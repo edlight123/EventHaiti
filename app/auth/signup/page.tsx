@@ -15,7 +15,6 @@ export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
-  const [role, setRole] = useState<UserRole>('attendee')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -32,7 +31,7 @@ export default function SignupPage() {
         options: {
           data: {
             full_name: fullName,
-            role: role,
+            role: 'attendee',
           },
         },
       })
@@ -56,12 +55,8 @@ export default function SignupPage() {
           .eq('id', data.user.id)
       }
 
-      // Redirect based on role
-      if (role === 'organizer') {
-        router.push('/organizer')
-      } else {
-        router.push('/')
-      }
+      // Redirect to home
+      router.push('/')
       router.refresh()
     } catch (err: any) {
       setError(err.message || 'An error occurred during signup')
@@ -154,42 +149,6 @@ export default function SignupPage() {
                 minLength={6}
               />
               <p className="mt-1 text-xs text-gray-500">At least 6 characters</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                I want to:
-              </label>
-              <div className="space-y-2">
-                <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="role"
-                    value="attendee"
-                    checked={role === 'attendee'}
-                    onChange={(e) => setRole(e.target.value as UserRole)}
-                    className="h-4 w-4 text-teal-600 focus:ring-teal-500"
-                  />
-                  <span className="ml-3">
-                    <span className="block text-sm font-medium text-gray-900">Attend events</span>
-                    <span className="block text-xs text-gray-500">Browse and buy tickets</span>
-                  </span>
-                </label>
-                <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="role"
-                    value="organizer"
-                    checked={role === 'organizer'}
-                    onChange={(e) => setRole(e.target.value as UserRole)}
-                    className="h-4 w-4 text-teal-600 focus:ring-teal-500"
-                  />
-                  <span className="ml-3">
-                    <span className="block text-sm font-medium text-gray-900">Organize events</span>
-                    <span className="block text-xs text-gray-500">Create and manage events</span>
-                  </span>
-                </label>
-              </div>
             </div>
           </div>
 

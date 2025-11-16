@@ -32,12 +32,8 @@ export default function LoginPage() {
           throw new Error(result.error)
         }
 
-        // Redirect based on role
-        if (result.role === 'organizer') {
-          router.push('/organizer')
-        } else {
-          router.push('/')
-        }
+        // Redirect to home
+        router.push('/')
         router.refresh()
         return
       }
@@ -50,19 +46,8 @@ export default function LoginPage() {
 
       if (error) throw error
 
-      // Get user profile to determine role
-      const { data: profile } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', data.user.id)
-        .single<Pick<UserProfile, 'role'>>()
-
-      // Redirect based on role
-      if (profile?.role === 'organizer') {
-        router.push('/organizer')
-      } else {
-        router.push('/')
-      }
+      // Redirect to home
+      router.push('/')
       router.refresh()
     } catch (err: any) {
       setError(err.message || 'An error occurred during login')

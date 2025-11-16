@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import TicketScanner from './TicketScanner'
 
 export default async function ScanTicketPage() {
-  const { user, error } = await requireAuth('organizer')
+  const { user, error } = await requireAuth()
 
   if (error || !user) {
     redirect('/auth/login')

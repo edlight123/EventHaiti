@@ -9,7 +9,7 @@ import { isDemoMode, DEMO_EVENTS, DEMO_TICKETS } from '@/lib/demo'
 export const revalidate = 0
 
 export default async function OrganizerEventDetailPage({ params }: { params: { id: string } }) {
-  const { user, error } = await requireAuth('organizer')
+  const { user, error } = await requireAuth()
 
   if (error || !user) {
     redirect('/auth/login')

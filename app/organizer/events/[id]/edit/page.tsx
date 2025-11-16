@@ -6,7 +6,7 @@ import EventForm from '../../EventForm'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 
 export default async function EditEventPage({ params }: { params: { id: string } }) {
-  const { user, error } = await requireAuth('organizer')
+  const { user, error } = await requireAuth()
 
   if (error || !user) {
     redirect('/auth/login')

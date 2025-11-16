@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import EventForm from '../EventForm'
 
 export default async function NewEventPage() {
-  const { user, error } = await requireAuth('organizer')
+  const { user, error } = await requireAuth()
 
   if (error || !user) {
     redirect('/auth/login')

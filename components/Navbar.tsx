@@ -55,25 +55,25 @@ export default function Navbar({ user }: NavbarProps) {
               >
                 Events
               </Link>
-              {user?.role === 'attendee' && (
-                <Link
-                  href="/tickets"
-                  className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                    pathname?.startsWith('/tickets') ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  My Tickets
-                </Link>
-              )}
-              {user?.role === 'organizer' && (
-                <Link
-                  href="/organizer"
-                  className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                    pathname?.startsWith('/organizer') ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  Dashboard
-                </Link>
+              {user && (
+                <>
+                  <Link
+                    href="/tickets"
+                    className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                      pathname?.startsWith('/tickets') ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    My Tickets
+                  </Link>
+                  <Link
+                    href="/organizer/events"
+                    className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                      pathname?.startsWith('/organizer') ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    My Events
+                  </Link>
+                </>
               )}
             </div>
           </div>
