@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { BRAND } from '@/config/brand'
 import { useState, useEffect } from 'react'
+import { isDemoMode, isDemoEmail } from '@/lib/demo'
+import { demoLogout } from '@/app/auth/actions'
 
 interface NavbarProps {
   user?: {
@@ -22,6 +24,13 @@ export default function Navbar({ user }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   async function handleSignOut() {
+    // Handle demo logout
+    if (isDemoMode() && user && isDemoEmail(user.email)) {
+      await demoLogout()
+      return
+    }
+
+    // Regular Supabase logout
     await supabase.auth.signOut()
     router.push('/')
     router.refresh()

@@ -3,24 +3,50 @@ import { getCurrentUser } from '@/lib/auth'
 import EventCard from '@/components/EventCard'
 import Navbar from '@/components/Navbar'
 import { BRAND } from '@/config/brand'
+import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
+import type { Database } from '@/types/database'
+
+type Event = Database['public']['Tables']['events']['Row']
 
 export const revalidate = 0
 
 export default async function HomePage() {
   const user = await getCurrentUser()
-  const supabase = await createClient()
-
-  // Fetch published events
-  const { data: events } = await supabase
-    .from('events')
-    .select('*')
-    .eq('is_published', true)
-    .gte('start_datetime', new Date().toISOString())
-    .order('start_datetime', { ascending: true })
+  
+  let events: Event[] = []
+  
+  if (isDemoMode()) {
+    // Use demo events in demo mode
+    events = DEMO_EVENTS as Event[]
+  } else {
+    // Fetch real events from database
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('events')
+      .select('*')
+      .eq('is_published', true)
+      .gte('start_datetime', new Date().toISOString())
+      .order('start_datetime', { ascending: true })
+    events = data || []
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar user={user} />
+
+      {/* Demo Mode Banner */}
+      {isDemoMode() && (
+        <div className="bg-yellow-50 border-b border-yellow-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div className="flex items-center gap-2 text-yellow-800">
+              <span className="text-lg">🎭</span>
+              <p className="text-sm font-medium">
+                <strong>Demo Mode:</strong> You&apos;re viewing sample events. Login with <code className="bg-yellow-100 px-1 rounded">demo-organizer@eventhaiti.com</code> or <code className="bg-yellow-100 px-1 rounded">demo-attendee@eventhaiti.com</code> (password: <code className="bg-yellow-100 px-1 rounded">demo123</code>)
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-teal-700 to-orange-600 text-white">

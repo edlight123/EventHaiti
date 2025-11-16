@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { BRAND } from '@/config/brand'
 import type { Database } from '@/types/database'
+import { isDemoMode, DEMO_USERS, isDemoEmail } from '@/lib/demo'
+import { demoLogin } from '../actions'
 
 type UserProfile = Database['public']['Tables']['users']['Row']
 
@@ -22,6 +24,25 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
+      // Demo mode login
+      if (isDemoMode() && isDemoEmail(email)) {
+        const result = await demoLogin(email, password)
+        
+        if (result.error) {
+          throw new Error(result.error)
+        }
+
+        // Redirect based on role
+        if (result.role === 'organizer') {
+          router.push('/organizer')
+        } else {
+          router.push('/')
+        }
+        router.refresh()
+        return
+      }
+
+      // Real Supabase authentication
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
