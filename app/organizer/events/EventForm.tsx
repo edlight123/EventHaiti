@@ -3,6 +3,7 @@
 import { useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
+import { isDemoMode } from '@/lib/demo'
 
 interface EventFormProps {
   userId: string
@@ -47,6 +48,15 @@ export default function EventForm({ userId, event }: EventFormProps) {
     setError(null)
 
     try {
+      // In demo mode, just show success message
+      if (isDemoMode()) {
+        await new Promise(resolve => setTimeout(resolve, 800)) // Simulate API call
+        alert('✅ Demo: Event saved! In production, this would create/update a real event.')
+        router.push('/organizer/events')
+        router.refresh()
+        return
+      }
+
       const eventData = {
         organizer_id: userId,
         title: formData.title,

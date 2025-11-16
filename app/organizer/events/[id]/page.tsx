@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar'
 import { redirect, notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import Link from 'next/link'
+import { isDemoMode, DEMO_EVENTS, DEMO_TICKETS } from '@/lib/demo'
 
 export const revalidate = 0
 
@@ -14,28 +15,55 @@ export default async function OrganizerEventDetailPage({ params }: { params: { i
     redirect('/auth/login')
   }
 
-  const supabase = await createClient()
+  let event: any = null
+  let tickets: any[] = []
 
-  const { data: event } = await supabase
-    .from('events')
-    .select('*')
-    .eq('id', params.id)
-    .eq('organizer_id', user.id)
-    .single()
+  if (isDemoMode()) {
+    // Find demo event
+    event = DEMO_EVENTS.find(e => e.id === params.id)
+    if (!event) {
+      notFound()
+    }
+    
+    // Get demo tickets for this event
+    tickets = DEMO_TICKETS
+      .filter(t => t.event_id === params.id)
+      .map(t => ({
+        ...t,
+        users: {
+          full_name: 'Demo Attendee',
+          email: 'demo-attendee@eventhaiti.com',
+          phone_number: '+509 1234-5678'
+        }
+      }))
+  } else {
+    // Fetch from database
+    const supabase = await createClient()
+    const { data: eventData } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', params.id)
+      .eq('organizer_id', user.id)
+      .single()
 
-  if (!event) {
-    notFound()
+    event = eventData
+
+    if (!event) {
+      notFound()
+    }
+
+    // Get tickets for this event
+    const { data: ticketsData } = await supabase
+      .from('tickets')
+      .select(`
+        *,
+        users!tickets_attendee_id_fkey(full_name, email, phone_number)
+      `)
+      .eq('event_id', event.id)
+      .order('purchased_at', { ascending: false })
+    
+    tickets = ticketsData || []
   }
-
-  // Get tickets for this event
-  const { data: tickets } = await supabase
-    .from('tickets')
-    .select(`
-      *,
-      users!tickets_attendee_id_fkey(full_name, email, phone_number)
-    `)
-    .eq('event_id', event.id)
-    .order('purchased_at', { ascending: false })
 
   const revenue = event.tickets_sold * Number(event.ticket_price)
   const remainingTickets = event.total_tickets - event.tickets_sold

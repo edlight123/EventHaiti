@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
+import { isDemoMode } from '@/lib/demo'
 
 interface BuyTicketButtonProps {
   eventId: string
@@ -20,6 +21,16 @@ export default function BuyTicketButton({ eventId, userId }: BuyTicketButtonProp
     setError(null)
 
     try {
+      // In demo mode, just show success message
+      if (isDemoMode()) {
+        await new Promise(resolve => setTimeout(resolve, 800)) // Simulate API call
+        setShowModal(false)
+        alert('✅ Demo: Ticket purchased successfully! In production, this would create a real ticket.')
+        router.refresh()
+        setLoading(false)
+        return
+      }
+
       // Generate QR code data
       const ticketId = crypto.randomUUID()
       const qrCodeData = `ticket:${ticketId}|event:${eventId}`

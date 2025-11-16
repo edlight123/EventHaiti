@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 import { redirect, notFound } from 'next/navigation'
 import EventForm from '../../EventForm'
+import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 
 export default async function EditEventPage({ params }: { params: { id: string } }) {
   const { user, error } = await requireAuth('organizer')
@@ -11,17 +12,29 @@ export default async function EditEventPage({ params }: { params: { id: string }
     redirect('/auth/login')
   }
 
-  const supabase = await createClient()
+  let event: any = null
 
-  const { data: event } = await supabase
-    .from('events')
-    .select('*')
-    .eq('id', params.id)
-    .eq('organizer_id', user.id)
-    .single()
+  if (isDemoMode()) {
+    // Find demo event
+    event = DEMO_EVENTS.find(e => e.id === params.id)
+    if (!event) {
+      notFound()
+    }
+  } else {
+    // Fetch from database
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', params.id)
+      .eq('organizer_id', user.id)
+      .single()
 
-  if (!event) {
-    notFound()
+    event = data
+
+    if (!event) {
+      notFound()
+    }
   }
 
   return (

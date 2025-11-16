@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { isDemoMode, DEMO_TICKETS, DEMO_EVENTS } from '@/lib/demo'
 
 interface TicketScannerProps {
   organizerId: string
@@ -39,7 +40,43 @@ export default function TicketScanner({ organizerId }: TicketScannerProps) {
       const ticketId = parts[0].replace('ticket:', '')
       const eventId = parts[1].replace('event:', '')
 
-      // Get ticket with event details
+      // Demo mode validation
+      if (isDemoMode()) {
+        await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API delay
+        
+        const demoTicket = DEMO_TICKETS.find(t => t.id === ticketId)
+        const demoEvent = DEMO_EVENTS.find(e => e.id === eventId)
+
+        if (!demoTicket || !demoEvent) {
+          setResult({
+            success: false,
+            message: '❌ Invalid ticket. This ticket does not exist.'
+          })
+          setLoading(false)
+          return
+        }
+
+        if (demoTicket.event_id !== eventId) {
+          setResult({
+            success: false,
+            message: '❌ Ticket/Event mismatch. This ticket is for a different event.'
+          })
+          setLoading(false)
+          return
+        }
+
+        // In demo mode, all tickets are valid (we don't track scan state)
+        setResult({
+          success: true,
+          message: '✅ Valid ticket! (Demo mode - ticket not actually marked as used)',
+          ticket: { ...demoTicket, users: { full_name: 'Demo Attendee', email: 'demo-attendee@eventhaiti.com' } },
+          event: demoEvent
+        })
+        setLoading(false)
+        return
+      }
+
+      // Real database validation
       const { data: ticket, error: ticketError } = await supabase
         .from('tickets')
         .select(`
