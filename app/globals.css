@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-primary: #0F766E;
+  --brand-secondary: #F97316;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900;
+}

@@ -1,0 +1,158 @@
+export type UserRole = 'attendee' | 'organizer'
+
+export type TicketStatus = 'active' | 'used' | 'cancelled'
+
+export type ScanResult = 'valid' | 'already_used' | 'invalid'
+
+export interface Database {
+  public: {
+    Tables: {
+      users: {
+        Row: {
+          id: string
+          full_name: string
+          email: string
+          phone_number: string | null
+          role: UserRole
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          full_name: string
+          email: string
+          phone_number?: string | null
+          role?: UserRole
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          full_name?: string
+          email?: string
+          phone_number?: string | null
+          role?: UserRole
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      events: {
+        Row: {
+          id: string
+          organizer_id: string
+          title: string
+          description: string
+          category: string
+          venue_name: string
+          city: string
+          commune: string
+          address: string
+          start_datetime: string
+          end_datetime: string
+          banner_image_url: string | null
+          ticket_price: number
+          currency: string
+          total_tickets: number
+          tickets_sold: number
+          is_published: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organizer_id: string
+          title: string
+          description: string
+          category: string
+          venue_name: string
+          city: string
+          commune: string
+          address: string
+          start_datetime: string
+          end_datetime: string
+          banner_image_url?: string | null
+          ticket_price: number
+          currency?: string
+          total_tickets: number
+          tickets_sold?: number
+          is_published?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          organizer_id?: string
+          title?: string
+          description?: string
+          category?: string
+          venue_name?: string
+          city?: string
+          commune?: string
+          address?: string
+          start_datetime?: string
+          end_datetime?: string
+          banner_image_url?: string | null
+          ticket_price?: number
+          currency?: string
+          total_tickets?: number
+          tickets_sold?: number
+          is_published?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      tickets: {
+        Row: {
+          id: string
+          event_id: string
+          attendee_id: string
+          qr_code_data: string
+          status: TicketStatus
+          purchased_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          attendee_id: string
+          qr_code_data: string
+          status?: TicketStatus
+          purchased_at?: string
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          attendee_id?: string
+          qr_code_data?: string
+          status?: TicketStatus
+          purchased_at?: string
+        }
+      }
+      ticket_scans: {
+        Row: {
+          id: string
+          ticket_id: string
+          event_id: string
+          scanned_by: string
+          scanned_at: string
+          result: ScanResult
+        }
+        Insert: {
+          id?: string
+          ticket_id: string
+          event_id: string
+          scanned_by: string
+          scanned_at?: string
+          result: ScanResult
+        }
+        Update: {
+          id?: string
+          ticket_id?: string
+          event_id?: string
+          scanned_by?: string
+          scanned_at?: string
+          result?: ScanResult
+        }
+      }
+    }
+  }
+}
