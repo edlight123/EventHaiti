@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 
 export const revalidate = 0
 
@@ -13,13 +14,21 @@ export default async function OrganizerDashboard() {
     redirect('/auth/login')
   }
 
-  const supabase = await createClient()
+  let events: any[] = []
 
-  // Get organizer's events stats
-  const { data: events } = await supabase
-    .from('events')
-    .select('*')
-    .eq('organizer_id', user.id)
+  if (isDemoMode()) {
+    // Use demo events
+    events = DEMO_EVENTS
+  } else {
+    // Fetch real events from database
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('events')
+      .select('*')
+      .eq('organizer_id', user.id)
+    
+    events = data || []
+  }
 
   const totalEvents = events?.length || 0
   const upcomingEvents = events?.filter(e => new Date(e.start_datetime) > new Date()).length || 0

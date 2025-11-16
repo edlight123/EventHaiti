@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar'
 import { redirect, notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import QRCodeDisplay from './QRCodeDisplay'
+import { isDemoMode, DEMO_TICKETS, DEMO_EVENTS } from '@/lib/demo'
 
 export const revalidate = 0
 
@@ -14,28 +15,46 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
     redirect('/auth/login')
   }
 
-  const supabase = await createClient()
+  let ticket: any = null
 
-  const { data: ticket } = await supabase
-    .from('tickets')
-    .select(`
-      *,
-      events (
-        id,
-        title,
-        description,
-        start_datetime,
-        end_datetime,
-        venue_name,
-        city,
-        commune,
-        address,
-        banner_image_url
-      )
-    `)
-    .eq('id', params.id)
-    .eq('attendee_id', user.id)
-    .single()
+  if (isDemoMode()) {
+    // Find demo ticket
+    const demoTicket = DEMO_TICKETS.find(t => t.id === params.id)
+    if (!demoTicket) {
+      notFound()
+    }
+    
+    const event = DEMO_EVENTS.find(e => e.id === demoTicket.event_id)
+    ticket = {
+      ...demoTicket,
+      events: event
+    }
+  } else {
+    // Fetch real ticket from database
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('tickets')
+      .select(`
+        *,
+        events (
+          id,
+          title,
+          description,
+          start_datetime,
+          end_datetime,
+          venue_name,
+          city,
+          commune,
+          address,
+          banner_image_url
+        )
+      `)
+      .eq('id', params.id)
+      .eq('attendee_id', user.id)
+      .single()
+
+    ticket = data
+  }
 
   if (!ticket) {
     notFound()

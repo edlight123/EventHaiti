@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
+import { isDemoMode, DEMO_TICKETS, DEMO_EVENTS } from '@/lib/demo'
 
 export const revalidate = 0
 
@@ -14,23 +15,38 @@ export default async function MyTicketsPage() {
     redirect('/auth/login')
   }
 
-  const supabase = await createClient()
+  let tickets: any[] = []
 
-  const { data: tickets } = await supabase
-    .from('tickets')
-    .select(`
-      *,
-      events (
-        id,
-        title,
-        start_datetime,
-        venue_name,
-        city,
-        banner_image_url
-      )
-    `)
-    .eq('attendee_id', user.id)
-    .order('purchased_at', { ascending: false })
+  if (isDemoMode()) {
+    // Return demo tickets with event details
+    tickets = DEMO_TICKETS.map(ticket => {
+      const event = DEMO_EVENTS.find(e => e.id === ticket.event_id)
+      return {
+        ...ticket,
+        events: event
+      }
+    })
+  } else {
+    // Fetch real tickets from database
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('tickets')
+      .select(`
+        *,
+        events (
+          id,
+          title,
+          start_datetime,
+          venue_name,
+          city,
+          banner_image_url
+        )
+      `)
+      .eq('attendee_id', user.id)
+      .order('purchased_at', { ascending: false })
+    
+    tickets = data || []
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

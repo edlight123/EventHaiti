@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
+import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 
 export const revalidate = 0
 
@@ -14,13 +15,22 @@ export default async function OrganizerEventsPage() {
     redirect('/auth/login')
   }
 
-  const supabase = await createClient()
+  let events: any[] = []
 
-  const { data: events } = await supabase
-    .from('events')
-    .select('*')
-    .eq('organizer_id', user.id)
-    .order('start_datetime', { ascending: false })
+  if (isDemoMode()) {
+    // Use demo events
+    events = DEMO_EVENTS
+  } else {
+    // Fetch real events from database
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('events')
+      .select('*')
+      .eq('organizer_id', user.id)
+      .order('start_datetime', { ascending: false })
+    
+    events = data || []
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

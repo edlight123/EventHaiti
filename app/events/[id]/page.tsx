@@ -4,21 +4,44 @@ import Navbar from '@/components/Navbar'
 import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import BuyTicketButton from './BuyTicketButton'
+import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 
 export const revalidate = 0
 
 export default async function EventDetailPage({ params }: { params: { id: string } }) {
   const user = await getCurrentUser()
-  const supabase = await createClient()
+  
+  let event: any = null
+  
+  if (isDemoMode()) {
+    // Find demo event by ID
+    event = DEMO_EVENTS.find(e => e.id === params.id)
+    
+    if (!event) {
+      notFound()
+    }
+    
+    // Add mock organizer info for demo events
+    event = {
+      ...event,
+      users: {
+        full_name: 'Demo Organizer'
+      }
+    }
+  } else {
+    // Fetch from database
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('events')
+      .select('*, users!events_organizer_id_fkey(full_name)')
+      .eq('id', params.id)
+      .single()
 
-  const { data: event } = await supabase
-    .from('events')
-    .select('*, users!events_organizer_id_fkey(full_name)')
-    .eq('id', params.id)
-    .single()
+    event = data
 
-  if (!event || (!event.is_published && event.organizer_id !== user?.id)) {
-    notFound()
+    if (!event || (!event.is_published && event.organizer_id !== user?.id)) {
+      notFound()
+    }
   }
 
   const remainingTickets = event.total_tickets - event.tickets_sold
