@@ -5,6 +5,9 @@ import { useState, FormEvent } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { BRAND } from '@/config/brand'
+import type { Database } from '@/types/database'
+
+type UserProfile = Database['public']['Tables']['users']['Row']
 
 export default function LoginPage() {
   const router = useRouter()
@@ -31,7 +34,7 @@ export default function LoginPage() {
         .from('users')
         .select('role')
         .eq('id', data.user.id)
-        .single()
+        .single<Pick<UserProfile, 'role'>>()
 
       // Redirect based on role
       if (profile?.role === 'organizer') {
@@ -111,7 +114,7 @@ export default function LoginPage() {
 
           <div className="text-center">
             <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Link
                 href="/auth/signup"
                 className="font-medium text-teal-700 hover:text-teal-800"

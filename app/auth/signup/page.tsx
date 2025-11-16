@@ -5,7 +5,9 @@ import { useState, FormEvent } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { BRAND } from '@/config/brand'
-import { UserRole } from '@/types/database'
+import type { UserRole, Database } from '@/types/database'
+
+type UserUpdate = Database['public']['Tables']['users']['Update']
 
 export default function SignupPage() {
   const router = useRouter()
@@ -47,9 +49,10 @@ export default function SignupPage() {
 
       // Update phone number if provided
       if (phoneNumber) {
+        const updateData: UserUpdate = { phone_number: phoneNumber }
         await supabase
           .from('users')
-          .update({ phone_number: phoneNumber })
+          .update(updateData)
           .eq('id', data.user.id)
       }
 

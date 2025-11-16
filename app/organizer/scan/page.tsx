@@ -31,7 +31,7 @@ export default async function ScanTicketPage() {
             <li>Ask attendees to show their QR code ticket</li>
             <li>The QR code contains data in format: ticket:[id]|event:[id]</li>
             <li>Enter or paste the QR code data in the field above</li>
-            <li>Click "Validate Ticket" to check and mark as used</li>
+            <li>Click &quot;Validate Ticket&quot; to check and mark as used</li>
             <li>A green message means valid, red means invalid or already used</li>
           </ol>
           <div className="mt-4 p-3 bg-blue-100 rounded text-xs text-blue-900">

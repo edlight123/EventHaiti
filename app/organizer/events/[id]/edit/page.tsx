@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 import { redirect, notFound } from 'next/navigation'
-import EventForm from '../EventForm'
+import EventForm from '../../EventForm'
 
 export default async function EditEventPage({ params }: { params: { id: string } }) {
   const { user, error } = await requireAuth('organizer')
