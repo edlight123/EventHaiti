@@ -17,13 +17,14 @@ export default function DateFilters() {
   const currentDate = searchParams.get('date') || ''
 
   const handleDateChange = (value: string) => {
-    const params = new URLSearchParams(searchParams.toString())
+    const params = new URLSearchParams(searchParams?.toString() || '')
     if (value) {
       params.set('date', value)
     } else {
       params.delete('date')
     }
-    router.push(`/?${params.toString()}`)
+    const queryString = params.toString()
+    router.push(queryString ? `/?${queryString}` : '/')
   }
 
   return (

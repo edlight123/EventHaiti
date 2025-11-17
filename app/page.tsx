@@ -16,9 +16,10 @@ export const revalidate = 0
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: { q?: string; location?: string; category?: string; date?: string }
+  searchParams: Promise<{ q?: string; location?: string; category?: string; date?: string }>
 }) {
   const user = await getCurrentUser()
+  const params = await searchParams
   
   let events: Event[] = []
   
@@ -39,30 +40,30 @@ export default async function HomePage({
   }
 
   // Apply filters
-  if (searchParams.q) {
-    const searchLower = searchParams.q.toLowerCase()
+  if (params.q) {
+    const searchLower = params.q.toLowerCase()
     events = events.filter(e => 
       e.title.toLowerCase().includes(searchLower) || 
       e.description.toLowerCase().includes(searchLower)
     )
   }
 
-  if (searchParams.location) {
-    events = events.filter(e => e.city === searchParams.location)
+  if (params.location) {
+    events = events.filter(e => e.city === params.location)
   }
 
-  if (searchParams.category) {
-    events = events.filter(e => e.category === searchParams.category)
+  if (params.category) {
+    events = events.filter(e => e.category === params.category)
   }
 
-  if (searchParams.date) {
+  if (params.date) {
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     
     events = events.filter(e => {
       const eventDate = new Date(e.start_datetime)
       
-      switch (searchParams.date) {
+      switch (params.date) {
         case 'today':
           return eventDate.toDateString() === today.toDateString()
         case 'tomorrow':
@@ -135,7 +136,7 @@ export default async function HomePage({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-900">
-            {searchParams.q || searchParams.location || searchParams.category 
+            {params.q || params.location || params.category 
               ? 'Search Results' 
               : 'Upcoming Events'}
           </h2>

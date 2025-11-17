@@ -10,13 +10,21 @@ export default function SearchBar() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    const params = new URLSearchParams()
-    if (searchQuery) params.set('q', searchQuery)
-    if (location) params.set('location', location)
+    const params = new URLSearchParams(window.location.search)
     
-    if (params.toString()) {
-      router.push(`/?${params.toString()}`)
+    if (searchQuery) {
+      params.set('q', searchQuery)
+    } else {
+      params.delete('q')
     }
+    
+    if (location) {
+      params.set('location', location)
+    } else {
+      params.delete('location')
+    }
+    
+    router.push(`/?${params.toString()}`)
   }
 
   return (
