@@ -8,14 +8,15 @@ import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 
 export const revalidate = 0
 
-export default async function EventDetailPage({ params }: { params: { id: string } }) {
+export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser()
+  const { id } = await params
   
   let event: any = null
   
   if (isDemoMode()) {
     // Find demo event by ID
-    event = DEMO_EVENTS.find(e => e.id === params.id)
+    event = DEMO_EVENTS.find(e => e.id === id)
     
     if (!event) {
       notFound()
@@ -34,7 +35,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
     const { data } = await supabase
       .from('events')
       .select('*, users!events_organizer_id_fkey(full_name)')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     event = data

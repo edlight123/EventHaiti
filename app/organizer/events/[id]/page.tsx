@@ -8,26 +8,27 @@ import { isDemoMode, DEMO_EVENTS, DEMO_TICKETS } from '@/lib/demo'
 
 export const revalidate = 0
 
-export default async function OrganizerEventDetailPage({ params }: { params: { id: string } }) {
+export default async function OrganizerEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { user, error } = await requireAuth()
 
   if (error || !user) {
     redirect('/auth/login')
   }
 
+  const { id } = await params
   let event: any = null
   let tickets: any[] = []
 
   if (isDemoMode()) {
     // Find demo event
-    event = DEMO_EVENTS.find(e => e.id === params.id)
+    event = DEMO_EVENTS.find(e => e.id === id)
     if (!event) {
       notFound()
     }
     
     // Get demo tickets for this event
     tickets = DEMO_TICKETS
-      .filter(t => t.event_id === params.id)
+      .filter(t => t.event_id === id)
       .map(t => ({
         ...t,
         users: {
@@ -42,7 +43,7 @@ export default async function OrganizerEventDetailPage({ params }: { params: { i
     const { data: eventData } = await supabase
       .from('events')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('organizer_id', user.id)
       .single()
 

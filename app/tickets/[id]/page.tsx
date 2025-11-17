@@ -8,18 +8,19 @@ import { isDemoMode, DEMO_TICKETS, DEMO_EVENTS } from '@/lib/demo'
 
 export const revalidate = 0
 
-export default async function TicketDetailPage({ params }: { params: { id: string } }) {
+export default async function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { user, error } = await requireAuth()
 
   if (error || !user) {
     redirect('/auth/login')
   }
 
+  const { id } = await params
   let ticket: any = null
 
   if (isDemoMode()) {
-    // Find demo ticket
-    const demoTicket = DEMO_TICKETS.find(t => t.id === params.id)
+    // Find demo ticket by ID
+    const demoTicket = DEMO_TICKETS.find(t => t.id === id)
     if (!demoTicket) {
       notFound()
     }
@@ -49,7 +50,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
           banner_image_url
         )
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('attendee_id', user.id)
       .single()
 

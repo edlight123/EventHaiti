@@ -5,18 +5,19 @@ import { redirect, notFound } from 'next/navigation'
 import EventForm from '../../EventForm'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 
-export default async function EditEventPage({ params }: { params: { id: string } }) {
+export default async function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
   const { user, error } = await requireAuth()
 
   if (error || !user) {
     redirect('/auth/login')
   }
 
+  const { id } = await params
   let event: any = null
 
   if (isDemoMode()) {
     // Find demo event
-    event = DEMO_EVENTS.find(e => e.id === params.id)
+    event = DEMO_EVENTS.find(e => e.id === id)
     if (!event) {
       notFound()
     }
@@ -26,7 +27,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
     const { data } = await supabase
       .from('events')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('organizer_id', user.id)
       .single()
 
