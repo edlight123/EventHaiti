@@ -152,20 +152,20 @@ export const DEMO_TICKETS = [
   {
     id: 'demo-ticket-1',
     event_id: 'demo-event-1',
-    user_id: 'demo-attendee-id',
+    attendee_id: 'demo-attendee-id',
     qr_code: 'ticket:demo-ticket-1|event:demo-event-1',
     status: 'active' as const,
-    purchase_date: '2025-11-01T14:30:00',
+    purchased_at: '2025-11-01T14:30:00',
     created_at: '2025-11-01T14:30:00',
     updated_at: '2025-11-01T14:30:00'
   },
   {
     id: 'demo-ticket-2',
     event_id: 'demo-event-3',
-    user_id: 'demo-attendee-id',
+    attendee_id: 'demo-attendee-id',
     qr_code: 'ticket:demo-ticket-2|event:demo-event-3',
     status: 'active' as const,
-    purchase_date: '2025-11-05T09:15:00',
+    purchased_at: '2025-11-05T09:15:00',
     created_at: '2025-11-05T09:15:00',
     updated_at: '2025-11-05T09:15:00'
   }
