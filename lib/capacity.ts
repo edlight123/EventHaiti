@@ -104,7 +104,48 @@ export async function notifyWaitlist(eventId: string, availableQuantity: number)
         })
         .eq('id', entry.id)
 
-      // TODO: Send email notification
+      // Send email notification
+      try {
+        const { sendEmail, getWaitlistNotificationEmail } = await import('@/lib/email')
+        const { data: event } = await supabase
+          .from('events')
+          .select('title, start_datetime')
+          .eq('id', eventId)
+          .single()
+
+        if (event) {
+          await sendEmail({
+            to: entry.email,
+            subject: `Tickets Available: ${event.title}`,
+            html: getWaitlistNotificationEmail({
+              eventTitle: event.title,
+              eventDate: event.start_datetime,
+              quantity: entry.quantity,
+              eventId: eventId
+            })
+          })
+
+          // Also send SMS if phone number available
+          if (entry.phone) {
+            try {
+              const { sendSms, getWaitlistAvailableSms } = await import('@/lib/sms')
+              await sendSms({
+                to: entry.phone,
+                message: getWaitlistAvailableSms({
+                  eventTitle: event.title,
+                  quantity: entry.quantity,
+                  eventUrl: `${process.env.NEXT_PUBLIC_APP_URL}/events/${eventId}`
+                })
+              })
+            } catch (smsError) {
+              console.error('Failed to send SMS notification:', smsError)
+              // Continue - email was sent
+            }
+          }
+        }
+      } catch (emailError) {
+        console.error('Failed to send waitlist notification:', emailError)
+      }
       
       remainingSlots -= entry.quantity
       notified++

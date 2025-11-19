@@ -64,7 +64,33 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Failed to request refund' }, { status: 500 })
     }
 
-    // TODO: Notify organizer about refund request
+    // Notify organizer about refund request
+    try {
+      const { sendEmail, getRefundRequestEmail } = await import('@/lib/email')
+      const { data: organizer } = await supabase
+        .from('users')
+        .select('email, full_name')
+        .eq('id', event.organizer_id)
+        .single()
+
+      if (organizer?.email) {
+        await sendEmail({
+          to: organizer.email,
+          subject: `Refund Request for ${event.title}`,
+          html: getRefundRequestEmail({
+            organizerName: organizer.full_name || 'Organizer',
+            eventTitle: event.title,
+            attendeeEmail: user.email || 'Unknown',
+            reason: reason,
+            ticketId: ticketId,
+            amount: ticket.price
+          })
+        })
+      }
+    } catch (emailError) {
+      console.error('Failed to send organizer notification:', emailError)
+      // Don't fail the request if email fails
+    }
     
     return Response.json({ 
       success: true, 

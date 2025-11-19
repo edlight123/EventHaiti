@@ -86,7 +86,55 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Failed to process refund' }, { status: 500 })
     }
 
-    // TODO: Send confirmation email to attendee
+    // Send confirmation email to attendee
+    try {
+      const { sendEmail, getRefundProcessedEmail } = await import('@/lib/email')
+      const { data: attendee } = await supabase
+        .from('users')
+        .select('email, full_name, phone')
+        .eq('id', ticket.attendee_id)
+        .single()
+
+      if (attendee?.email) {
+        await sendEmail({
+          to: attendee.email,
+          subject: `Refund ${action === 'approve' ? 'Approved' : 'Denied'} - ${ticket.events.title}`,
+          html: getRefundProcessedEmail({
+            attendeeName: attendee.full_name || 'Attendee',
+            eventTitle: ticket.events.title,
+            status: action === 'approve' ? 'approved' : 'denied',
+            refundAmount: action === 'approve' ? refundAmount : 0,
+            ticketId: ticketId
+          })
+        })
+      }
+
+      // Also send SMS notification if phone number available
+      if (attendee?.phone) {
+        try {
+          const { sendSms, getRefundApprovedSms, getRefundDeniedSms } = await import('@/lib/sms')
+          const smsMessage = action === 'approve'
+            ? getRefundApprovedSms({
+                eventTitle: ticket.events.title,
+                amount: refundAmount
+              })
+            : getRefundDeniedSms({
+                eventTitle: ticket.events.title
+              })
+          
+          await sendSms({
+            to: attendee.phone,
+            message: smsMessage
+          })
+        } catch (smsError) {
+          console.error('Failed to send SMS notification:', smsError)
+          // Continue - email was sent successfully
+        }
+      }
+    } catch (emailError) {
+      console.error('Failed to send attendee confirmation:', emailError)
+      // Don't fail the request if email fails
+    }
 
     return Response.json({ 
       success: true, 
