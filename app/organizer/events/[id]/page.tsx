@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar'
 import { redirect, notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import Link from 'next/link'
+import EventUpdates from './EventUpdates'
 import { isDemoMode, DEMO_EVENTS, DEMO_TICKETS } from '@/lib/demo'
 
 export const revalidate = 0
@@ -150,6 +151,19 @@ export default async function OrganizerEventDetailPage({ params }: { params: Pro
             </div>
           </div>
         </div>
+
+        {/* Event Updates */}
+        {!isDemoMode() && tickets && tickets.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              Send Announcement
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Notify all {tickets.length} ticket holder{tickets.length !== 1 ? 's' : ''} about important updates
+            </p>
+            <EventUpdates eventId={event.id} eventTitle={event.title} />
+          </div>
+        )}
 
         {/* Attendees List */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">

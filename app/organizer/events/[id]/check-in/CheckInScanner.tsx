@@ -1,14 +1,28 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
+
+// Dynamically import camera scanner (client-side only)
+const CameraQRScanner = dynamic(
+  () => import('@/components/CameraQRScanner'),
+  { ssr: false }
+)
 
 export default function CheckInScanner({ eventId }: { eventId: string }) {
   const [ticketId, setTicketId] = useState('')
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [loading, setLoading] = useState(false)
+  const [scanMode, setScanMode] = useState<'camera' | 'manual'>('camera')
 
   async function handleCheckIn(e: React.FormEvent) {
     e.preventDefault()
+    await checkInTicket(ticketId)
+  }
+
+  async function checkInTicket(ticketIdToCheck: string) {
+    if (loading) return // Prevent duplicate checks
+    
     setLoading(true)
     setMessage(null)
 
@@ -16,7 +30,7 @@ export default function CheckInScanner({ eventId }: { eventId: string }) {
       const response = await fetch('/api/check-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticketId, eventId }),
+        body: JSON.stringify({ ticketId: ticketIdToCheck, eventId }),
       })
 
       const data = await response.json()
@@ -34,28 +48,77 @@ export default function CheckInScanner({ eventId }: { eventId: string }) {
       }, 1500)
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message })
+      
+      // Clear error after 3 seconds
+      setTimeout(() => setMessage(null), 3000)
     } finally {
       setLoading(false)
     }
   }
 
+  function handleQRScan(data: string) {
+    // Extract ticket ID from QR code data
+    const ticketIdFromQR = data.trim()
+    checkInTicket(ticketIdFromQR)
+  }
+
   return (
     <div>
-      <div className="bg-gray-100 rounded-xl p-8 mb-4 text-center">
-        <div className="inline-flex items-center justify-center w-48 h-48 bg-white rounded-2xl border-4 border-dashed border-gray-300">
-          <div className="text-gray-400">
-            <svg className="w-24 h-24 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-            </svg>
-            <p className="text-sm">QR Scanner</p>
-            <p className="text-xs mt-1">Camera access required</p>
-          </div>
-        </div>
+      {/* Scan Mode Toggle */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setScanMode('camera')}
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+            scanMode === 'camera'
+              ? 'bg-orange-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          📷 Live Camera
+        </button>
+        <button
+          onClick={() => setScanMode('manual')}
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+            scanMode === 'manual'
+              ? 'bg-orange-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          ⌨️ Manual Entry
+        </button>
       </div>
 
-      <div className="text-center text-sm text-gray-500 mb-4">
-        or enter ticket ID manually
-      </div>
+      {scanMode === 'camera' ? (
+        <div className="mb-4">
+          <CameraQRScanner
+            onScan={handleQRScan}
+            onError={(error) => {
+              console.error('Camera error:', error)
+              setMessage({ type: 'error', text: 'Camera access denied. Please enable camera permissions or use manual entry.' })
+            }}
+            width={640}
+            height={480}
+          />
+        </div>
+      ) : (
+        <div className="bg-gray-100 rounded-xl p-8 mb-4 text-center">
+          <div className="inline-flex items-center justify-center w-48 h-48 bg-white rounded-2xl border-4 border-dashed border-gray-300">
+            <div className="text-gray-400">
+              <svg className="w-24 h-24 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+              </svg>
+              <p className="text-sm font-medium">Manual Entry</p>
+              <p className="text-xs mt-1">Enter ticket ID below</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {scanMode === 'manual' && (
+        <div className="text-center text-sm text-gray-500 mb-4">
+          Enter the ticket ID from the attendee&apos;s QR code
+        </div>
+      )}
 
       <form onSubmit={handleCheckIn} className="space-y-4">
         <input

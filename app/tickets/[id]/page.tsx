@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar'
 import { redirect, notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import QRCodeDisplay from './QRCodeDisplay'
+import TicketActions from './TicketActions'
 import { isDemoMode, DEMO_TICKETS, DEMO_EVENTS } from '@/lib/demo'
 
 export const revalidate = 0
@@ -143,6 +144,19 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
               </p>
             </div>
           </div>
+
+          {/* Ticket Actions */}
+          {!isDemoMode() && (
+            <div className="p-6 border-t border-gray-200 bg-gray-50">
+              <h3 className="font-semibold text-gray-900 mb-3">Manage Ticket</h3>
+              <TicketActions
+                ticketId={ticket.id}
+                ticketStatus={ticket.status}
+                checkedIn={ticket.checked_in || false}
+                eventTitle={event.title}
+              />
+            </div>
+          )}
         </div>
 
         {/* Instructions */}
