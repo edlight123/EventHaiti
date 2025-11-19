@@ -149,10 +149,13 @@ export default function TicketScanner({ organizerId }: TicketScannerProps) {
         return
       }
 
-      // Mark ticket as used
+      // Mark ticket as used and record check-in time
       const { error: updateError } = await supabase
         .from('tickets')
-        .update({ status: 'used' })
+        .update({ 
+          status: 'used',
+          checked_in_at: new Date().toISOString()
+        })
         .eq('id', ticketId)
 
       if (updateError) throw updateError

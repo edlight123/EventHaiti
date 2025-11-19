@@ -31,6 +31,8 @@ export default function EventForm({ userId, event }: EventFormProps) {
     end_datetime: event?.end_datetime ? event.end_datetime.slice(0, 16) : '',
     ticket_price: event?.ticket_price || '',
     total_tickets: event?.total_tickets || '',
+    max_tickets: event?.max_tickets || '',
+    currency: event?.currency || 'USD',
     banner_image_url: event?.banner_image_url || '',
     is_published: event?.is_published || false,
   })
@@ -282,10 +284,27 @@ export default function EventForm({ userId, event }: EventFormProps) {
         </div>
 
         {/* Pricing Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <label htmlFor="currency" className="block text-sm font-medium text-gray-700 mb-2">
+              Currency *
+            </label>
+            <select
+              id="currency"
+              name="currency"
+              required
+              value={formData.currency}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
+            >
+              <option value="USD">USD ($)</option>
+              <option value="HTG">HTG (G)</option>
+            </select>
+          </div>
+
           <div>
             <label htmlFor="ticket_price" className="block text-sm font-medium text-gray-700 mb-2">
-              Ticket Price (HTG) *
+              Ticket Price *
             </label>
             <input
               type="number"
@@ -297,24 +316,23 @@ export default function EventForm({ userId, event }: EventFormProps) {
               value={formData.ticket_price}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-              placeholder="500"
+              placeholder="25.00"
             />
           </div>
 
           <div>
-            <label htmlFor="total_tickets" className="block text-sm font-medium text-gray-700 mb-2">
-              Total Tickets *
+            <label htmlFor="max_tickets" className="block text-sm font-medium text-gray-700 mb-2">
+              Max Tickets (Optional)
             </label>
             <input
               type="number"
-              id="total_tickets"
-              name="total_tickets"
-              required
+              id="max_tickets"
+              name="max_tickets"
               min="1"
-              value={formData.total_tickets}
+              value={formData.max_tickets}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-              placeholder="100"
+              placeholder="Leave empty for unlimited"
             />
           </div>
         </div>
