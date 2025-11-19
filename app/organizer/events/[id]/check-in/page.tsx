@@ -4,7 +4,6 @@ import Navbar from '@/components/Navbar'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import CheckInScanner from './CheckInScanner'
-import { Users, CheckCircle, Clock, XCircle } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -106,7 +105,9 @@ export default async function CheckInPage({
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-gray-600">Total Tickets</h3>
-              <Users className="w-5 h-5 text-blue-600" />
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
             </div>
             <p className="text-3xl font-bold text-gray-900">{totalTickets}</p>
           </div>
@@ -114,7 +115,9 @@ export default async function CheckInPage({
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-gray-600">Checked In</h3>
-              <CheckCircle className="w-5 h-5 text-green-600" />
+              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             </div>
             <p className="text-3xl font-bold text-green-700">{checkedIn}</p>
             <p className="text-sm text-gray-500 mt-1">
@@ -125,7 +128,9 @@ export default async function CheckInPage({
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-gray-600">Pending</h3>
-              <Clock className="w-5 h-5 text-orange-600" />
+              <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             </div>
             <p className="text-3xl font-bold text-orange-700">{pending}</p>
           </div>
@@ -133,7 +138,9 @@ export default async function CheckInPage({
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-gray-600">Invalid</h3>
-              <XCircle className="w-5 h-5 text-red-600" />
+              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             </div>
             <p className="text-3xl font-bold text-red-700">{invalidTickets}</p>
           </div>
