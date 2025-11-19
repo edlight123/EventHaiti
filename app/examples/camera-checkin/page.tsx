@@ -5,7 +5,6 @@
 
 import { useState } from 'react'
 import { CameraQRScanner } from '@/components/CameraQRScanner'
-import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid'
 
 export default function AttendanceWithCameraExample() {
   const [scanMode, setScanMode] = useState<'upload' | 'camera'>('upload')
@@ -168,9 +167,13 @@ export default function AttendanceWithCameraExample() {
             >
               <div className="flex items-center gap-3">
                 {lastScan.status === 'success' ? (
-                  <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                  <svg className="h-6 w-6 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                    <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                  </svg>
                 ) : (
-                  <XCircleIcon className="h-6 w-6 text-red-600" />
+                  <svg className="h-6 w-6 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                    <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clipRule="evenodd" />
+                  </svg>
                 )}
                 <div>
                   <p
@@ -194,7 +197,7 @@ export default function AttendanceWithCameraExample() {
           <h3 className="font-medium text-blue-900 mb-2">💡 How to use:</h3>
           <ul className="text-sm text-blue-800 space-y-1">
             <li>• Switch to <strong>Live Camera</strong> mode for real-time scanning</li>
-            <li>• Point your camera at the attendee's QR code</li>
+            <li>• Point your camera at the attendee&apos;s QR code</li>
             <li>• The system will automatically detect and check them in</li>
             <li>• Green = Success, Red = Error/Already checked in</li>
             <li>• For file uploads, attendees can screenshot their ticket</li>
