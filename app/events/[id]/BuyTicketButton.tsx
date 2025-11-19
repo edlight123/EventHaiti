@@ -15,15 +15,16 @@ export default function BuyTicketButton({ eventId, userId }: BuyTicketButtonProp
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'moncash'>('stripe')
 
-  async function handlePurchase() {
+  async function handlePurchase(method: 'stripe' | 'moncash') {
     setLoading(true)
     setError(null)
 
     try {
       // In demo mode, just show success message
       if (isDemoMode()) {
-        await new Promise(resolve => setTimeout(resolve, 800)) // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 800))
         setShowModal(false)
         alert('✅ Demo: Ticket purchased successfully! In production, this would create a real ticket.')
         router.refresh()
@@ -31,52 +32,45 @@ export default function BuyTicketButton({ eventId, userId }: BuyTicketButtonProp
         return
       }
 
-      // Generate QR code data
-      const ticketId = crypto.randomUUID()
-      const qrCodeData = `ticket:${ticketId}|event:${eventId}`
-
-      // Create ticket
-      const { data: ticket, error: ticketError } = await supabase
-        .from('tickets')
-        .insert({
-          id: ticketId,
-          event_id: eventId,
-          attendee_id: userId,
-          qr_code_data: qrCodeData,
-          status: 'active',
+      if (method === 'stripe') {
+        // Create Stripe checkout session
+        const response = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId, quantity: 1 }),
         })
-        .select()
-        .single()
 
-      if (ticketError) throw ticketError
+        const data = await response.json()
 
-      // Increment tickets_sold
-      const { error: updateError } = await supabase.rpc('increment_tickets_sold', {
-        event_id: eventId,
-      })
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to create checkout session')
+        }
 
-      // If RPC doesn't exist, do it manually
-      if (updateError) {
-        const { data: event } = await supabase
-          .from('events')
-          .select('tickets_sold')
-          .eq('id', eventId)
-          .single()
+        // Redirect to Stripe checkout
+        if (data.url) {
+          window.location.href = data.url
+        }
+      } else {
+        // Create MonCash payment
+        const response = await fetch('/api/moncash/initiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId, quantity: 1 }),
+        })
 
-        if (event) {
-          await supabase
-            .from('events')
-            .update({ tickets_sold: event.tickets_sold + 1 })
-            .eq('id', eventId)
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to initiate MonCash payment')
+        }
+
+        // Redirect to MonCash payment page
+        if (data.paymentUrl) {
+          window.location.href = data.paymentUrl
         }
       }
-
-      // Redirect to ticket detail
-      router.push(`/tickets/${ticketId}`)
-      router.refresh()
     } catch (err: any) {
       setError(err.message || 'Failed to purchase ticket')
-    } finally {
       setLoading(false)
     }
   }
@@ -93,9 +87,9 @@ export default function BuyTicketButton({ eventId, userId }: BuyTicketButtonProp
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-md w-full p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Confirm Purchase</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Choose Payment Method</h3>
             <p className="text-gray-700 mb-6">
-              Are you sure you want to buy this ticket? This is a simulated purchase for MVP.
+              Select how you&apos;d like to pay for your ticket
             </p>
 
             {error && (
@@ -104,22 +98,59 @@ export default function BuyTicketButton({ eventId, userId }: BuyTicketButtonProp
               </div>
             )}
 
-            <div className="flex space-x-3">
+            <div className="space-y-3 mb-6">
+              {/* Stripe Option */}
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => handlePurchase('stripe')}
                 disabled={loading}
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className="w-full flex items-center justify-between px-4 py-4 border-2 border-gray-200 rounded-lg hover:border-teal-600 hover:bg-teal-50 transition disabled:opacity-50"
               >
-                Cancel
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className="font-semibold text-gray-900">Credit/Debit Card</div>
+                    <div className="text-sm text-gray-500">Visa, Mastercard, Amex</div>
+                  </div>
+                </div>
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </button>
+
+              {/* MonCash Option */}
               <button
-                onClick={handlePurchase}
+                onClick={() => handlePurchase('moncash')}
                 disabled={loading}
-                className="flex-1 px-4 py-3 bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-medium disabled:opacity-50"
+                className="w-full flex items-center justify-between px-4 py-4 border-2 border-gray-200 rounded-lg hover:border-teal-600 hover:bg-teal-50 transition disabled:opacity-50"
               >
-                {loading ? 'Processing...' : 'Confirm'}
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/>
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className="font-semibold text-gray-900">MonCash</div>
+                    <div className="text-sm text-gray-500">Mobile money (Haiti)</div>
+                  </div>
+                </div>
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </button>
             </div>
+
+            <button
+              onClick={() => setShowModal(false)}
+              disabled={loading}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              {loading ? 'Processing...' : 'Cancel'}
+            </button>
           </div>
         </div>
       )}

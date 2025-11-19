@@ -1,0 +1,142 @@
+'use client'
+
+import { useState, useRef } from 'react'
+import { supabase } from '@/lib/supabase/client'
+
+interface ImageUploadProps {
+  currentImage?: string | null
+  onImageUploaded: (url: string) => void
+  bucket?: string
+}
+
+export default function ImageUpload({ 
+  currentImage, 
+  onImageUploaded,
+  bucket = 'event-images' 
+}: ImageUploadProps) {
+  const [uploading, setUploading] = useState(false)
+  const [preview, setPreview] = useState<string | null>(currentImage || null)
+  const [error, setError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image must be less than 5MB')
+      return
+    }
+
+    setError(null)
+    setUploading(true)
+
+    try {
+      // Create preview
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setPreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${crypto.randomUUID()}.${fileExt}`
+      const filePath = `${fileName}`
+
+      const { error: uploadError, data } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+        })
+
+      if (uploadError) {
+        throw uploadError
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(filePath)
+
+      onImageUploaded(publicUrl)
+    } catch (err: any) {
+      console.error('Upload error:', err)
+      setError(err.message || 'Failed to upload image')
+      setPreview(currentImage || null)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="relative">
+        {preview ? (
+          <div className="relative group">
+            <img
+              src={preview}
+              alt="Preview"
+              className="w-full h-64 object-cover rounded-xl border-2 border-gray-200"
+            />
+            <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-4 py-2 bg-white text-gray-900 rounded-lg font-medium hover:bg-gray-100 transition"
+              >
+                Change Image
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full h-64 border-2 border-dashed border-gray-300 rounded-xl hover:border-orange-400 transition flex flex-col items-center justify-center text-gray-600 hover:text-orange-600"
+          >
+            <svg className="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span className="text-sm font-medium">Click to upload event banner</span>
+            <span className="text-xs text-gray-500 mt-1">PNG, JPG up to 5MB</span>
+          </button>
+        )}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
+          disabled={uploading}
+        />
+      </div>
+
+      {uploading && (
+        <div className="flex items-center justify-center py-2">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600"></div>
+          <span className="ml-2 text-sm text-gray-600">Uploading...</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+          {error}
+        </div>
+      )}
+
+      <p className="text-xs text-gray-500">
+        Recommended size: 1200x630px for best display across devices
+      </p>
+    </div>
+  )
+}

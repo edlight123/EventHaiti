@@ -5,8 +5,58 @@ import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import BuyTicketButton from './BuyTicketButton'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
+import type { Metadata } from 'next'
 
 export const revalidate = 0
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  
+  let event: any = null
+  
+  if (isDemoMode()) {
+    event = DEMO_EVENTS.find(e => e.id === id)
+  } else {
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', id)
+      .single()
+    event = data
+  }
+
+  if (!event) {
+    return {
+      title: 'Event Not Found',
+    }
+  }
+
+  const eventDate = new Date(event.start_datetime).toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+
+  return {
+    title: `${event.title} | EventHaiti`,
+    description: event.description || `Join us for ${event.title} at ${event.venue_name}, ${event.city}`,
+    openGraph: {
+      title: event.title,
+      description: event.description || `Join us for ${event.title}`,
+      images: event.banner_image_url ? [event.banner_image_url] : [],
+      type: 'website',
+      siteName: 'EventHaiti',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: event.title,
+      description: event.description || `Join us for ${event.title}`,
+      images: event.banner_image_url ? [event.banner_image_url] : [],
+    },
+  }
+}
 
 export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser()

@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { isDemoMode } from '@/lib/demo'
+import ImageUpload from '@/components/ImageUpload'
 
 interface EventFormProps {
   userId: string
@@ -126,6 +127,17 @@ export default function EventForm({ userId, event }: EventFormProps) {
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
             placeholder="e.g., Summer Music Festival 2025"
+          />
+        </div>
+
+        {/* Banner Image */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Event Banner Image
+          </label>
+          <ImageUpload
+            currentImage={formData.banner_image_url}
+            onImageUploaded={(url) => setFormData(prev => ({ ...prev, banner_image_url: url }))}
           />
         </div>
 
