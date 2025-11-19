@@ -36,14 +36,23 @@ export default async function FavoritesPage() {
   const supabase = await createClient()
 
   // Fetch user's favorite events
-  const { data: favorites } = await supabase
-    .from('favorites')
-    .select(`
-      event:events (*)
-    `)
-    .eq('user_id', user.id)
-
-  const favoriteEvents: Event[] = favorites?.map((f: any) => f.event).filter(Boolean) || []
+  let favoriteEvents: Event[] = []
+  
+  try {
+    const { data: favorites, error } = await supabase
+      .from('favorites')
+      .select(`
+        event:events (*)
+      `)
+      .eq('user_id', user.id)
+    
+    if (!error && favorites) {
+      favoriteEvents = favorites.map((f: any) => f.event).filter(Boolean)
+    }
+  } catch (error) {
+    // Table doesn't exist yet, show empty state
+    console.log('Favorites table not found')
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -29,19 +29,29 @@ export default async function PromoCodesPage({
     .order('start_datetime', { ascending: false })
 
   // Fetch promo codes
-  const { data: promoCodes } = await supabase
-    .from('promo_codes')
-    .select(`
-      *,
-      event:events (
-        title
-      )
-    `)
-    .eq('organizer_id', user.id)
-    .order('created_at', { ascending: false })
+  let promoCodesData: any[] = []
+  
+  try {
+    const { data: promoCodes, error } = await supabase
+      .from('promo_codes')
+      .select(`
+        *,
+        event:events (
+          title
+        )
+      `)
+      .eq('organizer_id', user.id)
+      .order('created_at', { ascending: false })
+    
+    if (!error && promoCodes) {
+      promoCodesData = promoCodes
+    }
+  } catch (error) {
+    // Table doesn't exist yet
+    console.log('Promo codes table not found')
+  }
 
   const eventsData = events || []
-  const promoCodesData = promoCodes || []
 
   return (
     <div className="min-h-screen bg-gray-50">

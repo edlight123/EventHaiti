@@ -17,11 +17,20 @@ export default async function SettingsPage() {
   const supabase = await createClient()
 
   // Fetch user's payment settings
-  const { data: settings } = await supabase
-    .from('organizer_settings')
-    .select('*')
-    .eq('organizer_id', user.id)
-    .single()
+  let settings = null
+  
+  try {
+    const { data } = await supabase
+      .from('organizer_settings')
+      .select('*')
+      .eq('organizer_id', user.id)
+      .single()
+    
+    settings = data
+  } catch (error) {
+    // Table doesn't exist yet or no settings found
+    console.log('Settings not found')
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
