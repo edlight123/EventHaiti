@@ -84,13 +84,13 @@ export async function GET(request: Request) {
 
     // Calculate monthly earnings
     const now = new Date()
-    const thisMonth = sales?.filter(s => {
+    const thisMonth = sales?.filter((s: any) => {
       const saleDate = new Date(s.created_at)
       return saleDate.getMonth() === now.getMonth() && 
              saleDate.getFullYear() === now.getFullYear()
     }) || []
 
-    const monthlyEarnings = thisMonth.reduce((sum, s) => sum + (s.commission_amount || 0), 0)
+    const monthlyEarnings = thisMonth.reduce((sum: number, s: any) => sum + (s.commission_amount || 0), 0)
 
     return Response.json({
       affiliate,

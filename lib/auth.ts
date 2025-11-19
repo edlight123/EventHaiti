@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { getServerSession } from '@/lib/firebase/server'
+import { adminDb } from '@/lib/firebase/admin'
 import { UserRole } from '@/types/database'
 import { isDemoMode } from '@/lib/demo'
 import { cookies } from 'next/headers'
@@ -37,21 +38,30 @@ export async function getCurrentUser() {
     }
   }
 
-  const supabase = await createClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const { user, error } = await getServerSession()
   
   if (error || !user) {
     return null
   }
 
-  // Get user profile from database
-  const { data: profile } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  // Get user profile from Firestore
+  const userDoc = await adminDb.collection('users').doc(user.id).get()
+  
+  if (!userDoc.exists) {
+    return null
+  }
 
-  return profile
+  const userData = userDoc.data()
+  
+  return {
+    id: userDoc.id,
+    email: userData?.email || user.email || '',
+    full_name: userData?.full_name || '',
+    role: userData?.role || 'attendee',
+    phone_number: userData?.phone_number || null,
+    created_at: userData?.created_at || new Date().toISOString(),
+    updated_at: userData?.updated_at || new Date().toISOString()
+  } as any
 }
 
 export async function requireAuth(requiredRole?: UserRole) {

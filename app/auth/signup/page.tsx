@@ -2,12 +2,12 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, FormEvent } from 'react'
-import { supabase } from '@/lib/supabase/client'
+import { auth, db } from '@/lib/firebase/client'
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
+import { doc, setDoc } from 'firebase/firestore'
 import Link from 'next/link'
 import { BRAND } from '@/config/brand'
-import type { UserRole, Database } from '@/types/database'
-
-type UserUpdate = Database['public']['Tables']['users']['Update']
+import type { UserRole } from '@/types/database'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -24,36 +24,32 @@ export default function SignupPage() {
     setLoading(true)
 
     try {
-      // Sign up with Supabase Auth
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            role: 'attendee',
-          },
-        },
+      // Create user with Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const user = userCredential.user
+
+      // Update display name
+      await updateProfile(user, {
+        displayName: fullName,
       })
 
-      if (signUpError) throw signUpError
+      // Create user profile in Firestore
+      await setDoc(doc(db, 'users', user.uid), {
+        email: user.email,
+        full_name: fullName,
+        phone_number: phoneNumber || null,
+        role: 'attendee' as UserRole,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
 
-      if (!data.user) {
-        throw new Error('Signup failed')
-      }
-
-      // The user profile will be created automatically by the database trigger
-      // Wait a moment for the trigger to complete
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // Update phone number if provided
-      if (phoneNumber) {
-        const updateData: UserUpdate = { phone_number: phoneNumber }
-        await supabase
-          .from('users')
-          .update(updateData)
-          .eq('id', data.user.id)
-      }
+      // Create session cookie
+      const idToken = await user.getIdToken()
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      })
 
       // Redirect to home
       router.push('/')

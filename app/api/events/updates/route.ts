@@ -85,16 +85,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all attendees' contact info
-    const { data: attendees, error: attendeesError } = await supabase
-      .rpc('get_event_attendee_contacts', { event_uuid: eventId })
+    // First get all tickets for this event
+    const { data: tickets } = await supabase
+      .from('tickets')
+      .select('*')
+      .eq('event_id', eventId)
+      .eq('status', 'active')
 
-    if (attendeesError) {
-      console.error('Failed to get attendees:', attendeesError)
-      return NextResponse.json(
-        { error: 'Failed to get attendee list' },
-        { status: 500 }
-      )
+    if (!tickets || tickets.length === 0) {
+      return NextResponse.json({
+        success: true,
+        update,
+        message: 'No attendees to notify'
+      })
     }
+
+    // Get unique attendee IDs
+    const attendeeIds = Array.from(new Set(tickets.map((t: any) => t.attendee_id)))
+    
+    // Fetch attendee details
+    const { data: attendeesList } = await supabase
+      .from('users')
+      .select('*')
+    
+    const attendees = attendeesList?.filter((u: any) => attendeeIds.includes(u.id)) || []
 
     if (!attendees || attendees.length === 0) {
       return NextResponse.json({

@@ -2,14 +2,12 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, FormEvent } from 'react'
-import { supabase } from '@/lib/supabase/client'
+import { auth } from '@/lib/firebase/client'
+import { signInWithEmailAndPassword } from 'firebase/auth'
 import Link from 'next/link'
 import { BRAND } from '@/config/brand'
-import type { Database } from '@/types/database'
-import { isDemoMode, DEMO_USERS, isDemoEmail } from '@/lib/demo'
+import { isDemoMode, isDemoEmail } from '@/lib/demo'
 import { demoLogin } from '../actions'
-
-type UserProfile = Database['public']['Tables']['users']['Row']
 
 export default function LoginPage() {
   const router = useRouter()
@@ -38,13 +36,16 @@ export default function LoginPage() {
         return
       }
 
-      // Real Supabase authentication
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      // Firebase authentication
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      
+      // Create session cookie
+      const idToken = await userCredential.user.getIdToken()
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
       })
-
-      if (error) throw error
 
       // Redirect to home
       router.push('/')

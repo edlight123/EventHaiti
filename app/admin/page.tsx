@@ -24,42 +24,30 @@ export default async function AdminDashboard() {
     redirect('/')
   }
 
-  // Fetch platform statistics
-  const { count: totalUsers } = await supabase
-    .from('users')
-    .select('*', { count: 'exact', head: true })
+  // Fetch platform statistics (Firestore doesn't support count, so we fetch all and count)
+  const { data: users } = await supabase.from('users').select('*')
+  const totalUsers = users?.length || 0
 
-  const { count: totalEvents } = await supabase
-    .from('events')
-    .select('*', { count: 'exact', head: true })
+  const { data: events } = await supabase.from('events').select('*')
+  const totalEvents = events?.length || 0
 
-  const { count: totalTickets } = await supabase
+  const { data: tickets } = await supabase.from('tickets').select('*')
+  const totalTickets = tickets?.length || 0
+
+  const { data: revenueTickets } = await supabase
     .from('tickets')
-    .select('*', { count: 'exact', head: true })
+    .select('*')
 
-  const { data: totalRevenue } = await supabase
-    .from('tickets')
-    .select('price')
-    .not('status', 'in', '(refunded,cancelled)')
-
-  const revenue = totalRevenue?.reduce((sum, t) => sum + (t.price || 0), 0) || 0
+  const revenue = revenueTickets
+    ?.filter((t: any) => t.status !== 'refunded' && t.status !== 'cancelled')
+    ?.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0) || 0
 
   // Recent events
   const { data: recentEvents } = await supabase
     .from('events')
-    .select('*, users:organizer_id(full_name, email)')
+    .select('*')
     .order('created_at', { ascending: false })
     .limit(10)
-
-  // Top organizers by revenue
-  const { data: topOrganizers } = await supabase
-    .from('events')
-    .select(`
-      organizer_id,
-      users:organizer_id(full_name, email),
-      tickets(price)
-    `)
-    .limit(100)
 
   return (
     <div className="min-h-screen bg-gray-50">
