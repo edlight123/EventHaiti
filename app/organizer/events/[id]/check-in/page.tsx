@@ -1,0 +1,179 @@
+import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser } from '@/lib/auth'
+import Navbar from '@/components/Navbar'
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import CheckInScanner from './CheckInScanner'
+import { Users, CheckCircle, Clock, XCircle } from 'lucide-react'
+
+export const revalidate = 0
+
+export default async function CheckInPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const user = await getCurrentUser()
+  const { id } = await params
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar user={null} />
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Please sign in to manage check-ins
+            </h2>
+            <Link
+              href="/auth/login"
+              className="text-orange-600 hover:text-orange-700 font-medium"
+            >
+              Sign In
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const supabase = await createClient()
+
+  // Fetch event and verify ownership
+  const { data: event, error } = await supabase
+    .from('events')
+    .select(`
+      *,
+      tickets (
+        id,
+        status,
+        checked_in_at,
+        attendee:users (
+          full_name,
+          email
+        )
+      )
+    `)
+    .eq('id', id)
+    .single()
+
+  if (error || !event) {
+    notFound()
+  }
+
+  if (event.organizer_id !== user.id) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar user={user} />
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Unauthorized
+            </h2>
+            <p className="text-gray-600">
+              You don&apos;t have permission to manage check-ins for this event.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const tickets = event.tickets || []
+  const totalTickets = tickets.length
+  const checkedIn = tickets.filter((t: any) => t.checked_in_at).length
+  const pending = totalTickets - checkedIn
+  const invalidTickets = tickets.filter((t: any) => t.status !== 'valid').length
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar user={user} />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <Link
+            href={`/organizer/events/${id}`}
+            className="text-orange-600 hover:text-orange-700 text-sm font-medium mb-2 inline-block"
+          >
+            ← Back to Event Details
+          </Link>
+          <h1 className="text-3xl font-bold text-gray-900">{event.title}</h1>
+          <p className="text-gray-600 mt-1">Check-In Management</p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-gray-600">Total Tickets</h3>
+              <Users className="w-5 h-5 text-blue-600" />
+            </div>
+            <p className="text-3xl font-bold text-gray-900">{totalTickets}</p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-gray-600">Checked In</h3>
+              <CheckCircle className="w-5 h-5 text-green-600" />
+            </div>
+            <p className="text-3xl font-bold text-green-700">{checkedIn}</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {totalTickets > 0 ? ((checkedIn / totalTickets) * 100).toFixed(0) : 0}%
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-gray-600">Pending</h3>
+              <Clock className="w-5 h-5 text-orange-600" />
+            </div>
+            <p className="text-3xl font-bold text-orange-700">{pending}</p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-gray-600">Invalid</h3>
+              <XCircle className="w-5 h-5 text-red-600" />
+            </div>
+            <p className="text-3xl font-bold text-red-700">{invalidTickets}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* QR Scanner */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Scan QR Code</h2>
+            <CheckInScanner eventId={id} />
+          </div>
+
+          {/* Recent Check-Ins */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Check-Ins</h2>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {tickets
+                .filter((t: any) => t.checked_in_at)
+                .sort((a: any, b: any) => new Date(b.checked_in_at).getTime() - new Date(a.checked_in_at).getTime())
+                .slice(0, 20)
+                .map((ticket: any) => (
+                  <div key={ticket.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">{ticket.attendee.full_name}</p>
+                      <p className="text-sm text-gray-600">{ticket.attendee.email}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">
+                        {new Date(ticket.checked_in_at).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              {checkedIn === 0 && (
+                <p className="text-center py-8 text-gray-500">No check-ins yet</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
