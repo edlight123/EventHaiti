@@ -201,7 +201,9 @@ class FirebaseQueryBuilder {
             updated_at: new Date().toISOString(),
           }
 
+          console.log('Inserting document:', { collection: this.collectionName, id, docData })
           await setDoc(doc(db, this.collectionName, id), docData)
+          console.log('Document inserted successfully:', id)
           results.push(docData)
         }
 

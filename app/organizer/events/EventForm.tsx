@@ -89,13 +89,20 @@ export default function EventForm({ userId, event }: EventFormProps) {
         router.push(`/organizer/events/${event.id}`)
       } else {
         // Create new event
+        console.log('Creating event with data:', eventData)
         const { data, error: insertError } = await supabase
           .from('events')
           .insert(eventData)
           .select()
           .single()
 
+        console.log('Insert result:', { data, error: insertError })
         if (insertError) throw insertError
+        
+        if (!data) {
+          throw new Error('Event created but no data returned')
+        }
+        
         router.push(`/organizer/events/${data.id}`)
       }
 
