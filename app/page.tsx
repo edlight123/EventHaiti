@@ -38,7 +38,8 @@ export default async function HomePage({
       .select('*')
       .eq('is_published', true)
       .gte('start_datetime', now)
-      .order('start_datetime', { ascending: true })
+      // Temporarily removed ordering to avoid index requirement
+      // .order('start_datetime', { ascending: true })
     
     const result = await query
     console.log('Home page - query result:', result)
