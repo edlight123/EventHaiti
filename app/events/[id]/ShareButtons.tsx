@@ -41,12 +41,27 @@ export default function ShareButtons({ eventId, eventTitle }: ShareButtonsProps)
     window.open(twitterUrl, '_blank', 'width=600,height=400')
   }
 
-  const handleShareInstagram = () => {
-    handleCopyLink()
-    setMessage({ 
-      type: 'success', 
-      text: 'Link copied! Paste it in your Instagram story or post.' 
-    })
+  const handleShareInstagram = async () => {
+    const eventUrl = `${window.location.origin}/events/${eventId}`
+    await handleCopyLink()
+    
+    // Try to open Instagram app on mobile
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    if (isMobile) {
+      // Attempt to open Instagram app
+      window.location.href = 'instagram://'
+      setTimeout(() => {
+        setMessage({ 
+          type: 'success', 
+          text: 'Link copied! Paste it in your Instagram story or post.' 
+        })
+      }, 1000)
+    } else {
+      setMessage({ 
+          type: 'success', 
+          text: 'Link copied! Open Instagram and paste the link in your story or post.' 
+        })
+    }
   }
 
   return (

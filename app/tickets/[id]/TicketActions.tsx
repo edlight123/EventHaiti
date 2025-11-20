@@ -128,13 +128,27 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
     window.open(twitterUrl, '_blank', 'width=600,height=400')
   }
 
-  const handleShareInstagram = () => {
+  const handleShareInstagram = async () => {
     // Instagram doesn't support direct web sharing, so we'll copy the link and guide users
-    handleCopyLink()
-    setMessage({ 
-      type: 'success', 
-      text: 'Link copied! Open Instagram app and paste the link in your story or post.' 
-    })
+    await handleCopyLink()
+    
+    // Try to open Instagram app on mobile
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    if (isMobile) {
+      // Attempt to open Instagram app
+      window.location.href = 'instagram://'
+      setTimeout(() => {
+        setMessage({ 
+          type: 'success', 
+          text: 'Link copied! Paste it in your Instagram story or post.' 
+        })
+      }, 1000)
+    } else {
+      setMessage({ 
+        type: 'success', 
+        text: 'Link copied! Open Instagram and paste the link in your story or post.' 
+      })
+    }
   }
 
   return (
