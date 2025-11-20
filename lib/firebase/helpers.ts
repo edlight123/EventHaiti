@@ -173,9 +173,9 @@ export async function insert(collectionName: string, data: any, useAdmin = false
     }
 
     if (useAdmin) {
-      await database.collection(collectionName).doc(id).set(docData)
+      await (database as any).collection(collectionName).doc(id).set(docData)
     } else {
-      await setDoc(doc(database, collectionName, id), docData)
+      await setDoc(doc(database as any, collectionName, id), docData)
     }
 
     return { data: docData, error: null }
@@ -194,9 +194,9 @@ export async function update(collectionName: string, id: string, data: any, useA
     }
 
     if (useAdmin) {
-      await database.collection(collectionName).doc(id).update(updateData)
+      await (database as any).collection(collectionName).doc(id).update(updateData)
     } else {
-      await updateDoc(doc(database, collectionName, id), updateData)
+      await updateDoc(doc(database as any, collectionName, id), updateData)
     }
 
     return { data: updateData, error: null }
@@ -211,9 +211,9 @@ export async function remove(collectionName: string, id: string, useAdmin = fals
     const database = useAdmin ? adminDb : db
 
     if (useAdmin) {
-      await database.collection(collectionName).doc(id).delete()
+      await (database as any).collection(collectionName).doc(id).delete()
     } else {
-      await deleteDoc(doc(database, collectionName, id))
+      await deleteDoc(doc(database as any, collectionName, id))
     }
 
     return { error: null }
@@ -228,13 +228,13 @@ export async function getById(collectionName: string, id: string, useAdmin = fal
     const database = useAdmin ? adminDb : db
 
     if (useAdmin) {
-      const docSnap = await database.collection(collectionName).doc(id).get()
+      const docSnap = await (database as any).collection(collectionName).doc(id).get()
       if (!docSnap.exists) {
         return { data: null, error: 'Document not found' }
       }
       return { data: { id: docSnap.id, ...docSnap.data() }, error: null }
     } else {
-      const docSnap = await getDoc(doc(database, collectionName, id))
+      const docSnap = await getDoc(doc(database as any, collectionName, id))
       if (!docSnap.exists()) {
         return { data: null, error: 'Document not found' }
       }

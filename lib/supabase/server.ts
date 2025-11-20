@@ -75,6 +75,13 @@ class ServerQueryBuilder {
     return this
   }
 
+  or(conditions: string): this {
+    // Firestore doesn't support OR at the query level like Supabase
+    // This is a limitation - OR queries need to be implemented differently
+    console.warn('OR queries are not fully supported in Firebase - this query may not work as expected')
+    return this
+  }
+
   contains(field: string, value: any): this {
     this.constraints.push({ field, op: 'array-contains', value })
     return this
