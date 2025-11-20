@@ -46,7 +46,7 @@ export default function ImageUpload({
       }
       reader.readAsDataURL(file)
 
-      // Upload to Supabase Storage
+      // Upload to Firebase Storage
       const fileExt = file.name.split('.').pop()
       const fileName = `${crypto.randomUUID()}.${fileExt}`
       const filePath = `${fileName}`
@@ -63,7 +63,7 @@ export default function ImageUpload({
       }
 
       // Get public URL
-      const { data: { publicUrl } } = supabase.storage
+      const { data: { publicUrl } } = await supabase.storage
         .from(bucket)
         .getPublicUrl(filePath)
 

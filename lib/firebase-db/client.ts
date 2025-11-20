@@ -1,7 +1,7 @@
 // Firebase client database wrapper
 // Provides a familiar API for client-side database operations
 
-import { db, auth } from '../firebase/client'
+import { db, auth, storage } from '../firebase/client'
 import { 
   collection, 
   doc, 
@@ -18,6 +18,7 @@ import {
   Timestamp
 } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 
 class FirebaseQueryBuilder {
   private collectionName: string
@@ -323,14 +324,44 @@ export const firebaseDb = {
   storage: {
     from: (bucket: string) => ({
       upload: async (path: string, file: File, options?: any) => {
-        // TODO: Implement Firebase Storage
-        return { data: null, error: new Error('Storage not implemented') }
+        try {
+          const storageRef = ref(storage, path)
+          const snapshot = await uploadBytes(storageRef, file, options)
+          const downloadURL = await getDownloadURL(snapshot.ref)
+          
+          return { 
+            data: { 
+              path: snapshot.ref.fullPath,
+              fullPath: snapshot.ref.fullPath 
+            }, 
+            error: null 
+          }
+        } catch (error: any) {
+          return { data: null, error }
+        }
       },
-      getPublicUrl: (path: string) => {
-        return { data: { publicUrl: path } }
+      getPublicUrl: async (path: string) => {
+        try {
+          const storageRef = ref(storage, path)
+          const downloadURL = await getDownloadURL(storageRef)
+          return { data: { publicUrl: downloadURL } }
+        } catch (error: any) {
+          console.error('Error getting download URL:', error)
+          return { data: { publicUrl: '' } }
+        }
       },
       remove: async (paths: string[]) => {
-        return { data: null, error: null }
+        try {
+          await Promise.all(
+            paths.map(async (path) => {
+              const storageRef = ref(storage, path)
+              await deleteObject(storageRef)
+            })
+          )
+          return { data: null, error: null }
+        } catch (error: any) {
+          return { data: null, error }
+        }
       }
     })
   }

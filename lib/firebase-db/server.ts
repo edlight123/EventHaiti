@@ -1,7 +1,7 @@
 // Firebase server database wrapper
 // Provides a familiar API for server-side database operations
 
-import { adminDb } from '../firebase/admin'
+import { adminDb, adminStorage } from '../firebase/admin'
 import { getServerSession } from '../firebase/server'
 
 class ServerQueryBuilder {
@@ -326,14 +326,65 @@ export async function createClient() {
     storage: {
       from: (bucket: string) => ({
         upload: async (path: string, file: any) => {
-          // TODO: Implement Firebase Storage
-          return { data: null, error: new Error('Storage not implemented') }
+          try {
+            const bucketInstance = adminStorage.bucket()
+            const fileRef = bucketInstance.file(path)
+            
+            // If file is a Buffer or has buffer method
+            let buffer: Buffer
+            if (Buffer.isBuffer(file)) {
+              buffer = file
+            } else if (file.arrayBuffer) {
+              // If it's a File/Blob object
+              const arrayBuffer = await file.arrayBuffer()
+              buffer = Buffer.from(arrayBuffer)
+            } else {
+              throw new Error('Invalid file format')
+            }
+            
+            await fileRef.save(buffer, {
+              metadata: {
+                contentType: file.type || 'application/octet-stream',
+              },
+            })
+            
+            // Make the file publicly accessible
+            await fileRef.makePublic()
+            
+            return { 
+              data: { 
+                path: path,
+                fullPath: path 
+              }, 
+              error: null 
+            }
+          } catch (error: any) {
+            return { data: null, error }
+          }
         },
         getPublicUrl: (path: string) => {
-          return { data: { publicUrl: path } }
+          try {
+            const bucketInstance = adminStorage.bucket()
+            const file = bucketInstance.file(path)
+            const publicUrl = `https://storage.googleapis.com/${bucketInstance.name}/${path}`
+            return { data: { publicUrl } }
+          } catch (error: any) {
+            return { data: { publicUrl: '' } }
+          }
         },
         remove: async (paths: string[]) => {
-          return { data: null, error: null }
+          try {
+            const bucketInstance = adminStorage.bucket()
+            await Promise.all(
+              paths.map(async (path) => {
+                const file = bucketInstance.file(path)
+                await file.delete()
+              })
+            )
+            return { data: null, error: null }
+          } catch (error: any) {
+            return { data: null, error }
+          }
         }
       })
     }
