@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { supabase } from '@/lib/supabase/client'
+import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 
 interface ImageUploadProps {
   currentImage?: string | null

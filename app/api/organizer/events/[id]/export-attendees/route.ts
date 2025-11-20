@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/firebase-db/server'
 
 export async function GET(
   request: Request,

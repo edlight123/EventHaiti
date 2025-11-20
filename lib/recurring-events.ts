@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/firebase-db/server'
 
 interface RecurringEventParams {
   eventData: any

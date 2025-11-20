@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase/client'
+import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 import { isDemoMode } from '@/lib/demo'
 
 interface BuyTicketButtonProps {

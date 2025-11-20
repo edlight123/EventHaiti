@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase/client'
+import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 
 type Event = {
   id: string

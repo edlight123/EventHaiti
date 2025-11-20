@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/firebase-db/server'
 
 // Export user data (GDPR Article 15 - Right to access)
 export async function GET(request: Request) {

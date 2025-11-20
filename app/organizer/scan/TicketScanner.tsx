@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, FormEvent } from 'react'
-import { supabase } from '@/lib/supabase/client'
+import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 import { isDemoMode, DEMO_TICKETS, DEMO_EVENTS } from '@/lib/demo'
 
 interface TicketScannerProps {

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/firebase-db/server'
 import { processStripeRefund } from '@/lib/refunds'
 
 export async function POST(request: Request) {

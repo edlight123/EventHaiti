@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { supabase } from '@/lib/supabase/client'
+import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 import { useRouter } from 'next/navigation'
 import { BRAND } from '@/config/brand'
 import { useState, useEffect } from 'react'

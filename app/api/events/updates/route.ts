@@ -1,7 +1,7 @@
 // API Route: POST /api/events/updates
 // Create and optionally send an event update/announcement
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/firebase-db/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 

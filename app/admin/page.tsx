@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/firebase-db/server'
 import { requireAuth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
