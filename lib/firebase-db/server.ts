@@ -236,8 +236,13 @@ class ServerQueryBuilder {
       // Regular query
       let query: any = adminDb.collection(this.collectionName)
 
+      console.log('Server query - collection:', this.collectionName)
+      console.log('Server query - constraints:', this.constraints)
+      console.log('Server query - orderField:', this.orderField, this.orderDirection)
+
       // Apply constraints
       for (const constraint of this.constraints) {
+        console.log('Applying constraint:', constraint)
         query = query.where(constraint.field, constraint.op, constraint.value)
       }
 
@@ -251,11 +256,16 @@ class ServerQueryBuilder {
         query = query.limit(this.limitCount)
       }
 
+      console.log('Executing query...')
       const snapshot = await query.get()
+      console.log('Query returned', snapshot.docs.length, 'documents')
+      
       const data = snapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...doc.data()
       }))
+
+      console.log('Mapped data:', data)
 
       if (this.singleDoc) {
         return { data: data[0] || null, error: null }

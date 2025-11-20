@@ -23,16 +23,27 @@ export default async function OrganizerEventsPage() {
   } else {
     // Fetch real events from database
     const supabase = await createClient()
-    const { data, error: fetchError } = await supabase
+    
+    console.log('=== FETCHING EVENTS ===')
+    console.log('User ID:', user.id)
+    
+    const result = await supabase
       .from('events')
       .select('*')
       .eq('organizer_id', user.id)
       .order('start_datetime', { ascending: false })
     
-    console.log('Fetching events for user:', user.id)
-    console.log('Events query result:', { data, error: fetchError })
+    console.log('Query result:', JSON.stringify(result, null, 2))
     
-    events = data || []
+    if (result.error) {
+      console.error('Error fetching events:', result.error)
+    }
+    
+    events = result.data || []
+    console.log('Events array length:', events.length)
+    if (events.length > 0) {
+      console.log('First event:', events[0])
+    }
   }
 
   return (
