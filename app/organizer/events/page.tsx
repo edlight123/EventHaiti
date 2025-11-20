@@ -22,27 +22,33 @@ export default async function OrganizerEventsPage() {
     events = DEMO_EVENTS
   } else {
     // Fetch real events from database
-    const supabase = await createClient()
-    
-    console.log('=== FETCHING EVENTS ===')
-    console.log('User ID:', user.id)
-    
-    const result = await supabase
-      .from('events')
-      .select('*')
-      .eq('organizer_id', user.id)
-      .order('start_datetime', { ascending: false })
-    
-    console.log('Query result:', JSON.stringify(result, null, 2))
-    
-    if (result.error) {
-      console.error('Error fetching events:', result.error)
-    }
-    
-    events = result.data || []
-    console.log('Events array length:', events.length)
-    if (events.length > 0) {
-      console.log('First event:', events[0])
+    try {
+      const supabase = await createClient()
+      
+      console.log('=== FETCHING EVENTS ===')
+      console.log('User ID:', user.id)
+      console.log('Supabase client created:', !!supabase)
+      
+      const result = await supabase
+        .from('events')
+        .select('*')
+        .eq('organizer_id', user.id)
+        .order('start_datetime', { ascending: false })
+      
+      console.log('Query result:', JSON.stringify(result, null, 2))
+      
+      if (result.error) {
+        console.error('Error fetching events:', result.error)
+      }
+      
+      events = result.data || []
+      console.log('Events array length:', events.length)
+      if (events.length > 0) {
+        console.log('First event:', events[0])
+      }
+    } catch (error) {
+      console.error('Exception fetching events:', error)
+      events = []
     }
   }
 
