@@ -51,6 +51,8 @@ export default function EventForm({ userId, event }: EventFormProps) {
     setError(null)
 
     try {
+      console.log('User ID:', userId)
+      
       // In demo mode, just show success message
       if (isDemoMode()) {
         await new Promise(resolve => setTimeout(resolve, 800)) // Simulate API call
