@@ -32,18 +32,18 @@ export default async function AnalyticsPage() {
 
   // Calculate analytics
   const totalEvents = eventsData.length
-  const totalTicketsSold = eventsData.reduce((sum, e: any) => sum + (e.tickets?.length || 0), 0)
-  const totalRevenue = eventsData.reduce((sum, e: any) => {
+  const totalTicketsSold = eventsData.reduce((sum: any, e: any) => sum + (e.tickets?.length || 0), 0)
+  const totalRevenue = eventsData.reduce((sum: any, e: any) => {
     return sum + (e.tickets?.reduce((s: number, t: any) => s + (t.price_paid || 0), 0) || 0)
   }, 0)
-  const publishedEvents = eventsData.filter(e => e.is_published).length
+  const publishedEvents = eventsData.filter((e: any) => e.is_published).length
 
   // Events with ticket sales
   const eventsWithSales = eventsData.map((event: any) => ({
     ...event,
     ticketCount: event.tickets?.length || 0,
     revenue: event.tickets?.reduce((s: number, t: any) => s + (t.price_paid || 0), 0) || 0,
-  })).sort((a, b) => b.ticketCount - a.ticketCount)
+  })).sort((a: any, b: any) => b.ticketCount - a.ticketCount)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -125,7 +125,7 @@ export default async function AnalyticsPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {eventsWithSales.slice(0, 10).map((event) => (
+              {eventsWithSales.slice(0, 10).map((event: any) => (
                 <div key={event.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
                   <div className="flex-1">
                     <Link href={`/organizer/events/${event.id}`} className="font-medium text-gray-900 hover:text-orange-600">

@@ -124,15 +124,15 @@ export async function GET(request: Request) {
     // Calculate statistics
     const totalReviews = reviews?.length || 0
     const avgRating = totalReviews > 0
-      ? (reviews!.reduce((sum, r) => sum + r.rating, 0) / totalReviews).toFixed(1)
+      ? (reviews!.reduce((sum: any, r: any) => sum + r.rating, 0) / totalReviews).toFixed(1)
       : '0'
     
-    const ratingDistribution = reviews?.reduce((acc: any, r) => {
+    const ratingDistribution = reviews?.reduce((acc: any, r: any) => {
       acc[r.rating] = (acc[r.rating] || 0) + 1
       return acc
     }, {})
 
-    const recommendCount = reviews?.filter(r => r.would_recommend).length || 0
+    const recommendCount = reviews?.filter((r: any) => r.would_recommend).length || 0
     const recommendationRate = totalReviews > 0
       ? ((recommendCount / totalReviews) * 100).toFixed(0)
       : '0'

@@ -23,103 +23,109 @@ class ServerQueryBuilder {
     this.collectionName = tableName
   }
 
-  select(fields: string = '*') {
+  select(fields: string = '*'): this {
     this.selectFields = fields
     return this
   }
 
-  eq(field: string, value: any) {
+  eq(field: string, value: any): this {
     this.constraints.push({ field, op: '==', value })
     return this
   }
 
-  neq(field: string, value: any) {
+  neq(field: string, value: any): this {
     this.constraints.push({ field, op: '!=', value })
     return this
   }
 
-  gt(field: string, value: any) {
+  gt(field: string, value: any): this {
     this.constraints.push({ field, op: '>', value })
     return this
   }
 
-  gte(field: string, value: any) {
+  gte(field: string, value: any): this {
     this.constraints.push({ field, op: '>=', value })
     return this
   }
 
-  lt(field: string, value: any) {
+  lt(field: string, value: any): this {
     this.constraints.push({ field, op: '<', value })
     return this
   }
 
-  lte(field: string, value: any) {
+  lte(field: string, value: any): this {
     this.constraints.push({ field, op: '<=', value })
     return this
   }
 
-  is(field: string, value: null) {
+  is(field: string, value: null): this {
     this.constraints.push({ field, op: '==', value: null })
     return this
   }
 
-  in(field: string, values: any[]) {
+  in(field: string, values: any[]): this {
     this.constraints.push({ field, op: 'in', value: values })
     return this
   }
 
-  not(field: string, op: string, value: any) {
+  not(field: string, op: string, value: any): this {
     // Firestore doesn't have NOT IN, so we'll filter later
     // For now, just skip this constraint - it won't work perfectly
     // but prevents build errors
     return this
   }
 
-  contains(field: string, value: any) {
+  contains(field: string, value: any): this {
     this.constraints.push({ field, op: 'array-contains', value })
     return this
   }
 
-  order(field: string, options?: { ascending?: boolean }) {
+  order(field: string, options?: { ascending?: boolean }): this {
     this.orderField = field
     this.orderDirection = options?.ascending === false ? 'desc' : 'asc'
     return this
   }
 
-  limit(count: number) {
+  limit(count: number): this {
     this.limitCount = count
     return this
   }
 
-  single() {
+  single(): this {
     this.singleDoc = true
     this.limitCount = 1
     return this
   }
 
-  insert(data: any | any[]) {
+  insert(data: any | any[]): ServerQueryBuilder {
     // Store data to be inserted and return builder for chaining
     const builder = new ServerQueryBuilder(this.collectionName)
+    builder['constraints'] = [...this.constraints]
+    builder['selectFields'] = this.selectFields
     ;(builder as any).pendingInsert = data
     return builder
   }
 
-  upsert(data: any | any[]) {
+  upsert(data: any | any[]): ServerQueryBuilder {
     // Upsert = update if exists, insert if not
     // For Firestore, we'll use set with merge
     const builder = new ServerQueryBuilder(this.collectionName)
+    builder['constraints'] = [...this.constraints]
+    builder['selectFields'] = this.selectFields
     ;(builder as any).pendingUpsert = data
     return builder
   }
 
-  update(data: any) {
+  update(data: any): ServerQueryBuilder {
     // Store update data and return builder for chaining
     const builder = new ServerQueryBuilder(this.collectionName)
+    builder['constraints'] = [...this.constraints]
+    builder['selectFields'] = this.selectFields
     ;(builder as any).pendingUpdate = data
     return builder
   }
 
-  delete() {
+  delete(): ServerQueryBuilder {
     // Store delete flag and return builder for chaining
     const builder = new ServerQueryBuilder(this.collectionName)
     ;(builder as any).pendingDelete = true

@@ -49,7 +49,7 @@ export async function GET(
       .select('status')
       .eq('event_id', eventId)
 
-    const statusCounts = ticketsByStatus?.reduce((acc: any, ticket) => {
+    const statusCounts = ticketsByStatus?.reduce((acc: any, ticket: any) => {
       acc[ticket.status] = (acc[ticket.status] || 0) + 1
       return acc
     }, {})
@@ -62,7 +62,7 @@ export async function GET(
       .not('checked_in_at', 'is', null)
       .order('checked_in_at', { ascending: true })
 
-    const timeline = checkIns?.reduce((acc: any, ticket) => {
+    const timeline = checkIns?.reduce((acc: any, ticket: any) => {
       const hour = new Date(ticket.checked_in_at!).toISOString().slice(0, 13) + ':00'
       acc[hour] = (acc[hour] || 0) + 1
       return acc

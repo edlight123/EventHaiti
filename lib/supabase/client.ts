@@ -24,145 +24,200 @@ class SupabaseQueryBuilder {
   private constraints: QueryConstraint[] = []
   private selectFields: string = '*'
   private singleDoc = false
+  private pendingInsert: any = null
+  private pendingUpdate: any = null
+  private pendingDelete: boolean = false
+  private pendingUpsert: any = null
 
   constructor(tableName: string) {
     this.collectionName = tableName
   }
 
-  select(fields: string = '*') {
+  select(fields: string = '*'): this {
     this.selectFields = fields
     return this
   }
 
-  eq(field: string, value: any) {
+  eq(field: string, value: any): this {
     this.constraints.push(where(field, '==', value))
     return this
   }
 
-  neq(field: string, value: any) {
+  neq(field: string, value: any): this {
     this.constraints.push(where(field, '!=', value))
     return this
   }
 
-  gt(field: string, value: any) {
+  gt(field: string, value: any): this {
     this.constraints.push(where(field, '>', value))
     return this
   }
 
-  gte(field: string, value: any) {
+  gte(field: string, value: any): this {
     this.constraints.push(where(field, '>=', value))
     return this
   }
 
-  lt(field: string, value: any) {
+  lt(field: string, value: any): this {
     this.constraints.push(where(field, '<', value))
     return this
   }
 
-  lte(field: string, value: any) {
+  lte(field: string, value: any): this {
     this.constraints.push(where(field, '<=', value))
     return this
   }
 
-  is(field: string, value: null) {
+  is(field: string, value: null): this {
     this.constraints.push(where(field, '==', null))
     return this
   }
 
-  in(field: string, values: any[]) {
+  in(field: string, values: any[]): this {
     this.constraints.push(where(field, 'in', values))
     return this
   }
 
-  contains(field: string, value: any) {
+  contains(field: string, value: any): this {
     this.constraints.push(where(field, 'array-contains', value))
     return this
   }
 
-  order(field: string, options?: { ascending?: boolean }) {
+  order(field: string, options?: { ascending?: boolean }): this {
     const direction = options?.ascending === false ? 'desc' : 'asc'
     this.constraints.push(orderBy(field, direction))
     return this
   }
 
-  limit(count: number) {
+  limit(count: number): this {
     this.constraints.push(firestoreLimit(count))
     return this
   }
 
-  single() {
+  single(): this {
     this.singleDoc = true
     return this
   }
 
-  async insert(data: any | any[]) {
-    try {
-      const dataArray = Array.isArray(data) ? data : [data]
-      const results = []
-
-      for (const item of dataArray) {
-        const id = this.generateId()
-        const docData = {
-          ...item,
-          id,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }
-
-        await setDoc(doc(db, this.collectionName, id), docData)
-        results.push(docData)
-      }
-
-      return { 
-        data: Array.isArray(data) ? results : results[0], 
-        error: null 
-      }
-    } catch (error: any) {
-      return { data: null, error }
-    }
+  insert(data: any | any[]): SupabaseQueryBuilder {
+    const builder = new SupabaseQueryBuilder(this.collectionName)
+    builder['constraints'] = [...this.constraints]
+    builder['selectFields'] = this.selectFields
+    builder['pendingInsert'] = data
+    return builder
   }
 
-  async update(data: any) {
-    try {
-      // Firestore update requires document ID from constraints
-      // This is a limitation - we'll need to fetch first
-      const { data: docs, error } = await this.execute()
-      if (error || !docs) throw error
-
-      const docsArray = Array.isArray(docs) ? docs : [docs]
-      const updateData = {
-        ...data,
-        updated_at: new Date().toISOString(),
-      }
-
-      for (const document of docsArray) {
-        await updateDoc(doc(db, this.collectionName, document.id), updateData)
-      }
-
-      return { data: docsArray, error: null }
-    } catch (error: any) {
-      return { data: null, error }
-    }
+  upsert(data: any | any[]): SupabaseQueryBuilder {
+    const builder = new SupabaseQueryBuilder(this.collectionName)
+    builder['constraints'] = [...this.constraints]
+    builder['selectFields'] = this.selectFields
+    builder['pendingUpsert'] = data
+    return builder
   }
 
-  async delete() {
-    try {
-      const { data: docs, error } = await this.execute()
-      if (error || !docs) throw error
+  update(data: any): SupabaseQueryBuilder {
+    const builder = new SupabaseQueryBuilder(this.collectionName)
+    builder['constraints'] = [...this.constraints]
+    builder['selectFields'] = this.selectFields
+    builder['pendingUpdate'] = data
+    return builder
+  }
 
-      const docsArray = Array.isArray(docs) ? docs : [docs]
-
-      for (const document of docsArray) {
-        await deleteDoc(doc(db, this.collectionName, document.id))
-      }
-
-      return { error: null }
-    } catch (error: any) {
-      return { error }
-    }
+  delete(): SupabaseQueryBuilder {
+    const builder = new SupabaseQueryBuilder(this.collectionName)
+    builder['constraints'] = [...this.constraints]
+    builder['pendingDelete'] = true
+    return builder
   }
 
   private async execute() {
+    try {
+      // Handle pending upsert
+      if (this.pendingUpsert !== null) {
+        const dataArray = Array.isArray(this.pendingUpsert) ? this.pendingUpsert : [this.pendingUpsert]
+        const results = []
+
+        for (const item of dataArray) {
+          const id = item.id || this.generateId()
+          const docData = {
+            ...item,
+            id,
+            created_at: item.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+
+          await setDoc(doc(db, this.collectionName, id), docData, { merge: true })
+          results.push(docData)
+        }
+
+        return { 
+          data: Array.isArray(this.pendingUpsert) ? results : results[0], 
+          error: null 
+        }
+      }
+
+      // Handle pending delete
+      if (this.pendingDelete) {
+        const { data: docs, error } = await this.fetchData()
+        if (error || !docs) throw error
+
+        const docsArray = Array.isArray(docs) ? docs : [docs]
+        for (const document of docsArray) {
+          await deleteDoc(doc(db, this.collectionName, document.id))
+        }
+        return { error: null }
+      }
+
+      // Handle pending update
+      if (this.pendingUpdate !== null) {
+        const { data: docs, error } = await this.fetchData()
+        if (error || !docs) throw error
+
+        const docsArray = Array.isArray(docs) ? docs : [docs]
+        const updateData = {
+          ...this.pendingUpdate,
+          updated_at: new Date().toISOString(),
+        }
+
+        for (const document of docsArray) {
+          await updateDoc(doc(db, this.collectionName, document.id), updateData)
+        }
+
+        return { data: docsArray.map((d: any) => ({ ...d, ...updateData })), error: null }
+      }
+
+      // Handle pending insert
+      if (this.pendingInsert !== null) {
+        const dataArray = Array.isArray(this.pendingInsert) ? this.pendingInsert : [this.pendingInsert]
+        const results = []
+
+        for (const item of dataArray) {
+          const id = this.generateId()
+          const docData = {
+            ...item,
+            id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+
+          await setDoc(doc(db, this.collectionName, id), docData)
+          results.push(docData)
+        }
+
+        return { 
+          data: Array.isArray(this.pendingInsert) ? results : results[0], 
+          error: null 
+        }
+      }
+
+      // Normal select query
+      return await this.fetchData()
+    } catch (error: any) {
+      return { data: null, error }
+    }
+  }
+
+  private async fetchData() {
     try {
       const collectionRef = collection(db, this.collectionName)
 
@@ -260,7 +315,7 @@ export const supabase = {
 
   storage: {
     from: (bucket: string) => ({
-      upload: async (path: string, file: File) => {
+      upload: async (path: string, file: File, options?: any) => {
         // TODO: Implement Firebase Storage
         return { data: null, error: new Error('Storage not implemented') }
       },

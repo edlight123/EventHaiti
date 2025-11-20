@@ -52,7 +52,7 @@ export async function GET(
       ['Ticket ID', 'Attendee Name', 'Email', 'Status', 'Price', 'Quantity', 'Purchase Date', 'Check-in Time']
     ]
 
-    tickets.forEach(ticket => {
+    tickets.forEach((ticket: any) => {
       const user = ticket.users as any
       csvRows.push([
         ticket.id,

@@ -83,6 +83,7 @@ export default function EventForm({ userId, event }: EventFormProps) {
           .from('events')
           .update(eventData)
           .eq('id', event.id)
+          .single()
 
         if (updateError) throw updateError
         router.push(`/organizer/events/${event.id}`)

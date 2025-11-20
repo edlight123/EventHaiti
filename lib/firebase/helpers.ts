@@ -92,8 +92,8 @@ export class FirestoreQueryBuilder {
   async execute() {
     const database = this.useAdminDb ? adminDb : db
     const collectionRef = this.useAdminDb 
-      ? database.collection(this.collectionName)
-      : collection(database, this.collectionName)
+      ? (database as any).collection(this.collectionName)
+      : collection(database as any, this.collectionName)
 
     if (this.singleResult && this.constraints.length === 0) {
       // If single result and no constraints, we need an ID
@@ -108,7 +108,7 @@ export class FirestoreQueryBuilder {
       
       const data = this.useAdminDb
         ? snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }))
-        : snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        : snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }))
 
       return { data, error: null }
     }
@@ -125,7 +125,7 @@ export class FirestoreQueryBuilder {
       
       const data = this.useAdminDb
         ? snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }))
-        : snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        : snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }))
 
       if (this.singleResult) {
         return { data: data[0] || null, error: null }
