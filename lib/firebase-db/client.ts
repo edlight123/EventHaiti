@@ -328,17 +328,21 @@ export const firebaseDb = {
       upload: async (path: string, file: File, options?: any) => {
         try {
           const storageRef = ref(storage, path)
+          console.log('Uploading to Firebase Storage:', path)
           const snapshot = await uploadBytes(storageRef, file, options)
           const downloadURL = await getDownloadURL(snapshot.ref)
+          console.log('Upload complete, download URL:', downloadURL)
           
           return { 
             data: { 
               path: snapshot.ref.fullPath,
-              fullPath: snapshot.ref.fullPath 
+              fullPath: snapshot.ref.fullPath,
+              publicUrl: downloadURL
             }, 
             error: null 
           }
         } catch (error: any) {
+          console.error('Firebase Storage upload error:', error)
           return { data: null, error }
         }
       },

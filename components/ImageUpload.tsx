@@ -49,8 +49,9 @@ export default function ImageUpload({
       // Upload to Firebase Storage
       const fileExt = file.name.split('.').pop()
       const fileName = `${crypto.randomUUID()}.${fileExt}`
-      const filePath = `${fileName}`
+      const filePath = `event-images/${fileName}`
 
+      console.log('Uploading file:', filePath)
       const { error: uploadError, data } = await supabase.storage
         .from(bucket)
         .upload(filePath, file, {
@@ -59,14 +60,24 @@ export default function ImageUpload({
         })
 
       if (uploadError) {
+        console.error('Upload error:', uploadError)
         throw uploadError
       }
 
-      // Get public URL
-      const { data: { publicUrl } } = await supabase.storage
-        .from(bucket)
-        .getPublicUrl(filePath)
+      console.log('Upload data:', data)
+      
+      // Use the publicUrl from upload response if available, otherwise fetch it
+      let publicUrl = data?.publicUrl
+      
+      if (!publicUrl) {
+        console.log('Getting public URL for:', filePath)
+        const urlResult = await supabase.storage
+          .from(bucket)
+          .getPublicUrl(filePath)
+        publicUrl = urlResult.data.publicUrl
+      }
 
+      console.log('Final public URL:', publicUrl)
       onImageUploaded(publicUrl)
     } catch (err: any) {
       console.error('Upload error:', err)
