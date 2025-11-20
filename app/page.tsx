@@ -29,14 +29,25 @@ export default async function HomePage({
   } else {
     // Fetch real events from database
     const supabase = await createClient()
+    
+    const now = new Date().toISOString()
+    console.log('Home page - fetching events after:', now)
+    
     let query = supabase
       .from('events')
       .select('*')
       .eq('is_published', true)
-      .gte('start_datetime', new Date().toISOString())
+      .gte('start_datetime', now)
       .order('start_datetime', { ascending: true })
     
-    events = (await query).data || []
+    const result = await query
+    console.log('Home page - query result:', result)
+    console.log('Home page - events found:', result.data?.length || 0)
+    if (result.data && result.data.length > 0) {
+      console.log('First event:', result.data[0])
+    }
+    
+    events = result.data || []
   }
 
   // Apply filters
