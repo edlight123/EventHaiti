@@ -87,7 +87,7 @@ export default function EventForm({ userId, event }: EventFormProps) {
           .single()
 
         if (updateError) throw updateError
-        router.push(`/organizer/events/${event.id}`)
+        router.push(`/organizer/events`)
       } else {
         // Create new event
         console.log('Creating event with data:', eventData)
@@ -104,7 +104,7 @@ export default function EventForm({ userId, event }: EventFormProps) {
           throw new Error('Event created but no data returned')
         }
         
-        router.push(`/organizer/events/${data.id}`)
+        router.push(`/organizer/events`)
       }
 
       router.refresh()
