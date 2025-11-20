@@ -338,23 +338,6 @@ export default function EventForm({ userId, event }: EventFormProps) {
           </div>
         </div>
 
-        {/* Banner Image URL */}
-        <div>
-          <label htmlFor="banner_image_url" className="block text-sm font-medium text-gray-700 mb-2">
-            Banner Image URL (Optional)
-          </label>
-          <input
-            type="url"
-            id="banner_image_url"
-            name="banner_image_url"
-            value={formData.banner_image_url}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-            placeholder="https://example.com/banner.jpg"
-          />
-          <p className="text-xs text-gray-500 mt-1">Recommended size: 1200x630px</p>
-        </div>
-
         {/* Publish Checkbox */}
         <div className="flex items-center">
           <input
