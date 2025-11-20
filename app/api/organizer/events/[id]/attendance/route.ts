@@ -26,18 +26,22 @@ export async function GET(
     }
 
     // Get total tickets count
-    const { count: totalTickets } = await supabase
+    const { data: allTickets } = await supabase
       .from('tickets')
-      .select('*', { count: 'exact', head: true })
+      .select('*')
       .eq('event_id', eventId)
       .not('status', 'in', '(refunded,cancelled)')
 
+    const totalTickets = allTickets?.length || 0
+
     // Get checked-in tickets count
-    const { count: checkedInTickets } = await supabase
+    const { data: checkedTickets } = await supabase
       .from('tickets')
-      .select('*', { count: 'exact', head: true })
+      .select('*')
       .eq('event_id', eventId)
       .not('checked_in_at', 'is', null)
+
+    const checkedInTickets = checkedTickets?.length || 0
 
     // Get tickets by status
     const { data: ticketsByStatus } = await supabase

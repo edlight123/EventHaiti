@@ -50,11 +50,13 @@ export async function POST(request: Request) {
     }
 
     // Check max uses per user
-    const { count: userUsageCount } = await supabase
+    const { data: userUsages } = await supabase
       .from('promo_code_usage')
-      .select('*', { count: 'exact', head: true })
+      .select('*')
       .eq('promo_code_id', promoCode.id)
       .eq('user_id', user.id)
+
+    const userUsageCount = userUsages?.length || 0
 
     if (userUsageCount && userUsageCount >= promoCode.max_uses_per_user) {
       return NextResponse.json({ 

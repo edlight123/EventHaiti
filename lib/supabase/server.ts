@@ -17,6 +17,7 @@ class ServerQueryBuilder {
   private pendingInsert: any = null
   private pendingUpdate: any = null
   private pendingDelete: boolean = false
+  private pendingUpsert: any = null
 
   constructor(tableName: string) {
     this.collectionName = tableName
@@ -103,6 +104,14 @@ class ServerQueryBuilder {
     return builder
   }
 
+  upsert(data: any | any[]) {
+    // Upsert = update if exists, insert if not
+    // For Firestore, we'll use set with merge
+    const builder = new ServerQueryBuilder(this.collectionName)
+    ;(builder as any).pendingUpsert = data
+    return builder
+  }
+
   update(data: any) {
     // Store update data and return builder for chaining
     const builder = new ServerQueryBuilder(this.collectionName)
@@ -121,6 +130,30 @@ class ServerQueryBuilder {
 
   private async execute() {
     try {
+      // Handle pending upsert
+      if (this.pendingUpsert !== null) {
+        const dataArray = Array.isArray(this.pendingUpsert) ? this.pendingUpsert : [this.pendingUpsert]
+        const results = []
+
+        for (const item of dataArray) {
+          // Use user_id or id as document ID for upsert
+          const docId = item.user_id || item.id || this.generateId()
+          const docData = {
+            ...item,
+            id: docId,
+            created_at: item.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+
+          // Set with merge option = upsert
+          await adminDb.collection(this.collectionName).doc(docId).set(docData, { merge: true })
+          results.push(docData)
+        }
+
+        const result = Array.isArray(this.pendingUpsert) ? results : results[0]
+        return { data: result, error: null }
+      }
+
       // Handle pending delete
       if (this.pendingDelete) {
         // Find documents matching constraints
@@ -276,6 +309,17 @@ export async function createClient() {
           return { data: { user: null }, error }
         }
         return { data: { user }, error: null }
+      },
+      signOut: async () => {
+        // Server-side sign out - clear session cookie
+        try {
+          const { cookies } = await import('next/headers')
+          const cookieStore = await cookies()
+          cookieStore.delete('session')
+          return { error: null }
+        } catch (error: any) {
+          return { error }
+        }
       }
     },
 

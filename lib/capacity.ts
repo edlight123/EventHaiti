@@ -29,13 +29,13 @@ export async function checkEventCapacity(
   }
 
   // Count current tickets (excluding refunded/cancelled)
-  const { count } = await supabase
+  const { data: tickets } = await supabase
     .from('tickets')
-    .select('*', { count: 'exact', head: true })
+    .select('*')
     .eq('event_id', eventId)
     .not('status', 'in', '(refunded,cancelled)')
 
-  const soldTickets = count || 0
+  const soldTickets = tickets?.length || 0
   const remaining = event.max_tickets - soldTickets
   const available = remaining >= requestedQuantity
 
