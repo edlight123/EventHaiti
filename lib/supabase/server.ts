@@ -16,6 +16,7 @@ class ServerQueryBuilder {
   private insertError: any = null
   private pendingInsert: any = null
   private pendingUpdate: any = null
+  private pendingDelete: boolean = false
 
   constructor(tableName: string) {
     this.collectionName = tableName
@@ -109,26 +110,38 @@ class ServerQueryBuilder {
     return builder
   }
 
-  async delete() {
-    try {
-      const { data: docs, error } = await this.execute()
-      if (error || !docs) throw error
-
-      const docsArray = Array.isArray(docs) ? docs : [docs]
-
-      for (const document of docsArray) {
-        await adminDb.collection(this.collectionName).doc(document.id).delete()
-      }
-
-      return { error: null }
-    } catch (error: any) {
-      console.error('Delete error:', error)
-      return { error }
-    }
+  delete() {
+    // Store delete flag and return builder for chaining
+    const builder = new ServerQueryBuilder(this.collectionName)
+    ;(builder as any).pendingDelete = true
+    // Copy constraints to the new builder
+    builder['constraints'] = this.constraints
+    return builder
   }
 
   private async execute() {
     try {
+      // Handle pending delete
+      if (this.pendingDelete) {
+        // Find documents matching constraints
+        let query: any = adminDb.collection(this.collectionName)
+        
+        for (const constraint of this.constraints) {
+          query = query.where(constraint.field, constraint.op, constraint.value)
+        }
+        
+        const snapshot = await query.get()
+        
+        // Delete all matching documents
+        const batch = adminDb.batch()
+        snapshot.docs.forEach((doc: any) => {
+          batch.delete(doc.ref)
+        })
+        await batch.commit()
+
+        return { error: null }
+      }
+      
       // Handle pending update
       if (this.pendingUpdate !== null) {
         // Find documents matching constraints

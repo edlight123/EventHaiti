@@ -107,7 +107,7 @@ export async function DELETE(request: Request) {
       .eq('attendee_id', user.id)
       .not('status', 'in', '(refunded,cancelled)')
 
-    const hasUpcomingTickets = upcomingTickets?.some(t => {
+    const hasUpcomingTickets = upcomingTickets?.some((t: any) => {
       const event = t.events as any
       return new Date(event.start_datetime) > new Date()
     })
