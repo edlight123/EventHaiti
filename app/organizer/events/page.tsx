@@ -33,8 +33,7 @@ export default async function OrganizerEventsPage() {
         .from('events')
         .select('*')
         .eq('organizer_id', user.id)
-        // Temporarily removed ordering to avoid index requirement
-        // .order('start_datetime', { ascending: false })
+        .order('start_datetime', { ascending: false })
       
       console.log('Query result:', JSON.stringify(result, null, 2))
       
