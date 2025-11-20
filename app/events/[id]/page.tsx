@@ -95,7 +95,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     }
   }
 
-  const remainingTickets = event.total_tickets - event.tickets_sold
+  const remainingTickets = (event.total_tickets || 0) - (event.tickets_sold || 0)
   const isSoldOut = remainingTickets <= 0
 
   return (
@@ -182,7 +182,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-6">
                 <div className="mb-6">
                   <div className="flex items-baseline mb-2">
-                    <span className="text-4xl font-bold text-gray-900">{event.ticket_price}</span>
+                    <span className="text-4xl font-bold text-gray-900">{event.ticket_price || 0}</span>
                     <span className="text-xl text-gray-600 ml-2">{event.currency}</span>
                   </div>
                   <p className="text-sm text-gray-600">per ticket</p>
@@ -191,7 +191,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-gray-600">Total tickets</span>
-                    <span className="font-semibold text-gray-900">{event.total_tickets}</span>
+                    <span className="font-semibold text-gray-900">{event.total_tickets || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Available</span>
@@ -203,11 +203,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
                         className="bg-teal-600 h-2 rounded-full transition-all" 
-                        style={{ width: `${((event.total_tickets - remainingTickets) / event.total_tickets) * 100}%` }}
+                        style={{ width: `${(event.total_tickets || 0) > 0 ? (((event.total_tickets || 0) - remainingTickets) / (event.total_tickets || 0)) * 100 : 0}%` }}
                       />
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
-                      {Math.round(((event.total_tickets - remainingTickets) / event.total_tickets) * 100)}% sold
+                      {(event.total_tickets || 0) > 0 ? Math.round((((event.total_tickets || 0) - remainingTickets) / (event.total_tickets || 0)) * 100) : 0}% sold
                     </p>
                   </div>
                 </div>
