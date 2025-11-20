@@ -15,7 +15,6 @@ export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
-  const [role, setRole] = useState<UserRole>('attendee')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -39,7 +38,7 @@ export default function SignupPage() {
         email: user.email,
         full_name: fullName,
         phone_number: phoneNumber || null,
-        role: role,
+        role: 'organizer' as UserRole,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -81,7 +80,7 @@ export default function SignupPage() {
           email: user.email,
           full_name: user.displayName || '',
           phone_number: user.phoneNumber || null,
-          role: role,
+          role: 'organizer' as UserRole,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -193,22 +192,6 @@ export default function SignupPage() {
                 minLength={6}
               />
               <p className="mt-1 text-xs text-gray-500">At least 6 characters</p>
-            </div>
-
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                I want to
-              </label>
-              <select
-                id="role"
-                name="role"
-                value={role}
-                onChange={(e) => setRole(e.target.value as UserRole)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-              >
-                <option value="attendee">Attend events</option>
-                <option value="organizer">Create and organize events</option>
-              </select>
             </div>
           </div>
 
