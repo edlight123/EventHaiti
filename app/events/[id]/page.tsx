@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar'
 import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import BuyTicketButton from './BuyTicketButton'
+import ShareButtons from './ShareButtons'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import type { Metadata } from 'next'
 
@@ -247,20 +248,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               </div>
 
               {/* Share Section */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mt-6">
-                <h3 className="font-bold text-gray-900 mb-3">Share with friends</h3>
-                <div className="flex gap-2">
-                  <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors">
-                    Facebook
-                  </button>
-                  <button className="flex-1 bg-sky-500 hover:bg-sky-600 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors">
-                    Twitter
-                  </button>
-                  <button className="flex-1 bg-gray-700 hover:bg-gray-800 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors">
-                    Copy
-                  </button>
-                </div>
-              </div>
+              <ShareButtons eventId={event.id} eventTitle={event.title} />
             </div>
           </div>
         </div>
