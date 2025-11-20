@@ -112,7 +112,7 @@ export default async function OrganizerEventsPage() {
                       {event.city}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      <span className="font-semibold">{event.tickets_sold}</span> / {event.total_tickets}
+                      <span className="font-semibold">{event.tickets_sold || 0}</span> / {event.total_tickets || 0}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${

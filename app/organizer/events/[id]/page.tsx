@@ -67,8 +67,8 @@ export default async function OrganizerEventDetailPage({ params }: { params: Pro
     tickets = ticketsData || []
   }
 
-  const revenue = event.tickets_sold * Number(event.ticket_price)
-  const remainingTickets = event.total_tickets - event.tickets_sold
+  const revenue = (event.tickets_sold || 0) * Number(event.ticket_price || 0)
+  const remainingTickets = (event.total_tickets || 0) - (event.tickets_sold || 0)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -100,8 +100,8 @@ export default async function OrganizerEventDetailPage({ params }: { params: Pro
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <p className="text-sm text-gray-600 mb-1">Tickets Sold</p>
-            <p className="text-3xl font-bold text-gray-900">{event.tickets_sold}</p>
-            <p className="text-xs text-gray-500">of {event.total_tickets}</p>
+            <p className="text-3xl font-bold text-gray-900">{event.tickets_sold || 0}</p>
+            <p className="text-xs text-gray-500">of {event.total_tickets || 0}</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -118,7 +118,7 @@ export default async function OrganizerEventDetailPage({ params }: { params: Pro
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <p className="text-sm text-gray-600 mb-1">Ticket Price</p>
-            <p className="text-3xl font-bold text-gray-900">{event.ticket_price}</p>
+            <p className="text-3xl font-bold text-gray-900">{event.ticket_price || 0}</p>
             <p className="text-xs text-gray-500">HTG</p>
           </div>
         </div>
