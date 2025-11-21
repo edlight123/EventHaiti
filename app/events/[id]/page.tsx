@@ -97,7 +97,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   }
 
   const remainingTickets = (event.total_tickets || 0) - (event.tickets_sold || 0)
-  const isSoldOut = remainingTickets <= 0
+  const isSoldOut = remainingTickets <= 0 && (event.total_tickets || 0) > 0
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -196,7 +196,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Available</span>
-                    <span className="font-semibold text-teal-700">{remainingTickets}</span>
+                    <span className="font-semibold text-teal-700">{Math.max(0, remainingTickets)}</span>
                   </div>
                   
                   {/* Progress Bar */}

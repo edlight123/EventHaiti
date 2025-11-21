@@ -106,7 +106,7 @@ export default async function OrganizerEventDetailPage({ params }: { params: Pro
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <p className="text-sm text-gray-600 mb-1">Remaining</p>
-            <p className="text-3xl font-bold text-gray-900">{remainingTickets}</p>
+            <p className="text-3xl font-bold text-gray-900">{Math.max(0, remainingTickets)}</p>
             <p className="text-xs text-gray-500">tickets</p>
           </div>
 
