@@ -18,6 +18,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'moncash'>('stripe')
+  const [quantity, setQuantity] = useState(1)
 
   async function handleClaimFreeTicket() {
     setLoading(true)
@@ -26,17 +27,17 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
     try {
       if (isDemoMode()) {
         await new Promise(resolve => setTimeout(resolve, 800))
-        alert('✅ Demo: Free ticket claimed successfully!')
+        alert(`✅ Demo: ${quantity} free ticket${quantity !== 1 ? 's' : ''} claimed successfully!`)
         router.push('/tickets')
         return
       }
 
-      console.log('Claiming free ticket for event:', eventId)
+      console.log('Claiming free tickets for event:', eventId, 'Quantity:', quantity)
       
       const response = await fetch('/api/tickets/claim-free', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId }),
+        body: JSON.stringify({ eventId, quantity }),
       })
 
       const data = await response.json()
@@ -48,7 +49,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
       }
 
       // Show success message and redirect
-      alert('✅ Free ticket claimed successfully! Redirecting to your tickets...')
+      alert(`✅ ${data.count} free ticket${data.count !== 1 ? 's' : ''} claimed successfully! Redirecting to your tickets...`)
       router.push('/tickets')
       router.refresh()
     } catch (err: any) {
@@ -118,13 +119,51 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
 
   return (
     <>
-      <button
-        onClick={() => isFree ? handleClaimFreeTicket() : setShowModal(true)}
-        disabled={loading}
-        className="block w-full bg-teal-700 hover:bg-teal-800 text-white text-center font-semibold py-4 px-6 rounded-lg transition-colors disabled:opacity-50"
-      >
-        {loading ? 'Processing...' : isFree ? 'Claim Free Ticket' : 'Buy Ticket'}
-      </button>
+      {isFree ? (
+        <div className="space-y-4">
+          {/* Quantity Selector for Free Tickets */}
+          <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+            <span className="text-sm font-medium text-gray-700">Quantity</span>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                disabled={quantity <= 1 || loading}
+                className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                </svg>
+              </button>
+              <span className="w-12 text-center font-semibold text-gray-900">{quantity}</span>
+              <button
+                onClick={() => setQuantity(Math.min(10, quantity + 1))}
+                disabled={quantity >= 10 || loading}
+                className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <button
+            onClick={handleClaimFreeTicket}
+            disabled={loading}
+            className="block w-full bg-teal-700 hover:bg-teal-800 text-white text-center font-semibold py-4 px-6 rounded-lg transition-colors disabled:opacity-50"
+          >
+            {loading ? 'Processing...' : `Claim ${quantity} Free Ticket${quantity !== 1 ? 's' : ''}`}
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setShowModal(true)}
+          disabled={loading}
+          className="block w-full bg-teal-700 hover:bg-teal-800 text-white text-center font-semibold py-4 px-6 rounded-lg transition-colors disabled:opacity-50"
+        >
+          {loading ? 'Processing...' : 'Buy Ticket'}
+        </button>
+      )}
 
       {error && !showModal && (
         <div className="mt-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">

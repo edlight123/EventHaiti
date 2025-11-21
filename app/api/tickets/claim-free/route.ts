@@ -13,12 +13,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { eventId } = await request.json()
-    console.log('Event ID:', eventId)
+    const { eventId, quantity = 1 } = await request.json()
+    console.log('Event ID:', eventId, 'Quantity:', quantity)
 
     if (!eventId) {
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 })
     }
+
+    // Validate quantity
+    const ticketQuantity = Math.min(Math.max(1, quantity), 10) // Max 10 tickets per claim
+    console.log('Validated quantity:', ticketQuantity)
 
     const supabase = await createClient()
 
@@ -41,49 +45,43 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This is not a free event' }, { status: 400 })
     }
 
-    // Check if user already has a ticket for this event
-    const { data: existingTicket, error: existingError } = await supabase
-      .from('tickets')
-      .select('id')
-      .eq('event_id', eventId)
-      .eq('attendee_id', user.id)
-      .single()
-
-    console.log('Existing ticket check:', { existingTicket, error: existingError })
-
-    if (existingTicket) {
-      return NextResponse.json({ error: 'You already have a ticket for this event' }, { status: 400 })
-    }
-
     // Check if tickets are still available
     const remainingTickets = (event.total_tickets || 0) - (event.tickets_sold || 0)
-    console.log('Remaining tickets:', remainingTickets)
+    console.log('Remaining tickets:', remainingTickets, 'Requested:', ticketQuantity)
+    
     if (remainingTickets <= 0) {
       return NextResponse.json({ error: 'No tickets available' }, { status: 400 })
     }
 
-    // Generate QR code data
-    const qrCodeData = `ticket-${eventId}-${user.id}-${Date.now()}`
+    if (remainingTickets < ticketQuantity) {
+      return NextResponse.json({ 
+        error: `Only ${remainingTickets} ticket${remainingTickets !== 1 ? 's' : ''} remaining` 
+      }, { status: 400 })
+    }
 
-    const ticketData = {
-      event_id: eventId,
-      attendee_id: user.id,
-      status: 'valid',
-      qr_code_data: qrCodeData,
-      price_paid: 0,
-      purchased_at: new Date().toISOString(),
+    // Create multiple tickets
+    const ticketsToCreate = []
+    for (let i = 0; i < ticketQuantity; i++) {
+      const qrCodeData = `ticket-${eventId}-${user.id}-${Date.now()}-${i}`
+      ticketsToCreate.push({
+        event_id: eventId,
+        attendee_id: user.id,
+        status: 'valid',
+        qr_code_data: qrCodeData,
+        price_paid: 0,
+        purchased_at: new Date().toISOString(),
+      })
     }
     
-    console.log('Creating ticket with data:', ticketData)
+    console.log('Creating tickets:', ticketsToCreate.length)
 
-    // Create ticket
-    const { data: ticket, error: ticketError } = await supabase
+    // Create tickets
+    const { data: tickets, error: ticketError } = await supabase
       .from('tickets')
-      .insert(ticketData)
+      .insert(ticketsToCreate)
       .select()
-      .single()
 
-    console.log('Ticket creation result:', { ticket, error: ticketError })
+    console.log('Ticket creation result:', { count: tickets?.length, error: ticketError })
 
     if (ticketError) {
       console.error('Ticket creation error:', ticketError)
@@ -93,7 +91,7 @@ export async function POST(request: Request) {
     // Update tickets_sold count
     const updateResult = await supabase
       .from('events')
-      .update({ tickets_sold: (event.tickets_sold || 0) + 1 })
+      .update({ tickets_sold: (event.tickets_sold || 0) + ticketQuantity })
       .eq('id', eventId)
       
     console.log('Update tickets_sold result:', updateResult)
@@ -101,8 +99,9 @@ export async function POST(request: Request) {
     console.log('=== SUCCESS ===')
     return NextResponse.json({ 
       success: true, 
-      ticket: ticket,
-      message: 'Free ticket claimed successfully!'
+      tickets: tickets,
+      count: ticketQuantity,
+      message: `${ticketQuantity} free ticket${ticketQuantity !== 1 ? 's' : ''} claimed successfully!`
     })
   } catch (error: any) {
     console.error('Claim free ticket error:', error)
