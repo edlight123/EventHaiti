@@ -75,6 +75,7 @@ export default function EventForm({ userId, event }: EventFormProps) {
         ticket_price: parseFloat(formData.ticket_price.toString()),
         total_tickets: parseInt(formData.total_tickets.toString()),
         tickets_sold: event?.tickets_sold || 0,
+        currency: formData.currency,
         banner_image_url: formData.banner_image_url || null,
         is_published: formData.is_published,
       }
