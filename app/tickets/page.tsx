@@ -31,6 +31,7 @@ export default async function MyTicketsPage() {
     const supabase = await createClient()
     console.log('=== FETCHING TICKETS ===')
     console.log('User ID:', user.id)
+    console.log('User email:', user.email)
     
     const { data, error: ticketsError } = await supabase
       .from('tickets')
@@ -51,7 +52,15 @@ export default async function MyTicketsPage() {
     console.log('Tickets query result:', { 
       count: data?.length || 0, 
       error: ticketsError,
-      tickets: data?.map((t: any) => ({ id: t.id, event_id: t.event_id, status: t.status, price_paid: t.price_paid }))
+      rawData: data,
+      tickets: data?.map((t: any) => ({ 
+        id: t.id, 
+        event_id: t.event_id, 
+        attendee_id: t.attendee_id,
+        status: t.status, 
+        price_paid: t.price_paid,
+        purchased_at: t.purchased_at 
+      }))
     })
     
     tickets = data || []

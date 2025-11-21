@@ -42,14 +42,14 @@ export async function POST(request: Request) {
     }
 
     // Check if user already has a ticket for this event
-    const { data: existingTicket } = await supabase
+    const { data: existingTicket, error: existingError } = await supabase
       .from('tickets')
       .select('id')
       .eq('event_id', eventId)
       .eq('attendee_id', user.id)
       .single()
 
-    console.log('Existing ticket check:', existingTicket)
+    console.log('Existing ticket check:', { existingTicket, error: existingError })
 
     if (existingTicket) {
       return NextResponse.json({ error: 'You already have a ticket for this event' }, { status: 400 })
