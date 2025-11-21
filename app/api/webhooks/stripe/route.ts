@@ -34,30 +34,42 @@ export async function POST(request: Request) {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object
 
-      // Create ticket in database
+      // Create tickets in database
       const supabase = await createClient()
+      const quantity = parseInt(session.metadata.quantity || '1', 10)
+      const pricePerTicket = session.amount_total / 100 / quantity // Total price divided by quantity
       
-      const { data: ticket, error: ticketError } = await supabase
-        .from('tickets')
-        .insert({
+      // Create multiple tickets
+      const ticketsToCreate = []
+      for (let i = 0; i < quantity; i++) {
+        const qrCodeData = `ticket-${session.metadata.eventId}-${session.client_reference_id}-${Date.now()}-${i}`
+        ticketsToCreate.push({
           event_id: session.metadata.eventId,
           attendee_id: session.client_reference_id,
-          price_paid: session.amount_total / 100, // Convert from cents
+          price_paid: pricePerTicket,
           payment_method: 'stripe',
           payment_id: session.payment_intent,
           status: 'valid',
+          qr_code_data: qrCodeData,
+          purchased_at: new Date().toISOString(),
         })
+      }
+
+      const { data: tickets, error: ticketError } = await supabase
+        .from('tickets')
+        .insert(ticketsToCreate)
         .select(`
           *,
           event:events (*),
           attendee:users (*)
         `)
-        .single()
 
       if (ticketError) {
-        console.error('Failed to create ticket:', ticketError)
-        return NextResponse.json({ error: 'Failed to create ticket' }, { status: 500 })
+        console.error('Failed to create tickets:', ticketError)
+        return NextResponse.json({ error: 'Failed to create tickets' }, { status: 500 })
       }
+
+      const ticket = tickets?.[0] // Use first ticket for email
 
       // Track promo code usage if applicable
       if (session.metadata.promoCodeId && session.metadata.originalPrice) {
@@ -81,14 +93,29 @@ export async function POST(request: Request) {
         }
       }
 
+      // Update tickets_sold count
+      const { data: eventData } = await supabase
+        .from('events')
+        .select('tickets_sold')
+        .eq('id', session.metadata.eventId)
+        .single()
+
+      if (eventData) {
+        await supabase
+          .from('events')
+          .update({ tickets_sold: (eventData.tickets_sold || 0) + quantity })
+          .eq('id', session.metadata.eventId)
+      }
+
       // Generate QR code
       const qrCodeDataURL = await generateTicketQRCode(ticket.id)
 
       // Send confirmation email
       if (ticket.attendee && ticket.event) {
+        const ticketWord = quantity > 1 ? `${quantity} tickets` : 'ticket'
         await sendEmail({
           to: ticket.attendee.email,
-          subject: `Your ticket for ${ticket.event.title}`,
+          subject: `Your ${ticketWord} for ${ticket.event.title}`,
           html: getTicketConfirmationEmail({
             attendeeName: ticket.attendee.full_name || 'Guest',
             eventTitle: ticket.event.title,

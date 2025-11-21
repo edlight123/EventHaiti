@@ -68,7 +68,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
       if (isDemoMode()) {
         await new Promise(resolve => setTimeout(resolve, 800))
         setShowModal(false)
-        alert('✅ Demo: Ticket purchased successfully! In production, this would create a real ticket.')
+        alert(`✅ Demo: ${quantity} ticket${quantity !== 1 ? 's' : ''} purchased successfully! In production, this would create real tickets.`)
         router.refresh()
         setLoading(false)
         return
@@ -79,7 +79,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
         const response = await fetch('/api/create-checkout-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ eventId, quantity: 1 }),
+          body: JSON.stringify({ eventId, quantity }),
         })
 
         const data = await response.json()
@@ -97,7 +97,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
         const response = await fetch('/api/moncash/initiate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ eventId, quantity: 1 }),
+          body: JSON.stringify({ eventId, quantity }),
         })
 
         const data = await response.json()
@@ -175,9 +175,42 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Choose Payment Method</h3>
-            <p className="text-gray-700 mb-6">
-              Select how you&apos;d like to pay for your ticket
+            <p className="text-gray-700 mb-4">
+              Select how you&apos;d like to pay for your {quantity} ticket{quantity !== 1 ? 's' : ''}
             </p>
+
+            {/* Quantity Selector */}
+            <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4 mb-6">
+              <span className="text-sm font-medium text-gray-700">Quantity</span>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  disabled={quantity <= 1 || loading}
+                  className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                  </svg>
+                </button>
+                <span className="w-12 text-center font-semibold text-gray-900">{quantity}</span>
+                <button
+                  onClick={() => setQuantity(Math.min(10, quantity + 1))}
+                  disabled={quantity >= 10 || loading}
+                  className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-teal-50 rounded-lg p-4 mb-6">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Total Amount:</span>
+                <span className="text-xl font-bold text-teal-700">{(ticketPrice * quantity).toFixed(2)} HTG</span>
+              </div>
+            </div>
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">

@@ -46,30 +46,42 @@ export async function GET(request: Request) {
       )
     }
 
-    // Create ticket
-    const { data: ticket, error: ticketError } = await supabase
-      .from('tickets')
-      .insert({
+    // Create tickets
+    const quantity = pendingTx.quantity || 1
+    const pricePerTicket = pendingTx.amount / quantity
+
+    const ticketsToCreate = []
+    for (let i = 0; i < quantity; i++) {
+      const qrCodeData = `ticket-${pendingTx.event_id}-${pendingTx.user_id}-${Date.now()}-${i}`
+      ticketsToCreate.push({
         event_id: pendingTx.event_id,
         attendee_id: pendingTx.user_id,
-        price_paid: pendingTx.amount,
+        price_paid: pricePerTicket,
         payment_method: 'moncash',
         payment_id: transactionId,
         status: 'valid',
+        qr_code_data: qrCodeData,
+        purchased_at: new Date().toISOString(),
       })
+    }
+
+    const { data: tickets, error: ticketError } = await supabase
+      .from('tickets')
+      .insert(ticketsToCreate)
       .select(`
         *,
         event:events (*),
         attendee:users (*)
       `)
-      .single()
 
     if (ticketError) {
-      console.error('Failed to create ticket:', ticketError)
+      console.error('Failed to create tickets:', ticketError)
       return NextResponse.redirect(
         new URL('/purchase/failed?reason=ticket_creation_failed', request.url)
       )
     }
+
+    const ticket = tickets?.[0] // Use first ticket for email and updates
 
     // Update transaction status
     await supabase
@@ -80,14 +92,29 @@ export async function GET(request: Request) {
       })
       .eq('transaction_id', transactionId)
 
+    // Update tickets_sold count
+    const { data: eventData } = await supabase
+      .from('events')
+      .select('tickets_sold')
+      .eq('id', pendingTx.event_id)
+      .single()
+
+    if (eventData) {
+      await supabase
+        .from('events')
+        .update({ tickets_sold: (eventData.tickets_sold || 0) + quantity })
+        .eq('id', pendingTx.event_id)
+    }
+
     // Generate QR code
     const qrCodeDataURL = await generateTicketQRCode(ticket.id)
 
     // Send confirmation email
     if (ticket.attendee && ticket.event) {
+      const ticketWord = quantity > 1 ? `${quantity} tickets` : 'ticket'
       await sendEmail({
         to: ticket.attendee.email,
-        subject: `Your ticket for ${ticket.event.title}`,
+        subject: `Your ${ticketWord} for ${ticket.event.title}`,
         html: getTicketConfirmationEmail({
           attendeeName: ticket.attendee.full_name || 'Guest',
           eventTitle: ticket.event.title,
