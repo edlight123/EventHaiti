@@ -29,7 +29,10 @@ export default async function MyTicketsPage() {
   } else {
     // Fetch real tickets from database
     const supabase = await createClient()
-    const { data } = await supabase
+    console.log('=== FETCHING TICKETS ===')
+    console.log('User ID:', user.id)
+    
+    const { data, error: ticketsError } = await supabase
       .from('tickets')
       .select(`
         *,
@@ -44,6 +47,12 @@ export default async function MyTicketsPage() {
       `)
       .eq('attendee_id', user.id)
       .order('purchased_at', { ascending: false })
+    
+    console.log('Tickets query result:', { 
+      count: data?.length || 0, 
+      error: ticketsError,
+      tickets: data?.map((t: any) => ({ id: t.id, event_id: t.event_id, status: t.status, price_paid: t.price_paid }))
+    })
     
     tickets = data || []
   }

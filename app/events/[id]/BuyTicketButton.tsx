@@ -31,6 +31,8 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
         return
       }
 
+      console.log('Claiming free ticket for event:', eventId)
+      
       const response = await fetch('/api/tickets/claim-free', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -38,14 +40,19 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
       })
 
       const data = await response.json()
+      
+      console.log('Claim response:', data)
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to claim ticket')
       }
 
-      // Redirect to tickets page
+      // Show success message and redirect
+      alert('✅ Free ticket claimed successfully! Redirecting to your tickets...')
       router.push('/tickets')
+      router.refresh()
     } catch (err: any) {
+      console.error('Claim error:', err)
       setError(err.message || 'Failed to claim ticket')
       setLoading(false)
     }
