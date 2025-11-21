@@ -31,7 +31,6 @@ export default function EventForm({ userId, event }: EventFormProps) {
     end_datetime: event?.end_datetime ? event.end_datetime.slice(0, 16) : '',
     ticket_price: event?.ticket_price || '',
     total_tickets: event?.total_tickets || '',
-    max_tickets: event?.max_tickets || '',
     currency: event?.currency || 'USD',
     banner_image_url: event?.banner_image_url || '',
     is_published: event?.is_published || false,
@@ -332,18 +331,19 @@ export default function EventForm({ userId, event }: EventFormProps) {
           </div>
 
           <div>
-            <label htmlFor="max_tickets" className="block text-sm font-medium text-gray-700 mb-2">
-              Max Tickets (Optional)
+            <label htmlFor="total_tickets" className="block text-sm font-medium text-gray-700 mb-2">
+              Total Tickets *
             </label>
             <input
               type="number"
-              id="max_tickets"
-              name="max_tickets"
+              id="total_tickets"
+              name="total_tickets"
+              required
               min="1"
-              value={formData.max_tickets}
+              value={formData.total_tickets}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-              placeholder="Leave empty for unlimited"
+              placeholder="e.g., 100"
             />
           </div>
         </div>
