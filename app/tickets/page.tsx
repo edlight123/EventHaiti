@@ -98,7 +98,7 @@ export default async function MyTicketsPage() {
                         </h3>
                         <span
                           className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${
-                            ticket.status === 'active'
+                            ticket.status === 'valid' || ticket.status === 'active'
                               ? 'bg-green-100 text-green-800'
                               : ticket.status === 'used'
                               ? 'bg-gray-100 text-gray-800'

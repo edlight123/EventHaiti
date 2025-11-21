@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     const ticketData = {
       event_id: eventId,
       attendee_id: user.id,
-      status: 'active',
+      status: 'valid',
       qr_code_data: qrCodeData,
       price_paid: 0,
       purchased_at: new Date().toISOString(),

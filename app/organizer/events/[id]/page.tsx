@@ -220,7 +220,7 @@ export default async function OrganizerEventDetailPage({ params }: { params: Pro
                         </td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            ticket.status === 'active'
+                            ticket.status === 'valid' || ticket.status === 'active'
                               ? 'bg-green-100 text-green-800'
                               : ticket.status === 'used'
                               ? 'bg-gray-100 text-gray-800'
