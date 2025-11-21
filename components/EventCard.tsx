@@ -22,6 +22,7 @@ interface EventCardProps {
 export default function EventCard({ event }: EventCardProps) {
   const remainingTickets = event.total_tickets - event.tickets_sold
   const isSoldOut = remainingTickets <= 0
+  const isFree = !event.ticket_price || event.ticket_price === 0
 
   return (
     <Link href={`/events/${event.id}`} className="group">
@@ -85,9 +86,13 @@ export default function EventCard({ event }: EventCardProps) {
           <div className="flex items-center justify-between pt-3 border-t border-gray-100">
             <div>
               <p className="text-xs text-gray-500 mb-1">From</p>
-              <p className="text-xl font-bold text-gray-900">
-                {event.ticket_price} <span className="text-sm font-normal text-gray-600">{event.currency}</span>
-              </p>
+              {isFree ? (
+                <p className="text-xl font-bold text-green-600">FREE</p>
+              ) : (
+                <p className="text-xl font-bold text-gray-900">
+                  {event.ticket_price} <span className="text-sm font-normal text-gray-600">{event.currency}</span>
+                </p>
+              )}
             </div>
             {!isSoldOut && (
               <div className="text-right">

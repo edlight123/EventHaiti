@@ -98,6 +98,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
   const remainingTickets = (event.total_tickets || 0) - (event.tickets_sold || 0)
   const isSoldOut = remainingTickets <= 0 && (event.total_tickets || 0) > 0
+  const isFree = !event.ticket_price || event.ticket_price === 0
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -182,11 +183,20 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               {/* Ticket Purchase Card */}
               <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-6">
                 <div className="mb-6">
-                  <div className="flex items-baseline mb-2">
-                    <span className="text-4xl font-bold text-gray-900">{event.ticket_price || 0}</span>
-                    <span className="text-xl text-gray-600 ml-2">{event.currency}</span>
-                  </div>
-                  <p className="text-sm text-gray-600">per ticket</p>
+                  {isFree ? (
+                    <div>
+                      <span className="text-4xl font-bold text-green-600">FREE</span>
+                      <p className="text-sm text-gray-600 mt-1">No payment required</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-baseline mb-2">
+                        <span className="text-4xl font-bold text-gray-900">{event.ticket_price}</span>
+                        <span className="text-xl text-gray-600 ml-2">{event.currency}</span>
+                      </div>
+                      <p className="text-sm text-gray-600">per ticket</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -218,7 +228,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                     SOLD OUT
                   </div>
                 ) : user ? (
-                  <BuyTicketButton eventId={event.id} userId={user.id} />
+                  <BuyTicketButton eventId={event.id} userId={user.id} isFree={isFree} ticketPrice={event.ticket_price || 0} />
                 ) : (
                   <a
                     href="/auth/login"

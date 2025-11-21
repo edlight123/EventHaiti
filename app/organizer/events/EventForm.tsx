@@ -315,7 +315,7 @@ export default function EventForm({ userId, event }: EventFormProps) {
 
           <div>
             <label htmlFor="ticket_price" className="block text-sm font-medium text-gray-700 mb-2">
-              Ticket Price *
+              Ticket Price * (Enter 0 for free events)
             </label>
             <input
               type="number"
@@ -327,7 +327,7 @@ export default function EventForm({ userId, event }: EventFormProps) {
               value={formData.ticket_price}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-              placeholder="25.00"
+              placeholder="0 for free, or 25.00"
             />
           </div>
 

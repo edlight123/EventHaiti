@@ -8,14 +8,48 @@ import { isDemoMode } from '@/lib/demo'
 interface BuyTicketButtonProps {
   eventId: string
   userId: string
+  isFree: boolean
+  ticketPrice: number
 }
 
-export default function BuyTicketButton({ eventId, userId }: BuyTicketButtonProps) {
+export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }: BuyTicketButtonProps) {
   const router = useRouter()
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'moncash'>('stripe')
+
+  async function handleClaimFreeTicket() {
+    setLoading(true)
+    setError(null)
+
+    try {
+      if (isDemoMode()) {
+        await new Promise(resolve => setTimeout(resolve, 800))
+        alert('✅ Demo: Free ticket claimed successfully!')
+        router.push('/tickets')
+        return
+      }
+
+      const response = await fetch('/api/tickets/claim-free', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to claim ticket')
+      }
+
+      // Redirect to tickets page
+      router.push('/tickets')
+    } catch (err: any) {
+      setError(err.message || 'Failed to claim ticket')
+      setLoading(false)
+    }
+  }
 
   async function handlePurchase(method: 'stripe' | 'moncash') {
     setLoading(true)
@@ -78,13 +112,20 @@ export default function BuyTicketButton({ eventId, userId }: BuyTicketButtonProp
   return (
     <>
       <button
-        onClick={() => setShowModal(true)}
-        className="block w-full bg-teal-700 hover:bg-teal-800 text-white text-center font-semibold py-4 px-6 rounded-lg transition-colors"
+        onClick={() => isFree ? handleClaimFreeTicket() : setShowModal(true)}
+        disabled={loading}
+        className="block w-full bg-teal-700 hover:bg-teal-800 text-white text-center font-semibold py-4 px-6 rounded-lg transition-colors disabled:opacity-50"
       >
-        Buy Ticket
+        {loading ? 'Processing...' : isFree ? 'Claim Free Ticket' : 'Buy Ticket'}
       </button>
 
-      {showModal && (
+      {error && !showModal && (
+        <div className="mt-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
+      {showModal && !isFree && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Choose Payment Method</h3>
