@@ -194,18 +194,9 @@ export function CameraQRScanner({
     )
   }
 
-  if (hasPermission === null) {
-    return (
-      <div className={`rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-8 text-center ${className}`}>
-        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-orange-600"></div>
-        <p className="mt-4 text-sm text-gray-600">Requesting camera access...</p>
-      </div>
-    )
-  }
-
   return (
     <div className={`relative rounded-lg overflow-hidden bg-black ${className}`}>
-      {/* Video element - show it for debugging */}
+      {/* Video element */}
       <video
         ref={videoRef}
         className="w-full h-auto rounded-lg"
@@ -220,6 +211,16 @@ export function CameraQRScanner({
         className="hidden"
       />
 
+      {/* Loading overlay */}
+      {hasPermission === null && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="text-center">
+            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-white"></div>
+            <p className="mt-4 text-sm text-white">Requesting camera access...</p>
+          </div>
+        </div>
+      )}
+
       {/* Scanning indicator */}
       {isScanning && (
         <div className="absolute top-4 right-4 flex items-center gap-2 rounded-full bg-green-500 px-3 py-1 text-sm font-medium text-white shadow-lg">
@@ -232,11 +233,13 @@ export function CameraQRScanner({
       )}
 
       {/* Instructions overlay */}
-      <div className="absolute bottom-4 left-4 right-4 rounded-lg bg-black/70 p-3 text-center backdrop-blur-sm">
-        <p className="text-sm font-medium text-white">
-          Point camera at QR code to scan
-        </p>
-      </div>
+      {isScanning && (
+        <div className="absolute bottom-4 left-4 right-4 rounded-lg bg-black/70 p-3 text-center backdrop-blur-sm">
+          <p className="text-sm font-medium text-white">
+            Point camera at QR code to scan
+          </p>
+        </div>
+      )}
     </div>
   )
 }
