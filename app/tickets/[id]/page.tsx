@@ -7,6 +7,7 @@ import QRCodeDisplay from './QRCodeDisplay'
 import TicketActions from './TicketActions'
 import { isDemoMode, DEMO_TICKETS, DEMO_EVENTS } from '@/lib/demo'
 
+export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -34,28 +35,27 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
   } else {
     // Fetch real ticket from database
     const supabase = await createClient()
-    const { data } = await supabase
+    
+    // Get all tickets and filter (since .eq() has issues with Firebase wrapper)
+    const { data: allTickets } = await supabase
       .from('tickets')
-      .select(`
-        *,
-        events (
-          id,
-          title,
-          description,
-          start_datetime,
-          end_datetime,
-          venue_name,
-          city,
-          commune,
-          address,
-          banner_image_url
-        )
-      `)
-      .eq('id', id)
-      .eq('attendee_id', user.id)
-      .single()
+      .select('*')
 
-    ticket = data
+    const ticketData = allTickets?.find((t: any) => t.id === id && t.attendee_id === user.id)
+
+    if (ticketData) {
+      // Get all events and find the matching one
+      const { data: allEvents } = await supabase
+        .from('events')
+        .select('*')
+
+      const eventData = allEvents?.find((e: any) => e.id === ticketData.event_id)
+
+      ticket = {
+        ...ticketData,
+        events: eventData
+      }
+    }
   }
 
   if (!ticket) {
