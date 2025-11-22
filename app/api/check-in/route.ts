@@ -18,15 +18,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Get all tickets and find by QR code
-    const { data: allTickets } = await supabase
+    const allTickets = await supabase
       .from('tickets')
       .select('*')
-      .execute()
 
-    const ticket = allTickets?.find(t => t.qr_code_data === ticketId)
+    const ticket = allTickets?.find((t: any) => t.qr_code_data === ticketId)
 
     if (!ticket) {
       return NextResponse.json(
@@ -44,12 +43,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Get event to verify organizer
-    const { data: allEvents } = await supabase
+    const allEvents = await supabase
       .from('events')
       .select('*')
-      .execute()
 
-    const event = allEvents?.find(e => e.id === eventId)
+    const event = allEvents?.find((e: any) => e.id === eventId)
 
     if (!event) {
       return NextResponse.json(
@@ -78,26 +76,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Get attendee info
-    const { data: allUsers } = await supabase
+    const allUsers = await supabase
       .from('users')
       .select('*')
-      .execute()
 
-    const attendee = allUsers?.find(u => u.id === ticket.attendee_id)
+    const attendee = allUsers?.find((u: any) => u.id === ticket.attendee_id)
 
     // Update ticket with check-in time
-    const { error: updateError } = await supabase
+    // First get all tickets, find the one to update, then update it
+    const allTicketsForUpdate = await supabase
       .from('tickets')
-      .update({ checked_in_at: new Date().toISOString() })
-      .match({ id: ticket.id })
-      .execute()
-
-    if (updateError) {
-      console.error('Error updating ticket:', updateError)
-      return NextResponse.json(
-        { error: 'Failed to check in ticket' },
-        { status: 500 }
-      )
+      .select('*')
+    
+    const ticketToUpdate = allTicketsForUpdate?.find((t: any) => t.id === ticket.id)
+    
+    if (ticketToUpdate) {
+      ticketToUpdate.checked_in_at = new Date().toISOString()
+      
+      await supabase
+        .from('tickets')
+        .update(ticketToUpdate)
     }
 
     return NextResponse.json({
