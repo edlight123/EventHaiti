@@ -33,51 +33,76 @@ export default async function MyTicketsPage() {
     console.log('User ID:', user.id)
     console.log('User email:', user.email)
     
+    // First, get all tickets for this user
     const { data: ticketsData, error: ticketsError } = await supabase
       .from('tickets')
       .select('*')
       .eq('attendee_id', user.id)
       .order('purchased_at', { ascending: false })
     
-    console.log('Tickets query result:', { 
-      count: ticketsData?.length || 0, 
+    console.log('Raw tickets query result:', {
+      count: ticketsData?.length || 0,
       error: ticketsError,
-      tickets: ticketsData?.map((t: any) => ({ 
-        id: t.id, 
-        event_id: t.event_id, 
-        attendee_id: t.attendee_id,
-        status: t.status, 
-        price_paid: t.price_paid,
-        purchased_at: t.purchased_at 
-      }))
+      data: ticketsData
     })
     
-    if (ticketsData && ticketsData.length > 0) {
-      // Fetch events for these tickets
-      const eventIds = Array.from(new Set(ticketsData.map((t: any) => t.event_id)))
-      console.log('Fetching events for IDs:', eventIds)
+    if (!ticketsData || ticketsData.length === 0) {
+      console.log('No tickets found for user')
+      tickets = []
+    } else {
+      // Get unique event IDs
+      const eventIdsSet = new Set<string>()
+      ticketsData.forEach((t: any) => {
+        if (t.event_id) {
+          eventIdsSet.add(t.event_id)
+        }
+      })
+      const eventIds = Array.from(eventIdsSet)
       
-      const { data: eventsData } = await supabase
+      console.log('Event IDs to fetch:', eventIds)
+      
+      // Fetch all events (we'll filter in memory)
+      const { data: eventsData, error: eventsError } = await supabase
         .from('events')
-        .select('id, title, start_datetime, venue_name, city, banner_image_url')
+        .select('*')
       
-      console.log('Events fetched:', eventsData?.length || 0)
-      
-      // Create a map of events
-      const eventsMap = new Map()
-      eventsData?.forEach((e: any) => {
-        eventsMap.set(e.id, e)
+      console.log('All events query result:', {
+        count: eventsData?.length || 0,
+        error: eventsError
       })
       
-      // Combine tickets with their events
-      tickets = ticketsData.map((ticket: any) => ({
-        ...ticket,
-        events: eventsMap.get(ticket.event_id)
-      })).filter((t: any) => t.events) // Only include tickets with valid events
+      // Create event map
+      const eventsMap = new Map()
+      if (eventsData) {
+        eventsData.forEach((event: any) => {
+          eventsMap.set(event.id, event)
+        })
+      }
       
-      console.log('Final tickets with events:', tickets.length)
-    } else {
-      tickets = []
+      console.log('Events map size:', eventsMap.size)
+      
+      // Combine tickets with events
+      tickets = ticketsData
+        .map((ticket: any) => {
+          const event = eventsMap.get(ticket.event_id)
+          if (!event) {
+            console.log('No event found for ticket:', ticket.id, 'event_id:', ticket.event_id)
+          }
+          return {
+            ...ticket,
+            events: event ? {
+              id: event.id,
+              title: event.title,
+              start_datetime: event.start_datetime,
+              venue_name: event.venue_name,
+              city: event.city,
+              banner_image_url: event.banner_image_url
+            } : null
+          }
+        })
+        .filter((t: any) => t.events !== null)
+      
+      console.log('Final combined tickets:', tickets.length)
     }
   }
 
