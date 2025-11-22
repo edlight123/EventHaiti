@@ -73,7 +73,7 @@ export async function POST(request: Request) {
 
       // Fetch event and attendee details separately (no joins with Firebase)
       const eventQuery = await supabase.from('events').select('*')
-      const event = eventQuery.data?.find((e: any) => e.id === session.metadata.eventId)
+      const eventDetails = eventQuery.data?.find((e: any) => e.id === session.metadata.eventId)
       
       const attendeeQuery = await supabase.from('users').select('*')
       const attendee = attendeeQuery.data?.find((u: any) => u.id === session.client_reference_id)
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
       // Create ticket object with joined data for email
       const ticket = createdTickets[0] ? {
         ...createdTickets[0],
-        event,
+        event: eventDetails,
         attendee
       } : null
 
