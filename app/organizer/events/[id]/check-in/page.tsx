@@ -38,25 +38,14 @@ export default async function CheckInPage({
 
   const supabase = await createClient()
 
-  // Fetch event and verify ownership
-  const { data: event, error } = await supabase
+  // Fetch all events and find the one we need
+  const { data: allEvents } = await supabase
     .from('events')
-    .select(`
-      *,
-      tickets (
-        id,
-        status,
-        checked_in_at,
-        attendee:users (
-          full_name,
-          email
-        )
-      )
-    `)
-    .eq('id', id)
-    .single()
+    .select('*')
 
-  if (error || !event) {
+  const event = allEvents?.find((e: any) => e.id === id)
+
+  if (!event) {
     notFound()
   }
 
@@ -78,7 +67,23 @@ export default async function CheckInPage({
     )
   }
 
-  const tickets = event.tickets || []
+  // Fetch all tickets and users
+  const { data: allTickets } = await supabase
+    .from('tickets')
+    .select('*')
+
+  const { data: allUsers } = await supabase
+    .from('users')
+    .select('*')
+
+  // Filter tickets for this event and combine with user data
+  const eventTickets = (allTickets || []).filter((t: any) => t.event_id === id)
+  const usersMap = new Map((allUsers || []).map((u: any) => [u.id, u]))
+
+  const tickets = eventTickets.map((ticket: any) => ({
+    ...ticket,
+    attendee: usersMap.get(ticket.attendee_id) || { full_name: 'Unknown', email: 'N/A' }
+  }))
   const totalTickets = tickets.length
   const checkedIn = tickets.filter((t: any) => t.checked_in_at).length
   const pending = totalTickets - checkedIn
