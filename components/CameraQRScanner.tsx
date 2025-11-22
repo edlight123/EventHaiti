@@ -27,7 +27,6 @@ export function CameraQRScanner({
   const [isScanning, setIsScanning] = useState(false)
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [lastScanAttempt, setLastScanAttempt] = useState<number>(0)
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
@@ -40,59 +39,68 @@ export function CameraQRScanner({
   const startCamera = async () => {
     try {
       setError(null)
-      setHasPermission(null) // Show loading state
+      setHasPermission(null)
       
       console.log('Requesting camera access...')
-      // Request camera access
+      
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { ideal: 'environment' }, // Prefer back camera but fall back to front
-          width: { ideal: width },
-          height: { ideal: height }
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
         }
       })
-      console.log('Camera access granted')
+      
+      console.log('Camera stream obtained')
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        videoRef.current.setAttribute('playsinline', 'true')
-        videoRef.current.setAttribute('webkit-playsinline', 'true')
-        
-        // Wait for video to be ready
-        await new Promise<void>((resolve, reject) => {
-          if (videoRef.current) {
-            const video = videoRef.current
+      const video = videoRef.current
+      if (!video) return
+
+      video.srcObject = stream
+      
+      // Force play on mobile
+      video.setAttribute('autoplay', '')
+      video.setAttribute('muted', '')
+      video.setAttribute('playsinline', '')
+      video.muted = true
+      video.playsInline = true
+      
+      // Wait for the video to actually start
+      return new Promise<void>((resolve, reject) => {
+        video.onloadedmetadata = async () => {
+          console.log('Video metadata loaded:', {
+            width: video.videoWidth,
+            height: video.videoHeight,
+            readyState: video.readyState
+          })
+          
+          try {
+            await video.play()
+            console.log('Video playing')
             
-            video.onloadedmetadata = () => {
-              console.log('Video metadata loaded', {
-                videoWidth: video.videoWidth,
-                videoHeight: video.videoHeight
-              })
-              
-              video.play().then(() => {
-                console.log('Video playing successfully')
-                // Set permission and start scanning immediately
-                setHasPermission(true)
-                setIsScanning(true)
-                resolve()
-              }).catch((err) => {
-                console.error('Error playing video:', err)
-                reject(err)
-              })
-            }
-            
-            video.onerror = (err) => {
-              console.error('Video error:', err)
-              reject(err)
-            }
-          } else {
-            resolve()
+            // Give it a moment to actually render
+            setTimeout(() => {
+              setHasPermission(true)
+              setIsScanning(true)
+              startScanning()
+              resolve()
+            }, 500)
+          } catch (playError) {
+            console.error('Play error:', playError)
+            reject(playError)
           }
-        })
+        }
         
-        // Start the scanning interval
-        startScanning()
-      }
+        video.onerror = (err) => {
+          console.error('Video element error:', err)
+          reject(new Error('Video element error'))
+        }
+        
+        // Timeout after 10 seconds
+        setTimeout(() => {
+          reject(new Error('Video initialization timeout'))
+        }, 10000)
+      })
     } catch (err) {
       console.error('Camera access error:', err)
       let errorMessage = 'Failed to access camera'
@@ -138,57 +146,58 @@ export function CameraQRScanner({
   }
 
   const scanFrame = () => {
-    if (!videoRef.current || !canvasRef.current || !isScanning) {
-      return
-    }
-
     const video = videoRef.current
     const canvas = canvasRef.current
-    const context = canvas.getContext('2d')
 
-    if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) {
+    if (!video || !canvas || !isScanning) {
       return
     }
+
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+      return
+    }
+
+    const context = canvas.getContext('2d', { willReadFrequently: true })
+    if (!context) return
 
     // Set canvas size to match video
     if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
       canvas.width = video.videoWidth
       canvas.height = video.videoHeight
-      console.log(`Canvas size set to ${canvas.width}x${canvas.height}`)
+      console.log(`Canvas sized: ${canvas.width}x${canvas.height}`)
     }
 
-    // Update last scan attempt timestamp
-    setLastScanAttempt(Date.now())
+    if (canvas.width === 0 || canvas.height === 0) {
+      return
+    }
 
-    // Draw current video frame to canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-    // Get image data from canvas
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-
-    // Scan for QR code - try both normal and inverted
-    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: 'attemptBoth' // Try both normal and inverted colors
-    })
-
-    if (code && code.data) {
-      // Found a QR code!
-      console.log('QR code detected:', code.data)
+    try {
+      // Draw video frame
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
       
-      // Stop scanning temporarily to prevent multiple scans
-      setIsScanning(false)
-      if (scanIntervalRef.current) {
-        clearInterval(scanIntervalRef.current)
-        scanIntervalRef.current = null
+      // Get image data
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+      
+      // Scan for QR code
+      const code = jsQR(imageData.data, canvas.width, canvas.height, {
+        inversionAttempts: 'attemptBoth'
+      })
+
+      if (code?.data) {
+        console.log('✓ QR Code found:', code.data)
+        
+        // Stop scanning
+        if (scanIntervalRef.current) {
+          clearInterval(scanIntervalRef.current)
+          scanIntervalRef.current = null
+        }
+        setIsScanning(false)
+        
+        // Call handler
+        onScan(code.data)
       }
-      
-      onScan(code.data)
-      
-      // Resume scanning after 2 seconds
-      setTimeout(() => {
-        setIsScanning(true)
-        startScanning()
-      }, 2000)
+    } catch (err) {
+      console.error('Scan frame error:', err)
     }
   }
 
@@ -243,16 +252,14 @@ export function CameraQRScanner({
   }
 
   return (
-    <div className={`relative rounded-lg overflow-hidden bg-black ${className}`}>
+    <div className={`relative rounded-lg overflow-hidden bg-gray-900 ${className}`}>
       {/* Video element */}
       <video
         ref={videoRef}
-        className="w-full h-auto rounded-lg min-h-[300px]"
+        className="w-full h-auto max-h-[600px]"
         playsInline
-        webkit-playsinline="true"
         muted
         autoPlay
-        style={{ objectFit: 'cover' }}
       />
       
       {/* Canvas for QR detection (hidden) */}
