@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { isDemoMode, DEMO_TICKETS, DEMO_EVENTS } from '@/lib/demo'
 
+export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function MyTicketsPage() {
@@ -33,76 +34,82 @@ export default async function MyTicketsPage() {
     console.log('User ID:', user.id)
     console.log('User email:', user.email)
     
-    // First, get all tickets for this user
-    const { data: ticketsData, error: ticketsError } = await supabase
-      .from('tickets')
-      .select('*')
-      .eq('attendee_id', user.id)
-      .order('purchased_at', { ascending: false })
-    
-    console.log('Raw tickets query result:', {
-      count: ticketsData?.length || 0,
-      error: ticketsError,
-      data: ticketsData
-    })
-    
-    if (!ticketsData || ticketsData.length === 0) {
-      console.log('No tickets found for user')
-      tickets = []
-    } else {
-      // Get unique event IDs
-      const eventIdsSet = new Set<string>()
-      ticketsData.forEach((t: any) => {
-        if (t.event_id) {
-          eventIdsSet.add(t.event_id)
-        }
-      })
-      const eventIds = Array.from(eventIdsSet)
-      
-      console.log('Event IDs to fetch:', eventIds)
-      
-      // Fetch all events (we'll filter in memory)
-      const { data: eventsData, error: eventsError } = await supabase
-        .from('events')
+    try {
+      // First, get all tickets for this user
+      const ticketsQuery = await supabase
+        .from('tickets')
         .select('*')
+        .eq('attendee_id', user.id)
+        .order('purchased_at', { ascending: false })
       
-      console.log('All events query result:', {
-        count: eventsData?.length || 0,
-        error: eventsError
+      const ticketsData = ticketsQuery.data
+      const ticketsError = ticketsQuery.error
+      
+      console.log('Raw tickets query result:', {
+        count: ticketsData?.length || 0,
+        error: ticketsError,
+        hasData: !!ticketsData,
+        firstTicket: ticketsData?.[0]
       })
       
-      // Create event map
-      const eventsMap = new Map()
-      if (eventsData) {
-        eventsData.forEach((event: any) => {
-          eventsMap.set(event.id, event)
+      if (!ticketsData || ticketsData.length === 0) {
+        console.log('No tickets found for user')
+        tickets = []
+      } else {
+        // Get ALL events from database
+        const eventsQuery = await supabase
+          .from('events')
+          .select('*')
+        
+        const eventsData = eventsQuery.data
+        
+        console.log('All events query result:', {
+          count: eventsData?.length || 0,
+          error: eventsQuery.error,
+          hasData: !!eventsData,
+          firstEvent: eventsData?.[0]
         })
-      }
-      
-      console.log('Events map size:', eventsMap.size)
-      
-      // Combine tickets with events
-      tickets = ticketsData
-        .map((ticket: any) => {
+        
+        // Create event map
+        const eventsMap = new Map()
+        if (eventsData) {
+          eventsData.forEach((event: any) => {
+            eventsMap.set(event.id, event)
+            console.log('Added event to map:', event.id, event.title)
+          })
+        }
+        
+        console.log('Events map has', eventsMap.size, 'events')
+        
+        // Combine tickets with events
+        tickets = []
+        for (const ticket of ticketsData) {
+          console.log('Processing ticket:', ticket.id, 'for event:', ticket.event_id)
           const event = eventsMap.get(ticket.event_id)
-          if (!event) {
-            console.log('No event found for ticket:', ticket.id, 'event_id:', ticket.event_id)
+          
+          if (event) {
+            console.log('Found event:', event.id, event.title)
+            tickets.push({
+              ...ticket,
+              events: {
+                id: event.id,
+                title: event.title,
+                start_datetime: event.start_datetime,
+                venue_name: event.venue_name,
+                city: event.city,
+                banner_image_url: event.banner_image_url
+              }
+            })
+          } else {
+            console.log('WARNING: No event found for ticket:', ticket.id, 'event_id:', ticket.event_id)
           }
-          return {
-            ...ticket,
-            events: event ? {
-              id: event.id,
-              title: event.title,
-              start_datetime: event.start_datetime,
-              venue_name: event.venue_name,
-              city: event.city,
-              banner_image_url: event.banner_image_url
-            } : null
-          }
-        })
-        .filter((t: any) => t.events !== null)
-      
-      console.log('Final combined tickets:', tickets.length)
+        }
+        
+        console.log('Final combined tickets:', tickets.length)
+      }
+    } catch (error) {
+      console.error('Error fetching tickets:', error)
+      tickets = []
     }
   }
 
