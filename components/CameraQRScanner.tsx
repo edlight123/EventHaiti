@@ -28,6 +28,7 @@ export function CameraQRScanner({
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<string>('')
+  const [frameCount, setFrameCount] = useState(0)
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Don't auto-start on iOS - wait for user interaction
@@ -230,20 +231,34 @@ export function CameraQRScanner({
     const context = canvas.getContext('2d', { willReadFrequently: true })
     if (!context) return
 
-    // Set canvas size to match video
+    // Set canvas internal resolution to match video
     if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
       canvas.width = video.videoWidth
       canvas.height = video.videoHeight
       console.log(`Canvas sized: ${canvas.width}x${canvas.height}`)
+      
+      // Also set CSS size to match parent
+      const parent = canvas.parentElement
+      if (parent) {
+        canvas.style.width = '100%'
+        canvas.style.height = '100%'
+      }
     }
 
     if (canvas.width === 0 || canvas.height === 0) {
+      console.log('Canvas has zero dimensions, skipping frame')
       return
     }
 
     try {
+      // Clear canvas first
+      context.clearRect(0, 0, canvas.width, canvas.height)
+      
       // Draw video frame
       context.drawImage(video, 0, 0, canvas.width, canvas.height)
+      
+      // Update frame counter for debugging
+      setFrameCount(prev => prev + 1)
       
       // Get image data
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
@@ -327,12 +342,11 @@ export function CameraQRScanner({
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
 
   return (
-    <div className={`relative rounded-lg overflow-hidden bg-gray-900 ${className}`} style={{ minHeight: '300px' }}>
+    <div className={`relative rounded-lg overflow-hidden bg-gray-900 ${className}`} style={{ minHeight: '400px', aspectRatio: '4/3' }}>
       {/* Video element - hidden, used for stream */}
       <video
         ref={videoRef}
-        className="absolute inset-0 w-full h-full object-cover opacity-0 pointer-events-none"
-        style={{ minHeight: '300px', display: 'block' }}
+        className="absolute inset-0 w-0 h-0 opacity-0 pointer-events-none"
         playsInline
         muted
         autoPlay
@@ -341,8 +355,8 @@ export function CameraQRScanner({
       {/* Canvas - visible, shows video feed and QR detection */}
       <canvas
         ref={canvasRef}
-        className="w-full h-full object-cover"
-        style={{ minHeight: '300px', display: 'block' }}
+        className="absolute inset-0 w-full h-full"
+        style={{ objectFit: 'cover' }}
       />
 
       {/* iOS Start Button Overlay */}
@@ -431,7 +445,9 @@ export function CameraQRScanner({
           </div>
           {debugInfo && (
             <div className="rounded-lg bg-blue-500/80 px-3 py-2 text-center backdrop-blur-sm">
-              <p className="text-xs font-mono text-white">{debugInfo}</p>
+              <p className="text-xs font-mono text-white">
+                {debugInfo} | Frames: {frameCount}
+              </p>
             </div>
           )}
         </div>
