@@ -52,39 +52,51 @@ export function CameraQRScanner({
       
       console.log('Requesting camera access...')
       
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      })
+      // Try simpler constraints first for iOS compatibility
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+      const constraints = isIOS 
+        ? { video: { facingMode: 'environment' } }
+        : {
+            video: {
+              facingMode: 'environment',
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            }
+          }
       
-      setDebugInfo('Stream obtained')
-      console.log('Camera stream obtained')
+      console.log('Using constraints:', constraints)
+      setDebugInfo('Requesting with iOS constraints...')
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+      
+      setDebugInfo('Stream obtained!')
+      console.log('Camera stream obtained', stream)
 
       const video = videoRef.current
       if (!video) {
-        setDebugInfo('No video element')
+        setDebugInfo('ERROR: No video element')
+        console.error('No video element found')
         return
       }
 
+      setDebugInfo('Setting stream to video...')
       video.srcObject = stream
-      setDebugInfo('Stream set to video')
       
       // Force play on mobile
-      video.setAttribute('autoplay', '')
-      video.setAttribute('muted', '')
-      video.setAttribute('playsinline', '')
+      video.setAttribute('autoplay', 'true')
+      video.setAttribute('muted', 'true')
+      video.setAttribute('playsinline', 'true')
       video.muted = true
       video.playsInline = true
+      
+      setDebugInfo('Waiting for metadata...')
       
       // Wait for the video to actually start
       return new Promise<void>((resolve, reject) => {
         let resolved = false
         
         video.onloadedmetadata = async () => {
-          setDebugInfo(`Metadata loaded: ${video.videoWidth}x${video.videoHeight}`)
+          setDebugInfo(`Metadata! ${video.videoWidth}x${video.videoHeight}`)
           console.log('Video metadata loaded:', {
             width: video.videoWidth,
             height: video.videoHeight,
@@ -141,6 +153,7 @@ export function CameraQRScanner({
       })
     } catch (err) {
       console.error('Camera access error:', err)
+      setDebugInfo(`ERROR: ${err instanceof Error ? err.message : String(err)}`)
       let errorMessage = 'Failed to access camera'
       
       if (err instanceof Error) {
@@ -351,8 +364,8 @@ export function CameraQRScanner({
         </div>
       )}
 
-      {/* Loading overlay */}
-      {hasPermission === null && (
+      {/* Loading overlay - hide on iOS when button is showing */}
+      {!isIOS && hasPermission === null && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm">
           <div className="text-center text-white">
             <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-white"></div>
