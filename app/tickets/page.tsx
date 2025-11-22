@@ -54,7 +54,7 @@ export default async function MyTicketsPage() {
     
     if (ticketsData && ticketsData.length > 0) {
       // Fetch events for these tickets
-      const eventIds = [...new Set(ticketsData.map((t: any) => t.event_id))]
+      const eventIds = Array.from(new Set(ticketsData.map((t: any) => t.event_id)))
       console.log('Fetching events for IDs:', eventIds)
       
       const { data: eventsData } = await supabase
