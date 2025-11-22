@@ -242,11 +242,8 @@ export function CameraQRScanner({
       return
     }
     
-    if (!isScanning) {
-      addLog('scanFrame: not scanning')
-      return
-    }
-
+    // Don't check isScanning here - the interval controls when we scan
+    
     if (video.readyState !== video.HAVE_ENOUGH_DATA) {
       addLog(`scanFrame: video readyState=${video.readyState}`)
       return
