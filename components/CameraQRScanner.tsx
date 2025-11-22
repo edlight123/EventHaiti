@@ -41,14 +41,16 @@ export function CameraQRScanner({
       setError(null)
       setHasPermission(null) // Show loading state
       
+      console.log('Requesting camera access...')
       // Request camera access
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: 'environment', // Use back camera on mobile
+          facingMode: { ideal: 'environment' }, // Prefer back camera but fall back to front
           width: { ideal: width },
           height: { ideal: height }
         }
       })
+      console.log('Camera access granted')
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream
@@ -78,7 +80,20 @@ export function CameraQRScanner({
       }
     } catch (err) {
       console.error('Camera access error:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Failed to access camera'
+      let errorMessage = 'Failed to access camera'
+      
+      if (err instanceof Error) {
+        errorMessage = err.message
+        // Check for common permission/HTTPS errors
+        if (err.name === 'NotAllowedError') {
+          errorMessage = 'Camera access denied. Please allow camera permissions in your browser settings.'
+        } else if (err.name === 'NotFoundError') {
+          errorMessage = 'No camera found on this device.'
+        } else if (err.name === 'NotSupportedError' || err.message.includes('secure')) {
+          errorMessage = 'Camera requires HTTPS. Please access this page via a secure connection.'
+        }
+      }
+      
       setError(errorMessage)
       setHasPermission(false)
       onError?.(err instanceof Error ? err : new Error(errorMessage))
@@ -121,8 +136,11 @@ export function CameraQRScanner({
     }
 
     // Set canvas size to match video
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
+    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      console.log(`Canvas size set to ${canvas.width}x${canvas.height}`)
+    }
 
     // Draw current video frame to canvas
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
@@ -130,13 +148,14 @@ export function CameraQRScanner({
     // Get image data from canvas
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
 
-    // Scan for QR code
+    // Scan for QR code - try both normal and inverted
     const code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: 'dontInvert'
+      inversionAttempts: 'attemptBoth' // Try both normal and inverted colors
     })
 
     if (code && code.data) {
       // Found a QR code!
+      console.log('QR code detected:', code.data)
       onScan(code.data)
       
       // Optional: Draw a box around the detected QR code
