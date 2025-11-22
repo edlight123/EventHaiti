@@ -127,6 +127,14 @@ export function CameraQRScanner({
                 const debugMsg = `Active: ${video.videoWidth}x${video.videoHeight}`
                 setDebugInfo(debugMsg)
                 console.log('Scanning active with dimensions:', debugMsg)
+                
+                // Force Safari to render the video - trigger repaint
+                video.style.transform = 'translateZ(0)'
+                video.style.webkitTransform = 'translateZ(0)'
+                
+                // Try forcing a layout recalculation
+                void video.offsetHeight
+                
                 resolve()
               }
             }, 500)
@@ -320,20 +328,21 @@ export function CameraQRScanner({
 
   return (
     <div className={`relative rounded-lg overflow-hidden bg-gray-900 ${className}`} style={{ minHeight: '300px' }}>
-      {/* Video element - always rendered */}
+      {/* Video element - hidden, used for stream */}
       <video
         ref={videoRef}
-        className="w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-cover opacity-0 pointer-events-none"
         style={{ minHeight: '300px', display: 'block' }}
         playsInline
         muted
         autoPlay
       />
       
-      {/* Canvas for QR detection (hidden) */}
+      {/* Canvas - visible, shows video feed and QR detection */}
       <canvas
         ref={canvasRef}
-        className="hidden"
+        className="w-full h-full object-cover"
+        style={{ minHeight: '300px', display: 'block' }}
       />
 
       {/* iOS Start Button Overlay */}
