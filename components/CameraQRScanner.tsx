@@ -363,7 +363,7 @@ export function CameraQRScanner({
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
 
   return (
-    <div className={`relative rounded-lg overflow-hidden bg-gray-900 ${className}`} style={{ minHeight: '400px', aspectRatio: '4/3' }}>
+    <div className={`relative rounded-lg overflow-hidden bg-gray-900 ${className}`} style={{ aspectRatio: '1/1', width: '100%', maxWidth: '500px', margin: '0 auto' }}>
       {/* Video element - hidden, used for stream */}
       <video
         ref={videoRef}
