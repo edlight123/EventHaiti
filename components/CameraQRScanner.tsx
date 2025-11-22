@@ -38,6 +38,9 @@ export function CameraQRScanner({
 
   const startCamera = async () => {
     try {
+      setError(null)
+      setHasPermission(null) // Show loading state
+      
       // Request camera access
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -49,7 +52,24 @@ export function CameraQRScanner({
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        videoRef.current.play()
+        
+        // Wait for video to be ready
+        await new Promise<void>((resolve) => {
+          if (videoRef.current) {
+            videoRef.current.onloadedmetadata = () => {
+              videoRef.current?.play().then(() => {
+                console.log('Video playing')
+                resolve()
+              }).catch((err) => {
+                console.error('Error playing video:', err)
+                resolve()
+              })
+            }
+          } else {
+            resolve()
+          }
+        })
+        
         setHasPermission(true)
         setIsScanning(true)
         startScanning()
@@ -182,19 +202,20 @@ export function CameraQRScanner({
   }
 
   return (
-    <div className={`relative rounded-lg overflow-hidden ${className}`}>
-      {/* Video element (hidden, we draw to canvas) */}
+    <div className={`relative rounded-lg overflow-hidden bg-black ${className}`}>
+      {/* Video element - show it for debugging */}
       <video
         ref={videoRef}
-        className="hidden"
+        className="w-full h-auto rounded-lg"
         playsInline
         muted
+        autoPlay
       />
       
-      {/* Canvas for rendering video and QR detection */}
+      {/* Canvas for QR detection (hidden) */}
       <canvas
         ref={canvasRef}
-        className="w-full h-auto rounded-lg border-2 border-orange-500"
+        className="hidden"
       />
 
       {/* Scanning indicator */}
