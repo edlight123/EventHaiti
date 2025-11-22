@@ -29,7 +29,14 @@ export function CameraQRScanner({
   const [error, setError] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<string>('')
   const [frameCount, setFrameCount] = useState(0)
+  const [consoleLog, setConsoleLog] = useState<string[]>([])
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Helper to add to console log
+  const addLog = (msg: string) => {
+    console.log(msg)
+    setConsoleLog(prev => [...prev.slice(-4), msg]) // Keep last 5 messages
+  }
 
   // Don't auto-start on iOS - wait for user interaction
   useEffect(() => {
@@ -210,7 +217,7 @@ export function CameraQRScanner({
   }
 
   const startScanning = () => {
-    console.log('startScanning called')
+    addLog('startScanning called')
     setDebugInfo('Starting scan interval...')
     
     // Scan for QR codes every 100ms
@@ -218,7 +225,7 @@ export function CameraQRScanner({
       scanFrame()
     }, 100)
     
-    console.log('Scan interval set:', scanIntervalRef.current)
+    addLog(`Scan interval set: ${scanIntervalRef.current}`)
   }
 
   const scanFrame = () => {
@@ -226,22 +233,22 @@ export function CameraQRScanner({
     const canvas = canvasRef.current
 
     if (!video) {
-      console.log('scanFrame: no video')
+      addLog('scanFrame: no video')
       return
     }
     
     if (!canvas) {
-      console.log('scanFrame: no canvas')
+      addLog('scanFrame: no canvas')
       return
     }
     
     if (!isScanning) {
-      console.log('scanFrame: not scanning')
+      addLog('scanFrame: not scanning')
       return
     }
 
     if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-      console.log('scanFrame: video not ready, readyState:', video.readyState)
+      addLog(`scanFrame: video readyState=${video.readyState}`)
       return
     }
 
@@ -465,6 +472,16 @@ export function CameraQRScanner({
               <p className="text-xs font-mono text-white">
                 {debugInfo} | Frames: {frameCount}
               </p>
+            </div>
+          )}
+          {/* Console Log Display */}
+          {consoleLog.length > 0 && (
+            <div className="rounded-lg bg-purple-600/90 px-2 py-2 backdrop-blur-sm">
+              {consoleLog.map((log, i) => (
+                <p key={i} className="text-xs font-mono text-white">
+                  {log}
+                </p>
+              ))}
             </div>
           )}
         </div>
