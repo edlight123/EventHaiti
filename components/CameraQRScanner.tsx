@@ -35,6 +35,9 @@ export function CameraQRScanner({
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
     if (!isIOS) {
       startCamera()
+    } else {
+      // On iOS, just set to waiting state
+      setHasPermission(null)
     }
     return () => {
       stopCamera()
@@ -78,6 +81,8 @@ export function CameraQRScanner({
       
       // Wait for the video to actually start
       return new Promise<void>((resolve, reject) => {
+        let resolved = false
+        
         video.onloadedmetadata = async () => {
           setDebugInfo(`Metadata loaded: ${video.videoWidth}x${video.videoHeight}`)
           console.log('Video metadata loaded:', {
@@ -93,30 +98,44 @@ export function CameraQRScanner({
             
             // Give it a moment to actually render
             setTimeout(() => {
-              setHasPermission(true)
-              setIsScanning(true)
-              startScanning()
-              setDebugInfo('Scanning active')
-              resolve()
+              if (!resolved) {
+                resolved = true
+                setHasPermission(true)
+                setIsScanning(true)
+                startScanning()
+                setDebugInfo('Scanning active')
+                resolve()
+              }
             }, 500)
           } catch (playError) {
             setDebugInfo(`Play error: ${playError}`)
             console.error('Play error:', playError)
-            reject(playError)
+            if (!resolved) {
+              resolved = true
+              reject(playError)
+            }
           }
         }
         
         video.onerror = (err) => {
           setDebugInfo(`Video error: ${err}`)
           console.error('Video element error:', err)
-          reject(new Error('Video element error'))
+          if (!resolved) {
+            resolved = true
+            reject(new Error('Video element error'))
+          }
         }
         
         // Timeout after 10 seconds
         setTimeout(() => {
-          if (hasPermission === null) {
+          if (!resolved) {
+            resolved = true
             setDebugInfo('Timeout - video did not load')
-            reject(new Error('Video initialization timeout'))
+            // Don't reject on timeout, just mark as ready and try anyway
+            setHasPermission(true)
+            setIsScanning(true)
+            startScanning()
+            resolve()
           }
         }, 10000)
       })
@@ -273,53 +292,14 @@ export function CameraQRScanner({
     )
   }
 
-  // Show start button for iOS devices
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-  if (isIOS && hasPermission === null) {
-    return (
-      <div className={`rounded-lg border-2 border-dashed border-orange-300 bg-orange-50 p-8 text-center ${className}`}>
-        <svg
-          className="mx-auto h-12 w-12 text-orange-400"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-          />
-        </svg>
-        <h3 className="mt-2 text-sm font-medium text-gray-900">Start Camera</h3>
-        <p className="mt-1 text-sm text-gray-600">
-          Tap the button below to enable camera scanning
-        </p>
-        {debugInfo && (
-          <p className="mt-2 text-xs text-gray-500 font-mono">{debugInfo}</p>
-        )}
-        <button
-          onClick={startCamera}
-          className="mt-4 inline-flex items-center rounded-md bg-orange-600 px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-orange-500"
-        >
-          📷 Start Camera
-        </button>
-      </div>
-    )
-  }
 
   return (
     <div className={`relative rounded-lg overflow-hidden bg-gray-900 ${className}`}>
-      {/* Video element */}
+      {/* Video element - always rendered */}
       <video
         ref={videoRef}
-        className="w-full h-auto max-h-[600px]"
+        className="w-full h-auto max-h-[600px] min-h-[300px]"
         playsInline
         muted
         autoPlay
@@ -330,6 +310,46 @@ export function CameraQRScanner({
         ref={canvasRef}
         className="hidden"
       />
+
+      {/* iOS Start Button Overlay */}
+      {isIOS && hasPermission === null && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-900/95 backdrop-blur-sm">
+          <div className="text-center p-8">
+            <svg
+              className="mx-auto h-16 w-16 text-orange-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+            <h3 className="mt-4 text-lg font-semibold text-white">Start Camera</h3>
+            <p className="mt-2 text-sm text-gray-300">
+              Tap the button below to enable camera scanning
+            </p>
+            {debugInfo && (
+              <p className="mt-2 text-xs text-blue-400 font-mono">{debugInfo}</p>
+            )}
+            <button
+              onClick={startCamera}
+              className="mt-6 inline-flex items-center rounded-lg bg-orange-600 px-8 py-4 text-lg font-semibold text-white shadow-lg hover:bg-orange-500"
+            >
+              📷 Start Camera
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Loading overlay */}
       {hasPermission === null && (
