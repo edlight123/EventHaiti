@@ -59,6 +59,9 @@ export function CameraQRScanner({
             videoRef.current.onloadedmetadata = () => {
               videoRef.current?.play().then(() => {
                 console.log('Video playing')
+                // Set permission and start scanning immediately
+                setHasPermission(true)
+                setIsScanning(true)
                 resolve()
               }).catch((err) => {
                 console.error('Error playing video:', err)
@@ -70,8 +73,7 @@ export function CameraQRScanner({
           }
         })
         
-        setHasPermission(true)
-        setIsScanning(true)
+        // Start the scanning interval
         startScanning()
       }
     } catch (err) {
