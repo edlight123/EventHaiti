@@ -15,35 +15,46 @@ export default async function AnalyticsPage() {
 
   const supabase = await createClient()
 
-  // Fetch organizer's events with ticket data
-  const { data: events } = await supabase
-    .from('events')
-    .select(`
-      *,
-      tickets (
-        id,
-        status,
-        price_paid
-      )
-    `)
-    .eq('organizer_id', user.id)
+  // Fetch organizer's events (no joins with Firebase)
+  const allEventsQuery = await supabase.from('events').select('*')
+  const allEvents = allEventsQuery.data || []
+  const eventsData = allEvents.filter((e: any) => e.organizer_id === user.id)
 
-  const eventsData = events || []
+  // Fetch all tickets
+  const allTicketsQuery = await supabase.from('tickets').select('*')
+  const allTickets = allTicketsQuery.data || []
+  
+  // Group tickets by event
+  const ticketsByEvent = new Map()
+  allTickets.forEach((ticket: any) => {
+    if (!ticketsByEvent.has(ticket.event_id)) {
+      ticketsByEvent.set(ticket.event_id, [])
+    }
+    ticketsByEvent.get(ticket.event_id).push(ticket)
+  })
 
   // Calculate analytics
   const totalEvents = eventsData.length
-  const totalTicketsSold = eventsData.reduce((sum: any, e: any) => sum + (e.tickets?.length || 0), 0)
-  const totalRevenue = eventsData.reduce((sum: any, e: any) => {
-    return sum + (e.tickets?.reduce((s: number, t: any) => s + (t.price_paid || 0), 0) || 0)
-  }, 0)
+  let totalTicketsSold = 0
+  let totalRevenue = 0
+  
+  eventsData.forEach((event: any) => {
+    const eventTickets = ticketsByEvent.get(event.id) || []
+    totalTicketsSold += eventTickets.length
+    totalRevenue += eventTickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0)
+  })
+  
   const publishedEvents = eventsData.filter((e: any) => e.is_published).length
 
   // Events with ticket sales
-  const eventsWithSales = eventsData.map((event: any) => ({
-    ...event,
-    ticketCount: event.tickets?.length || 0,
-    revenue: event.tickets?.reduce((s: number, t: any) => s + (t.price_paid || 0), 0) || 0,
-  })).sort((a: any, b: any) => b.ticketCount - a.ticketCount)
+  const eventsWithSales = eventsData.map((event: any) => {
+    const eventTickets = ticketsByEvent.get(event.id) || []
+    return {
+      ...event,
+      ticketCount: eventTickets.length,
+      revenue: eventTickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0),
+    }
+  }).sort((a: any, b: any) => b.ticketCount - a.ticketCount)
 
   return (
     <div className="min-h-screen bg-gray-50">

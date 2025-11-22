@@ -28,24 +28,33 @@ export default async function PromoCodesPage({
     .eq('organizer_id', user.id)
     .order('start_datetime', { ascending: false })
 
-  // Fetch promo codes
+  // Fetch promo codes (no joins with Firebase)
   let promoCodesData: any[] = []
   
   try {
-    const { data: promoCodes, error } = await supabase
+    const allPromoCodesQuery = await supabase
       .from('promo_codes')
-      .select(`
-        *,
-        event:events (
-          title
-        )
-      `)
-      .eq('organizer_id', user.id)
-      .order('created_at', { ascending: false })
+      .select('*')
     
-    if (!error && promoCodes) {
-      promoCodesData = promoCodes
+    const allPromoCodes = allPromoCodesQuery.data || []
+    const userPromoCodes = allPromoCodes.filter((pc: any) => pc.organizer_id === user.id)
+    
+    // Get event titles separately
+    const eventsMap = new Map()
+    if (events) {
+      events.forEach((event: any) => {
+        eventsMap.set(event.id, event.title)
+      })
     }
+    
+    // Attach event data manually
+    promoCodesData = userPromoCodes.map((pc: any) => ({
+      ...pc,
+      event: pc.event_id ? { title: eventsMap.get(pc.event_id) } : null
+    }))
+    
+    // Sort by created_at descending
+    promoCodesData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   } catch (error) {
     // Table doesn't exist yet
     console.log('Promo codes table not found')
