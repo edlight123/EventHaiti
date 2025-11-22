@@ -82,12 +82,20 @@ export function CameraQRScanner({
       setDebugInfo('Setting stream to video...')
       video.srcObject = stream
       
+      console.log('Stream tracks:', stream.getTracks().map(t => ({
+        kind: t.kind,
+        enabled: t.enabled,
+        readyState: t.readyState,
+        label: t.label
+      })))
+      
       // Force play on mobile
       video.setAttribute('autoplay', 'true')
       video.setAttribute('muted', 'true')
       video.setAttribute('playsinline', 'true')
       video.muted = true
       video.playsInline = true
+      video.style.display = 'block'
       
       setDebugInfo('Waiting for metadata...')
       
@@ -115,7 +123,10 @@ export function CameraQRScanner({
                 setHasPermission(true)
                 setIsScanning(true)
                 startScanning()
-                setDebugInfo('Scanning active')
+                // Show video dimensions in debug
+                const debugMsg = `Active: ${video.videoWidth}x${video.videoHeight}`
+                setDebugInfo(debugMsg)
+                console.log('Scanning active with dimensions:', debugMsg)
                 resolve()
               }
             }, 500)
@@ -308,11 +319,12 @@ export function CameraQRScanner({
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
 
   return (
-    <div className={`relative rounded-lg overflow-hidden bg-gray-900 ${className}`}>
+    <div className={`relative rounded-lg overflow-hidden bg-gray-900 ${className}`} style={{ minHeight: '300px' }}>
       {/* Video element - always rendered */}
       <video
         ref={videoRef}
-        className="w-full h-auto max-h-[600px] min-h-[300px]"
+        className="w-full h-full object-cover"
+        style={{ minHeight: '300px', display: 'block' }}
         playsInline
         muted
         autoPlay
