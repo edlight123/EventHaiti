@@ -39,11 +39,11 @@ export async function POST(request: Request) {
       const quantity = parseInt(session.metadata.quantity || '1', 10)
       const pricePerTicket = session.amount_total / 100 / quantity // Total price divided by quantity
       
-      // Create multiple tickets
-      const ticketsToCreate = []
+      // Create tickets one at a time to ensure each gets unique ID
+      const createdTickets = []
       for (let i = 0; i < quantity; i++) {
         const qrCodeData = `ticket-${session.metadata.eventId}-${session.client_reference_id}-${Date.now()}-${i}`
-        ticketsToCreate.push({
+        const ticketData = {
           event_id: session.metadata.eventId,
           attendee_id: session.client_reference_id,
           price_paid: pricePerTicket,
@@ -52,24 +52,38 @@ export async function POST(request: Request) {
           status: 'valid',
           qr_code_data: qrCodeData,
           purchased_at: new Date().toISOString(),
-        })
+        }
+        
+        const insertResult = await supabase
+          .from('tickets')
+          .insert([ticketData])
+          .select()
+        
+        if (insertResult.error) {
+          console.error('Failed to create ticket:', insertResult.error)
+          return NextResponse.json({ error: 'Failed to create tickets' }, { status: 500 })
+        }
+        
+        const createdTicket = insertResult.data?.[0]
+        if (createdTicket) {
+          createdTickets.push(createdTicket)
+          console.log('Created ticket:', createdTicket.id, 'with QR:', qrCodeData)
+        }
       }
 
-      const { data: tickets, error: ticketError } = await supabase
-        .from('tickets')
-        .insert(ticketsToCreate)
-        .select(`
-          *,
-          event:events (*),
-          attendee:users (*)
-        `)
-
-      if (ticketError) {
-        console.error('Failed to create tickets:', ticketError)
-        return NextResponse.json({ error: 'Failed to create tickets' }, { status: 500 })
-      }
-
-      const ticket = tickets?.[0] // Use first ticket for email
+      // Fetch event and attendee details separately (no joins with Firebase)
+      const eventQuery = await supabase.from('events').select('*')
+      const event = eventQuery.data?.find((e: any) => e.id === session.metadata.eventId)
+      
+      const attendeeQuery = await supabase.from('users').select('*')
+      const attendee = attendeeQuery.data?.find((u: any) => u.id === session.client_reference_id)
+      
+      // Create ticket object with joined data for email
+      const ticket = createdTickets[0] ? {
+        ...createdTickets[0],
+        event,
+        attendee
+      } : null
 
       // Track promo code usage if applicable
       if (session.metadata.promoCodeId && session.metadata.originalPrice) {

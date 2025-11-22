@@ -59,34 +59,37 @@ export async function POST(request: Request) {
       }, { status: 400 })
     }
 
-    // Create multiple tickets
-    const ticketsToCreate = []
+    // Create tickets one at a time to ensure each gets a unique ID
+    const createdTickets = []
     for (let i = 0; i < ticketQuantity; i++) {
       const qrCodeData = `ticket-${eventId}-${user.id}-${Date.now()}-${i}`
-      ticketsToCreate.push({
+      const ticketData = {
         event_id: eventId,
         attendee_id: user.id,
         status: 'valid',
         qr_code_data: qrCodeData,
         price_paid: 0,
         purchased_at: new Date().toISOString(),
-      })
+      }
+      
+      const insertResult = await supabase
+        .from('tickets')
+        .insert([ticketData])
+        .select()
+      
+      if (insertResult.error) {
+        console.error('Ticket creation error:', insertResult.error)
+        return NextResponse.json({ error: 'Failed to create ticket' }, { status: 500 })
+      }
+      
+      const createdTicket = insertResult.data?.[0]
+      if (createdTicket) {
+        createdTickets.push(createdTicket)
+        console.log('Created ticket:', createdTicket.id, 'with QR:', qrCodeData)
+      }
     }
     
-    console.log('Creating tickets:', ticketsToCreate.length)
-
-    // Create tickets
-    const { data: tickets, error: ticketError } = await supabase
-      .from('tickets')
-      .insert(ticketsToCreate)
-      .select()
-
-    console.log('Ticket creation result:', { count: tickets?.length, error: ticketError })
-
-    if (ticketError) {
-      console.error('Ticket creation error:', ticketError)
-      return NextResponse.json({ error: 'Failed to create ticket' }, { status: 500 })
-    }
+    console.log('Created tickets:', createdTickets.length)
 
     // Update tickets_sold count
     const updateResult = await supabase
@@ -99,7 +102,7 @@ export async function POST(request: Request) {
     console.log('=== SUCCESS ===')
     return NextResponse.json({ 
       success: true, 
-      tickets: tickets,
+      tickets: createdTickets,
       count: ticketQuantity,
       message: `${ticketQuantity} free ticket${ticketQuantity !== 1 ? 's' : ''} claimed successfully!`
     })
