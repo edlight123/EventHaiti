@@ -67,12 +67,6 @@ export default async function OrganizerEventsPage() {
           </Link>
         </div>
 
-        {/* Debug info */}
-        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-          <p><strong>User ID:</strong> {user.id}</p>
-          <p><strong>Events found:</strong> {events.length}</p>
-        </div>
-
         {events && events.length > 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
