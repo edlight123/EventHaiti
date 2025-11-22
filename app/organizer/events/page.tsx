@@ -32,8 +32,6 @@ export default async function OrganizerEventsPage() {
       const result = await supabase
         .from('events')
         .select('*')
-        .eq('organizer_id', user.id)
-        .order('start_datetime', { ascending: false })
       
       console.log('Query result:', JSON.stringify(result, null, 2))
       
@@ -41,7 +39,13 @@ export default async function OrganizerEventsPage() {
         console.error('Error fetching events:', result.error)
       }
       
-      events = result.data || []
+      // Filter for this organizer's events
+      const allEvents = result.data || []
+      events = allEvents.filter((e: any) => e.organizer_id === user.id)
+      
+      // Sort by start_datetime descending
+      events.sort((a: any, b: any) => new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime())
+      
       console.log('Events array length:', events.length)
       if (events.length > 0) {
         console.log('First event:', events[0])

@@ -41,30 +41,44 @@ export default async function OrganizerEventDetailPage({ params }: { params: Pro
   } else {
     // Fetch from database
     const supabase = await createClient()
-    const { data: eventData } = await supabase
+    const allEventsQuery = await supabase
       .from('events')
       .select('*')
-      .eq('id', id)
-      .eq('organizer_id', user.id)
-      .single()
 
-    event = eventData
+    const allEvents = allEventsQuery.data || []
+    event = allEvents.find((e: any) => e.id === id && e.organizer_id === user.id) || null
 
     if (!event) {
       notFound()
     }
 
-    // Get tickets for this event
-    const { data: ticketsData } = await supabase
+    // Get tickets for this event (no joins)
+    const allTicketsQuery = await supabase
       .from('tickets')
-      .select(`
-        *,
-        users!tickets_attendee_id_fkey(full_name, email, phone_number)
-      `)
-      .eq('event_id', event.id)
-      .order('purchased_at', { ascending: false })
+      .select('*')
     
-    tickets = ticketsData || []
+    const allTickets = allTicketsQuery.data || []
+    const eventTickets = allTickets.filter((t: any) => t.event_id === event.id)
+    
+    // Sort by purchased_at descending
+    eventTickets.sort((a: any, b: any) => new Date(b.purchased_at).getTime() - new Date(a.purchased_at).getTime())
+    
+    // Get user data separately
+    const allUsersQuery = await supabase
+      .from('users')
+      .select('id, full_name, email, phone_number')
+    
+    const allUsers = allUsersQuery.data || []
+    const usersMap = new Map()
+    allUsers.forEach((u: any) => {
+      usersMap.set(u.id, u)
+    })
+    
+    // Attach user data to tickets
+    tickets = eventTickets.map((t: any) => ({
+      ...t,
+      users: usersMap.get(t.attendee_id) || { full_name: 'Unknown', email: '', phone_number: '' }
+    }))
   }
 
   const revenue = (event.tickets_sold || 0) * Number(event.ticket_price || 0)

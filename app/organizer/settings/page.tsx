@@ -20,13 +20,12 @@ export default async function SettingsPage() {
   let settings = null
   
   try {
-    const { data } = await supabase
+    const allSettingsQuery = await supabase
       .from('organizer_settings')
       .select('*')
-      .eq('organizer_id', user.id)
-      .single()
     
-    settings = data
+    const allSettings = allSettingsQuery.data || []
+    settings = allSettings.find((s: any) => s.organizer_id === user.id) || null
   } catch (error) {
     // Table doesn't exist yet or no settings found
     console.log('Settings not found')

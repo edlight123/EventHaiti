@@ -21,12 +21,15 @@ export default async function PromoCodesPage({
   const supabase = await createClient()
   const params = await searchParams
 
-  // Fetch organizer's events
-  const { data: events } = await supabase
+  // Fetch all events and filter for this organizer
+  const allEventsQuery = await supabase
     .from('events')
-    .select('id, title')
-    .eq('organizer_id', user.id)
-    .order('start_datetime', { ascending: false })
+    .select('id, title, start_datetime, organizer_id')
+  
+  const allEvents = allEventsQuery.data || []
+  const events = allEvents
+    .filter((e: any) => e.organizer_id === user.id)
+    .sort((a: any, b: any) => new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime())
 
   // Fetch promo codes (no joins with Firebase)
   let promoCodesData: any[] = []

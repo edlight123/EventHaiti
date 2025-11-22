@@ -24,14 +24,12 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
   } else {
     // Fetch from database
     const supabase = await createClient()
-    const { data } = await supabase
+    const allEventsQuery = await supabase
       .from('events')
       .select('*')
-      .eq('id', id)
-      .eq('organizer_id', user.id)
-      .single()
 
-    event = data
+    const allEvents = allEventsQuery.data || []
+    event = allEvents.find((e: any) => e.id === id && e.organizer_id === user.id) || null
 
     if (!event) {
       notFound()
