@@ -27,6 +27,7 @@ export function CameraQRScanner({
   const [isScanning, setIsScanning] = useState(false)
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [lastScanAttempt, setLastScanAttempt] = useState<number>(0)
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
@@ -54,21 +55,35 @@ export function CameraQRScanner({
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream
+        videoRef.current.setAttribute('playsinline', 'true')
+        videoRef.current.setAttribute('webkit-playsinline', 'true')
         
         // Wait for video to be ready
-        await new Promise<void>((resolve) => {
+        await new Promise<void>((resolve, reject) => {
           if (videoRef.current) {
-            videoRef.current.onloadedmetadata = () => {
-              videoRef.current?.play().then(() => {
-                console.log('Video playing')
+            const video = videoRef.current
+            
+            video.onloadedmetadata = () => {
+              console.log('Video metadata loaded', {
+                videoWidth: video.videoWidth,
+                videoHeight: video.videoHeight
+              })
+              
+              video.play().then(() => {
+                console.log('Video playing successfully')
                 // Set permission and start scanning immediately
                 setHasPermission(true)
                 setIsScanning(true)
                 resolve()
               }).catch((err) => {
                 console.error('Error playing video:', err)
-                resolve()
+                reject(err)
               })
+            }
+            
+            video.onerror = (err) => {
+              console.error('Video error:', err)
+              reject(err)
             }
           } else {
             resolve()
@@ -142,6 +157,9 @@ export function CameraQRScanner({
       console.log(`Canvas size set to ${canvas.width}x${canvas.height}`)
     }
 
+    // Update last scan attempt timestamp
+    setLastScanAttempt(Date.now())
+
     // Draw current video frame to canvas
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
@@ -156,10 +174,21 @@ export function CameraQRScanner({
     if (code && code.data) {
       // Found a QR code!
       console.log('QR code detected:', code.data)
+      
+      // Stop scanning temporarily to prevent multiple scans
+      setIsScanning(false)
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current)
+        scanIntervalRef.current = null
+      }
+      
       onScan(code.data)
       
-      // Optional: Draw a box around the detected QR code
-      drawBox(context, code.location)
+      // Resume scanning after 2 seconds
+      setTimeout(() => {
+        setIsScanning(true)
+        startScanning()
+      }, 2000)
     }
   }
 
@@ -218,10 +247,12 @@ export function CameraQRScanner({
       {/* Video element */}
       <video
         ref={videoRef}
-        className="w-full h-auto rounded-lg"
+        className="w-full h-auto rounded-lg min-h-[300px]"
         playsInline
+        webkit-playsinline="true"
         muted
         autoPlay
+        style={{ objectFit: 'cover' }}
       />
       
       {/* Canvas for QR detection (hidden) */}
@@ -242,13 +273,25 @@ export function CameraQRScanner({
 
       {/* Scanning indicator */}
       {isScanning && (
-        <div className="absolute top-4 right-4 flex items-center gap-2 rounded-full bg-green-500 px-3 py-1 text-sm font-medium text-white shadow-lg">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-          </span>
-          Scanning...
-        </div>
+        <>
+          <div className="absolute top-4 right-4 flex items-center gap-2 rounded-full bg-green-500 px-3 py-1 text-sm font-medium text-white shadow-lg">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+            </span>
+            Scanning...
+          </div>
+          
+          {/* Scanning frame indicator */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-8 border-4 border-white/30 rounded-lg">
+              <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg"></div>
+              <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg"></div>
+              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg"></div>
+              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg"></div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Instructions overlay */}
