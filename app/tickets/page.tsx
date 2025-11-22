@@ -33,27 +33,16 @@ export default async function MyTicketsPage() {
     console.log('User ID:', user.id)
     console.log('User email:', user.email)
     
-    const { data, error: ticketsError } = await supabase
+    const { data: ticketsData, error: ticketsError } = await supabase
       .from('tickets')
-      .select(`
-        *,
-        events (
-          id,
-          title,
-          start_datetime,
-          venue_name,
-          city,
-          banner_image_url
-        )
-      `)
+      .select('*')
       .eq('attendee_id', user.id)
       .order('purchased_at', { ascending: false })
     
     console.log('Tickets query result:', { 
-      count: data?.length || 0, 
+      count: ticketsData?.length || 0, 
       error: ticketsError,
-      rawData: data,
-      tickets: data?.map((t: any) => ({ 
+      tickets: ticketsData?.map((t: any) => ({ 
         id: t.id, 
         event_id: t.event_id, 
         attendee_id: t.attendee_id,
@@ -63,7 +52,33 @@ export default async function MyTicketsPage() {
       }))
     })
     
-    tickets = data || []
+    if (ticketsData && ticketsData.length > 0) {
+      // Fetch events for these tickets
+      const eventIds = [...new Set(ticketsData.map((t: any) => t.event_id))]
+      console.log('Fetching events for IDs:', eventIds)
+      
+      const { data: eventsData } = await supabase
+        .from('events')
+        .select('id, title, start_datetime, venue_name, city, banner_image_url')
+      
+      console.log('Events fetched:', eventsData?.length || 0)
+      
+      // Create a map of events
+      const eventsMap = new Map()
+      eventsData?.forEach((e: any) => {
+        eventsMap.set(e.id, e)
+      })
+      
+      // Combine tickets with their events
+      tickets = ticketsData.map((ticket: any) => ({
+        ...ticket,
+        events: eventsMap.get(ticket.event_id)
+      })).filter((t: any) => t.events) // Only include tickets with valid events
+      
+      console.log('Final tickets with events:', tickets.length)
+    } else {
+      tickets = []
+    }
   }
 
   return (
