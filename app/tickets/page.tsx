@@ -120,11 +120,29 @@ export default async function MyTicketsPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">My Tickets</h1>
 
+        {/* Debug info */}
+        {!isDemoMode() && (
+          <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded text-xs">
+            <p><strong>Debug:</strong> Found {tickets?.length || 0} tickets</p>
+            {tickets && tickets.length > 0 && (
+              <pre className="mt-2 overflow-auto">{JSON.stringify(tickets.map((t: any) => ({
+                id: t.id,
+                event_id: t.event_id,
+                hasEvents: !!t.events,
+                eventTitle: t.events?.title
+              })), null, 2)}</pre>
+            )}
+          </div>
+        )}
+
         {tickets && tickets.length > 0 ? (
           <div className="space-y-4">
             {tickets.map((ticket) => {
               const event = ticket.events as any
-              if (!event) return null
+              if (!event) {
+                console.log('Skipping ticket without event:', ticket.id)
+                return null
+              }
 
               return (
                 <Link
