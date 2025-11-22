@@ -35,22 +35,19 @@ export default async function MyTicketsPage() {
     console.log('User email:', user.email)
     
     try {
-      // First, get all tickets for this user
-      const ticketsQuery = await supabase
+      // Get ALL tickets first, then filter in memory
+      const allTicketsQuery = await supabase
         .from('tickets')
         .select('*')
-        .eq('attendee_id', user.id)
-        .order('purchased_at', { ascending: false })
       
-      const ticketsData = ticketsQuery.data
-      const ticketsError = ticketsQuery.error
+      const allTicketsData = allTicketsQuery.data
+      console.log('ALL tickets in database:', allTicketsData?.length || 0)
+      console.log('First 3 tickets:', allTicketsData?.slice(0, 3))
       
-      console.log('Raw tickets query result:', {
-        count: ticketsData?.length || 0,
-        error: ticketsError,
-        hasData: !!ticketsData,
-        firstTicket: ticketsData?.[0]
-      })
+      // Filter for this user
+      const ticketsData = allTicketsData?.filter((t: any) => t.attendee_id === user.id)
+      console.log('Tickets for this user:', ticketsData?.length || 0)
+      console.log('User tickets:', ticketsData)
       
       if (!ticketsData || ticketsData.length === 0) {
         console.log('No tickets found for user')
