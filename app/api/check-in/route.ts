@@ -9,7 +9,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { ticketId, eventId } = await request.json()
+    const body = await request.json()
+    console.log('Check-in request:', body)
+    const { ticketId, eventId } = body
 
     if (!ticketId || !eventId) {
       return NextResponse.json(
@@ -18,6 +20,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log('Looking for ticket with QR code:', ticketId, 'for event:', eventId)
+
     const supabase = await createClient()
 
     // Get all tickets and find by QR code
@@ -25,14 +29,19 @@ export async function POST(request: NextRequest) {
       .from('tickets')
       .select('*')
 
+    console.log('Total tickets found:', allTickets?.length)
+
     const ticket = allTickets?.find((t: any) => t.qr_code_data === ticketId)
 
     if (!ticket) {
+      console.log('Ticket not found with QR code:', ticketId)
       return NextResponse.json(
         { error: 'Ticket not found' },
         { status: 404 }
       )
     }
+
+    console.log('Found ticket:', ticket.id, 'for event:', ticket.event_id)
 
     // Verify ticket belongs to this event
     if (ticket.event_id !== eventId) {
@@ -107,10 +116,11 @@ export async function POST(request: NextRequest) {
         checked_in_at: new Date().toISOString()
       }
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Check-in error:', error)
+    console.error('Error stack:', error.stack)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: `Internal server error: ${error.message}` },
       { status: 500 }
     )
   }
