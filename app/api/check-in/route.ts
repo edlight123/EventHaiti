@@ -25,9 +25,11 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
 
     // Get all tickets and find by QR code
-    const allTickets = await supabase
+    const allTicketsQuery = await supabase
       .from('tickets')
       .select('*')
+    
+    const allTickets = allTicketsQuery.data
 
     console.log('Total tickets found:', allTickets?.length)
 
@@ -52,9 +54,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Get event to verify organizer
-    const allEvents = await supabase
+    const allEventsQuery = await supabase
       .from('events')
       .select('*')
+    
+    const allEvents = allEventsQuery.data
 
     const event = allEvents?.find((e: any) => e.id === eventId)
 
@@ -85,18 +89,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Get attendee info
-    const allUsers = await supabase
+    const allUsersQuery = await supabase
       .from('users')
       .select('*')
+    
+    const allUsers = allUsersQuery.data
 
     const attendee = allUsers?.find((u: any) => u.id === ticket.attendee_id)
 
     // Update ticket with check-in time
     // First get all tickets, find the one to update, then update it
-    const allTicketsForUpdate = await supabase
+    const allTicketsForUpdateQuery = await supabase
       .from('tickets')
       .select('*')
     
+    const allTicketsForUpdate = allTicketsForUpdateQuery.data
     const ticketToUpdate = allTicketsForUpdate?.find((t: any) => t.id === ticket.id)
     
     if (ticketToUpdate) {
