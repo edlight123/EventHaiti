@@ -16,15 +16,24 @@ export default async function MyTicketsPage() {
     redirect('/auth/login')
   }
 
-  let tickets: any[] = []
+  let eventsWithTickets: any[] = []
 
   if (isDemoMode()) {
-    // Return demo tickets with event details
-    tickets = DEMO_TICKETS.map(ticket => {
-      const event = DEMO_EVENTS.find(e => e.id === ticket.event_id)
+    // Group demo tickets by event
+    const ticketsByEvent = new Map()
+    DEMO_TICKETS.forEach(ticket => {
+      if (!ticketsByEvent.has(ticket.event_id)) {
+        ticketsByEvent.set(ticket.event_id, [])
+      }
+      ticketsByEvent.get(ticket.event_id).push(ticket)
+    })
+    
+    eventsWithTickets = Array.from(ticketsByEvent.entries()).map(([eventId, tickets]) => {
+      const event = DEMO_EVENTS.find(e => e.id === eventId)
       return {
-        ...ticket,
-        events: event
+        event,
+        tickets,
+        ticketCount: tickets.length
       }
     })
   } else {
@@ -32,7 +41,6 @@ export default async function MyTicketsPage() {
     const supabase = await createClient()
     console.log('=== FETCHING TICKETS ===')
     console.log('User ID:', user.id)
-    console.log('User email:', user.email)
     
     try {
       // Get ALL tickets first, then filter in memory
@@ -42,16 +50,14 @@ export default async function MyTicketsPage() {
       
       const allTicketsData = allTicketsQuery.data
       console.log('ALL tickets in database:', allTicketsData?.length || 0)
-      console.log('First 3 tickets:', allTicketsData?.slice(0, 3))
       
       // Filter for this user
       const ticketsData = allTicketsData?.filter((t: any) => t.attendee_id === user.id)
       console.log('Tickets for this user:', ticketsData?.length || 0)
-      console.log('User tickets:', ticketsData)
       
       if (!ticketsData || ticketsData.length === 0) {
         console.log('No tickets found for user')
-        tickets = []
+        eventsWithTickets = []
       } else {
         // Get ALL events from database
         const eventsQuery = await supabase
@@ -60,53 +66,31 @@ export default async function MyTicketsPage() {
         
         const eventsData = eventsQuery.data
         
-        console.log('All events query result:', {
-          count: eventsData?.length || 0,
-          error: eventsQuery.error,
-          hasData: !!eventsData,
-          firstEvent: eventsData?.[0]
+        // Group tickets by event
+        const ticketsByEvent = new Map()
+        
+        ticketsData.forEach((ticket: any) => {
+          if (!ticketsByEvent.has(ticket.event_id)) {
+            ticketsByEvent.set(ticket.event_id, [])
+          }
+          ticketsByEvent.get(ticket.event_id).push(ticket)
         })
         
-        // Create event map
-        const eventsMap = new Map()
-        if (eventsData) {
-          eventsData.forEach((event: any) => {
-            eventsMap.set(event.id, event)
-            console.log('Added event to map:', event.id, event.title)
-          })
-        }
-        
-        console.log('Events map has', eventsMap.size, 'events')
-        
-        // Combine tickets with events
-        tickets = []
-        for (const ticket of ticketsData) {
-          console.log('Processing ticket:', ticket.id, 'for event:', ticket.event_id)
-          const event = eventsMap.get(ticket.event_id)
-          
-          if (event) {
-            console.log('Found event:', event.id, event.title)
-            tickets.push({
-              ...ticket,
-              events: {
-                id: event.id,
-                title: event.title,
-                start_datetime: event.start_datetime,
-                venue_name: event.venue_name,
-                city: event.city,
-                banner_image_url: event.banner_image_url
-              }
-            })
-          } else {
-            console.log('WARNING: No event found for ticket:', ticket.id, 'event_id:', ticket.event_id)
+        // Create events with ticket counts
+        eventsWithTickets = Array.from(ticketsByEvent.entries()).map(([eventId, tickets]) => {
+          const event = eventsData?.find((e: any) => e.id === eventId)
+          return {
+            event,
+            tickets,
+            ticketCount: (tickets as any[]).length
           }
-        }
+        }).filter(item => item.event) // Only include items with valid events
         
-        console.log('Final combined tickets:', tickets.length)
+        console.log('Events with tickets:', eventsWithTickets.length)
       }
     } catch (error) {
       console.error('Error fetching tickets:', error)
-      tickets = []
+      eventsWithTickets = []
     }
   }
 
@@ -117,19 +101,18 @@ export default async function MyTicketsPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">My Tickets</h1>
 
-        {tickets && tickets.length > 0 ? (
+        {eventsWithTickets && eventsWithTickets.length > 0 ? (
           <div className="space-y-4">
-            {tickets.map((ticket) => {
-              const event = ticket.events as any
+            {eventsWithTickets.map((item) => {
+              const event = item.event
               if (!event) {
-                console.log('Skipping ticket without event:', ticket.id)
                 return null
               }
 
               return (
                 <Link
-                  key={ticket.id}
-                  href={`/tickets/${ticket.id}`}
+                  key={event.id}
+                  href={`/tickets/event/${event.id}`}
                   className="block bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200 overflow-hidden"
                 >
                   <div className="md:flex">
@@ -152,16 +135,8 @@ export default async function MyTicketsPage() {
                         <h3 className="text-xl font-semibold text-gray-900">
                           {event.title}
                         </h3>
-                        <span
-                          className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${
-                            ticket.status === 'valid' || ticket.status === 'active'
-                              ? 'bg-green-100 text-green-800'
-                              : ticket.status === 'used'
-                              ? 'bg-gray-100 text-gray-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}
-                        >
-                          {ticket.status}
+                        <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                          {item.ticketCount} {item.ticketCount === 1 ? 'Ticket' : 'Tickets'}
                         </span>
                       </div>
 
@@ -180,15 +155,11 @@ export default async function MyTicketsPage() {
                           </svg>
                           {event.venue_name}, {event.city}
                         </div>
-
-                        <div className="text-xs text-gray-500 mt-2">
-                          Purchased {format(new Date(ticket.purchased_at), 'MMM d, yyyy')}
-                        </div>
                       </div>
 
                       <div className="mt-4">
                         <span className="text-teal-700 text-sm font-medium">
-                          View QR Code →
+                          View Tickets & QR Codes →
                         </span>
                       </div>
                     </div>
