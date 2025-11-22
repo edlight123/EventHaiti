@@ -210,21 +210,38 @@ export function CameraQRScanner({
   }
 
   const startScanning = () => {
+    console.log('startScanning called')
+    setDebugInfo('Starting scan interval...')
+    
     // Scan for QR codes every 100ms
     scanIntervalRef.current = setInterval(() => {
       scanFrame()
     }, 100)
+    
+    console.log('Scan interval set:', scanIntervalRef.current)
   }
 
   const scanFrame = () => {
     const video = videoRef.current
     const canvas = canvasRef.current
 
-    if (!video || !canvas || !isScanning) {
+    if (!video) {
+      console.log('scanFrame: no video')
+      return
+    }
+    
+    if (!canvas) {
+      console.log('scanFrame: no canvas')
+      return
+    }
+    
+    if (!isScanning) {
+      console.log('scanFrame: not scanning')
       return
     }
 
     if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+      console.log('scanFrame: video not ready, readyState:', video.readyState)
       return
     }
 
