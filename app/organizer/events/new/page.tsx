@@ -17,6 +17,23 @@ export default async function NewEventPage() {
   const allUsers = await supabase.from('users').select('*')
   const userData = allUsers.data?.find((u: any) => u.id === user.id)
 
+  // Check for pending verification request
+  let verificationStatus = userData?.verification_status
+  if (userData && !userData.is_verified) {
+    const { data: verificationRequest } = await supabase
+      .from('verification_requests')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+    
+    // Update status from request if exists
+    if (verificationRequest) {
+      verificationStatus = verificationRequest.status
+    }
+  }
+
   // If not verified, redirect to verification page
   if (!userData?.is_verified) {
     return (
@@ -33,10 +50,10 @@ export default async function NewEventPage() {
               </div>
               
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                Verification Required
+                {verificationStatus === 'pending' ? 'Verification Pending' : 'Verification Required'}
               </h1>
               
-              {userData?.verification_status === 'pending' ? (
+              {verificationStatus === 'pending' ? (
                 <>
                   <p className="text-gray-600 mb-6">
                     Your verification request is being reviewed. This usually takes 24-48 hours.
@@ -53,7 +70,7 @@ export default async function NewEventPage() {
                     Back to Dashboard
                   </Link>
                 </>
-              ) : userData?.verification_status === 'rejected' ? (
+              ) : verificationStatus === 'rejected' ? (
                 <>
                   <p className="text-gray-600 mb-6">
                     Unfortunately, your verification request was not approved. Please try again with clearer photos.
