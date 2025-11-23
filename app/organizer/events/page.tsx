@@ -38,16 +38,19 @@ export default async function OrganizerEventsPage() {
       console.log('Is verified:', userData?.is_verified)
       console.log('Verification status:', userData?.verification_status)
       
-      // Check for pending verification request
+      // Check for pending verification request - simplified query without ordering
       if (userData && !userData.is_verified) {
         const { data: verificationRequests } = await supabase
           .from('verification_requests')
           .select('*')
           .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
         
-        const verificationRequest = verificationRequests?.[0]
+        // Sort in memory instead of in query to avoid index requirement
+        const sortedRequests = verificationRequests?.sort((a: any, b: any) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+        const verificationRequest = sortedRequests?.[0]
+        
         console.log('Verification request:', verificationRequest)
         
         // Update userData with verification status from request if exists

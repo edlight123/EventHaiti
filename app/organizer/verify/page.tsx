@@ -20,15 +20,18 @@ export default async function VerifyOrganizerPage() {
   console.log('Verify page - User data:', userData)
   console.log('Is verified:', userData?.is_verified)
 
-  // Check for existing verification request
+  // Check for existing verification request - simplified query without ordering
   const { data: existingRequests } = await supabase
     .from('verification_requests')
     .select('*')
     .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(1)
 
-  const existingRequest = existingRequests?.[0]
+  // Sort in memory instead of in query to avoid index requirement
+  const sortedRequests = existingRequests?.sort((a: any, b: any) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )
+  const existingRequest = sortedRequests?.[0]
+  
   console.log('Existing verification request:', existingRequest)
 
   // If already verified, redirect to events
