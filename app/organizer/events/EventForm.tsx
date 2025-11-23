@@ -333,6 +333,9 @@ export default function EventForm({ userId, event }: EventFormProps) {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
               placeholder="0 for free, or 25.00"
             />
+            <p className="mt-1 text-sm text-gray-500">
+              💡 This is your general admission price. After creating the event, you can add VIP, Early Bird, and other ticket tiers!
+            </p>
           </div>
 
           <div>
@@ -350,6 +353,9 @@ export default function EventForm({ userId, event }: EventFormProps) {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
               placeholder="e.g., 100"
             />
+            <p className="mt-1 text-sm text-gray-500">
+              This is the total capacity. You can split this into different tiers after creating the event.
+            </p>
           </div>
         </div>
 
