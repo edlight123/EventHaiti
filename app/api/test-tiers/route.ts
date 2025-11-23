@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     console.log('Direct Firestore query succeeded')
     console.log('Found documents:', snapshot.docs.length)
 
-    const tiers = snapshot.docs.map(doc => ({
+    const tiers = snapshot.docs.map((doc: any) => ({
       id: doc.id,
       ...doc.data()
     }))
