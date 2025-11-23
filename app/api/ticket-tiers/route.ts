@@ -40,17 +40,23 @@ export async function POST(req: NextRequest) {
     // Create ticket tier
     const tierId = `tier_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
+    // Convert price from cents to dollars for DECIMAL storage
+    const priceInDollars = price / 100
+
     const { error: insertError } = await supabase.from('ticket_tiers').insert({
       id: tierId,
       event_id: eventId,
       name,
       description,
-      price,
-      quantity,
+      price: priceInDollars,
+      total_quantity: quantity,
+      sold_quantity: 0,
       sales_start: salesStart || null,
       sales_end: salesEnd || null,
       sort_order: sortOrder || 0,
+      is_active: true,
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
 
     if (insertError) {
@@ -148,16 +154,19 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Update tier
+    const priceInDollars = price !== undefined ? price / 100 : tier.price
+    
     const { error: updateError } = await supabase
       .from('ticket_tiers')
       .update({
         name: name !== undefined ? name : tier.name,
         description: description !== undefined ? description : tier.description,
-        price: price !== undefined ? price : tier.price,
-        quantity: quantity !== undefined ? quantity : tier.quantity,
+        price: priceInDollars,
+        total_quantity: quantity !== undefined ? quantity : tier.total_quantity,
         sales_start: salesStart !== undefined ? salesStart : tier.sales_start,
         sales_end: salesEnd !== undefined ? salesEnd : tier.sales_end,
         sort_order: sortOrder !== undefined ? sortOrder : tier.sort_order,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', tierId)
 
