@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { Resend } from 'resend'
+import { adminDb } from '@/lib/firebase/admin'
 
 const resend = new Resend(process.env.RESEND_API_KEY || '')
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@eventhaiti.com').split(',')
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
     console.log('Current user data:', userToUpdate)
     console.log('New verification status:', status)
 
-    // Update the user document with verification fields
+    // Update the user document directly using Firebase Admin SDK
     const updatePayload = {
       ...userToUpdate,
       is_verified: status === 'approved',
@@ -86,16 +87,12 @@ export async function POST(request: NextRequest) {
     
     console.log('Update payload:', updatePayload)
 
-    const { data: updateResult, error: updateUserError } = await supabase
-      .from('users')
-      .update(updatePayload)
-      .eq('id', verificationRequest.user_id)
-
-    console.log('Update result:', updateResult)
-    console.log('Update error:', updateUserError)
-
-    if (updateUserError) {
-      console.error('Error updating user:', updateUserError)
+    try {
+      // Use Firebase Admin SDK directly to ensure the update works
+      await adminDb.collection('users').doc(verificationRequest.user_id).set(updatePayload, { merge: true })
+      console.log('User updated successfully via Admin SDK')
+    } catch (adminError) {
+      console.error('Error updating user via Admin SDK:', adminError)
       return NextResponse.json(
         { error: 'Failed to update user status' },
         { status: 500 }
