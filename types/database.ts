@@ -15,6 +15,7 @@ export interface Database {
           phone_number: string | null
           role: UserRole
           is_verified: boolean
+          verification_status: 'none' | 'pending' | 'approved' | 'rejected'
           created_at: string
           updated_at: string
         }
@@ -25,6 +26,7 @@ export interface Database {
           phone_number?: string | null
           role?: UserRole
           is_verified?: boolean
+          verification_status?: 'none' | 'pending' | 'approved' | 'rejected'
           created_at?: string
           updated_at?: string
         }
@@ -35,6 +37,48 @@ export interface Database {
           phone_number?: string | null
           role?: UserRole
           is_verified?: boolean
+          verification_status?: 'none' | 'pending' | 'approved' | 'rejected'
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      verification_requests: {
+        Row: {
+          id: string
+          user_id: string
+          id_front_url: string
+          id_back_url: string
+          face_photo_url: string
+          status: 'pending' | 'approved' | 'rejected'
+          reviewed_by: string | null
+          reviewed_at: string | null
+          rejection_reason: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          id_front_url: string
+          id_back_url: string
+          face_photo_url: string
+          status?: 'pending' | 'approved' | 'rejected'
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          rejection_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          id_front_url?: string
+          id_back_url?: string
+          face_photo_url?: string
+          status?: 'pending' | 'approved' | 'rejected'
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          rejection_reason?: string | null
           created_at?: string
           updated_at?: string
         }
