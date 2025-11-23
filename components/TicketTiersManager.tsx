@@ -8,11 +8,12 @@ interface TicketTier {
   name: string
   description: string | null
   price: number
-  quantity: number
-  sold_count: number
+  total_quantity: number
+  sold_quantity: number
   sales_start: string | null
   sales_end: string | null
   sort_order: number
+  is_active?: boolean
 }
 
 interface TicketTiersManagerProps {
@@ -39,9 +40,11 @@ export default function TicketTiersManager({ eventId }: TicketTiersManagerProps)
 
   const fetchTiers = async () => {
     try {
+      console.log('Fetching tiers for event:', eventId)
       const response = await fetch(`/api/ticket-tiers?eventId=${eventId}`)
       if (!response.ok) throw new Error('Failed to fetch tiers')
       const data = await response.json()
+      console.log('Received tiers data:', data)
       setTiers(data.tiers || [])
     } catch (error) {
       console.error('Error fetching tiers:', error)
@@ -55,22 +58,29 @@ export default function TicketTiersManager({ eventId }: TicketTiersManagerProps)
     setLoading(true)
 
     try {
+      const requestBody = {
+        eventId,
+        name: formData.name,
+        description: formData.description || null,
+        price: parseFloat(formData.price) * 100, // Convert to cents
+        quantity: parseInt(formData.quantity),
+        salesStart: formData.salesStart || null,
+        salesEnd: formData.salesEnd || null,
+        sortOrder: tiers.length,
+      }
+      
+      console.log('Creating tier with data:', requestBody)
+      
       const response = await fetch('/api/ticket-tiers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventId,
-          name: formData.name,
-          description: formData.description || null,
-          price: parseFloat(formData.price) * 100, // Convert to cents
-          quantity: parseInt(formData.quantity),
-          salesStart: formData.salesStart || null,
-          salesEnd: formData.salesEnd || null,
-          sortOrder: tiers.length,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
-      if (!response.ok) throw new Error('Failed to create tier')
+      const result = await response.json()
+      console.log('Create tier response:', result)
+
+      if (!response.ok) throw new Error(result.error || 'Failed to create tier')
 
       alert('Ticket tier created successfully!')
       setShowForm(false)
@@ -78,6 +88,8 @@ export default function TicketTiersManager({ eventId }: TicketTiersManagerProps)
       fetchTiers()
       router.refresh()
     } catch (error: any) {
+      console.error('Error creating tier:', error)
+      alert('Error: ' + error.message)
       alert(error.message || 'Failed to create ticket tier')
     } finally {
       setLoading(false)
@@ -228,10 +240,10 @@ export default function TicketTiersManager({ eventId }: TicketTiersManagerProps)
                   )}
                   <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
                     <span className="font-medium text-teal-600">
-                      {(tier.price / 100).toFixed(2)} HTG
+                      {tier.price.toFixed(2)} HTG
                     </span>
                     <span>
-                      {tier.sold_count || 0} / {tier.quantity} sold
+                      {tier.sold_quantity || 0} / {tier.total_quantity} sold
                     </span>
                     {tier.sales_start && (
                       <span>
