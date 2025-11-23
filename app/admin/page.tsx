@@ -48,82 +48,108 @@ export default async function AdminDashboard() {
 
   const supabase = await createClient()
 
+  // Fetch platform statistics with error handling for each query
+  let totalUsers = 0
+  let totalEvents = 0
+  let totalTickets = 0
+  let revenue = 0
+  let pendingVerifications = 0
+  let recentEvents: any[] = []
+
   try {
-    // Fetch platform statistics
-    const { data: users } = await supabase.from('users').select('id')
-    const totalUsers = users?.length || 0
+    const usersResult = await supabase.from('users').select('id')
+    totalUsers = usersResult.data?.length || 0
+  } catch (e) {
+    console.error('Error fetching users:', e)
+  }
 
-    const { data: events } = await supabase.from('events').select('id')
-    const totalEvents = events?.length || 0
+  try {
+    const eventsResult = await supabase.from('events').select('id')
+    totalEvents = eventsResult.data?.length || 0
+  } catch (e) {
+    console.error('Error fetching events:', e)
+  }
 
-    const { data: tickets } = await supabase.from('tickets').select('id, price_paid, status')
-    const totalTickets = tickets?.length || 0
-
-    const revenue = tickets
+  try {
+    const ticketsResult = await supabase.from('tickets').select('id, price_paid, status')
+    totalTickets = ticketsResult.data?.length || 0
+    revenue = ticketsResult.data
       ?.filter((t: any) => t.status === 'confirmed')
       ?.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0) || 0
+  } catch (e) {
+    console.error('Error fetching tickets:', e)
+  }
 
-    // Verification requests
-    const { data: verificationRequests } = await supabase
+  try {
+    const verificationResult = await supabase
       .from('verification_requests')
       .select('id, status')
-    
-    const pendingVerifications = verificationRequests?.filter((r: any) => r.status === 'pending').length || 0
+    pendingVerifications = verificationResult.data?.filter((r: any) => r.status === 'pending').length || 0
+  } catch (e) {
+    console.error('Error fetching verifications:', e)
+  }
 
-    // Recent events - simplified query without join
-    const { data: recentEvents } = await supabase
+  try {
+    const eventsResult = await supabase
       .from('events')
-      .select('id, title, start_datetime, price, created_at, organizer_id')
+      .select('id, title, start_datetime, price, created_at')
       .order('created_at', { ascending: false })
       .limit(10)
+    recentEvents = eventsResult.data || []
+  } catch (e) {
+    console.error('Error fetching recent events:', e)
+  }
 
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar user={user} />
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar user={user} />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-            <p className="text-gray-600 mt-2">Platform overview and management</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-gray-600 mt-2">Platform overview and management</p>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="text-sm font-medium text-gray-600">Total Users</div>
+            <div className="text-3xl font-bold text-gray-900 mt-2">{totalUsers.toLocaleString()}</div>
           </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="text-sm font-medium text-gray-600">Total Users</div>
-              <div className="text-3xl font-bold text-gray-900 mt-2">{totalUsers.toLocaleString()}</div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="text-sm font-medium text-gray-600">Total Events</div>
-              <div className="text-3xl font-bold text-gray-900 mt-2">{totalEvents.toLocaleString()}</div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="text-sm font-medium text-gray-600">Tickets Sold</div>
-              <div className="text-3xl font-bold text-gray-900 mt-2">{totalTickets.toLocaleString()}</div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="text-sm font-medium text-gray-600">Total Revenue</div>
-              <div className="text-3xl font-bold text-teal-600 mt-2">${revenue.toLocaleString()}</div>
-            </div>
-
-            <a
-              href="/admin/verify"
-              className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl shadow-sm border-2 border-yellow-400 p-6 hover:border-yellow-500 transition-all hover:shadow-md"
-            >
-              <div className="text-sm font-medium text-yellow-800">Pending Verifications</div>
-              <div className="text-3xl font-bold text-yellow-900 mt-2">{pendingVerifications}</div>
-              {pendingVerifications > 0 && (
-                <div className="text-xs text-yellow-700 mt-2 font-medium">→ Click to Review</div>
-              )}
-            </a>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="text-sm font-medium text-gray-600">Total Events</div>
+            <div className="text-3xl font-bold text-gray-900 mt-2">{totalEvents.toLocaleString()}</div>
           </div>
 
-          {/* Recent Events */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Events</h2>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="text-sm font-medium text-gray-600">Tickets Sold</div>
+            <div className="text-3xl font-bold text-gray-900 mt-2">{totalTickets.toLocaleString()}</div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="text-sm font-medium text-gray-600">Total Revenue</div>
+            <div className="text-3xl font-bold text-teal-600 mt-2">${revenue.toLocaleString()}</div>
+          </div>
+
+          <a
+            href="/admin/verify"
+            className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl shadow-sm border-2 border-yellow-400 p-6 hover:border-yellow-500 transition-all hover:shadow-md"
+          >
+            <div className="text-sm font-medium text-yellow-800">Pending Verifications</div>
+            <div className="text-3xl font-bold text-yellow-900 mt-2">{pendingVerifications}</div>
+            {pendingVerifications > 0 && (
+              <div className="text-xs text-yellow-700 mt-2 font-medium">→ Click to Review</div>
+            )}
+          </a>
+        </div>
+
+        {/* Recent Events */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Events</h2>
+          {recentEvents.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">No events yet</p>
+          ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
@@ -135,7 +161,7 @@ export default async function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {recentEvents?.map((event: any) => (
+                  {recentEvents.map((event: any) => (
                     <tr key={event.id}>
                       <td className="px-4 py-3 text-sm text-gray-900">{event.title}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">
@@ -156,74 +182,51 @@ export default async function AdminDashboard() {
                 </tbody>
               </table>
             </div>
-          </div>
-
-          {/* Admin Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <a
-              href="/admin/verify"
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-teal-600 transition-colors group"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-semibold text-gray-900">Verify Organizers</h3>
-                {pendingVerifications > 0 && (
-                  <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                    {pendingVerifications}
-                  </span>
-                )}
-              </div>
-              <p className="text-gray-600 text-sm">Review identity verification requests</p>
-            </a>
-
-            <a
-              href="/admin/events"
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-teal-600 transition-colors"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Manage Events</h3>
-              <p className="text-gray-600 text-sm">Review and moderate events</p>
-            </a>
-
-            <a
-              href="/admin/users"
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-teal-600 transition-colors"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Manage Users</h3>
-              <p className="text-gray-600 text-sm">View and moderate user accounts</p>
-            </a>
-
-            <a
-              href="/admin/analytics"
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-teal-600 transition-colors"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Analytics</h3>
-              <p className="text-gray-600 text-sm">Platform insights and reports</p>
-            </a>
-          </div>
+          )}
         </div>
-      </div>
-    )
-  } catch (error) {
-    console.error('Admin dashboard error:', error)
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-gray-200 p-8 text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Dashboard</h1>
-          <p className="text-gray-600 mb-6">
-            There was an error loading the admin dashboard. Please try again or contact support.
-          </p>
+
+        {/* Admin Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <a
-            href="/"
-            className="inline-block bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition-colors"
+            href="/admin/verify"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-teal-600 transition-colors group"
           >
-            Return to Home
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold text-gray-900">Verify Organizers</h3>
+              {pendingVerifications > 0 && (
+                <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  {pendingVerifications}
+                </span>
+              )}
+            </div>
+            <p className="text-gray-600 text-sm">Review identity verification requests</p>
+          </a>
+
+          <a
+            href="/admin/events"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-teal-600 transition-colors"
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Manage Events</h3>
+            <p className="text-gray-600 text-sm">Review and moderate events</p>
+          </a>
+
+          <a
+            href="/admin/users"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-teal-600 transition-colors"
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Manage Users</h3>
+            <p className="text-gray-600 text-sm">View and moderate user accounts</p>
+          </a>
+
+          <a
+            href="/admin/analytics"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-teal-600 transition-colors"
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Analytics</h3>
+            <p className="text-gray-600 text-sm">Platform insights and reports</p>
           </a>
         </div>
       </div>
-    )
-  }
+    </div>
+  )
 }
