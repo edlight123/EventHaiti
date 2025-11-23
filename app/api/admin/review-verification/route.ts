@@ -80,6 +80,24 @@ export async function POST(request: NextRequest) {
     const allUsers = await supabase.from('users').select('*')
     const organizer = allUsers.data?.find((u: any) => u.id === verificationRequest.user_id)
 
+    // Create in-app notification
+    try {
+      const notificationMessage = status === 'approved'
+        ? 'Your account has been verified! You can now create events.'
+        : `Your verification was not approved. ${rejectionReason || 'Please try again with clearer documents.'}`
+
+      await supabase.from('notifications').insert({
+        user_id: verificationRequest.user_id,
+        type: status === 'approved' ? 'verification_approved' : 'verification_rejected',
+        title: status === 'approved' ? '✅ Account Verified!' : '❌ Verification Not Approved',
+        message: notificationMessage,
+        link: status === 'approved' ? '/organizer/events/new' : '/organizer/verify',
+      })
+    } catch (notificationError) {
+      console.error('Error creating notification:', notificationError)
+      // Don't fail the request if notification creation fails
+    }
+
     // Send notification email to organizer
     if (organizer?.email) {
       try {
