@@ -39,26 +39,111 @@ export default function FaceVerification({ onCapture, onRetake }: Props) {
 
   const startCamera = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'user', // Front camera for selfie
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      })
+      setError(null)
+      setCameraReady(false)
       
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream
-        videoRef.current.onloadedmetadata = () => {
-          setCameraReady(true)
-        }
+      // iOS-compatible constraints - simpler for better compatibility
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+      const constraints = isIOS 
+        ? { video: { facingMode: 'user' } }
+        : {
+            video: {
+              facingMode: 'user', // Front camera for selfie
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+          }
+      
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
+      
+      const video = videoRef.current
+      if (!video) {
+        console.error('No video element found')
+        setError('Video element not ready')
+        return
       }
+
+      video.srcObject = mediaStream
+      
+      // Force proper mobile video playback attributes
+      video.setAttribute('autoplay', 'true')
+      video.setAttribute('muted', 'true')
+      video.setAttribute('playsinline', 'true')
+      video.muted = true
+      video.playsInline = true
+      
+      // Wait for the video to actually start with timeout
+      await new Promise<void>((resolve, reject) => {
+        let resolved = false
+        
+        video.onloadedmetadata = async () => {
+          console.log('Video metadata loaded:', {
+            width: video.videoWidth,
+            height: video.videoHeight
+          })
+          
+          try {
+            await video.play()
+            console.log('Video playing')
+            
+            // Give it a moment to render, especially on iOS
+            setTimeout(() => {
+              if (!resolved) {
+                resolved = true
+                setCameraReady(true)
+                
+                // Force Safari to render - trigger repaint
+                video.style.transform = 'translateZ(0)'
+                video.style.webkitTransform = 'translateZ(0)'
+                void video.offsetHeight
+                
+                resolve()
+              }
+            }, 500)
+          } catch (playError) {
+            console.error('Play error:', playError)
+            if (!resolved) {
+              resolved = true
+              reject(playError)
+            }
+          }
+        }
+        
+        video.onerror = (err) => {
+          console.error('Video element error:', err)
+          if (!resolved) {
+            resolved = true
+            reject(new Error('Video element error'))
+          }
+        }
+        
+        // Timeout after 10 seconds
+        setTimeout(() => {
+          if (!resolved) {
+            resolved = true
+            setCameraReady(true)
+            resolve()
+          }
+        }, 10000)
+      })
       
       setStream(mediaStream)
       setError(null)
     } catch (err) {
       console.error('Camera access error:', err)
-      setError('Unable to access camera. Please grant camera permissions.')
+      let errorMessage = 'Unable to access camera. Please grant camera permissions.'
+      
+      if (err instanceof Error) {
+        if (err.name === 'NotAllowedError') {
+          errorMessage = 'Camera access denied. Please allow camera permissions in your browser settings.'
+        } else if (err.name === 'NotFoundError') {
+          errorMessage = 'No camera found on this device.'
+        } else if (err.name === 'NotSupportedError' || err.message.includes('secure')) {
+          errorMessage = 'Camera requires HTTPS. Please access this page via a secure connection.'
+        }
+      }
+      
+      setError(errorMessage)
     }
   }
 
