@@ -18,22 +18,27 @@ export default async function AdminVerifyPage() {
 
   const supabase = await createClient()
   
-  // Fetch all verification requests with user data
+  // Fetch all verification requests
   const allRequests = await supabase
     .from('verification_requests')
-    .select(`
-      *,
-      users (
-        id,
-        email,
-        full_name
-      )
-    `)
+    .select('*')
   const verificationRequests = allRequests.data || []
 
-  // Fetch all organizers for quick verification toggle
+  // Fetch all users to match with verification requests
   const allUsers = await supabase.from('users').select('*')
-  const organizers = allUsers.data?.filter((u: any) => u.role === 'organizer') || []
+  const users = allUsers.data || []
+
+  // Manually join user data with verification requests
+  const requestsWithUsers = verificationRequests.map((request: any) => {
+    const requestUser = users.find((u: any) => u.id === request.user_id)
+    return {
+      ...request,
+      user: requestUser
+    }
+  })
+
+  // Filter organizers for quick verification toggle
+  const organizers = users.filter((u: any) => u.role === 'organizer')
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -60,14 +65,14 @@ export default async function AdminVerifyPage() {
             <p className="text-gray-500 text-center py-8">No pending verification requests</p>
           ) : (
             <div className="space-y-6">
-              {verificationRequests
+              {requestsWithUsers
                 .filter((r: any) => r.status === 'pending')
                 .map((request: any) => {
                   return (
                     <VerificationRequestReview
                       key={request.id}
                       request={request}
-                      user={request.users}
+                      user={request.user}
                     />
                   )
                 })}
