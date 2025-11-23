@@ -81,7 +81,7 @@ export default function EventSelector({ events, organizerId }: EventSelectorProp
         {events.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📅</div>
-            <p className="text-gray-600 mb-4">You don't have any events yet.</p>
+            <p className="text-gray-600 mb-4">You don&apos;t have any events yet.</p>
             <a
               href="/organizer/events/new"
               className="inline-block px-6 py-3 bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-medium"
