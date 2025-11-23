@@ -35,7 +35,7 @@ export default async function AdminDashboard() {
     .from('verification_requests')
     .select('id, status')
   
-  const pendingVerifications = verificationRequests?.filter(r => r.status === 'pending').length || 0
+  const pendingVerifications = verificationRequests?.filter((r: any) => r.status === 'pending').length || 0
 
   // Recent events
   const { data: recentEvents } = await supabase
