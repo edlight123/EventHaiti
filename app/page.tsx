@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar'
 import SearchBar from '@/components/SearchBar'
 import CategoryGrid from '@/components/CategoryGrid'
 import DateFilters from '@/components/DateFilters'
+import EventSearchFilters from '@/components/EventSearchFilters'
 import { BRAND } from '@/config/brand'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import type { Database } from '@/types/database'
@@ -16,7 +17,18 @@ export const revalidate = 0
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; location?: string; category?: string; date?: string }>
+  searchParams: Promise<{ 
+    q?: string
+    location?: string
+    category?: string
+    date?: string
+    city?: string
+    dateFrom?: string
+    dateTo?: string
+    minPrice?: string
+    maxPrice?: string
+    sort?: string
+  }>
 }) {
   const user = await getCurrentUser()
   const params = await searchParams
@@ -38,8 +50,6 @@ export default async function HomePage({
       .select('*, users!events_organizer_id_fkey(full_name, is_verified)')
       .eq('is_published', true)
       .gte('start_datetime', now)
-      // Temporarily removed ordering to avoid index requirement
-      // .order('start_datetime', { ascending: true })
     
     const result = await query
     console.log('Home page - query result:', result)
@@ -60,14 +70,40 @@ export default async function HomePage({
     )
   }
 
-  if (params.location) {
-    events = events.filter(e => e.city === params.location)
+  // City filter (from both old and new params)
+  const cityFilter = params.city || params.location
+  if (cityFilter) {
+    events = events.filter(e => e.city === cityFilter)
   }
 
   if (params.category) {
     events = events.filter(e => e.category === params.category)
   }
 
+  // Date range filter (new advanced filters)
+  if (params.dateFrom) {
+    const fromDate = new Date(params.dateFrom)
+    events = events.filter(e => new Date(e.start_datetime) >= fromDate)
+  }
+  
+  if (params.dateTo) {
+    const toDate = new Date(params.dateTo)
+    toDate.setHours(23, 59, 59, 999) // End of day
+    events = events.filter(e => new Date(e.start_datetime) <= toDate)
+  }
+
+  // Price range filter (new advanced filters)
+  if (params.minPrice) {
+    const minPrice = parseFloat(params.minPrice)
+    events = events.filter(e => (e.ticket_price || 0) >= minPrice)
+  }
+  
+  if (params.maxPrice) {
+    const maxPrice = parseFloat(params.maxPrice)
+    events = events.filter(e => (e.ticket_price || 0) <= maxPrice)
+  }
+
+  // Legacy date filter (for backward compatibility)
   if (params.date) {
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -100,6 +136,30 @@ export default async function HomePage({
           return true
       }
     })
+  }
+
+  // Apply sorting
+  if (params.sort) {
+    switch (params.sort) {
+      case 'date':
+        events.sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
+        break
+      case 'price-low':
+        events.sort((a, b) => (a.ticket_price || 0) - (b.ticket_price || 0))
+        break
+      case 'price-high':
+        events.sort((a, b) => (b.ticket_price || 0) - (a.ticket_price || 0))
+        break
+      case 'popular':
+        events.sort((a, b) => (b.tickets_sold || 0) - (a.tickets_sold || 0))
+        break
+      default:
+        // Default sort by date
+        events.sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
+    }
+  } else {
+    // Default sort by date if no sort specified
+    events.sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
   }
 
   return (
@@ -136,11 +196,10 @@ export default async function HomePage({
         </div>
       </div>
 
-      {/* Categories Section */}
+      {/* Advanced Search Filters */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Browse by Category</h2>
-          <CategoryGrid />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <EventSearchFilters />
         </div>
       </div>
 
@@ -148,15 +207,10 @@ export default async function HomePage({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-900">
-            {params.q || params.location || params.category 
+            {params.q || params.location || params.city || params.category 
               ? 'Search Results' 
               : 'Upcoming Events'}
           </h2>
-        </div>
-
-        {/* Date Filters */}
-        <div className="mb-8">
-          <DateFilters />
         </div>
 
         {events && events.length > 0 ? (

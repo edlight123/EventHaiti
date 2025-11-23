@@ -5,6 +5,7 @@ import { redirect, notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import EventUpdates from './EventUpdates'
+import NotifyAttendeesButton from './NotifyAttendeesButton'
 import { isDemoMode, DEMO_EVENTS, DEMO_TICKETS } from '@/lib/demo'
 
 export const revalidate = 0
@@ -94,6 +95,7 @@ export default async function OrganizerEventDetailPage({ params }: { params: Pro
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-3xl font-bold text-gray-900">{event.title}</h1>
             <div className="flex gap-3">
+              <NotifyAttendeesButton eventId={event.id} />
               <a
                 href={`/api/events/${event.id}/export-attendees`}
                 download
