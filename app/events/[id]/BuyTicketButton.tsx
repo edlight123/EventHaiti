@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 import { isDemoMode } from '@/lib/demo'
+import TieredTicketSelector from '@/components/TieredTicketSelector'
 
 interface BuyTicketButtonProps {
   eventId: string
@@ -15,10 +16,14 @@ interface BuyTicketButtonProps {
 export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }: BuyTicketButtonProps) {
   const router = useRouter()
   const [showModal, setShowModal] = useState(false)
+  const [showTieredModal, setShowTieredModal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'moncash'>('stripe')
   const [quantity, setQuantity] = useState(1)
+  const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
+  const [selectedTierPrice, setSelectedTierPrice] = useState<number>(0)
+  const [promoCode, setPromoCode] = useState<string | undefined>()
 
   async function handleClaimFreeTicket() {
     setLoading(true)
@@ -68,6 +73,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
       if (isDemoMode()) {
         await new Promise(resolve => setTimeout(resolve, 800))
         setShowModal(false)
+        setShowTieredModal(false)
         alert(`✅ Demo: ${quantity} ticket${quantity !== 1 ? 's' : ''} purchased successfully! In production, this would create real tickets.`)
         router.refresh()
         setLoading(false)
@@ -79,7 +85,13 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
         const response = await fetch('/api/create-checkout-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ eventId, quantity }),
+          body: JSON.stringify({ 
+            eventId, 
+            quantity,
+            tierId: selectedTierId,
+            tierPrice: selectedTierPrice,
+            promoCode,
+          }),
         })
 
         const data = await response.json()
@@ -97,7 +109,13 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
         const response = await fetch('/api/moncash/initiate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ eventId, quantity }),
+          body: JSON.stringify({ 
+            eventId, 
+            quantity,
+            tierId: selectedTierId,
+            tierPrice: selectedTierPrice,
+            promoCode,
+          }),
         })
 
         const data = await response.json()
@@ -115,6 +133,15 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
       setError(err.message || 'Failed to purchase ticket')
       setLoading(false)
     }
+  }
+
+  const handleTieredPurchase = (tierId: string, tierPrice: number, qty: number, promo?: string) => {
+    setSelectedTierId(tierId)
+    setSelectedTierPrice(tierPrice)
+    setQuantity(qty)
+    setPromoCode(promo)
+    setShowTieredModal(false)
+    setShowModal(true)
   }
 
   return (
@@ -156,13 +183,38 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
           </button>
         </div>
       ) : (
-        <button
-          onClick={() => setShowModal(true)}
-          disabled={loading}
-          className="block w-full bg-teal-700 hover:bg-teal-800 text-white text-center font-semibold py-4 px-6 rounded-lg transition-colors disabled:opacity-50"
-        >
-          {loading ? 'Processing...' : 'Buy Ticket'}
-        </button>
+        <>
+          <button
+            onClick={() => setShowTieredModal(true)}
+            disabled={loading}
+            className="block w-full bg-teal-700 hover:bg-teal-800 text-white text-center font-semibold py-4 px-6 rounded-lg transition-colors disabled:opacity-50"
+          >
+            {loading ? 'Processing...' : 'Buy Ticket'}
+          </button>
+
+          {/* Tiered Ticket Selection Modal */}
+          {showTieredModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+              <div className="bg-white rounded-2xl max-w-2xl w-full p-6 my-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-gray-900">Select Tickets</h3>
+                  <button
+                    onClick={() => setShowTieredModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <TieredTicketSelector
+                  eventId={eventId}
+                  userId={userId}
+                  onPurchase={handleTieredPurchase}
+                />
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {error && !showModal && (
@@ -208,8 +260,15 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
             <div className="bg-teal-50 rounded-lg p-4 mb-6">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Total Amount:</span>
-                <span className="text-xl font-bold text-teal-700">{(ticketPrice * quantity).toFixed(2)} HTG</span>
+                <span className="text-xl font-bold text-teal-700">
+                  {((selectedTierPrice || ticketPrice) * quantity / 100).toFixed(2)} HTG
+                </span>
               </div>
+              {promoCode && (
+                <div className="mt-2 text-sm text-green-600">
+                  ✓ Promo code {promoCode} applied
+                </div>
+              )}
             </div>
 
             {error && (

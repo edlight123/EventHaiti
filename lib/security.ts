@@ -246,10 +246,20 @@ export async function validateTicketScan(
  */
 export async function recordTicketScan(ticketId: string, scannedBy: string): Promise<void> {
   const supabase = await createClient()
+  
+  // Get current ticket data
+  const { data: ticket } = await supabase
+    .from('tickets')
+    .select('scanned_count')
+    .eq('id', ticketId)
+    .single()
+  
+  const currentCount = ticket?.scanned_count || 0
+  
   await supabase
     .from('tickets')
     .update({
-      scanned_count: supabase.sql`scanned_count + 1`,
+      scanned_count: currentCount + 1,
       last_scanned_at: new Date().toISOString(),
       last_scanned_by: scannedBy,
     })
@@ -297,10 +307,18 @@ export async function logTicketTransfer(
   })
 
   // Update ticket transfer count
+  const { data: ticket } = await supabase
+    .from('tickets')
+    .select('transfer_count')
+    .eq('id', ticketId)
+    .single()
+  
+  const currentCount = ticket?.transfer_count || 0
+  
   await supabase
     .from('tickets')
     .update({
-      transfer_count: supabase.sql`transfer_count + 1`,
+      transfer_count: currentCount + 1,
       user_id: toUserId,
     })
     .eq('id', ticketId)

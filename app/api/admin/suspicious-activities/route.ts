@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/firebase-db/server'
 
 /**
  * Admin endpoint to view suspicious activities
@@ -18,6 +18,8 @@ export async function GET(req: NextRequest) {
     const severity = searchParams.get('severity')
     const activityType = searchParams.get('activityType')
     const limit = parseInt(searchParams.get('limit') || '50')
+
+    const supabase = await createClient()
 
     let query = supabase
       .from('suspicious_activities')
@@ -48,14 +50,14 @@ export async function GET(req: NextRequest) {
     }
 
     // Get count of unreviewed activities
-    const { count: unreviewedCount } = await supabase
+    const { data: unreviewedActivities } = await supabase
       .from('suspicious_activities')
-      .select('id', { count: 'exact', head: true })
+      .select('id')
       .eq('reviewed', false)
 
     return NextResponse.json({
       activities,
-      unreviewedCount,
+      unreviewedCount: unreviewedActivities?.length || 0,
       total: activities.length,
     })
   } catch (error) {
@@ -85,6 +87,8 @@ export async function PATCH(req: NextRequest) {
         { status: 400 }
       )
     }
+
+    const supabase = await createClient()
 
     const { error } = await supabase
       .from('suspicious_activities')
