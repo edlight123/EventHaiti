@@ -90,6 +90,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const eventId = searchParams.get('eventId')
 
+    console.log('=== GET /api/ticket-tiers called ===')
+    console.log('eventId:', eventId)
+
     if (!eventId) {
       return NextResponse.json(
         { error: 'Event ID is required' },
@@ -98,6 +101,7 @@ export async function GET(req: NextRequest) {
     }
 
     const supabase = await createClient()
+    console.log('Database client created')
 
     console.log('Fetching ticket tiers for eventId:', eventId)
 
@@ -107,20 +111,25 @@ export async function GET(req: NextRequest) {
       .eq('event_id', eventId)
       .order('sort_order', { ascending: true })
 
+    console.log('Query completed')
+    console.log('Error:', error)
+    console.log('Tiers:', tiers)
+
     if (error) {
       console.error('Error fetching ticket tiers:', error)
       return NextResponse.json(
-        { error: 'Failed to fetch ticket tiers' },
+        { error: 'Failed to fetch ticket tiers', details: error.message || error },
         { status: 500 }
       )
     }
 
-    console.log('Found tiers:', tiers?.length || 0, tiers)
-    return NextResponse.json({ tiers })
-  } catch (error) {
+    console.log('Found tiers:', tiers?.length || 0)
+    return NextResponse.json({ tiers: tiers || [] })
+  } catch (error: any) {
     console.error('Error in GET /api/ticket-tiers:', error)
+    console.error('Error stack:', error.stack)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     )
   }
