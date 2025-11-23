@@ -60,11 +60,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Update user verification status
+    // First, get all users to find the one we need to update
+    const allUsers = await supabase.from('users').select('*')
+    const userToUpdate = allUsers.data?.find((u: any) => u.id === verificationRequest.user_id)
+
+    if (!userToUpdate) {
+      console.error('User not found:', verificationRequest.user_id)
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    // Update the user document with verification fields
     const { error: updateUserError } = await supabase
       .from('users')
       .update({
+        ...userToUpdate,
         is_verified: status === 'approved',
         verification_status: status,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', verificationRequest.user_id)
 
@@ -76,9 +91,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user details for email
-    const allUsers = await supabase.from('users').select('*')
-    const organizer = allUsers.data?.find((u: any) => u.id === verificationRequest.user_id)
+    // Get user details for email (we already have it from above)
+    const organizer = userToUpdate
 
     // Send notification email to organizer
     if (organizer?.email) {
