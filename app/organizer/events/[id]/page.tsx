@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 import Link from 'next/link'
 import EventUpdates from './EventUpdates'
 import NotifyAttendeesButton from './NotifyAttendeesButton'
+import TicketTiersManager from '@/components/TicketTiersManager'
 import { isDemoMode, DEMO_EVENTS, DEMO_TICKETS } from '@/lib/demo'
 
 export const revalidate = 0
@@ -159,6 +160,13 @@ export default async function OrganizerEventDetailPage({ params }: { params: Pro
             <p className="text-xs text-gray-500">HTG</p>
           </div>
         </div>
+
+        {/* Ticket Tiers Management */}
+        {!isDemoMode() && (
+          <div className="mb-8">
+            <TicketTiersManager eventId={event.id} />
+          </div>
+        )}
 
         {/* Event Details */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
