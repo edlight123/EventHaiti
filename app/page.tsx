@@ -193,13 +193,11 @@ export default async function HomePage({
           </div>
           
           <SearchBar />
-        </div>
-      </div>
-
-      {/* Advanced Search Filters */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <EventSearchFilters />
+          
+          {/* Filters inside hero for better visibility */}
+          <div className="mt-6">
+            <EventSearchFilters />
+          </div>
         </div>
       </div>
 

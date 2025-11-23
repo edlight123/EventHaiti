@@ -108,17 +108,42 @@ export default function EventSearchFilters({ onFilterChange }: SearchFiltersProp
   ].filter(Boolean).length
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
-      {/* Filter Controls */}
-      <div className="flex gap-4 items-center mb-4">
+    <div className="bg-white/95 backdrop-blur rounded-xl shadow-lg border border-white/20 p-4">
+      {/* Compact Filter Bar */}
+      <div className="flex flex-wrap gap-3 items-center">
+        {/* Category Filter */}
+        <select
+          value={filters.category}
+          onChange={(e) => handleChange('category', e.target.value)}
+          className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+        >
+          <option value="">All Categories</option>
+          {CATEGORIES.map(cat => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
+
+        {/* City Filter */}
+        <select
+          value={filters.city}
+          onChange={(e) => handleChange('city', e.target.value)}
+          className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+        >
+          <option value="">All Cities</option>
+          {CITIES.map(city => (
+            <option key={city} value={city}>{city}</option>
+          ))}
+        </select>
+
+        {/* More Filters Button */}
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors text-sm"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
           </svg>
-          Filters
+          More
           {activeFiltersCount > 0 && (
             <span className="bg-teal-600 text-white text-xs px-2 py-0.5 rounded-full">
               {activeFiltersCount}
@@ -126,65 +151,36 @@ export default function EventSearchFilters({ onFilterChange }: SearchFiltersProp
           )}
         </button>
 
+        {/* Sort */}
         <select
           value={filters.sortBy}
           onChange={(e) => handleChange('sortBy', e.target.value)}
-          className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
         >
-          <option value="date">Date</option>
-          <option value="price-low">Price: Low to High</option>
-          <option value="price-high">Price: High to Low</option>
-          <option value="popular">Most Popular</option>
+          <option value="date">Sort: Date</option>
+          <option value="price-low">Sort: Price Low-High</option>
+          <option value="price-high">Sort: Price High-Low</option>
+          <option value="popular">Sort: Most Popular</option>
         </select>
 
+        {/* Clear Filters */}
         {activeFiltersCount > 0 && (
           <button
             onClick={clearFilters}
-            className="ml-auto text-sm text-teal-600 hover:text-teal-700 font-medium"
+            className="ml-auto text-sm text-white hover:text-teal-100 font-medium flex items-center gap-1"
           >
-            Clear all filters
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Clear all
           </button>
         )}
       </div>
 
-      {/* Filters Panel */}
+      {/* Advanced Filters Panel */}
       {showFilters && (
         <div className="border-t border-gray-200 pt-4 mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Category */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <select
-                value={filters.category}
-                onChange={(e) => handleChange('category', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              >
-                <option value="">All Categories</option>
-                {CATEGORIES.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* City */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                City
-              </label>
-              <select
-                value={filters.city}
-                onChange={(e) => handleChange('city', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              >
-                <option value="">All Cities</option>
-                {CITIES.map(city => (
-                  <option key={city} value={city}>{city}</option>
-                ))}
-              </select>
-            </div>
-
             {/* Date From */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -239,18 +235,6 @@ export default function EventSearchFilters({ onFilterChange }: SearchFiltersProp
               />
             </div>
           </div>
-
-          {/* Clear Filters */}
-          {activeFiltersCount > 0 && (
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={clearFilters}
-                className="text-sm text-teal-600 hover:text-teal-700 font-medium"
-              >
-                Clear all filters
-              </button>
-            </div>
-          )}
         </div>
       )}
     </div>
