@@ -164,18 +164,20 @@ export default async function AdminDashboard() {
                 <tbody className="divide-y divide-gray-200">
                   {recentEvents.map((event: any) => (
                     <tr key={event.id}>
-                      <td className="px-4 py-3 text-sm text-gray-900">{event.title}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{event.title || 'Untitled'}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">
-                        {new Date(event.start_datetime).toLocaleDateString()}
+                        {event.start_datetime ? new Date(event.start_datetime).toLocaleDateString() : 'N/A'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">${event.price.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        ${(event.price || 0).toFixed(2)}
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          new Date(event.start_datetime) > new Date()
+                          event.start_datetime && new Date(event.start_datetime) > new Date()
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {new Date(event.start_datetime) > new Date() ? 'Upcoming' : 'Past'}
+                          {event.start_datetime && new Date(event.start_datetime) > new Date() ? 'Upcoming' : 'Past'}
                         </span>
                       </td>
                     </tr>
