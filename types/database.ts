@@ -206,6 +206,101 @@ export interface Database {
           result?: ScanResult
         }
       }
+      event_favorites: {
+        Row: {
+          id: string
+          user_id: string
+          event_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          event_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          event_id?: string
+          created_at?: string
+        }
+      }
+      organizer_follows: {
+        Row: {
+          id: string
+          follower_id: string
+          organizer_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          follower_id: string
+          organizer_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          follower_id?: string
+          organizer_id?: string
+          created_at?: string
+        }
+      }
+      event_reviews: {
+        Row: {
+          id: string
+          event_id: string
+          user_id: string
+          rating: number
+          review_text: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          user_id: string
+          rating: number
+          review_text?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          user_id?: string
+          rating?: number
+          review_text?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      event_photos: {
+        Row: {
+          id: string
+          event_id: string
+          uploaded_by: string
+          photo_url: string
+          caption: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          uploaded_by: string
+          photo_url: string
+          caption?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          uploaded_by?: string
+          photo_url?: string
+          caption?: string | null
+          created_at?: string
+        }
+      }
     }
   }
 }
