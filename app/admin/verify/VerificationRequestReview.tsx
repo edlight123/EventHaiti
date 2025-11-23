@@ -1,0 +1,229 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+
+interface Props {
+  request: any
+  user: any
+}
+
+export default function VerificationRequestReview({ request, user }: Props) {
+  const router = useRouter()
+  const [reviewing, setReviewing] = useState(false)
+  const [showRejectModal, setShowRejectModal] = useState(false)
+  const [rejectionReason, setRejectionReason] = useState('')
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
+
+  const handleApprove = async () => {
+    if (!confirm('Are you sure you want to approve this verification?')) return
+
+    setReviewing(true)
+    try {
+      const response = await fetch('/api/admin/review-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId: request.id,
+          status: 'approved',
+        }),
+      })
+
+      if (!response.ok) throw new Error('Failed to approve')
+
+      alert('✅ Verification approved! Organizer has been notified.')
+      router.refresh()
+    } catch (error) {
+      console.error('Error approving:', error)
+      alert('Failed to approve verification')
+    } finally {
+      setReviewing(false)
+    }
+  }
+
+  const handleReject = async () => {
+    if (!rejectionReason.trim()) {
+      alert('Please provide a reason for rejection')
+      return
+    }
+
+    setReviewing(true)
+    try {
+      const response = await fetch('/api/admin/review-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId: request.id,
+          status: 'rejected',
+          rejectionReason: rejectionReason.trim(),
+        }),
+      })
+
+      if (!response.ok) throw new Error('Failed to reject')
+
+      alert('Verification rejected. Organizer has been notified.')
+      setShowRejectModal(false)
+      router.refresh()
+    } catch (error) {
+      console.error('Error rejecting:', error)
+      alert('Failed to reject verification')
+    } finally {
+      setReviewing(false)
+    }
+  }
+
+  return (
+    <>
+      <div className="border border-gray-200 rounded-lg p-6 bg-white">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h3 className="font-semibold text-gray-900 text-lg">
+              {user?.full_name || 'Unknown User'}
+            </h3>
+            <p className="text-sm text-gray-600">{user?.email}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Submitted {new Date(request.created_at).toLocaleDateString()} at{' '}
+              {new Date(request.created_at).toLocaleTimeString()}
+            </p>
+          </div>
+          <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full">
+            Pending Review
+          </span>
+        </div>
+
+        {/* Verification Images */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {/* ID Front */}
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2">ID Card - Front</p>
+            <div
+              onClick={() => setSelectedImage(request.id_front_url)}
+              className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
+            >
+              <img
+                src={request.id_front_url}
+                alt="ID Front"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-10 transition-opacity">
+                <svg className="w-8 h-8 text-white opacity-0 hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* ID Back */}
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2">ID Card - Back</p>
+            <div
+              onClick={() => setSelectedImage(request.id_back_url)}
+              className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
+            >
+              <img
+                src={request.id_back_url}
+                alt="ID Back"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+
+          {/* Face Photo */}
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2">Face Photo</p>
+            <div
+              onClick={() => setSelectedImage(request.face_photo_url)}
+              className="relative aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
+            >
+              <img
+                src={request.face_photo_url}
+                alt="Face"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-3">
+          <button
+            onClick={handleApprove}
+            disabled={reviewing}
+            className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {reviewing ? 'Processing...' : '✅ Approve'}
+          </button>
+          <button
+            onClick={() => setShowRejectModal(true)}
+            disabled={reviewing}
+            className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            ❌ Reject
+          </button>
+        </div>
+      </div>
+
+      {/* Image Lightbox */}
+      {selectedImage && (
+        <div
+          onClick={() => setSelectedImage(null)}
+          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+        >
+          <div className="relative max-w-4xl max-h-full">
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-4 right-4 bg-white rounded-full p-2 hover:bg-gray-100"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <img
+              src={selectedImage}
+              alt="Verification document"
+              className="max-w-full max-h-screen object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Reject Verification</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Please provide a reason for rejecting this verification. The organizer will receive this in an email.
+            </p>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="e.g., ID card photo is blurry, face not clearly visible, etc."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent mb-4"
+              rows={4}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowRejectModal(false)
+                  setRejectionReason('')
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={reviewing || !rejectionReason.trim()}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {reviewing ? 'Rejecting...' : 'Confirm Rejection'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}

@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@eventhaiti.com').split(',')
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
 
-    // Only allow specific admin users
-    const ADMIN_EMAILS = ['admin@eventhaiti.com', 'your-email@example.com']
-    
+    // Only allow admin users
     if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
       return NextResponse.json(
         { error: 'Unauthorized' },

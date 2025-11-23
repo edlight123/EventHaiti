@@ -4,6 +4,7 @@ import { useState } from 'react'
 import IDCardCapture from './IDCardCapture'
 import FaceVerification from './FaceVerification'
 import { useRouter } from 'next/navigation'
+import { uploadVerificationImage } from '@/lib/upload-verification'
 
 interface Props {
   userId: string
@@ -37,15 +38,26 @@ export default function VerificationFlow({ userId }: Props) {
     setError(null)
 
     try {
-      // Submit verification request
+      // Upload all images to Firebase Storage
+      const [frontUpload, backUpload, faceUpload] = await Promise.all([
+        uploadVerificationImage(idFrontImage!, userId, 'id_front'),
+        uploadVerificationImage(idBackImage!, userId, 'id_back'),
+        uploadVerificationImage(imageData, userId, 'face'),
+      ])
+
+      if (frontUpload.error || backUpload.error || faceUpload.error) {
+        throw new Error('Failed to upload images')
+      }
+
+      // Submit verification request with image URLs
       const response = await fetch('/api/organizer/submit-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
-          idFrontImage,
-          idBackImage,
-          faceImage: imageData,
+          idFrontUrl: frontUpload.url,
+          idBackUrl: backUpload.url,
+          facePhotoUrl: faceUpload.url,
         }),
       })
 
