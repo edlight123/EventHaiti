@@ -34,13 +34,13 @@ export default async function VerifyOrganizerPage() {
   
   console.log('Existing verification request:', existingRequest)
 
-  // If already verified, redirect to events
-  if (userData?.is_verified) {
+  // If already verified (check both is_verified field and verification_status), redirect to events
+  if (userData?.is_verified === true || userData?.verification_status === 'approved') {
     redirect('/organizer/events')
   }
 
-  // If verification is pending, show pending status
-  if (existingRequest && existingRequest.status === 'pending') {
+  // If verification is pending (check both request status and user verification_status), show pending status
+  if ((existingRequest && existingRequest.status === 'pending') || userData?.verification_status === 'pending') {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar user={user} />

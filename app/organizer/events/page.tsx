@@ -39,7 +39,8 @@ export default async function OrganizerEventsPage() {
       console.log('Verification status:', userData?.verification_status)
       
       // Check for pending verification request - simplified query without ordering
-      if (userData && !userData.is_verified) {
+      // If is_verified is undefined or false, check for verification requests
+      if (userData && userData.is_verified !== true && userData.verification_status !== 'approved') {
         const { data: verificationRequests } = await supabase
           .from('verification_requests')
           .select('*')

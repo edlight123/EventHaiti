@@ -23,7 +23,8 @@ export default async function NewEventPage() {
 
   // Check for pending verification request - simplified query without ordering
   let verificationStatus = userData?.verification_status
-  if (userData && !userData.is_verified) {
+  // If is_verified is undefined or false, check for verification requests
+  if (userData && userData.is_verified !== true && userData.verification_status !== 'approved') {
     const { data: verificationRequests } = await supabase
       .from('verification_requests')
       .select('*')
@@ -44,8 +45,8 @@ export default async function NewEventPage() {
     }
   }
 
-  // If not verified, redirect to verification page
-  if (!userData?.is_verified) {
+  // If not verified (check both is_verified and verification_status), redirect to verification page
+  if (userData?.is_verified !== true && userData?.verification_status !== 'approved') {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar user={user} />
