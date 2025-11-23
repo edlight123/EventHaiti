@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import Navbar from '@/components/Navbar'
 import VerifyOrganizerForm from './VerifyOrganizerForm'
 import VerificationRequestReview from './VerificationRequestReview'
 
@@ -35,8 +36,17 @@ export default async function AdminVerifyPage() {
   const organizers = allUsers.data?.filter((u: any) => u.role === 'organizer') || []
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50">
+      <Navbar user={user} />
+      
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Breadcrumb */}
+        <div className="mb-6">
+          <a href="/admin" className="text-teal-600 hover:text-teal-700 text-sm font-medium">
+            ← Back to Admin Dashboard
+          </a>
+        </div>
+
         {/* Verification Requests Section */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">

@@ -1,51 +1,56 @@
 import { createClient } from '@/lib/firebase-db/server'
-import { requireAuth } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 
-export default async function AdminDashboard() {
-  const { user, error } = await requireAuth()
+export const revalidate = 0
 
-  if (error || !user) {
-    redirect('/auth/login')
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',')
+
+export default async function AdminDashboard() {
+  const user = await getCurrentUser()
+
+  if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
+    redirect('/')
   }
 
   const supabase = await createClient()
 
-  // Check if user is admin
-  const { data: adminUser } = await supabase
-    .from('admin_users')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .single()
-
-  if (!adminUser) {
-    redirect('/')
-  }
-
-  // Fetch platform statistics (Firestore doesn't support count, so we fetch all and count)
-  const { data: users } = await supabase.from('users').select('*')
+  // Fetch platform statistics
+  const { data: users } = await supabase.from('users').select('id')
   const totalUsers = users?.length || 0
 
-  const { data: events } = await supabase.from('events').select('*')
+  const { data: events } = await supabase.from('events').select('id')
   const totalEvents = events?.length || 0
 
-  const { data: tickets } = await supabase.from('tickets').select('*')
+  const { data: tickets } = await supabase.from('tickets').select('id, price_paid, status')
   const totalTickets = tickets?.length || 0
 
-  const { data: revenueTickets } = await supabase
-    .from('tickets')
-    .select('*')
-
-  const revenue = revenueTickets
-    ?.filter((t: any) => t.status !== 'refunded' && t.status !== 'cancelled')
+  const revenue = tickets
+    ?.filter((t: any) => t.status === 'confirmed')
     ?.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0) || 0
+
+  // Verification requests
+  const { data: verificationRequests } = await supabase
+    .from('verification_requests')
+    .select('id, status')
+  
+  const pendingVerifications = verificationRequests?.filter(r => r.status === 'pending').length || 0
 
   // Recent events
   const { data: recentEvents } = await supabase
     .from('events')
-    .select('*')
+    .select(`
+      id,
+      title,
+      start_datetime,
+      price,
+      created_at,
+      users (
+        full_name,
+        email
+      )
+    `)
     .order('created_at', { ascending: false })
     .limit(10)
 
@@ -60,26 +65,37 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="text-sm font-medium text-gray-600">Total Users</div>
-            <div className="text-3xl font-bold text-gray-900 mt-2">{totalUsers?.toLocaleString() || 0}</div>
+            <div className="text-3xl font-bold text-gray-900 mt-2">{totalUsers.toLocaleString()}</div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="text-sm font-medium text-gray-600">Total Events</div>
-            <div className="text-3xl font-bold text-gray-900 mt-2">{totalEvents?.toLocaleString() || 0}</div>
+            <div className="text-3xl font-bold text-gray-900 mt-2">{totalEvents.toLocaleString()}</div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="text-sm font-medium text-gray-600">Tickets Sold</div>
-            <div className="text-3xl font-bold text-gray-900 mt-2">{totalTickets?.toLocaleString() || 0}</div>
+            <div className="text-3xl font-bold text-gray-900 mt-2">{totalTickets.toLocaleString()}</div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="text-sm font-medium text-gray-600">Total Revenue</div>
             <div className="text-3xl font-bold text-teal-600 mt-2">${revenue.toLocaleString()}</div>
           </div>
+
+          <a
+            href="/admin/verify"
+            className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl shadow-sm border-2 border-yellow-400 p-6 hover:border-yellow-500 transition-all hover:shadow-md"
+          >
+            <div className="text-sm font-medium text-yellow-800">Pending Verifications</div>
+            <div className="text-3xl font-bold text-yellow-900 mt-2">{pendingVerifications}</div>
+            {pendingVerifications > 0 && (
+              <div className="text-xs text-yellow-700 mt-2 font-medium">→ Click to Review</div>
+            )}
+          </a>
         </div>
 
         {/* Recent Events */}
@@ -124,13 +140,20 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Admin Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <a
-            href="/admin/users"
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-teal-600 transition-colors"
+            href="/admin/verify"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-teal-600 transition-colors group"
           >
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Manage Users</h3>
-            <p className="text-gray-600 text-sm">View and moderate user accounts</p>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold text-gray-900">Verify Organizers</h3>
+              {pendingVerifications > 0 && (
+                <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  {pendingVerifications}
+                </span>
+              )}
+            </div>
+            <p className="text-gray-600 text-sm">Review identity verification requests</p>
           </a>
 
           <a
@@ -142,11 +165,19 @@ export default async function AdminDashboard() {
           </a>
 
           <a
+            href="/admin/users"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-teal-600 transition-colors"
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Manage Users</h3>
+            <p className="text-gray-600 text-sm">View and moderate user accounts</p>
+          </a>
+
+          <a
             href="/admin/analytics"
             className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-teal-600 transition-colors"
           >
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Advanced Analytics</h3>
-            <p className="text-gray-600 text-sm">Detailed platform insights</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Analytics</h3>
+            <p className="text-gray-600 text-sm">Platform insights and reports</p>
           </a>
         </div>
       </div>
