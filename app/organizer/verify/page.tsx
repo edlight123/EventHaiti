@@ -118,9 +118,6 @@ export default async function VerifyOrganizerPage() {
   // If rejected, allow resubmission
   const wasRejected = existingRequest && existingRequest.status === 'rejected'
 
-  // If rejected, allow resubmission
-  const wasRejected = existingRequest && existingRequest.status === 'rejected'
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar user={user} />
