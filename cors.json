@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["https://eventhaiti.vercel.app", "http://localhost:3000"],
+    "method": ["GET", "POST", "PUT", "DELETE"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": ["Content-Type"]
+  }
+]

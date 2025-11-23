@@ -17,8 +17,17 @@ export default async function AdminVerifyPage() {
 
   const supabase = await createClient()
   
-  // Fetch all verification requests
-  const allRequests = await supabase.from('verification_requests').select('*')
+  // Fetch all verification requests with user data
+  const allRequests = await supabase
+    .from('verification_requests')
+    .select(`
+      *,
+      users (
+        id,
+        email,
+        full_name
+      )
+    `)
   const verificationRequests = allRequests.data || []
 
   // Fetch all organizers for quick verification toggle
@@ -44,12 +53,11 @@ export default async function AdminVerifyPage() {
               {verificationRequests
                 .filter((r: any) => r.status === 'pending')
                 .map((request: any) => {
-                  const requestUser = organizers.find((o: any) => o.id === request.user_id)
                   return (
                     <VerificationRequestReview
                       key={request.id}
                       request={request}
-                      user={requestUser}
+                      user={request.users}
                     />
                   )
                 })}
