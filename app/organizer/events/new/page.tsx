@@ -17,20 +17,27 @@ export default async function NewEventPage() {
   const allUsers = await supabase.from('users').select('*')
   const userData = allUsers.data?.find((u: any) => u.id === user.id)
 
+  console.log('New event page - User data:', userData)
+  console.log('Is verified:', userData?.is_verified)
+  console.log('Verification status:', userData?.verification_status)
+
   // Check for pending verification request
   let verificationStatus = userData?.verification_status
   if (userData && !userData.is_verified) {
-    const { data: verificationRequest } = await supabase
+    const { data: verificationRequests } = await supabase
       .from('verification_requests')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+    
+    const verificationRequest = verificationRequests?.[0]
+    console.log('Verification request:', verificationRequest)
     
     // Update status from request if exists
     if (verificationRequest) {
       verificationStatus = verificationRequest.status
+      console.log('Updated verification status to:', verificationStatus)
     }
   }
 

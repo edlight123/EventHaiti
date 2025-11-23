@@ -34,19 +34,26 @@ export default async function OrganizerEventsPage() {
       const allUsers = await supabase.from('users').select('*')
       userData = allUsers.data?.find((u: any) => u.id === user.id)
       
+      console.log('User data:', userData)
+      console.log('Is verified:', userData?.is_verified)
+      console.log('Verification status:', userData?.verification_status)
+      
       // Check for pending verification request
       if (userData && !userData.is_verified) {
-        const { data: verificationRequest } = await supabase
+        const { data: verificationRequests } = await supabase
           .from('verification_requests')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single()
+        
+        const verificationRequest = verificationRequests?.[0]
+        console.log('Verification request:', verificationRequest)
         
         // Update userData with verification status from request if exists
         if (verificationRequest) {
           userData.verification_status = verificationRequest.status
+          console.log('Updated verification status to:', verificationRequest.status)
         }
       }
       
