@@ -2,7 +2,6 @@ import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import EventCard from '@/components/EventCard'
 import Navbar from '@/components/Navbar'
-import SearchBar from '@/components/SearchBar'
 import CategoryGrid from '@/components/CategoryGrid'
 import DateFilters from '@/components/DateFilters'
 import EventSearchFilters from '@/components/EventSearchFilters'
@@ -180,23 +179,21 @@ export default async function HomePage({
         </div>
       )}
 
-      {/* Hero Section with Search */}
+      {/* Hero Section */}
       <div className="bg-gradient-to-r from-teal-700 to-orange-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="text-center mb-8">
+          <div className="text-center">
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
               {BRAND.tagline || 'Discover Events in Haiti'}
             </h1>
-            <p className="text-xl text-teal-50 max-w-2xl mx-auto mb-8">
+            <p className="text-xl text-teal-50 max-w-2xl mx-auto">
               Find and book tickets for concerts, parties, conferences, festivals, and more across Haiti.
             </p>
           </div>
-          
-          <SearchBar />
         </div>
       </div>
 
-      {/* Advanced Search Filters */}
+      {/* Search Filters */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <EventSearchFilters />
