@@ -99,8 +99,6 @@ export default function EventSearchFilters({ onFilterChange }: SearchFiltersProp
   }
 
   const activeFiltersCount = [
-    filters.category,
-    filters.city,
     filters.dateFrom,
     filters.dateTo,
     filters.priceMin,
@@ -108,19 +106,19 @@ export default function EventSearchFilters({ onFilterChange }: SearchFiltersProp
   ].filter(Boolean).length
 
   return (
-    <div className="bg-white/95 backdrop-blur rounded-xl shadow-lg border border-white/20 p-4">
+    <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 p-4">
       {/* Filter Controls */}
       <div className="flex gap-4 items-center">
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
+          className="flex items-center gap-2 px-6 py-3 bg-white/90 hover:bg-white rounded-lg transition-colors shadow-sm"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
           </svg>
-          Filters
+          <span className="font-medium text-gray-900">Filters</span>
           {activeFiltersCount > 0 && (
-            <span className="bg-teal-600 text-white text-xs px-2 py-0.5 rounded-full">
+            <span className="bg-teal-600 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
               {activeFiltersCount}
             </span>
           )}
@@ -129,90 +127,60 @@ export default function EventSearchFilters({ onFilterChange }: SearchFiltersProp
         <select
           value={filters.sortBy}
           onChange={(e) => handleChange('sortBy', e.target.value)}
-          className="px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          className="px-4 py-3 bg-white/90 hover:bg-white rounded-lg shadow-sm focus:ring-2 focus:ring-white focus:outline-none font-medium text-gray-900"
         >
-          <option value="date">Date</option>
-          <option value="price-low">Price: Low to High</option>
-          <option value="price-high">Price: High to Low</option>
-          <option value="popular">Most Popular</option>
+          <option value="date">Sort: Date</option>
+          <option value="price-low">Sort: Price Low to High</option>
+          <option value="price-high">Sort: Price High to Low</option>
+          <option value="popular">Sort: Most Popular</option>
         </select>
 
         {activeFiltersCount > 0 && (
           <button
             onClick={clearFilters}
-            className="ml-auto text-sm text-white hover:text-teal-100 font-medium"
+            className="ml-auto text-sm text-white hover:text-teal-100 font-medium flex items-center gap-1"
           >
-            Clear all filters
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Clear filters
           </button>
         )}
       </div>
 
       {/* Advanced Filters Panel */}
       {showFilters && (
-        <div className="border-t border-gray-200 pt-4 mt-4">
+        <div className="border-t border-white/20 pt-4 mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Category */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <select
-                value={filters.category}
-                onChange={(e) => handleChange('category', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              >
-                <option value="">All Categories</option>
-                {CATEGORIES.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* City */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                City
-              </label>
-              <select
-                value={filters.city}
-                onChange={(e) => handleChange('city', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              >
-                <option value="">All Cities</option>
-                {CITIES.map(city => (
-                  <option key={city} value={city}>{city}</option>
-                ))}
-              </select>
-            </div>
             {/* Date From */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 From Date
               </label>
               <input
                 type="date"
                 value={filters.dateFrom}
                 onChange={(e) => handleChange('dateFrom', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="w-full px-4 py-2 bg-white/90 rounded-lg focus:ring-2 focus:ring-white focus:outline-none"
               />
             </div>
 
             {/* Date To */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 To Date
               </label>
               <input
                 type="date"
                 value={filters.dateTo}
                 onChange={(e) => handleChange('dateTo', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="w-full px-4 py-2 bg-white/90 rounded-lg focus:ring-2 focus:ring-white focus:outline-none"
               />
             </div>
 
             {/* Price Min */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Min Price ($)
               </label>
               <input
@@ -220,13 +188,13 @@ export default function EventSearchFilters({ onFilterChange }: SearchFiltersProp
                 value={filters.priceMin}
                 onChange={(e) => handleChange('priceMin', e.target.value)}
                 placeholder="0"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="w-full px-4 py-2 bg-white/90 rounded-lg focus:ring-2 focus:ring-white focus:outline-none"
               />
             </div>
 
             {/* Price Max */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Max Price ($)
               </label>
               <input
@@ -234,7 +202,7 @@ export default function EventSearchFilters({ onFilterChange }: SearchFiltersProp
                 value={filters.priceMax}
                 onChange={(e) => handleChange('priceMax', e.target.value)}
                 placeholder="1000"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="w-full px-4 py-2 bg-white/90 rounded-lg focus:ring-2 focus:ring-white focus:outline-none"
               />
             </div>
           </div>
