@@ -1,7 +1,8 @@
 import { requireAuth } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 import { redirect } from 'next/navigation'
-import TicketScanner from './TicketScanner'
+import { createClient } from '@/lib/firebase-db/server'
+import EventSelector from './EventSelector'
 
 export default async function ScanTicketPage() {
   const { user, error } = await requireAuth()
@@ -9,6 +10,14 @@ export default async function ScanTicketPage() {
   if (error || !user) {
     redirect('/auth/login')
   }
+
+  // Fetch organizer's events
+  const supabase = await createClient()
+  const allEventsQuery = await supabase.from('events').select('*')
+  const allEvents = allEventsQuery.data || []
+  const events = allEvents
+    .filter((e: any) => e.organizer_id === user.id)
+    .sort((a: any, b: any) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -18,26 +27,11 @@ export default async function ScanTicketPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Scan Tickets</h1>
           <p className="text-gray-600">
-            Enter or paste the ticket QR code data to validate tickets at the door.
+            Select an event, then use your camera to scan attendee QR codes.
           </p>
         </div>
 
-        <TicketScanner organizerId={user.id} />
-
-        {/* Instructions */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="font-semibold text-blue-900 mb-3">📱 How to validate tickets</h3>
-          <ol className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
-            <li>Ask attendees to show their QR code ticket</li>
-            <li>The QR code contains data in format: ticket:[id]|event:[id]</li>
-            <li>Enter or paste the QR code data in the field above</li>
-            <li>Click &quot;Validate Ticket&quot; to check and mark as used</li>
-            <li>A green message means valid, red means invalid or already used</li>
-          </ol>
-          <div className="mt-4 p-3 bg-blue-100 rounded text-xs text-blue-900">
-            <strong>Note for MVP:</strong> For real QR scanning with camera, future versions can integrate browser APIs or mobile scanning apps.
-          </div>
-        </div>
+        <EventSelector events={events} organizerId={user.id} />
       </div>
     </div>
   )
