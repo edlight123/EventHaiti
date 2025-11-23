@@ -158,6 +158,7 @@ export interface Database {
           attendee_id: string
           qr_code_data: string
           status: TicketStatus
+          price_paid: number
           purchased_at: string
         }
         Insert: {
@@ -166,6 +167,7 @@ export interface Database {
           attendee_id: string
           qr_code_data: string
           status?: TicketStatus
+          price_paid: number
           purchased_at?: string
         }
         Update: {
@@ -174,6 +176,7 @@ export interface Database {
           attendee_id?: string
           qr_code_data?: string
           status?: TicketStatus
+          price_paid?: number
           purchased_at?: string
         }
       }

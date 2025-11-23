@@ -82,7 +82,7 @@ export default async function AdminEventsPage() {
                     <tr key={event.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">{event.title}</div>
-                        <div className="text-sm text-gray-500">{event.location}</div>
+                        <div className="text-sm text-gray-500">{event.venue_name || event.city}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900">
@@ -94,7 +94,7 @@ export default async function AdminEventsPage() {
                         {event.start_datetime ? new Date(event.start_datetime).toLocaleDateString() : 'N/A'}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        ${(event.price || 0).toFixed(2)}
+                        ${(event.ticket_price || 0).toFixed(2)}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${

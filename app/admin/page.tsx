@@ -93,7 +93,7 @@ export default async function AdminDashboard() {
   try {
     const eventsResult = await supabase
       .from('events')
-      .select('id, title, start_datetime, price, created_at')
+      .select('id, title, start_datetime, ticket_price, created_at')
       .order('created_at', { ascending: false })
       .limit(10)
     recentEvents = eventsResult.data || []
@@ -169,7 +169,7 @@ export default async function AdminDashboard() {
                         {event.start_datetime ? new Date(event.start_datetime).toLocaleDateString() : 'N/A'}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
-                        ${(event.price || 0).toFixed(2)}
+                        ${(event.ticket_price || 0).toFixed(2)}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
