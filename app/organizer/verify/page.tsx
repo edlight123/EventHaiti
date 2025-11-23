@@ -17,14 +17,19 @@ export default async function VerifyOrganizerPage() {
   const allUsers = await supabase.from('users').select('*')
   const userData = allUsers.data?.find((u: any) => u.id === user.id)
 
+  console.log('Verify page - User data:', userData)
+  console.log('Is verified:', userData?.is_verified)
+
   // Check for existing verification request
-  const { data: existingRequest } = await supabase
+  const { data: existingRequests } = await supabase
     .from('verification_requests')
     .select('*')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single()
+
+  const existingRequest = existingRequests?.[0]
+  console.log('Existing verification request:', existingRequest)
 
   // If already verified, redirect to events
   if (userData?.is_verified) {
