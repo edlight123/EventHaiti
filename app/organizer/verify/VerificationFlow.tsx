@@ -39,16 +39,30 @@ export default function VerificationFlow({ userId }: Props) {
 
     try {
       // Upload all images to Firebase Storage
+      console.log('Starting image uploads...')
       const [frontUpload, backUpload, faceUpload] = await Promise.all([
         uploadVerificationImage(idFrontImage!, userId, 'id_front'),
         uploadVerificationImage(idBackImage!, userId, 'id_back'),
         uploadVerificationImage(imageData, userId, 'face'),
       ])
 
+      console.log('Upload results:', { frontUpload, backUpload, faceUpload })
+
       if (frontUpload.error || backUpload.error || faceUpload.error) {
+        console.error('Upload errors:', {
+          front: frontUpload.error,
+          back: backUpload.error,
+          face: faceUpload.error,
+        })
         throw new Error('Failed to upload images')
       }
 
+      if (!frontUpload.url || !backUpload.url || !faceUpload.url) {
+        console.error('Missing URLs:', { frontUpload, backUpload, faceUpload })
+        throw new Error('Failed to get image URLs')
+      }
+
+      console.log('Submitting verification request...')
       // Submit verification request with image URLs
       const response = await fetch('/api/organizer/submit-verification', {
         method: 'POST',
@@ -61,8 +75,11 @@ export default function VerificationFlow({ userId }: Props) {
         }),
       })
 
+      const responseData = await response.json()
+      console.log('API response:', responseData)
+
       if (!response.ok) {
-        throw new Error('Failed to submit verification')
+        throw new Error(responseData.error || 'Failed to submit verification')
       }
 
       setStep('complete')
@@ -72,9 +89,9 @@ export default function VerificationFlow({ userId }: Props) {
         router.push('/organizer/events')
         router.refresh()
       }, 3000)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Verification submission error:', err)
-      setError('Failed to submit verification. Please try again.')
+      setError(err.message || 'Failed to submit verification. Please try again.')
       setStep('face')
     }
   }
