@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     // Convert price from cents to dollars for DECIMAL storage
     const priceInDollars = price / 100
 
-    const { error: insertError } = await supabase.from('ticket_tiers').insert({
+    const tierData = {
       id: tierId,
       event_id: eventId,
       name,
@@ -57,7 +57,11 @@ export async function POST(req: NextRequest) {
       is_active: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    })
+    }
+
+    console.log('Creating ticket tier:', tierData)
+
+    const { error: insertError } = await supabase.from('ticket_tiers').insert(tierData)
 
     if (insertError) {
       console.error('Error creating ticket tier:', insertError)
@@ -67,6 +71,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    console.log('Ticket tier created successfully:', tierId)
     return NextResponse.json({ success: true, tierId })
   } catch (error) {
     console.error('Error in POST /api/ticket-tiers:', error)
@@ -94,6 +99,8 @@ export async function GET(req: NextRequest) {
 
     const supabase = await createClient()
 
+    console.log('Fetching ticket tiers for eventId:', eventId)
+
     const { data: tiers, error } = await supabase
       .from('ticket_tiers')
       .select('*')
@@ -108,6 +115,7 @@ export async function GET(req: NextRequest) {
       )
     }
 
+    console.log('Found tiers:', tiers?.length || 0, tiers)
     return NextResponse.json({ tiers })
   } catch (error) {
     console.error('Error in GET /api/ticket-tiers:', error)
