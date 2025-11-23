@@ -109,31 +109,8 @@ export default function EventSearchFilters({ onFilterChange }: SearchFiltersProp
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
-      {/* Search Bar */}
+      {/* Filter Controls */}
       <div className="flex gap-4 items-center mb-4">
-        <div className="flex-1 relative">
-          <input
-            type="text"
-            placeholder="Search events..."
-            value={filters.query}
-            onChange={(e) => handleChange('query', e.target.value)}
-            className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-          />
-          <svg
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-        </div>
-
         <button
           onClick={() => setShowFilters(!showFilters)}
           className="flex items-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
@@ -159,6 +136,15 @@ export default function EventSearchFilters({ onFilterChange }: SearchFiltersProp
           <option value="price-high">Price: High to Low</option>
           <option value="popular">Most Popular</option>
         </select>
+
+        {activeFiltersCount > 0 && (
+          <button
+            onClick={clearFilters}
+            className="ml-auto text-sm text-teal-600 hover:text-teal-700 font-medium"
+          >
+            Clear all filters
+          </button>
+        )}
       </div>
 
       {/* Filters Panel */}
