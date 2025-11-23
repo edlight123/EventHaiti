@@ -1,0 +1,46 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { adminDb } from '@/lib/firebase/admin'
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const eventId = searchParams.get('eventId')
+
+    console.log('=== TEST ENDPOINT ===')
+    console.log('Testing direct Firestore access for eventId:', eventId)
+
+    if (!eventId) {
+      return NextResponse.json({ error: 'Event ID required' }, { status: 400 })
+    }
+
+    // Try direct Firestore query
+    const snapshot = await adminDb
+      .collection('ticket_tiers')
+      .where('event_id', '==', eventId)
+      .get()
+
+    console.log('Direct Firestore query succeeded')
+    console.log('Found documents:', snapshot.docs.length)
+
+    const tiers = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+
+    console.log('Tiers:', tiers)
+
+    return NextResponse.json({
+      success: true,
+      count: tiers.length,
+      tiers
+    })
+  } catch (error: any) {
+    console.error('Test endpoint error:', error)
+    console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack)
+    return NextResponse.json({
+      error: error.message,
+      stack: error.stack
+    }, { status: 500 })
+  }
+}
