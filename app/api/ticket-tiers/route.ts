@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/firebase-db/server'
+import { adminDb } from '@/lib/firebase/admin'
 
 /**
  * Create ticket tier for an event
@@ -21,16 +22,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
-
-    // Verify event belongs to user
-    const { data: event, error: eventError } = await supabase
-      .from('events')
-      .select('organizer_id')
-      .eq('id', eventId)
-      .single()
-
-    if (eventError || !event || event.organizer_id !== user.id) {
+    // Verify event belongs to user using direct Firestore
+    const eventDoc = await adminDb.collection('events').doc(eventId).get()
+    
+    if (!eventDoc.exists || eventDoc.data()?.organizer_id !== user.id) {
       return NextResponse.json(
         { error: 'Event not found or unauthorized' },
         { status: 404 }
@@ -61,15 +56,7 @@ export async function POST(req: NextRequest) {
 
     console.log('Creating ticket tier:', tierData)
 
-    const { error: insertError } = await supabase.from('ticket_tiers').insert(tierData)
-
-    if (insertError) {
-      console.error('Error creating ticket tier:', insertError)
-      return NextResponse.json(
-        { error: 'Failed to create ticket tier' },
-        { status: 500 }
-      )
-    }
+    await adminDb.collection('ticket_tiers').doc(tierId).set(tierData)
 
     console.log('Ticket tier created successfully:', tierId)
     return NextResponse.json({ success: true, tierId })
@@ -100,31 +87,24 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
-    console.log('Database client created')
-
     console.log('Fetching ticket tiers for eventId:', eventId)
 
-    const { data: tiers, error } = await supabase
-      .from('ticket_tiers')
-      .select('*')
-      .eq('event_id', eventId)
-      .order('sort_order', { ascending: true })
+    // Use direct Firestore access instead of wrapper to avoid query issues
+    const snapshot = await adminDb
+      .collection('ticket_tiers')
+      .where('event_id', '==', eventId)
+      .orderBy('sort_order', 'asc')
+      .get()
 
-    console.log('Query completed')
-    console.log('Error:', error)
-    console.log('Tiers:', tiers)
+    console.log('Query completed, found:', snapshot.docs.length, 'tiers')
 
-    if (error) {
-      console.error('Error fetching ticket tiers:', error)
-      return NextResponse.json(
-        { error: 'Failed to fetch ticket tiers', details: error.message || error },
-        { status: 500 }
-      )
-    }
+    const tiers = snapshot.docs.map((doc: any) => ({
+      id: doc.id,
+      ...doc.data()
+    }))
 
-    console.log('Found tiers:', tiers?.length || 0)
-    return NextResponse.json({ tiers: tiers || [] })
+    console.log('Returning tiers:', tiers)
+    return NextResponse.json({ tiers })
   } catch (error: any) {
     console.error('Error in GET /api/ticket-tiers:', error)
     console.error('Error stack:', error.stack)
@@ -225,35 +205,28 @@ export async function DELETE(req: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
-
-    // Verify tier belongs to user's event
-    const { data: tier } = await supabase
-      .from('ticket_tiers')
-      .select('*, events(organizer_id)')
-      .eq('id', tierId)
-      .single()
-
-    if (!tier || tier.events?.organizer_id !== user.id) {
+    // Get tier and verify ownership
+    const tierDoc = await adminDb.collection('ticket_tiers').doc(tierId).get()
+    
+    if (!tierDoc.exists) {
       return NextResponse.json(
-        { error: 'Ticket tier not found or unauthorized' },
+        { error: 'Ticket tier not found' },
         { status: 404 }
       )
     }
 
-    // Delete tier
-    const { error: deleteError } = await supabase
-      .from('ticket_tiers')
-      .delete()
-      .eq('id', tierId)
-
-    if (deleteError) {
-      console.error('Error deleting ticket tier:', deleteError)
+    const tierData = tierDoc.data()
+    const eventDoc = await adminDb.collection('events').doc(tierData?.event_id).get()
+    
+    if (!eventDoc.exists || eventDoc.data()?.organizer_id !== user.id) {
       return NextResponse.json(
-        { error: 'Failed to delete ticket tier' },
-        { status: 500 }
+        { error: 'Unauthorized' },
+        { status: 403 }
       )
     }
+
+    // Delete tier
+    await adminDb.collection('ticket_tiers').doc(tierId).delete()
 
     return NextResponse.json({ success: true })
   } catch (error) {
