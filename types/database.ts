@@ -14,6 +14,7 @@ export interface Database {
           email: string
           phone_number: string | null
           role: UserRole
+          is_verified: boolean
           created_at: string
           updated_at: string
         }
@@ -23,6 +24,7 @@ export interface Database {
           email: string
           phone_number?: string | null
           role?: UserRole
+          is_verified?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -32,6 +34,7 @@ export interface Database {
           email?: string
           phone_number?: string | null
           role?: UserRole
+          is_verified?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -55,6 +58,7 @@ export interface Database {
           total_tickets: number
           tickets_sold: number
           is_published: boolean
+          tags: string[] | null
           created_at: string
           updated_at: string
         }
@@ -76,6 +80,7 @@ export interface Database {
           total_tickets: number
           tickets_sold?: number
           is_published?: boolean
+          tags?: string[] | null
           created_at?: string
           updated_at?: string
         }
@@ -97,6 +102,7 @@ export interface Database {
           total_tickets?: number
           tickets_sold?: number
           is_published?: boolean
+          tags?: string[] | null
           created_at?: string
           updated_at?: string
         }

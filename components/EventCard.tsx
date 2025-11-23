@@ -13,6 +13,11 @@ interface Event {
   total_tickets: number
   tickets_sold: number
   banner_image_url?: string | null
+  tags?: string[] | null
+  users?: {
+    full_name: string
+    is_verified: boolean
+  }
 }
 
 interface EventCardProps {
@@ -56,6 +61,13 @@ export default function EventCard({ event }: EventCardProps) {
             <span className="inline-block px-3 py-1 text-xs font-semibold bg-teal-100 text-teal-800 rounded-full">
               {event.category}
             </span>
+            {event.users?.is_verified && (
+              <div className="inline-flex items-center gap-0.5 text-blue-600" title="Verified Organizer">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
           </div>
 
           <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-teal-700 transition-colors">
@@ -65,6 +77,25 @@ export default function EventCard({ event }: EventCardProps) {
           <p className="text-sm text-gray-600 mb-4 line-clamp-2">
             {event.description}
           </p>
+
+          {/* Tags */}
+          {event.tags && event.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-3">
+              {event.tags.slice(0, 3).map(tag => (
+                <span
+                  key={tag}
+                  className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full"
+                >
+                  {tag}
+                </span>
+              ))}
+              {event.tags.length > 3 && (
+                <span className="px-2 py-0.5 text-xs text-gray-500">
+                  +{event.tags.length - 3}
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2 mb-4">
             <div className="flex items-center text-sm text-gray-700">

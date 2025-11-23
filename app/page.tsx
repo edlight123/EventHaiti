@@ -35,7 +35,7 @@ export default async function HomePage({
     
     let query = supabase
       .from('events')
-      .select('*')
+      .select('*, users!events_organizer_id_fkey(full_name, is_verified)')
       .eq('is_published', true)
       .gte('start_datetime', now)
       // Temporarily removed ordering to avoid index requirement

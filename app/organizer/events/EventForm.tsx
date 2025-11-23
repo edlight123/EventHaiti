@@ -13,11 +13,14 @@ interface EventFormProps {
 
 const CATEGORIES = ['Concert', 'Party', 'Conference', 'Festival', 'Workshop', 'Sports', 'Theater', 'Other']
 const CITIES = ['Port-au-Prince', 'Cap-Haïtien', 'Gonaïves', 'Les Cayes', 'Jacmel', 'Port-de-Paix', 'Jérémie', 'Saint-Marc']
+const POPULAR_TAGS = ['music', 'food', 'outdoor', 'indoor', 'family-friendly', 'nightlife', 'cultural', 'educational', 'networking', 'charity', 'vip', 'free-drinks', 'live-band', 'dj', 'art', 'dance']
 
 export default function EventForm({ userId, event }: EventFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [tags, setTags] = useState<string[]>(event?.tags || [])
+  const [tagInput, setTagInput] = useState('')
 
   const [formData, setFormData] = useState({
     title: event?.title || '',
@@ -78,6 +81,7 @@ export default function EventForm({ userId, event }: EventFormProps) {
         currency: formData.currency,
         banner_image_url: formData.banner_image_url || null,
         is_published: formData.is_published,
+        tags: tags,
       }
 
       if (event?.id) {
@@ -362,6 +366,102 @@ export default function EventForm({ userId, event }: EventFormProps) {
           <label htmlFor="is_published" className="ml-2 block text-sm text-gray-700">
             Publish event (make it visible to the public)
           </label>
+        </div>
+
+        {/* Event Tags */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Event Tags
+          </label>
+          <p className="text-sm text-gray-500 mb-3">
+            Add tags to help people discover your event
+          </p>
+          
+          {/* Popular Tags */}
+          <div className="mb-3">
+            <p className="text-xs font-medium text-gray-600 mb-2">Popular tags:</p>
+            <div className="flex flex-wrap gap-2">
+              {POPULAR_TAGS.map(tag => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => {
+                    if (!tags.includes(tag)) {
+                      setTags([...tags, tag])
+                    }
+                  }}
+                  disabled={tags.includes(tag)}
+                  className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                    tags.includes(tag)
+                      ? 'bg-teal-100 text-teal-700 border-teal-300 cursor-not-allowed'
+                      : 'bg-white text-gray-700 border-gray-300 hover:border-teal-500 hover:text-teal-600'
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom Tag Input */}
+          <div className="flex gap-2 mb-3">
+            <input
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  const trimmed = tagInput.trim().toLowerCase()
+                  if (trimmed && !tags.includes(trimmed)) {
+                    setTags([...tags, trimmed])
+                    setTagInput('')
+                  }
+                }
+              }}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent text-sm"
+              placeholder="Add custom tag (press Enter)"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const trimmed = tagInput.trim().toLowerCase()
+                if (trimmed && !tags.includes(trimmed)) {
+                  setTags([...tags, trimmed])
+                  setTagInput('')
+                }
+              }}
+              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium"
+            >
+              Add Tag
+            </button>
+          </div>
+
+          {/* Selected Tags */}
+          {tags.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-gray-600 mb-2">Selected tags:</p>
+              <div className="flex flex-wrap gap-2">
+                {tags.map(tag => (
+                  <div
+                    key={tag}
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-teal-600 text-white text-sm rounded-full"
+                  >
+                    <span>{tag}</span>
+                    <button
+                      type="button"
+                      onClick={() => setTags(tags.filter(t => t !== tag))}
+                      className="ml-1 hover:bg-teal-700 rounded-full p-0.5"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
