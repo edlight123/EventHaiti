@@ -91,13 +91,13 @@ export async function GET(request: Request) {
     if (error) throw error
 
     // Get user data separately
-    const userIds = reviews?.map(r => r.user_id) || []
+    const userIds = reviews?.map((r: any) => r.user_id) || []
     const { data: users } = await supabase
       .from('users')
       .select('id, full_name')
       .in('id', userIds)
 
-    const usersMap = new Map(users?.map(u => [u.id, u]) || [])
+    const usersMap = new Map(users?.map((u: any) => [u.id, u]) || [])
 
     // Join reviews with user data
     const reviewsWithUsers = reviews?.map(review => ({
