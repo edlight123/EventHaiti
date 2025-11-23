@@ -202,10 +202,10 @@ class ServerQueryBuilder {
           updated_at: new Date().toISOString(),
         }
 
-        // Update all matching documents
+        // Update all matching documents using set with merge to allow adding new fields
         const batch = adminDb.batch()
         snapshot.docs.forEach((doc: any) => {
-          batch.update(doc.ref, updateData)
+          batch.set(doc.ref, updateData, { merge: true })
         })
         await batch.commit()
 
