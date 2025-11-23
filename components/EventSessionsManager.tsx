@@ -153,7 +153,7 @@ export default function EventSessionsManager({
       ) : sessions.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           No sessions scheduled yet
-          {isOrganizer && <p className="text-sm mt-2">Click "Add Session" to create one</p>}
+          {isOrganizer && <p className="text-sm mt-2">Click &quot;Add Session&quot; to create one</p>}
         </div>
       ) : (
         <div className="space-y-6">

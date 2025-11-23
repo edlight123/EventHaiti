@@ -116,7 +116,7 @@ export default function NotifyAttendeesModal({ eventId, isOpen, onClose }: Notif
                 </div>
                 <div className="ml-3">
                   <p className="text-sm text-yellow-700">
-                    <strong>Warning:</strong> This is a critical update. Make sure you've communicated all necessary details.
+                    <strong>Warning:</strong> This is a critical update. Make sure you&apos;ve communicated all necessary details.
                     {updateType === 'cancellation' && ' Refund processing information will be included automatically.'}
                   </p>
                 </div>
