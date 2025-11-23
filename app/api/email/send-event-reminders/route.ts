@@ -81,7 +81,8 @@ export async function GET(request: Request) {
         })
 
         // Send reminder email to each attendee
-        for (const [userId, { user, tickets }] of ticketsByUser.entries()) {
+        const entries = Array.from(ticketsByUser.entries())
+        for (const [userId, { user, tickets }] of entries) {
           try {
             const eventDate = new Date(event.start_datetime)
             const formattedDate = eventDate.toLocaleDateString('en-US', {
