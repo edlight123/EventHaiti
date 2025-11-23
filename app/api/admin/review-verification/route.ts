@@ -72,16 +72,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log('Updating user:', verificationRequest.user_id)
+    console.log('Current user data:', userToUpdate)
+    console.log('New verification status:', status)
+
     // Update the user document with verification fields
-    const { error: updateUserError } = await supabase
+    const updatePayload = {
+      ...userToUpdate,
+      is_verified: status === 'approved',
+      verification_status: status,
+      updated_at: new Date().toISOString(),
+    }
+    
+    console.log('Update payload:', updatePayload)
+
+    const { data: updateResult, error: updateUserError } = await supabase
       .from('users')
-      .update({
-        ...userToUpdate,
-        is_verified: status === 'approved',
-        verification_status: status,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', verificationRequest.user_id)
+
+    console.log('Update result:', updateResult)
+    console.log('Update error:', updateUserError)
 
     if (updateUserError) {
       console.error('Error updating user:', updateUserError)
