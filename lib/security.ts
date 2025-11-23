@@ -1,0 +1,408 @@
+/**
+ * Security and fraud prevention utilities
+ */
+
+import { createClient } from '@/lib/firebase-db/server'
+
+interface PurchaseAttempt {
+  userId: string | null
+  eventId: string
+  ipAddress: string
+  quantity: number
+  fingerprint?: string
+}
+
+interface SuspiciousActivity {
+  userId?: string
+  activityType: 'rapid_purchases' | 'duplicate_tickets' | 'unusual_location' | 'bot_behavior' | 'chargeback' | 'multiple_accounts'
+  description: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  ipAddress?: string
+  metadata?: Record<string, any>
+}
+
+/**
+ * Check if user/IP is blacklisted
+ */
+export async function isBlacklisted(
+  value: string,
+  type: 'user' | 'ip' | 'email'
+): Promise<{ blacklisted: boolean; reason?: string }> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('security_blacklist')
+    .select('reason, expires_at')
+    .eq('type', type)
+    .eq('value', value)
+    .single()
+
+  if (error || !data) {
+    return { blacklisted: false }
+  }
+
+  // Check if blacklist has expired
+  if (data.expires_at && new Date(data.expires_at) < new Date()) {
+    return { blacklisted: false }
+  }
+
+  return { blacklisted: true, reason: data.reason }
+}
+
+/**
+ * Log a purchase attempt for rate limiting
+ */
+export async function logPurchaseAttempt(
+  attempt: PurchaseAttempt,
+  success: boolean
+): Promise<void> {
+  const supabase = await createClient()
+  const id = `attempt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  await supabase.from('purchase_attempts').insert({
+    id,
+    user_id: attempt.userId,
+    event_id: attempt.eventId,
+    ip_address: attempt.ipAddress,
+    attempted_at: new Date().toISOString(),
+    success,
+    quantity: attempt.quantity,
+    fingerprint: attempt.fingerprint,
+  })
+}
+
+/**
+ * Check if purchase should be rate limited
+ * Returns true if too many attempts in short time
+ */
+export async function shouldRateLimit(
+  userId: string | null,
+  ipAddress: string,
+  eventId: string
+): Promise<{ limited: boolean; reason?: string }> {
+  const supabase = await createClient()
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+
+  // Check attempts by user in last 5 minutes
+  if (userId) {
+    const { data: userAttempts } = await supabase
+      .from('purchase_attempts')
+      .select('id')
+      .eq('user_id', userId)
+      .gte('attempted_at', fiveMinutesAgo)
+
+    if (userAttempts && userAttempts.length >= 10) {
+      return { limited: true, reason: 'Too many purchase attempts. Please wait before trying again.' }
+    }
+  }
+
+  // Check attempts by IP in last 5 minutes
+  const { data: ipAttempts } = await supabase
+    .from('purchase_attempts')
+    .select('id')
+    .eq('ip_address', ipAddress)
+    .gte('attempted_at', fiveMinutesAgo)
+
+  if (ipAttempts && ipAttempts.length >= 20) {
+    return { limited: true, reason: 'Too many purchase attempts from this network. Please wait before trying again.' }
+  }
+
+  // Check rapid purchases for same event
+  const { data: eventAttempts } = await supabase
+    .from('purchase_attempts')
+    .select('id')
+    .eq('event_id', eventId)
+    .eq('ip_address', ipAddress)
+    .gte('attempted_at', fiveMinutesAgo)
+
+  if (eventAttempts && eventAttempts.length >= 5) {
+    return { limited: true, reason: 'Too many attempts for this event. Please wait before trying again.' }
+  }
+
+  return { limited: false }
+}
+
+/**
+ * Check if user has exceeded per-event ticket limit
+ */
+export async function checkTicketLimit(
+  userId: string,
+  eventId: string
+): Promise<{ exceeded: boolean; currentCount?: number; maxAllowed?: number }> {
+  const supabase = await createClient()
+  // Get event's max tickets per user
+  const { data: event } = await supabase
+    .from('events')
+    .select('max_tickets_per_user')
+    .eq('id', eventId)
+    .single()
+
+  if (!event) {
+    return { exceeded: false }
+  }
+
+  const maxAllowed = event.max_tickets_per_user || 10
+
+  // Count user's existing tickets for this event
+  const { data: tickets } = await supabase
+    .from('tickets')
+    .select('id')
+    .eq('event_id', eventId)
+    .eq('user_id', userId)
+
+  const currentCount = tickets?.length || 0
+
+  return {
+    exceeded: currentCount >= maxAllowed,
+    currentCount,
+    maxAllowed,
+  }
+}
+
+/**
+ * Log suspicious activity
+ */
+export async function logSuspiciousActivity(activity: SuspiciousActivity): Promise<void> {
+  const supabase = await createClient()
+  const id = `suspicious_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  await supabase.from('suspicious_activities').insert({
+    id,
+    user_id: activity.userId,
+    activity_type: activity.activityType,
+    description: activity.description,
+    severity: activity.severity,
+    ip_address: activity.ipAddress,
+    metadata: activity.metadata ? JSON.stringify(activity.metadata) : null,
+    detected_at: new Date().toISOString(),
+  })
+
+  // If critical severity, could send admin alert here
+  if (activity.severity === 'critical') {
+    console.error('CRITICAL SECURITY ALERT:', activity.description, activity)
+    // TODO: Send email/Slack alert to admins
+  }
+}
+
+/**
+ * Validate QR code and prevent duplicate scans
+ */
+export async function validateTicketScan(
+  ticketId: string,
+  scannedBy: string
+): Promise<{ valid: boolean; reason?: string; ticket?: any }> {
+  const supabase = await createClient()
+  const { data: ticket } = await supabase
+    .from('tickets')
+    .select('*, events(*)')
+    .eq('id', ticketId)
+    .single()
+
+  if (!ticket) {
+    return { valid: false, reason: 'Ticket not found' }
+  }
+
+  // Check if ticket is flagged
+  if (ticket.is_flagged) {
+    await logSuspiciousActivity({
+      activityType: 'duplicate_tickets',
+      description: `Attempted to scan flagged ticket: ${ticketId}`,
+      severity: 'high',
+      metadata: { ticketId, scannedBy, flagReason: ticket.flag_reason },
+    })
+    return { valid: false, reason: `Ticket flagged: ${ticket.flag_reason}` }
+  }
+
+  // Check if already scanned (for single-entry events)
+  if (ticket.scanned_count > 0) {
+    const lastScannedMinutesAgo = ticket.last_scanned_at
+      ? (Date.now() - new Date(ticket.last_scanned_at).getTime()) / 1000 / 60
+      : Infinity
+
+    // If scanned within last 5 minutes, likely duplicate scan attempt
+    if (lastScannedMinutesAgo < 5) {
+      await logSuspiciousActivity({
+        userId: ticket.user_id,
+        activityType: 'duplicate_tickets',
+        description: `Duplicate scan attempt for ticket ${ticketId}`,
+        severity: 'medium',
+        metadata: { ticketId, scannedBy, lastScannedAt: ticket.last_scanned_at },
+      })
+      return { valid: false, reason: 'Ticket already scanned recently' }
+    }
+  }
+
+  // Check if event has already occurred
+  const eventDate = new Date(ticket.events.date)
+  const eventEndDate = new Date(eventDate.getTime() + 24 * 60 * 60 * 1000) // Assume 24h event duration
+  if (Date.now() > eventEndDate.getTime()) {
+    return { valid: false, reason: 'Event has already ended' }
+  }
+
+  return { valid: true, ticket }
+}
+
+/**
+ * Record ticket scan
+ */
+export async function recordTicketScan(ticketId: string, scannedBy: string): Promise<void> {
+  const supabase = await createClient()
+  await supabase
+    .from('tickets')
+    .update({
+      scanned_count: supabase.sql`scanned_count + 1`,
+      last_scanned_at: new Date().toISOString(),
+      last_scanned_by: scannedBy,
+    })
+    .eq('id', ticketId)
+}
+
+/**
+ * Log ticket transfer
+ */
+export async function logTicketTransfer(
+  ticketId: string,
+  fromUserId: string,
+  toUserId: string,
+  ipAddress: string,
+  reason?: string
+): Promise<void> {
+  const supabase = await createClient()
+  const id = `transfer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  // Check if ticket has been transferred too many times
+  const { data: transfers } = await supabase
+    .from('ticket_transfers')
+    .select('id')
+    .eq('ticket_id', ticketId)
+
+  if (transfers && transfers.length >= 3) {
+    await logSuspiciousActivity({
+      userId: fromUserId,
+      activityType: 'duplicate_tickets',
+      description: `Ticket ${ticketId} has been transferred ${transfers.length} times`,
+      severity: 'medium',
+      metadata: { ticketId, fromUserId, toUserId, transferCount: transfers.length },
+    })
+  }
+
+  // Record transfer
+  await supabase.from('ticket_transfers').insert({
+    id,
+    ticket_id: ticketId,
+    from_user_id: fromUserId,
+    to_user_id: toUserId,
+    transferred_at: new Date().toISOString(),
+    transfer_reason: reason,
+    ip_address: ipAddress,
+  })
+
+  // Update ticket transfer count
+  await supabase
+    .from('tickets')
+    .update({
+      transfer_count: supabase.sql`transfer_count + 1`,
+      user_id: toUserId,
+    })
+    .eq('id', ticketId)
+}
+
+/**
+ * Detect potential bot behavior
+ */
+export async function detectBotBehavior(
+  userId: string | null,
+  ipAddress: string,
+  fingerprint?: string
+): Promise<boolean> {
+  const supabase = await createClient()
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+
+  // Check for identical fingerprints from different IPs (botnet)
+  if (fingerprint) {
+    const { data: fingerprintAttempts } = await supabase
+      .from('purchase_attempts')
+      .select('ip_address')
+      .eq('fingerprint', fingerprint)
+      .gte('attempted_at', oneHourAgo)
+
+    if (fingerprintAttempts) {
+      const uniqueIps = new Set(fingerprintAttempts.map((a) => a.ip_address))
+      if (uniqueIps.size >= 5) {
+        await logSuspiciousActivity({
+          userId: userId || undefined,
+          activityType: 'bot_behavior',
+          description: `Same fingerprint from ${uniqueIps.size} different IPs`,
+          severity: 'high',
+          ipAddress,
+          metadata: { fingerprint, uniqueIps: Array.from(uniqueIps) },
+        })
+        return true
+      }
+    }
+  }
+
+  // Check for very rapid attempts (< 2 seconds between attempts)
+  if (userId) {
+    const { data: userAttempts } = await supabase
+      .from('purchase_attempts')
+      .select('attempted_at')
+      .eq('user_id', userId)
+      .gte('attempted_at', oneHourAgo)
+      .order('attempted_at', { ascending: false })
+      .limit(10)
+
+    if (userAttempts && userAttempts.length >= 5) {
+      const times = userAttempts.map((a) => new Date(a.attempted_at).getTime())
+      const intervals = []
+      for (let i = 1; i < times.length; i++) {
+        intervals.push(times[i - 1] - times[i])
+      }
+      const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length
+      if (avgInterval < 2000) {
+        // Less than 2 seconds average
+        await logSuspiciousActivity({
+          userId,
+          activityType: 'bot_behavior',
+          description: `Very rapid purchase attempts (avg ${avgInterval}ms)`,
+          severity: 'high',
+          ipAddress,
+          metadata: { intervals, avgInterval },
+        })
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+/**
+ * Add user/IP to blacklist
+ */
+export async function addToBlacklist(
+  type: 'user' | 'ip' | 'email',
+  value: string,
+  reason: string,
+  blacklistedBy: string,
+  expiresAt?: Date
+): Promise<void> {
+  const supabase = await createClient()
+  const id = `blacklist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  await supabase.from('security_blacklist').insert({
+    id,
+    type,
+    value,
+    reason,
+    blacklisted_by: blacklistedBy,
+    blacklisted_at: new Date().toISOString(),
+    expires_at: expiresAt?.toISOString(),
+  })
+
+  await logSuspiciousActivity({
+    activityType: 'multiple_accounts',
+    description: `${type} blacklisted: ${value}`,
+    severity: 'critical',
+    metadata: { type, value, reason, blacklistedBy },
+  })
+}

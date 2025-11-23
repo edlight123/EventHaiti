@@ -3,6 +3,13 @@ import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
+import {
+  getUserGrowthMetrics,
+  getRevenueGrowthMetrics,
+  getTopPerformingEvents,
+  getCategoryPopularity,
+  getOrganizerRankings,
+} from '@/lib/admin-analytics'
 
 export const revalidate = 0
 

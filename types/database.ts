@@ -301,6 +301,143 @@ export interface Database {
           created_at?: string
         }
       }
+      ticket_transfers: {
+        Row: {
+          id: string
+          ticket_id: string
+          from_user_id: string
+          to_user_id: string
+          transferred_at: string
+          transfer_reason: string | null
+          ip_address: string | null
+        }
+        Insert: {
+          id?: string
+          ticket_id: string
+          from_user_id: string
+          to_user_id: string
+          transferred_at?: string
+          transfer_reason?: string | null
+          ip_address?: string | null
+        }
+        Update: {
+          id?: string
+          ticket_id?: string
+          from_user_id?: string
+          to_user_id?: string
+          transferred_at?: string
+          transfer_reason?: string | null
+          ip_address?: string | null
+        }
+      }
+      purchase_attempts: {
+        Row: {
+          id: string
+          user_id: string | null
+          event_id: string
+          ip_address: string
+          attempted_at: string
+          success: boolean
+          quantity: number
+          fingerprint: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          event_id: string
+          ip_address: string
+          attempted_at?: string
+          success?: boolean
+          quantity: number
+          fingerprint?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          event_id?: string
+          ip_address?: string
+          attempted_at?: string
+          success?: boolean
+          quantity?: number
+          fingerprint?: string | null
+        }
+      }
+      security_blacklist: {
+        Row: {
+          id: string
+          type: 'user' | 'ip' | 'email'
+          value: string
+          reason: string
+          blacklisted_by: string | null
+          blacklisted_at: string
+          expires_at: string | null
+          notes: string | null
+        }
+        Insert: {
+          id?: string
+          type: 'user' | 'ip' | 'email'
+          value: string
+          reason: string
+          blacklisted_by?: string | null
+          blacklisted_at?: string
+          expires_at?: string | null
+          notes?: string | null
+        }
+        Update: {
+          id?: string
+          type?: 'user' | 'ip' | 'email'
+          value?: string
+          reason?: string
+          blacklisted_by?: string | null
+          blacklisted_at?: string
+          expires_at?: string | null
+          notes?: string | null
+        }
+      }
+      suspicious_activities: {
+        Row: {
+          id: string
+          user_id: string | null
+          activity_type: 'rapid_purchases' | 'duplicate_tickets' | 'unusual_location' | 'bot_behavior' | 'chargeback' | 'multiple_accounts'
+          description: string
+          severity: 'low' | 'medium' | 'high' | 'critical'
+          ip_address: string | null
+          metadata: string | null
+          detected_at: string
+          reviewed: boolean
+          reviewed_by: string | null
+          reviewed_at: string | null
+          action_taken: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          activity_type: 'rapid_purchases' | 'duplicate_tickets' | 'unusual_location' | 'bot_behavior' | 'chargeback' | 'multiple_accounts'
+          description: string
+          severity: 'low' | 'medium' | 'high' | 'critical'
+          ip_address?: string | null
+          metadata?: string | null
+          detected_at?: string
+          reviewed?: boolean
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          action_taken?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          activity_type?: 'rapid_purchases' | 'duplicate_tickets' | 'unusual_location' | 'bot_behavior' | 'chargeback' | 'multiple_accounts'
+          description?: string
+          severity?: 'low' | 'medium' | 'high' | 'critical'
+          ip_address?: string | null
+          metadata?: string | null
+          detected_at?: string
+          reviewed?: boolean
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          action_taken?: string | null
+        }
+      }
     }
   }
 }
