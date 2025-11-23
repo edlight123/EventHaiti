@@ -42,7 +42,7 @@ export default async function DiscoverPage() {
           
           {trendingEvents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {trendingEvents.map((event, index) => (
+              {trendingEvents.map((event: any, index: number) => (
                 <div key={event.id} className="relative">
                   {index < 3 && (
                     <div className="absolute -top-2 -left-2 z-10 w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
@@ -77,7 +77,7 @@ export default async function DiscoverPage() {
 
           {nearbyEvents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {nearbyEvents.map((event) => (
+              {nearbyEvents.map((event: any) => (
                 <EventCard key={event.id} event={event} />
               ))}
             </div>
@@ -92,7 +92,7 @@ export default async function DiscoverPage() {
         <section>
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Browse by Category</h2>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {['Music', 'Sports', 'Arts', 'Business', 'Food', 'Community', 'Education', 'Technology', 'Health', 'Other'].map(category => (
+            {['Music', 'Sports', 'Arts', 'Business', 'Food', 'Community', 'Education', 'Technology', 'Health', 'Other'].map((category: string) => (
               <a
                 key={category}
                 href={`/?category=${category}`}

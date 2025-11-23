@@ -34,7 +34,7 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
     .select('event_id')
     .eq('attendee_id', userId)
 
-  const attendedEventIds = new Set(userTickets?.map(t => t.event_id) || [])
+  const attendedEventIds = new Set(userTickets?.map((t: any) => t.event_id) || [])
 
   // Get attended events details
   const { data: attendedEvents } = await supabase
@@ -44,7 +44,7 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
 
   // Calculate category preferences
   const categoryPreferences = new Map<string, number>()
-  attendedEvents?.forEach(event => {
+  attendedEvents?.forEach((event: any) => {
     const count = categoryPreferences.get(event.category) || 0
     categoryPreferences.set(event.category, count + 1)
   })
@@ -55,7 +55,7 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
     .select('event_id')
     .eq('user_id', userId)
 
-  const favoriteEventIds = new Set(favorites?.map(f => f.event_id) || [])
+  const favoriteEventIds = new Set(favorites?.map((f: any) => f.event_id) || [])
 
   // Get events from favorites to learn preferences
   const { data: favoriteEvents } = await supabase
@@ -63,7 +63,7 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
     .select('*')
     .in('id', Array.from(favoriteEventIds))
 
-  favoriteEvents?.forEach(event => {
+  favoriteEvents?.forEach((event: any) => {
     const count = categoryPreferences.get(event.category) || 0
     categoryPreferences.set(event.category, count + 2) // Weight favorites more
   })
@@ -74,10 +74,10 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
     .select('organizer_id')
     .eq('follower_id', userId)
 
-  const followedOrganizerIds = new Set(follows?.map(f => f.organizer_id) || [])
+  const followedOrganizerIds = new Set(follows?.map((f: any) => f.organizer_id) || [])
 
   // Score each event
-  allEvents.forEach(event => {
+  allEvents.forEach((event: any) => {
     // Skip already attended events
     if (attendedEventIds.has(event.id)) return
 
@@ -106,7 +106,7 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
 
     // Price similarity to attended events
     const avgAttendedPrice = attendedEvents && attendedEvents.length > 0
-      ? attendedEvents.reduce((sum, e) => sum + (e.ticket_price || 0), 0) / attendedEvents.length
+      ? attendedEvents.reduce((sum: number, e: any) => sum + (e.ticket_price || 0), 0) / attendedEvents.length
       : 0
 
     if (avgAttendedPrice > 0) {
@@ -136,14 +136,14 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
     .slice(0, limit)
 
   // Get full event details
-  const recommendedEventIds = recommendations.map(r => r.eventId)
+  const recommendedEventIds = recommendations.map((r: any) => r.eventId)
   const { data: recommendedEvents } = await supabase
     .from('events')
     .select('*')
     .in('id', recommendedEventIds)
 
   // Attach recommendation reasons
-  return recommendedEvents?.map(event => ({
+  return recommendedEvents?.map((event: any) => ({
     ...event,
     recommendationReasons: scores.get(event.id)?.reasons || []
   })) || []
@@ -176,7 +176,7 @@ export async function getTrendingEvents(limit: number = 10) {
     .gte('purchased_at', weekAgo.toISOString())
 
   const ticketCounts = new Map<string, number>()
-  recentTickets?.forEach(ticket => {
+  recentTickets?.forEach((ticket: any) => {
     const count = ticketCounts.get(ticket.event_id) || 0
     ticketCounts.set(ticket.event_id, count + 1)
   })
@@ -187,13 +187,13 @@ export async function getTrendingEvents(limit: number = 10) {
     .select('event_id')
 
   const favoriteCounts = new Map<string, number>()
-  favorites?.forEach(fav => {
+  favorites?.forEach((fav: any) => {
     const count = favoriteCounts.get(fav.event_id) || 0
     favoriteCounts.set(fav.event_id, count + 1)
   })
 
   // Calculate trending score
-  const trendingScores = events.map(event => {
+  const trendingScores = events.map((event: any) => {
     const recentSales = ticketCounts.get(event.id) || 0
     const favoriteCount = favoriteCounts.get(event.id) || 0
     const daysOld = (now.getTime() - new Date(event.created_at).getTime()) / (1000 * 60 * 60 * 24)
@@ -207,7 +207,7 @@ export async function getTrendingEvents(limit: number = 10) {
 
   // Sort by trending score
   return trendingScores
-    .sort((a, b) => b.trendingScore - a.trendingScore)
+    .sort((a: any, b: any) => b.trendingScore - a.trendingScore)
     .slice(0, limit)
 }
 
@@ -260,7 +260,7 @@ export async function getRelatedEvents(eventId: string, limit: number = 6) {
   if (!relatedEvents) return []
 
   // Score related events
-  const scoredEvents = relatedEvents.map(e => {
+  const scoredEvents = relatedEvents.map((e: any) => {
     let score = 0
     if (e.category === event.category) score += 10
     if (e.organizer_id === event.organizer_id) score += 20
@@ -274,7 +274,7 @@ export async function getRelatedEvents(eventId: string, limit: number = 6) {
   })
 
   return scoredEvents
-    .filter(e => e.relatedScore > 0)
-    .sort((a, b) => b.relatedScore - a.relatedScore)
+    .filter((e: any) => e.relatedScore > 0)
+    .sort((a: any, b: any) => b.relatedScore - a.relatedScore)
     .slice(0, limit)
 }

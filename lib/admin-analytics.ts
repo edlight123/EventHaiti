@@ -25,7 +25,7 @@ export async function getUserGrowthMetrics(days: number = 30) {
   // Group by day
   const dailySignups: Record<string, { date: string; attendees: number; organizers: number; total: number }> = {}
 
-  users.forEach((user) => {
+  users.forEach((user: any) => {
     const date = new Date(user.created_at).toISOString().split('T')[0]
     if (!dailySignups[date]) {
       dailySignups[date] = { date, attendees: 0, organizers: 0, total: 0 }
@@ -38,8 +38,8 @@ export async function getUserGrowthMetrics(days: number = 30) {
     dailySignups[date].total++
   })
 
-  const organizerCount = users.filter((u) => u.role === 'organizer').length
-  const attendeeCount = users.filter((u) => u.role === 'attendee').length
+  const organizerCount = users.filter((u: any) => u.role === 'organizer').length
+  const attendeeCount = users.filter((u: any) => u.role === 'attendee').length
 
   return {
     dailySignups: Object.values(dailySignups),
@@ -74,7 +74,7 @@ export async function getRevenueGrowthMetrics(days: number = 30) {
   let stripeRevenue = 0
   let monCashRevenue = 0
 
-  tickets.forEach((ticket) => {
+  tickets.forEach((ticket: any) => {
     const date = new Date(ticket.purchased_at).toISOString().split('T')[0]
     const price = ticket.price || 0
 
@@ -127,7 +127,7 @@ export async function calculateEventSuccessScore(eventId: string): Promise<numbe
   // 2. Average review rating (30 points max)
   const reviews = event.event_reviews || []
   if (reviews.length > 0) {
-    const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+    const avgRating = reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length
     score += (avgRating / 5) * 30
   }
 
@@ -164,7 +164,7 @@ export async function getTopPerformingEvents(limit: number = 10) {
 
   // Calculate success scores
   const eventsWithScores = await Promise.all(
-    events.map(async (event) => {
+    events.map(async (event: any) => {
       const score = await calculateEventSuccessScore(event.id)
       return { ...event, successScore: score }
     })
@@ -195,14 +195,14 @@ export async function getCategoryPopularity(days: number = 30) {
   // Count by category
   const categoryCounts: Record<string, number> = {}
 
-  tickets.forEach((ticket) => {
+  tickets.forEach((ticket: any) => {
     const category = ticket.events?.category || 'Other'
     categoryCounts[category] = (categoryCounts[category] || 0) + 1
   })
 
   // Convert to array and sort
   return Object.entries(categoryCounts)
-    .map(([category, count]) => ({ category, count }))
+    .map(([category, count]: [string, number]) => ({ category, count }))
     .sort((a, b) => b.count - a.count)
 }
 
@@ -228,7 +228,7 @@ export async function getGeographicDistribution() {
     'Other': 0,
   }
 
-  users.forEach((user) => {
+  users.forEach((user: any) => {
     if (user.phone_number) {
       // Simplified: would need real geocoding
       // Just count all as "Other" for now
@@ -237,8 +237,8 @@ export async function getGeographicDistribution() {
   })
 
   return Object.entries(regionCounts)
-    .map(([region, count]) => ({ region, count }))
-    .filter((r) => r.count > 0)
+    .map(([region, count]: [string, number]) => ({ region, count }))
+    .filter((r: any) => r.count > 0)
 }
 
 /**
@@ -297,22 +297,22 @@ export async function getOrganizerRankings(limit: number = 10) {
 
   // Get stats for each organizer
   const organizerStats = await Promise.all(
-    organizers.map(async (organizer) => {
+    organizers.map(async (organizer: any) => {
       const { data: events } = await supabase
         .from('events')
         .select('id, tickets(count), event_favorites(count), event_reviews(rating)')
         .eq('organizer_id', organizer.id)
 
       const eventsCount = events?.length || 0
-      const totalTickets = events?.reduce((sum, e) => sum + (e.tickets?.length || 0), 0) || 0
-      const totalFavorites = events?.reduce((sum, e) => sum + (e.event_favorites?.length || 0), 0) || 0
+      const totalTickets = events?.reduce((sum: number, e: any) => sum + (e.tickets?.length || 0), 0) || 0
+      const totalFavorites = events?.reduce((sum: number, e: any) => sum + (e.event_favorites?.length || 0), 0) || 0
 
       // Calculate average review rating across all events
       let totalRating = 0
       let totalReviews = 0
-      events?.forEach((event) => {
+      events?.forEach((event: any) => {
         const reviews = event.event_reviews || []
-        reviews.forEach((review) => {
+        reviews.forEach((review: any) => {
           totalRating += review.rating
           totalReviews++
         })
@@ -351,7 +351,7 @@ export async function getChurnAnalysis(inactiveDays: number = 90) {
 
   // Check last purchase for each user
   const userAnalysis = await Promise.all(
-    allUsers.map(async (user) => {
+    allUsers.map(async (user: any) => {
       const { data: tickets } = await supabase
         .from('tickets')
         .select('purchased_at')
@@ -376,8 +376,8 @@ export async function getChurnAnalysis(inactiveDays: number = 90) {
     })
   )
 
-  const churned = userAnalysis.filter((u) => u.status === 'churned')
-  const active = userAnalysis.filter((u) => u.status === 'active')
+  const churned = userAnalysis.filter((u: any) => u.status === 'churned')
+  const active = userAnalysis.filter((u: any) => u.status === 'active')
   const churnRate = allUsers.length > 0 ? (churned.length / allUsers.length) * 100 : 0
 
   return {

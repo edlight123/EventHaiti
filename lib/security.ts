@@ -344,7 +344,7 @@ export async function detectBotBehavior(
       .gte('attempted_at', oneHourAgo)
 
     if (fingerprintAttempts) {
-      const uniqueIps = new Set(fingerprintAttempts.map((a) => a.ip_address))
+      const uniqueIps = new Set(fingerprintAttempts.map((a: any) => a.ip_address))
       if (uniqueIps.size >= 5) {
         await logSuspiciousActivity({
           userId: userId || undefined,
@@ -370,12 +370,12 @@ export async function detectBotBehavior(
       .limit(10)
 
     if (userAttempts && userAttempts.length >= 5) {
-      const times = userAttempts.map((a) => new Date(a.attempted_at).getTime())
+      const times = userAttempts.map((a: any) => new Date(a.attempted_at).getTime())
       const intervals = []
       for (let i = 1; i < times.length; i++) {
         intervals.push(times[i - 1] - times[i])
       }
-      const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length
+      const avgInterval = intervals.reduce((a: number, b: number) => a + b, 0) / intervals.length
       if (avgInterval < 2000) {
         // Less than 2 seconds average
         await logSuspiciousActivity({
