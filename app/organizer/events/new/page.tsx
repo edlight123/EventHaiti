@@ -43,7 +43,7 @@ export default async function NewEventPage() {
                   </p>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                     <p className="text-sm text-blue-800">
-                      You'll receive an email once your account is verified. Thank you for your patience!
+                      You&apos;ll receive an email once your account is verified. Thank you for your patience!
                     </p>
                   </div>
                   <Link
@@ -71,7 +71,7 @@ export default async function NewEventPage() {
                     To create events on EventHaiti, you need to verify your identity first. This helps keep our community safe and trustworthy.
                   </p>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
-                    <h3 className="font-semibold text-blue-900 mb-2">What you'll need:</h3>
+                    <h3 className="font-semibold text-blue-900 mb-2">What you&apos;ll need:</h3>
                     <ul className="space-y-1 text-sm text-blue-800">
                       <li className="flex items-center">
                         <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">

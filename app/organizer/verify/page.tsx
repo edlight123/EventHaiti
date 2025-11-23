@@ -43,7 +43,7 @@ export default async function VerifyOrganizerPage() {
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
-            <h3 className="font-semibold text-blue-900 mb-2">You'll need:</h3>
+            <h3 className="font-semibold text-blue-900 mb-2">You&apos;ll need:</h3>
             <ul className="space-y-1 text-sm text-blue-800">
               <li className="flex items-center">
                 <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
