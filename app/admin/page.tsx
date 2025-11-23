@@ -8,43 +8,44 @@ export const revalidate = 0
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e)
 
 export default async function AdminDashboard() {
-  const user = await getCurrentUser()
+  try {
+    const user = await getCurrentUser()
 
-  if (!user) {
-    redirect('/auth/login?redirect=/admin')
-  }
+    if (!user) {
+      redirect('/auth/login?redirect=/admin')
+    }
 
-  if (!ADMIN_EMAILS.includes(user.email || '')) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-gray-200 p-8 text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-          <p className="text-gray-600 mb-4">
-            You don&apos;t have admin privileges for this platform.
-          </p>
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <p className="text-sm text-gray-700">
-              <strong>Your email:</strong> {user.email}
+    if (!ADMIN_EMAILS.includes(user.email || '')) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-gray-200 p-8 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+            <p className="text-gray-600 mb-4">
+              You don&apos;t have admin privileges for this platform.
             </p>
-            <p className="text-xs text-gray-500 mt-2">
-              Contact an administrator to request access.
-            </p>
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <p className="text-sm text-gray-700">
+                <strong>Your email:</strong> {user.email}
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                Contact an administrator to request access.
+              </p>
+            </div>
+            <a
+              href="/"
+              className="inline-block bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition-colors"
+            >
+              Return to Home
+            </a>
           </div>
-          <a
-            href="/"
-            className="inline-block bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition-colors"
-          >
-            Return to Home
-          </a>
         </div>
-      </div>
-    )
-  }
+      )
+    }
 
   const supabase = await createClient()
 
@@ -229,4 +230,33 @@ export default async function AdminDashboard() {
       </div>
     </div>
   )
+  } catch (error) {
+    console.error('Admin dashboard fatal error:', error)
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-gray-200 p-8 text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Dashboard</h1>
+          <p className="text-gray-600 mb-6">
+            There was an error loading the admin dashboard. This may be a configuration issue.
+          </p>
+          <div className="bg-gray-50 rounded-lg p-4 mb-6">
+            <p className="text-xs text-gray-500">
+              Error: {error instanceof Error ? error.message : 'Unknown error'}
+            </p>
+          </div>
+          <a
+            href="/"
+            className="inline-block bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            Return to Home
+          </a>
+        </div>
+      </div>
+    )
+  }
 }
