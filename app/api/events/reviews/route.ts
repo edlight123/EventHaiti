@@ -100,7 +100,7 @@ export async function GET(request: Request) {
     const usersMap = new Map(users?.map((u: any) => [u.id, u]) || [])
 
     // Join reviews with user data
-    const reviewsWithUsers = reviews?.map(review => ({
+    const reviewsWithUsers = reviews?.map((review: any) => ({
       ...review,
       user: usersMap.get(review.user_id)
     }))
