@@ -82,7 +82,7 @@ export default function TransferAcceptForm({ transfer, ticket, event, sender, cu
       {/* Header */}
       <div className="bg-gradient-to-r from-teal-700 to-orange-600 text-white p-6">
         <h1 className="text-2xl font-bold mb-2">🎟️ Ticket Transfer</h1>
-        <p className="text-teal-50">You've received a ticket!</p>
+        <p className="text-teal-50">You&apos;ve received a ticket!</p>
       </div>
 
       {/* Content */}
