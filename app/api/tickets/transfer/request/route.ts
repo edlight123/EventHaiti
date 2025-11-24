@@ -2,8 +2,10 @@
 // Initiate a ticket transfer to another user
 
 import { createClient } from '@/lib/firebase-db/server'
+import { adminDb } from '@/lib/firebase/admin'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { getCurrentUser } from '@/lib/auth'
 
 const transferRequestSchema = z.object({
   ticketId: z.string().min(1),
@@ -13,11 +15,9 @@ const transferRequestSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    
-    // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    // Get current user using auth helper
+    const user = await getCurrentUser()
+    if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -43,6 +43,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Get supabase for ticket verification
+    const supabase = await createClient()
 
     // Verify ticket ownership and status
     const { data: ticket, error: ticketError } = await supabase
@@ -104,9 +107,10 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date()
     expiresAt.setHours(expiresAt.getHours() + 24)
 
-    // Create transfer request - use simple field structure
+    // Create transfer request - use Firestore directly
+    const transferId = `transfer_${Date.now()}_${Math.random().toString(36).substring(7)}`
     const transferData = {
-      id: `transfer_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      id: transferId,
       ticket_id: ticketId,
       from_user_id: user.id,
       to_email: toEmail.toLowerCase(),
@@ -121,24 +125,21 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString()
     }
 
-    console.log('Attempting to create transfer with data:', transferData)
+    console.log('Creating transfer with Firestore directly:', transferId)
 
-    const { data: transfer, error: transferError } = await supabase
-      .from('ticket_transfers')
-      .insert(transferData)
-      .select()
-      .single()
-
-    if (transferError) {
-      console.error('Transfer creation error:', transferError)
-      console.error('Error details:', JSON.stringify(transferError, null, 2))
+    try {
+      await adminDb.collection('ticket_transfers').doc(transferId).set(transferData)
+      console.log('Transfer created successfully in Firestore')
+    } catch (firestoreError: any) {
+      console.error('Firestore error:', firestoreError)
       return NextResponse.json(
-        { error: 'Failed to create transfer request', details: transferError.message },
+        { error: 'Failed to create transfer request', details: firestoreError.message },
         { status: 500 }
       )
     }
 
-    console.log('Transfer created successfully:', transfer)
+    // Use transferData as the transfer object for response
+    const transfer = transferData
 
     // Send email notification to recipient
     try {
