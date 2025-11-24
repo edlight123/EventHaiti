@@ -106,8 +106,8 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
     }
   }
 
-  const canTransfer = ticketStatus === 'active' && !checkedIn
-  const canRequestRefund = ticketStatus === 'active' && !checkedIn
+  const canTransfer = (ticketStatus === 'active' || ticketStatus === 'valid') && !checkedIn
+  const canRequestRefund = (ticketStatus === 'active' || ticketStatus === 'valid') && !checkedIn
 
   const handleCopyLink = async () => {
     const ticketUrl = `${window.location.origin}/tickets/${ticketId}`
