@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check ticket is still valid
-    if (transfer.tickets.status !== 'active' || transfer.tickets.checked_in) {
+    if ((transfer.tickets.status !== 'active' && transfer.tickets.status !== 'valid') || transfer.tickets.checked_in) {
       return NextResponse.json(
         { error: 'Ticket is no longer available for transfer' },
         { status: 400 }

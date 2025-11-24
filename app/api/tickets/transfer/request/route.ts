@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (ticket.status !== 'active') {
+    if (ticket.status !== 'active' && ticket.status !== 'valid') {
       return NextResponse.json(
         { error: `Cannot transfer ticket with status: ${ticket.status}` },
         { status: 400 }
