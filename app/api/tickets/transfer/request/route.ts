@@ -1,7 +1,6 @@
 // API Route: POST /api/tickets/transfer/request
 // Initiate a ticket transfer to another user
 
-import { createClient } from '@/lib/firebase-db/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
@@ -44,18 +43,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get supabase for ticket verification
-    const supabase = await createClient()
+    // Verify ticket ownership and status using Firestore
+    const ticketDoc = await adminDb.collection('tickets').doc(ticketId).get()
+    
+    if (!ticketDoc.exists) {
+      return NextResponse.json(
+        { error: 'Ticket not found' },
+        { status: 404 }
+      )
+    }
 
-    // Verify ticket ownership and status
-    const { data: ticket, error: ticketError } = await supabase
-      .from('tickets')
-      .select('*, events(title, start_datetime, organizer_id)')
-      .eq('id', ticketId)
-      .eq('attendee_id', user.id)
-      .single()
-
-    if (ticketError || !ticket) {
+    const ticket = ticketDoc.data()
+    
+    // Verify ownership
+    if (ticket?.attendee_id !== user.id && ticket?.user_id !== user.id) {
       return NextResponse.json(
         { error: 'Ticket not found or not owned by you' },
         { status: 404 }
@@ -69,35 +70,40 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (ticket.checked_in) {
+    if (ticket.checked_in || ticket.checked_in_at) {
       return NextResponse.json(
         { error: 'Cannot transfer a ticket that has been checked in' },
         { status: 400 }
       )
     }
 
-    // Check for existing pending transfers
-    const { data: existingTransfer } = await supabase
-      .from('ticket_transfers')
-      .select('id')
-      .eq('ticket_id', ticketId)
-      .eq('status', 'pending')
-      .single()
+    // Check for existing pending transfers using Firestore
+    const existingTransfers = await adminDb.collection('ticket_transfers')
+      .where('ticket_id', '==', ticketId)
+      .where('status', '==', 'pending')
+      .limit(1)
+      .get()
 
-    if (existingTransfer) {
+    if (!existingTransfers.empty) {
       return NextResponse.json(
         { error: 'A pending transfer already exists for this ticket' },
         { status: 400 }
       )
     }
 
-    // Check if event allows transfers (optional - you could add a transfers_enabled field to events)
-    const eventDate = new Date(ticket.events.start_datetime)
-    if (eventDate < new Date()) {
-      return NextResponse.json(
-        { error: 'Cannot transfer tickets for past events' },
-        { status: 400 }
-      )
+    // Get event details
+    const eventDoc = await adminDb.collection('events').doc(ticket.event_id).get()
+    const event = eventDoc.data()
+
+    // Check if event allows transfers
+    if (event?.start_datetime) {
+      const eventDate = new Date(event.start_datetime)
+      if (eventDate < new Date()) {
+        return NextResponse.json(
+          { error: 'Cannot transfer tickets for past events' },
+          { status: 400 }
+        )
+      }
     }
 
     // Generate unique transfer token
@@ -144,47 +150,50 @@ export async function POST(request: NextRequest) {
     // Send email notification to recipient
     try {
       const { sendEmail, getTicketTransferRequestEmail } = await import('@/lib/email')
-      const { data: sender } = await supabase
-        .from('users')
-        .select('full_name, email')
-        .eq('id', user.id)
-        .single()
+      
+      // Get sender info from Firestore
+      const senderDoc = await adminDb.collection('users').doc(user.id).get()
+      const sender = senderDoc.data()
 
       await sendEmail({
         to: toEmail,
-        subject: `${sender?.full_name || 'Someone'} wants to transfer you a ticket`,
+        subject: `${sender?.full_name || sender?.name || 'Someone'} wants to transfer you a ticket`,
         html: getTicketTransferRequestEmail({
-          senderName: sender?.full_name || 'A friend',
-          senderEmail: sender?.email || '',
-          eventTitle: ticket.events.title,
-          eventDate: ticket.events.start_datetime,
+          senderName: sender?.full_name || sender?.name || 'A friend',
+          senderEmail: sender?.email || user.email || '',
+          eventTitle: event?.title || 'Event',
+          eventDate: event?.start_datetime || new Date().toISOString(),
           message: message || '',
           transferToken: transfer.transfer_token,
           expiresAt: transfer.expires_at
         })
       })
 
-      // Check if recipient has account with phone number
-      const { data: recipient } = await supabase
-        .from('users')
-        .select('phone')
-        .eq('email', toEmail.toLowerCase())
-        .single()
+      // Check if recipient has account with phone number using Firestore
+      const recipientQuery = await adminDb.collection('users')
+        .where('email', '==', toEmail.toLowerCase())
+        .limit(1)
+        .get()
 
-      if (recipient?.phone) {
-        try {
-          const { sendSms, getTicketTransferSms } = await import('@/lib/sms')
-          await sendSms({
-            to: recipient.phone,
-            message: getTicketTransferSms({
-              senderName: sender?.full_name || 'A friend',
-              eventTitle: ticket.events.title,
-              transferUrl: `${process.env.NEXT_PUBLIC_APP_URL}/tickets/transfer/${transfer.transfer_token}`
+      if (!recipientQuery.empty) {
+        const recipientDoc = recipientQuery.docs[0]
+        const recipient = recipientDoc.data()
+
+        if (recipient?.phone) {
+          try {
+            const { sendSms, getTicketTransferSms } = await import('@/lib/sms')
+            await sendSms({
+              to: recipient.phone,
+              message: getTicketTransferSms({
+                senderName: sender?.full_name || sender?.name || 'A friend',
+                eventTitle: event?.title || 'Event',
+                transferUrl: `${process.env.NEXT_PUBLIC_APP_URL}/tickets/transfer/${transfer.transfer_token}`
+              })
             })
-          })
-        } catch (smsError) {
-          console.error('Failed to send SMS notification:', smsError)
-          // Continue - email was sent
+          } catch (smsError) {
+            console.error('Failed to send SMS notification:', smsError)
+            // Continue - email was sent
+          }
         }
       }
     } catch (emailError) {
