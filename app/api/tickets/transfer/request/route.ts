@@ -104,34 +104,34 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date()
     expiresAt.setHours(expiresAt.getHours() + 24)
 
-    // Create transfer request
+    // Create transfer request - use simple field structure
+    const transferData = {
+      id: `transfer_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      ticket_id: ticketId,
+      from_user_id: user.id,
+      to_email: toEmail.toLowerCase(),
+      to_user_id: null,
+      status: 'pending',
+      message: message || null,
+      transfer_token: transferToken,
+      requested_at: new Date().toISOString(),
+      responded_at: null,
+      expires_at: expiresAt.toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+
+    console.log('Attempting to create transfer with data:', transferData)
+
     const { data: transfer, error: transferError } = await supabase
       .from('ticket_transfers')
-      .insert({
-        ticket_id: ticketId,
-        from_user_id: user.id,
-        to_email: toEmail.toLowerCase(),
-        message: message || null,
-        status: 'pending',
-        transfer_token: transferToken,
-        requested_at: new Date().toISOString(),
-        expires_at: expiresAt.toISOString()
-      })
+      .insert(transferData)
       .select()
       .single()
 
     if (transferError) {
       console.error('Transfer creation error:', transferError)
-      console.error('Attempted to insert:', {
-        ticket_id: ticketId,
-        from_user_id: user.id,
-        to_email: toEmail.toLowerCase(),
-        message: message || null,
-        status: 'pending',
-        transfer_token: transferToken,
-        requested_at: new Date().toISOString(),
-        expires_at: expiresAt.toISOString()
-      })
+      console.error('Error details:', JSON.stringify(transferError, null, 2))
       return NextResponse.json(
         { error: 'Failed to create transfer request', details: transferError.message },
         { status: 500 }
