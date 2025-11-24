@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
 const transferRequestSchema = z.object({
-  ticketId: z.string().uuid(),
+  ticketId: z.string().min(1),
   toEmail: z.string().email(),
   message: z.string().max(500).optional()
 })
