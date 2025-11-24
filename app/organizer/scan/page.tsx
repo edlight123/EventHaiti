@@ -15,9 +15,39 @@ export default async function ScanTicketPage() {
   const supabase = await createClient()
   const allEventsQuery = await supabase.from('events').select('*')
   const allEvents = allEventsQuery.data || []
-  const events = allEvents
-    .filter((e: any) => e.organizer_id === user.id)
-    .sort((a: any, b: any) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
+  
+  // Filter user's events
+  const userEvents = allEvents.filter((e: any) => e.organizer_id === user.id)
+  
+  // Get today's date boundaries
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  
+  // Separate events happening today from others
+  const todayEvents = userEvents.filter((e: any) => {
+    const eventDate = new Date(e.start_datetime)
+    return eventDate >= today && eventDate < tomorrow
+  })
+  
+  const otherEvents = userEvents.filter((e: any) => {
+    const eventDate = new Date(e.start_datetime)
+    return eventDate < today || eventDate >= tomorrow
+  })
+  
+  // Sort today's events by time (earliest first)
+  todayEvents.sort((a: any, b: any) => 
+    new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime()
+  )
+  
+  // Sort other events newest to oldest (by event date)
+  otherEvents.sort((a: any, b: any) => 
+    new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime()
+  )
+  
+  // Combine: today's events first, then others
+  const events = [...todayEvents, ...otherEvents]
 
   return (
     <div className="min-h-screen bg-gray-50">

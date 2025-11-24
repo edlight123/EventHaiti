@@ -74,6 +74,22 @@ export default function EventSelector({ events, organizerId }: EventSelectorProp
   }
 
   if (!selectedEventId) {
+    // Separate today's events from others for display
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    
+    const todayEvents = events.filter(e => {
+      const eventDate = new Date(e.start_datetime)
+      return eventDate >= today && eventDate < tomorrow
+    })
+    
+    const otherEvents = events.filter(e => {
+      const eventDate = new Date(e.start_datetime)
+      return eventDate < today || eventDate >= tomorrow
+    })
+    
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Select an Event</h2>
@@ -90,38 +106,87 @@ export default function EventSelector({ events, organizerId }: EventSelectorProp
             </a>
           </div>
         ) : (
-          <div className="space-y-3">
-            {events.map((event) => {
-              const isPast = new Date(event.start_datetime) < new Date()
-              
-              return (
-                <button
-                  key={event.id}
-                  onClick={() => setSelectedEventId(event.id)}
-                  className="w-full text-left p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{event.title}</h3>
-                      <p className="text-sm text-gray-600 mt-1">
-                        📅 {format(new Date(event.start_datetime), 'PPP • p')}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        📍 {event.venue_name}, {event.city}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-2">
-                        {event.tickets_sold || 0} tickets sold
-                      </p>
-                    </div>
-                    {isPast && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
-                        Past
-                      </span>
-                    )}
-                  </div>
-                </button>
-              )
-            })}
+          <div className="space-y-6">
+            {/* Today's Events */}
+            {todayEvents.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-teal-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+                  <span>📍</span>
+                  <span>Happening Today</span>
+                </h3>
+                <div className="space-y-3">
+                  {todayEvents.map((event) => (
+                    <button
+                      key={event.id}
+                      onClick={() => setSelectedEventId(event.id)}
+                      className="w-full text-left p-4 bg-teal-50 hover:bg-teal-100 rounded-lg border-2 border-teal-200 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900">{event.title}</h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            📅 {format(new Date(event.start_datetime), 'PPP • p')}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            📍 {event.venue_name}, {event.city}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-2">
+                            {event.tickets_sold || 0} tickets sold
+                          </p>
+                        </div>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-teal-600 text-white">
+                          Today
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Other Events */}
+            {otherEvents.length > 0 && (
+              <div>
+                {todayEvents.length > 0 && (
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                    Other Events
+                  </h3>
+                )}
+                <div className="space-y-3">
+                  {otherEvents.map((event) => {
+                    const isPast = new Date(event.start_datetime) < new Date()
+                    
+                    return (
+                      <button
+                        key={event.id}
+                        onClick={() => setSelectedEventId(event.id)}
+                        className="w-full text-left p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900">{event.title}</h3>
+                            <p className="text-sm text-gray-600 mt-1">
+                              📅 {format(new Date(event.start_datetime), 'PPP • p')}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              📍 {event.venue_name}, {event.city}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              {event.tickets_sold || 0} tickets sold
+                            </p>
+                          </div>
+                          {isPast && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                              Past
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
