@@ -161,11 +161,21 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
 
                 {/* Add to Wallet Button */}
                 {!isDemoMode() && (
-                  <div className="p-4 border-t border-gray-200 bg-gray-50">
+                  <div className="p-4 border-t border-gray-200 bg-gray-50 space-y-2">
                     <AddToWalletButton
                       ticket={ticket}
                       event={event}
                     />
+                    
+                    {/* Transfer Ticket Button */}
+                    {!ticket.checked_in_at && ticket.status === 'valid' && (
+                      <a
+                        href={`/tickets/${ticket.id}`}
+                        className="block w-full py-3 px-4 bg-teal-600 hover:bg-teal-700 text-white text-center font-medium rounded-lg transition-colors"
+                      >
+                        🔄 Transfer This Ticket
+                      </a>
+                    )}
                   </div>
                 )}
               </div>
@@ -180,6 +190,7 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
             <li>• Each ticket has a unique QR code</li>
             <li>• Scroll to see all your tickets for this event</li>
             <li>• Save tickets to your wallet for easy access</li>
+            <li>• Transfer tickets to friends using the transfer button</li>
             <li>• Show each QR code at the venue entrance</li>
             <li>• Each ticket can only be used once</li>
           </ul>
