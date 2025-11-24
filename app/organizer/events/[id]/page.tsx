@@ -7,6 +7,7 @@ import Link from 'next/link'
 import EventUpdates from './EventUpdates'
 import NotifyAttendeesButton from './NotifyAttendeesButton'
 import TicketTiersManager from '@/components/TicketTiersManager'
+import GroupDiscountsManager from '@/components/GroupDiscountsManager'
 import { isDemoMode, DEMO_EVENTS, DEMO_TICKETS } from '@/lib/demo'
 
 export const revalidate = 0
@@ -165,6 +166,13 @@ export default async function OrganizerEventDetailPage({ params }: { params: Pro
         {!isDemoMode() && (
           <div className="mb-8">
             <TicketTiersManager eventId={event.id} />
+          </div>
+        )}
+
+        {/* Group Discounts Management */}
+        {!isDemoMode() && (
+          <div className="mb-8">
+            <GroupDiscountsManager eventId={event.id} />
           </div>
         )}
 

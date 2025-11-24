@@ -8,10 +8,17 @@ interface TicketTier {
   name: string
   description: string | null
   price: number
-  quantity: number
-  sold_count: number
+  total_quantity: number
+  sold_quantity: number
   sales_start: string | null
   sales_end: string | null
+}
+
+interface GroupDiscount {
+  id: string
+  min_quantity: number
+  discount_percentage: number
+  is_active: boolean
 }
 
 interface TieredTicketSelectorProps {
@@ -23,6 +30,7 @@ interface TieredTicketSelectorProps {
 export default function TieredTicketSelector({ eventId, userId, onPurchase }: TieredTicketSelectorProps) {
   const router = useRouter()
   const [tiers, setTiers] = useState<TicketTier[]>([])
+  const [groupDiscounts, setGroupDiscounts] = useState<GroupDiscount[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedTier, setSelectedTier] = useState<string | null>(null)
   const [quantity, setQuantity] = useState(1)
@@ -33,6 +41,7 @@ export default function TieredTicketSelector({ eventId, userId, onPurchase }: Ti
 
   useEffect(() => {
     fetchTiers()
+    fetchGroupDiscounts()
   }, [eventId])
 
   const fetchTiers = async () => {
@@ -45,7 +54,7 @@ export default function TieredTicketSelector({ eventId, userId, onPurchase }: Ti
       // Auto-select first available tier
       if (data.tiers && data.tiers.length > 0) {
         const firstAvailable = data.tiers.find((t: TicketTier) => 
-          (t.quantity - (t.sold_count || 0)) > 0 && isTierAvailable(t)
+          (t.total_quantity - (t.sold_quantity || 0)) > 0 && isTierAvailable(t)
         )
         if (firstAvailable) {
           setSelectedTier(firstAvailable.id)
@@ -55,6 +64,17 @@ export default function TieredTicketSelector({ eventId, userId, onPurchase }: Ti
       console.error('Error fetching tiers:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchGroupDiscounts = async () => {
+    try {
+      const response = await fetch(`/api/group-discounts?eventId=${eventId}`)
+      if (!response.ok) throw new Error('Failed to fetch group discounts')
+      const data = await response.json()
+      setGroupDiscounts(data.discounts || [])
+    } catch (error) {
+      console.error('Error fetching group discounts:', error)
     }
   }
 
@@ -69,7 +89,7 @@ export default function TieredTicketSelector({ eventId, userId, onPurchase }: Ti
       return false
     }
     
-    return (tier.quantity - (tier.sold_count || 0)) > 0
+    return (tier.total_quantity - (tier.sold_quantity || 0)) > 0
   }
 
   const handleApplyPromo = async () => {
@@ -101,6 +121,7 @@ export default function TieredTicketSelector({ eventId, userId, onPurchase }: Ti
 
     let price = tier.price
 
+    // Apply promo code discount first
     if (promoApplied) {
       if (promoApplied.discountType === 'percentage') {
         price = price * (1 - promoApplied.discountValue / 100)
@@ -109,7 +130,24 @@ export default function TieredTicketSelector({ eventId, userId, onPurchase }: Ti
       }
     }
 
+    // Apply group discount if applicable (after promo)
+    const applicableGroupDiscount = getApplicableGroupDiscount()
+    if (applicableGroupDiscount && !promoApplied) {
+      price = price * (1 - applicableGroupDiscount.discount_percentage / 100)
+    }
+
     return price
+  }
+
+  const getApplicableGroupDiscount = (): GroupDiscount | null => {
+    if (groupDiscounts.length === 0) return null
+    
+    // Find the best discount that applies to current quantity
+    const applicable = groupDiscounts
+      .filter(d => quantity >= d.min_quantity)
+      .sort((a, b) => b.discount_percentage - a.discount_percentage)
+    
+    return applicable.length > 0 ? applicable[0] : null
   }
 
   const handlePurchase = () => {
@@ -138,7 +176,7 @@ export default function TieredTicketSelector({ eventId, userId, onPurchase }: Ti
       {/* Tier Selection */}
       <div className="space-y-2">
         {tiers.map((tier) => {
-          const available = tier.quantity - (tier.sold_count || 0)
+          const available = tier.total_quantity - (tier.sold_quantity || 0)
           const isAvailable = isTierAvailable(tier)
           const isSelected = selectedTier === tier.id
 
@@ -191,12 +229,26 @@ export default function TieredTicketSelector({ eventId, userId, onPurchase }: Ti
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Quantity
           </label>
+          {groupDiscounts.length > 0 && (
+            <div className="mb-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <p className="text-sm font-medium text-orange-800 mb-1">🎟️ Group Discounts Available:</p>
+              <ul className="text-sm text-orange-700 space-y-1">
+                {groupDiscounts
+                  .sort((a, b) => a.min_quantity - b.min_quantity)
+                  .map(d => (
+                    <li key={d.id}>
+                      Buy {d.min_quantity}+ tickets → Save {d.discount_percentage}%
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
           <select
             value={quantity}
             onChange={(e) => setQuantity(Number(e.target.value))}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
           >
-            {[...Array(Math.min(10, selectedTierData.quantity - (selectedTierData.sold_count || 0)))].map((_, i) => (
+            {[...Array(Math.min(10, selectedTierData.total_quantity - (selectedTierData.sold_quantity || 0)))].map((_, i) => (
               <option key={i + 1} value={i + 1}>
                 {i + 1}
               </option>
@@ -252,7 +304,13 @@ export default function TieredTicketSelector({ eventId, userId, onPurchase }: Ti
             </div>
             {promoApplied && (
               <div className="flex justify-between text-sm text-green-600">
-                <span>Discount</span>
+                <span>Promo Discount</span>
+                <span>-{((selectedTierData.price - finalPrice) / 100).toFixed(2)} HTG</span>
+              </div>
+            )}
+            {getApplicableGroupDiscount() && !promoApplied && (
+              <div className="flex justify-between text-sm text-orange-600">
+                <span>Group Discount ({getApplicableGroupDiscount()?.discount_percentage}% off {getApplicableGroupDiscount()?.min_quantity}+ tickets)</span>
                 <span>-{((selectedTierData.price - finalPrice) / 100).toFixed(2)} HTG</span>
               </div>
             )}
