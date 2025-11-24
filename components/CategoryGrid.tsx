@@ -15,19 +15,19 @@ const categories = [
 
 export default function CategoryGrid() {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
       {categories.map((category) => (
         <Link
           key={category.name}
           href={category.href}
-          className="group"
+          className="group flex-shrink-0"
         >
-          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-200 group-hover:scale-105">
+          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-200 group-hover:scale-105 w-24">
             <div className={`h-20 bg-gradient-to-br ${category.color} flex items-center justify-center`}>
               <span className="text-3xl">{category.icon}</span>
             </div>
             <div className="p-3 text-center">
-              <p className="font-semibold text-gray-900 text-xs">{category.name}</p>
+              <p className="font-semibold text-gray-900 text-xs whitespace-nowrap overflow-hidden text-ellipsis">{category.name}</p>
             </div>
           </div>
         </Link>
