@@ -163,17 +163,17 @@ export default async function HomePage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Navbar user={user} />
 
       {/* Demo Mode Banner */}
       {isDemoMode() && (
-        <div className="bg-yellow-50 border-b border-yellow-200">
+        <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-b border-yellow-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
             <div className="flex items-center gap-2 text-yellow-800">
               <span className="text-lg">🎭</span>
               <p className="text-sm font-medium">
-                <strong>Demo Mode:</strong> You&apos;re viewing sample events. Login with <code className="bg-yellow-100 px-1 rounded">demo-organizer@eventhaiti.com</code> or <code className="bg-yellow-100 px-1 rounded">demo-attendee@eventhaiti.com</code> (password: <code className="bg-yellow-100 px-1 rounded">demo123</code>)
+                <strong>Demo Mode:</strong> You&apos;re viewing sample events. Login with <code className="bg-yellow-100 px-1.5 py-0.5 rounded">demo-organizer@eventhaiti.com</code> or <code className="bg-yellow-100 px-1.5 py-0.5 rounded">demo-attendee@eventhaiti.com</code> (password: <code className="bg-yellow-100 px-1.5 py-0.5 rounded">demo123</code>)
               </p>
             </div>
           </div>
@@ -181,13 +181,14 @@ export default async function HomePage({
       )}
 
       {/* Hero Section with Search */}
-      <div className="bg-gradient-to-r from-teal-700 to-orange-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+      <div className="relative bg-gradient-to-br from-teal-600 via-teal-700 to-orange-600 overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative">
+          <div className="text-center mb-10">
+            <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-6 drop-shadow-lg">
               {BRAND.tagline || 'Discover Events in Haiti'}
             </h1>
-            <p className="text-xl text-teal-50 max-w-2xl mx-auto mb-8">
+            <p className="text-xl md:text-2xl text-teal-50 max-w-2xl mx-auto mb-10 drop-shadow-md">
               Find and book tickets for concerts, parties, conferences, festivals, and more across Haiti.
             </p>
           </div>
@@ -195,22 +196,22 @@ export default async function HomePage({
           <SearchBar />
           
           {/* Filters inside hero for better visibility */}
-          <div className="mt-6">
+          <div className="mt-8">
             <EventSearchFilters />
           </div>
         </div>
       </div>
 
       {/* Events Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* Category Icons */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Browse by Category</h2>
+        <div className="mb-16">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8">Browse by Category</h2>
           <CategoryGrid />
         </div>
 
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-bold text-gray-900">
             {params.q || params.location || params.city || params.category 
               ? 'Search Results' 
               : 'Upcoming Events'}
@@ -219,23 +220,23 @@ export default async function HomePage({
 
         {events && events.length > 0 ? (
           <>
-            <p className="text-gray-600 mb-6">{events.length} events found</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <p className="text-gray-600 mb-8 text-lg">{events.length} events found</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {events.map((event) => (
                 <EventCard key={event.id} event={event} />
               ))}
             </div>
           </>
         ) : (
-          <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-            <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No events found</h3>
-            <p className="text-gray-600 mb-4">
+          <div className="text-center py-16 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200 shadow-lg">
+            <div className="text-7xl mb-6">🔍</div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">No events found</h3>
+            <p className="text-gray-600 mb-6 text-lg">
               Try adjusting your search or filters
             </p>
             <a
               href="/"
-              className="inline-block px-6 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800 transition-colors"
+              className="inline-block px-8 py-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-xl hover:from-teal-700 hover:to-teal-800 shadow-lg hover:shadow-xl transition-all duration-300 font-medium"
             >
               View all events
             </a>

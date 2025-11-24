@@ -45,15 +45,15 @@ export default function FavoriteButton({ eventId, userId, initialIsFavorite = fa
     <button
       onClick={toggleFavorite}
       disabled={loading}
-      className={`p-2 rounded-full transition-all ${
+      className={`p-3 rounded-full transition-all duration-300 shadow-md hover:shadow-lg ${
         isFavorite
-          ? 'bg-red-100 text-red-600 hover:bg-red-200'
-          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-      } disabled:opacity-50`}
+          ? 'bg-gradient-to-br from-red-50 to-red-100 text-red-600 hover:from-red-100 hover:to-red-200 ring-2 ring-red-200'
+          : 'bg-white text-gray-400 hover:text-red-500 hover:bg-red-50'
+      } disabled:opacity-50 transform hover:scale-110`}
       title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
     >
       <svg
-        className="w-6 h-6"
+        className="w-6 h-6 transition-transform duration-300"
         fill={isFavorite ? 'currentColor' : 'none'}
         stroke="currentColor"
         viewBox="0 0 24 24"

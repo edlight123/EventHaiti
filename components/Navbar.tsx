@@ -37,7 +37,7 @@ export default function Navbar({ user }: NavbarProps) {
   }
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    <nav className="bg-white/80 backdrop-blur-lg shadow-sm border-b border-gray-200/50 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
@@ -49,16 +49,16 @@ export default function Navbar({ user }: NavbarProps) {
             <div className="hidden md:ml-8 md:flex md:space-x-4">
               <Link
                 href="/"
-                className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                  pathname === '/' ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  pathname === '/' ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 Events
               </Link>
               <Link
                 href="/discover"
-                className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                  pathname === '/discover' ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  pathname === '/discover' ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 Discover
@@ -67,24 +67,24 @@ export default function Navbar({ user }: NavbarProps) {
                 <>
                   <Link
                     href="/tickets"
-                    className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                      pathname?.startsWith('/tickets') ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      pathname?.startsWith('/tickets') ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
                     }`}
                   >
                     My Tickets
                   </Link>
                   <Link
                     href="/favorites"
-                    className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                      pathname === '/favorites' ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      pathname === '/favorites' ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
                     }`}
                   >
                     Favorites
                   </Link>
                   <Link
                     href="/organizer/events"
-                    className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                      pathname?.startsWith('/organizer') ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      pathname?.startsWith('/organizer') ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
                     }`}
                   >
                     My Events
@@ -99,16 +99,16 @@ export default function Navbar({ user }: NavbarProps) {
               <>
                 <Link
                   href="/profile"
-                  className="hidden sm:flex items-center gap-2 text-sm text-gray-700 hover:text-teal-700"
+                  className="hidden sm:flex items-center gap-2 text-sm text-gray-700 hover:text-teal-700 transition-colors duration-200"
                 >
-                  <div className="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center text-white font-semibold text-xs">
+                  <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-teal-700 rounded-full flex items-center justify-center text-white font-semibold text-xs shadow-md ring-2 ring-white ring-opacity-50">
                     {user.full_name?.charAt(0).toUpperCase() || 'U'}
                   </div>
                   <span className="font-medium">{user.full_name}</span>
                 </Link>
                 <button
                   onClick={handleSignOut}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
                 >
                   Sign out
                 </button>
@@ -117,13 +117,13 @@ export default function Navbar({ user }: NavbarProps) {
               <>
                 <Link
                   href="/auth/login"
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
                 >
                   Sign in
                 </Link>
                 <Link
                   href="/auth/signup"
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-teal-700 hover:bg-teal-800"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 shadow-md hover:shadow-lg transition-all duration-200"
                 >
                   Sign up
                 </Link>

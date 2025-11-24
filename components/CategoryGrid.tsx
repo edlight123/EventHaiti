@@ -15,19 +15,20 @@ const categories = [
 
 export default function CategoryGrid() {
   return (
-    <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+    <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide">
       {categories.map((category) => (
         <Link
           key={category.name}
           href={category.href}
           className="group flex-shrink-0"
         >
-          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-200 group-hover:scale-105 w-24">
-            <div className={`h-20 bg-gradient-to-br ${category.color} flex items-center justify-center`}>
-              <span className="text-3xl">{category.icon}</span>
+          <div className="bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 group-hover:scale-110 group-hover:-translate-y-2 w-28">
+            <div className={`h-24 bg-gradient-to-br ${category.color} flex items-center justify-center relative overflow-hidden`}>
+              <div className="absolute inset-0 bg-white/10 group-hover:bg-white/20 transition-colors"></div>
+              <span className="text-4xl transform group-hover:scale-125 transition-transform duration-500 relative z-10">{category.icon}</span>
             </div>
-            <div className="p-3 text-center">
-              <p className="font-semibold text-gray-900 text-xs whitespace-nowrap overflow-hidden text-ellipsis">{category.name}</p>
+            <div className="p-4 text-center bg-gradient-to-b from-white to-gray-50">
+              <p className="font-bold text-gray-900 text-sm whitespace-nowrap overflow-hidden text-ellipsis group-hover:text-teal-700 transition-colors">{category.name}</p>
             </div>
           </div>
         </Link>
