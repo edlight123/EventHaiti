@@ -24,12 +24,12 @@ export async function POST(req: NextRequest) {
 
     const supabase = await createClient()
 
-    // Verify ticket belongs to current user
+    // Verify ticket belongs to current user (check both user_id and attendee_id for compatibility)
     const { data: ticket, error: ticketError } = await supabase
       .from('tickets')
       .select('*, events(*)')
       .eq('id', ticketId)
-      .eq('user_id', user.id)
+      .or(`user_id.eq.${user.id},attendee_id.eq.${user.id}`)
       .single()
 
     if (ticketError || !ticket) {
@@ -84,6 +84,24 @@ export async function POST(req: NextRequest) {
 
     // Log the transfer
     await logTicketTransfer(ticketId, user.id, recipientUser.id, ipAddress, reason)
+
+    // **UPDATE TICKET OWNERSHIP** - Transfer to new user
+    const { error: updateError } = await supabase
+      .from('tickets')
+      .update({
+        user_id: recipientUser.id,
+        attendee_id: recipientUser.id,
+        transfer_count: ticket.transfer_count + 1
+      })
+      .eq('id', ticketId)
+
+    if (updateError) {
+      console.error('Error updating ticket ownership:', updateError)
+      return NextResponse.json(
+        { error: 'Failed to update ticket ownership' },
+        { status: 500 }
+      )
+    }
 
     // Send email to recipient
     await resend.emails.send({
