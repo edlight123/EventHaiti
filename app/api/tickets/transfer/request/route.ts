@@ -97,6 +97,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Generate unique transfer token
+    const transferToken = `transfer_${Date.now()}_${Math.random().toString(36).substring(7)}`
+    
+    // Set 24-hour expiry
+    const expiresAt = new Date()
+    expiresAt.setHours(expiresAt.getHours() + 24)
+
     // Create transfer request
     const { data: transfer, error: transferError } = await supabase
       .from('ticket_transfers')
@@ -105,7 +112,10 @@ export async function POST(request: NextRequest) {
         from_user_id: user.id,
         to_email: toEmail.toLowerCase(),
         message: message || null,
-        status: 'pending'
+        status: 'pending',
+        transfer_token: transferToken,
+        requested_at: new Date().toISOString(),
+        expires_at: expiresAt.toISOString()
       })
       .select()
       .single()
@@ -175,6 +185,7 @@ export async function POST(request: NextRequest) {
         id: transfer.id,
         status: transfer.status,
         toEmail: transfer.to_email,
+        transferToken: transfer.transfer_token,
         expiresAt: transfer.expires_at
       }
     })
