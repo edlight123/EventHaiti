@@ -2,9 +2,10 @@ import { createClient } from '@/lib/firebase-db/server'
 import { requireAuth } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 import { redirect, notFound } from 'next/navigation'
-import { format } from 'date-fns'
+import { format, isPast } from 'date-fns'
 import QRCodeDisplay from './QRCodeDisplay'
 import TicketActions from './TicketActions'
+import ReviewForm from '@/components/ReviewForm'
 import { isDemoMode, DEMO_TICKETS, DEMO_EVENTS } from '@/lib/demo'
 
 export const dynamic = 'force-dynamic'
@@ -63,6 +64,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
   }
 
   const event = ticket.events as any
+  const eventPassed = isPast(new Date(event.end_datetime))
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -158,6 +160,17 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
             </div>
           )}
         </div>
+
+        {/* Review Form for Past Events */}
+        {eventPassed && !isDemoMode() && (
+          <div className="mt-6">
+            <ReviewForm 
+              eventId={event.id} 
+              ticketId={ticket.id}
+              eventTitle={event.title}
+            />
+          </div>
+        )}
 
         {/* Instructions */}
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">

@@ -7,6 +7,8 @@ import BuyTicketButton from './BuyTicketButton'
 import ShareButtons from './ShareButtons'
 import FavoriteButton from '@/components/FavoriteButton'
 import FollowButton from '@/components/FollowButton'
+import WaitlistButton from '@/components/WaitlistButton'
+import ReviewsList from '@/components/ReviewsList'
 import EventShare from './EventShare'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import type { Metadata } from 'next'
@@ -102,6 +104,26 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   const remainingTickets = (event.total_tickets || 0) - (event.tickets_sold || 0)
   const isSoldOut = remainingTickets <= 0 && (event.total_tickets || 0) > 0
   const isFree = !event.ticket_price || event.ticket_price === 0
+
+  // Fetch reviews for this event
+  let reviews: any[] = []
+  if (!isDemoMode()) {
+    const supabase = await createClient()
+    const { data: reviewsData } = await supabase
+      .from('reviews')
+      .select('*, users!reviews_user_id_fkey(full_name)')
+      .eq('event_id', id)
+    
+    reviews = reviewsData?.map((r: any) => ({
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      created_at: r.created_at,
+      user: {
+        full_name: r.users?.full_name || 'Anonymous'
+      }
+    })) || []
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -203,6 +225,14 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                 <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{event.description}</p>
               </div>
             </div>
+
+            {/* Reviews Section */}
+            {reviews.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Reviews</h2>
+                <ReviewsList reviews={reviews} />
+              </div>
+            )}
           </div>
 
           {/* Sidebar - Right Side - Sticky */}
@@ -252,9 +282,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                 </div>
 
                 {isSoldOut ? (
-                  <div className="bg-red-50 border-2 border-red-200 text-red-700 px-6 py-4 rounded-lg text-center font-bold">
-                    SOLD OUT
-                  </div>
+                  <WaitlistButton eventId={event.id} userId={user?.id || null} />
                 ) : user ? (
                   <BuyTicketButton eventId={event.id} userId={user.id} isFree={isFree} ticketPrice={event.ticket_price || 0} />
                 ) : (
