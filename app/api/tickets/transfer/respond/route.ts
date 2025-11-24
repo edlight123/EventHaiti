@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
           attendee_id,
           status,
           checked_in,
+          transfer_count,
           events(
             id,
             title,
@@ -151,7 +152,11 @@ export async function POST(request: NextRequest) {
     // Accept transfer - update ticket ownership
     const { error: ticketUpdateError } = await supabase
       .from('tickets')
-      .update({ attendee_id: user.id })
+      .update({ 
+        attendee_id: user.id,
+        user_id: user.id,
+        transfer_count: (transfer.tickets.transfer_count || 0) + 1
+      })
       .eq('id', transfer.ticket_id)
 
     if (ticketUpdateError) {
