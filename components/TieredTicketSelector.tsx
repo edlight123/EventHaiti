@@ -162,7 +162,12 @@ export default function TieredTicketSelector({ eventId, userId, onPurchase }: Ti
   }
 
   if (tiers.length === 0) {
-    return null // Fall back to simple purchase
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-600 mb-4">No ticket tiers available for this event.</p>
+        <p className="text-sm text-gray-500">The organizer hasn&apos;t created ticket tiers yet. Please use the standard ticket purchase option.</p>
+      </div>
+    )
   }
 
   const selectedTierData = tiers.find(t => t.id === selectedTier)
@@ -203,7 +208,7 @@ export default function TieredTicketSelector({ eventId, userId, onPurchase }: Ti
                   )}
                   <div className="flex items-center gap-3 mt-2 text-sm">
                     <span className="font-medium text-teal-600">
-                      {(tier.price / 100).toFixed(2)} HTG
+                      {tier.price.toFixed(2)} HTG
                     </span>
                     <span className={available > 0 ? 'text-gray-600' : 'text-red-600'}>
                       {available > 0 ? `${available} available` : 'Sold out'}
@@ -300,18 +305,18 @@ export default function TieredTicketSelector({ eventId, userId, onPurchase }: Ti
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Tier: {selectedTierData.name}</span>
-              <span className="text-gray-900">{(selectedTierData.price / 100).toFixed(2)} HTG</span>
+              <span className="text-gray-900">{selectedTierData.price.toFixed(2)} HTG</span>
             </div>
             {promoApplied && (
               <div className="flex justify-between text-sm text-green-600">
                 <span>Promo Discount</span>
-                <span>-{((selectedTierData.price - finalPrice) / 100).toFixed(2)} HTG</span>
+                <span>-{(selectedTierData.price - finalPrice).toFixed(2)} HTG</span>
               </div>
             )}
             {getApplicableGroupDiscount() && !promoApplied && (
               <div className="flex justify-between text-sm text-orange-600">
                 <span>Group Discount ({getApplicableGroupDiscount()?.discount_percentage}% off {getApplicableGroupDiscount()?.min_quantity}+ tickets)</span>
-                <span>-{((selectedTierData.price - finalPrice) / 100).toFixed(2)} HTG</span>
+                <span>-{(selectedTierData.price - finalPrice).toFixed(2)} HTG</span>
               </div>
             )}
             <div className="flex justify-between text-sm">
@@ -320,7 +325,7 @@ export default function TieredTicketSelector({ eventId, userId, onPurchase }: Ti
             </div>
             <div className="border-t border-gray-300 pt-2 flex justify-between font-semibold text-lg">
               <span>Total</span>
-              <span className="text-teal-600">{(totalPrice / 100).toFixed(2)} HTG</span>
+              <span className="text-teal-600">{totalPrice.toFixed(2)} HTG</span>
             </div>
           </div>
         </div>
