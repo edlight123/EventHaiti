@@ -55,6 +55,14 @@ export default function Navbar({ user }: NavbarProps) {
               >
                 Events
               </Link>
+              <Link
+                href="/discover"
+                className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                  pathname === '/discover' ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Discover
+              </Link>
               {user && (
                 <>
                   <Link
@@ -64,6 +72,14 @@ export default function Navbar({ user }: NavbarProps) {
                     }`}
                   >
                     My Tickets
+                  </Link>
+                  <Link
+                    href="/favorites"
+                    className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                      pathname === '/favorites' ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    Favorites
                   </Link>
                   <Link
                     href="/organizer/events"
@@ -81,9 +97,15 @@ export default function Navbar({ user }: NavbarProps) {
           <div className="flex items-center space-x-4">
             {user ? (
               <>
-                <span className="hidden sm:block text-sm text-gray-700">
-                  {user.full_name}
-                </span>
+                <Link
+                  href="/profile"
+                  className="hidden sm:flex items-center gap-2 text-sm text-gray-700 hover:text-teal-700"
+                >
+                  <div className="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center text-white font-semibold text-xs">
+                    {user.full_name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <span className="font-medium">{user.full_name}</span>
+                </Link>
                 <button
                   onClick={handleSignOut}
                   className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
@@ -137,6 +159,15 @@ export default function Navbar({ user }: NavbarProps) {
               >
                 Events
               </Link>
+              <Link
+                href="/discover"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block px-3 py-2 rounded-lg text-sm font-medium ${
+                  pathname === '/discover' ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Discover
+              </Link>
               {user && (
                 <>
                   <Link
@@ -149,6 +180,15 @@ export default function Navbar({ user }: NavbarProps) {
                     My Tickets
                   </Link>
                   <Link
+                    href="/favorites"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`block px-3 py-2 rounded-lg text-sm font-medium ${
+                      pathname === '/favorites' ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    Favorites
+                  </Link>
+                  <Link
                     href="/organizer/events"
                     onClick={() => setMobileMenuOpen(false)}
                     className={`block px-3 py-2 rounded-lg text-sm font-medium ${
@@ -156,6 +196,15 @@ export default function Navbar({ user }: NavbarProps) {
                     }`}
                   >
                     My Events
+                  </Link>
+                  <Link
+                    href="/profile"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`block px-3 py-2 rounded-lg text-sm font-medium ${
+                      pathname === '/profile' ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    Profile
                   </Link>
                 </>
               )}

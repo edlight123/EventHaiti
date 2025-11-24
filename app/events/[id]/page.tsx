@@ -5,6 +5,9 @@ import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import BuyTicketButton from './BuyTicketButton'
 import ShareButtons from './ShareButtons'
+import FavoriteButton from '@/components/FavoriteButton'
+import FollowButton from '@/components/FollowButton'
+import EventShare from './EventShare'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import type { Metadata } from 'next'
 
@@ -126,9 +129,12 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
             {/* Event Info Card */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-6">
               <div className="mb-6">
-                <span className="inline-block px-4 py-1.5 text-sm font-semibold bg-teal-100 text-teal-800 rounded-full mb-4">
-                  {event.category}
-                </span>
+                <div className="flex items-start justify-between mb-4">
+                  <span className="inline-block px-4 py-1.5 text-sm font-semibold bg-teal-100 text-teal-800 rounded-full">
+                    {event.category}
+                  </span>
+                  <FavoriteButton eventId={event.id} userId={user?.id || null} />
+                </div>
                 <h1 className="text-4xl font-bold text-gray-900 mb-3">
                   {event.title}
                 </h1>
@@ -266,20 +272,26 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               </div>
 
               {/* Organizer Info Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
                 <h3 className="font-bold text-gray-900 mb-3">Organized by</h3>
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-teal-400 to-orange-400 rounded-full flex items-center justify-center text-white font-bold text-lg mr-3">
-                    {(event.users?.full_name || 'E')[0].toUpperCase()}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-gradient-to-br from-teal-400 to-orange-400 rounded-full flex items-center justify-center text-white font-bold text-lg mr-3">
+                      {(event.users?.full_name || 'E')[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">{event.users?.full_name || 'Event Organizer'}</p>
+                      <p className="text-sm text-gray-600">Event Organizer</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">{event.users?.full_name || 'Event Organizer'}</p>
-                    <p className="text-sm text-gray-600">Event Organizer</p>
-                  </div>
+                  {user && event.organizer_id && user.id !== event.organizer_id && (
+                    <FollowButton organizerId={event.organizer_id} userId={user.id} />
+                  )}
                 </div>
               </div>
 
               {/* Share Section */}
+              <EventShare eventId={event.id} eventTitle={event.title} />
               <ShareButtons eventId={event.id} eventTitle={event.title} />
             </div>
           </div>
