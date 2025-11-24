@@ -122,11 +122,23 @@ export async function POST(request: NextRequest) {
 
     if (transferError) {
       console.error('Transfer creation error:', transferError)
+      console.error('Attempted to insert:', {
+        ticket_id: ticketId,
+        from_user_id: user.id,
+        to_email: toEmail.toLowerCase(),
+        message: message || null,
+        status: 'pending',
+        transfer_token: transferToken,
+        requested_at: new Date().toISOString(),
+        expires_at: expiresAt.toISOString()
+      })
       return NextResponse.json(
-        { error: 'Failed to create transfer request' },
+        { error: 'Failed to create transfer request', details: transferError.message },
         { status: 500 }
       )
     }
+
+    console.log('Transfer created successfully:', transfer)
 
     // Send email notification to recipient
     try {

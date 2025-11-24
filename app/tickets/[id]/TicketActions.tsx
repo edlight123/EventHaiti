@@ -46,11 +46,16 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
         throw new Error(data.error || 'Transfer failed')
       }
 
+      console.log('Transfer response:', data)
+
       // Generate transfer link if token is returned
       if (data.transfer?.transferToken) {
         const link = `${window.location.origin}/tickets/transfer/${data.transfer.transferToken}`
         setTransferLink(link)
         setShowTransferLink(true)
+        console.log('Transfer link set:', link)
+      } else {
+        console.log('No transfer token in response:', data)
       }
 
       setMessage({ type: 'success', text: 'Transfer request sent! The recipient will receive an email.' })
@@ -58,7 +63,7 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
       setTransferMessage('')
       
       // Don't auto-close modal if we're showing the transfer link
-      if (!showTransferLink) {
+      if (!data.transfer?.transferToken) {
         setTimeout(() => {
           setShowTransferModal(false)
           window.location.reload()
