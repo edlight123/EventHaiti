@@ -90,11 +90,21 @@ export async function GET(req: NextRequest) {
     console.log('Fetching ticket tiers for eventId:', eventId)
 
     // Use direct Firestore access instead of wrapper to avoid query issues
-    const snapshot = await adminDb
-      .collection('ticket_tiers')
-      .where('event_id', '==', eventId)
-      .orderBy('sort_order', 'asc')
-      .get()
+    let snapshot
+    try {
+      snapshot = await adminDb
+        .collection('ticket_tiers')
+        .where('event_id', '==', eventId)
+        .orderBy('sort_order', 'asc')
+        .get()
+    } catch (orderError: any) {
+      // If orderBy fails (index not created), try without ordering
+      console.warn('OrderBy failed, trying without ordering:', orderError.message)
+      snapshot = await adminDb
+        .collection('ticket_tiers')
+        .where('event_id', '==', eventId)
+        .get()
+    }
 
     console.log('Query completed, found:', snapshot.docs.length, 'tiers')
 
@@ -103,10 +113,14 @@ export async function GET(req: NextRequest) {
       ...doc.data()
     }))
 
+    // Sort in memory if we couldn't order in query
+    tiers.sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))
+
     console.log('Returning tiers:', tiers)
     return NextResponse.json({ tiers })
   } catch (error: any) {
     console.error('Error in GET /api/ticket-tiers:', error)
+    console.error('Error message:', error.message)
     console.error('Error stack:', error.stack)
     return NextResponse.json(
       { error: 'Internal server error', details: error.message },
