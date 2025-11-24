@@ -188,7 +188,7 @@ export default function GroupDiscountsManager({ eventId }: GroupDiscountsManager
       {discounts.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <p className="text-4xl mb-2">🎟️</p>
-          <p>No group discounts created yet. Click "Add Discount" to create one.</p>
+          <p>No group discounts created yet. Click &quot;Add Discount&quot; to create one.</p>
           <p className="text-sm mt-2">Example: Buy 4+ tickets, get 10% off</p>
         </div>
       ) : (
