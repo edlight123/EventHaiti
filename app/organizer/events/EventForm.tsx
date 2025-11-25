@@ -7,6 +7,7 @@ import { isDemoMode } from '@/lib/demo'
 import ImageUpload from '@/components/ImageUpload'
 import Input from '@/components/ui/Input'
 import Badge from '@/components/ui/Badge'
+import { useToast } from '@/components/ui/Toast'
 import { Calendar, MapPin, DollarSign, Ticket, Tag, Image as ImageIcon, FileText, Clock, Check } from 'lucide-react'
 
 interface EventFormProps {
@@ -20,6 +21,7 @@ const POPULAR_TAGS = ['music', 'food', 'outdoor', 'indoor', 'family-friendly', '
 
 export default function EventForm({ userId, event }: EventFormProps) {
   const router = useRouter()
+  const { showToast } = useToast()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tags, setTags] = useState<string[]>(event?.tags || [])
@@ -70,7 +72,12 @@ export default function EventForm({ userId, event }: EventFormProps) {
       // In demo mode, just show success message
       if (isDemoMode()) {
         await new Promise(resolve => setTimeout(resolve, 800)) // Simulate API call
-        alert('✅ Demo: Event saved! In production, this would create/update a real event.')
+        showToast({
+          type: 'success',
+          title: event?.id ? 'Event updated!' : 'Event created!',
+          message: formData.is_published ? 'Your event is now live' : 'Your event has been saved as draft',
+          duration: 4000
+        })
         router.push('/organizer/events')
         router.refresh()
         return
@@ -105,6 +112,14 @@ export default function EventForm({ userId, event }: EventFormProps) {
           .single()
 
         if (updateError) throw updateError
+        
+        showToast({
+          type: 'success',
+          title: 'Event updated successfully!',
+          message: formData.is_published ? 'Your changes are now live' : 'Event updated as draft',
+          duration: 4000
+        })
+        
         router.push(`/organizer/events`)
       } else {
         // Create new event
@@ -122,12 +137,25 @@ export default function EventForm({ userId, event }: EventFormProps) {
           throw new Error('Event created but no data returned')
         }
         
+        showToast({
+          type: 'success',
+          title: 'Event created successfully!',
+          message: formData.is_published ? 'Your event is now live and visible to attendees' : 'Event saved as draft',
+          duration: 4000
+        })
+        
         router.push(`/organizer/events`)
       }
 
       router.refresh()
     } catch (err: any) {
       setError(err.message || 'Failed to save event')
+      showToast({
+        type: 'error',
+        title: 'Failed to save event',
+        message: err.message || 'Please check your inputs and try again',
+        duration: 5000
+      })
     } finally {
       setLoading(false)
     }

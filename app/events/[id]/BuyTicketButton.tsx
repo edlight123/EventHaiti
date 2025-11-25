@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 import { isDemoMode } from '@/lib/demo'
 import TieredTicketSelector from '@/components/TieredTicketSelector'
+import { useToast } from '@/components/ui/Toast'
 
 interface BuyTicketButtonProps {
   eventId: string
@@ -15,6 +16,7 @@ interface BuyTicketButtonProps {
 
 export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }: BuyTicketButtonProps) {
   const router = useRouter()
+  const { showToast } = useToast()
   const [showModal, setShowModal] = useState(false)
   const [showTieredModal, setShowTieredModal] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -32,7 +34,12 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
     try {
       if (isDemoMode()) {
         await new Promise(resolve => setTimeout(resolve, 800))
-        alert(`✅ Demo: ${quantity} free ticket${quantity !== 1 ? 's' : ''} claimed successfully!`)
+        showToast({
+          type: 'success',
+          title: 'Free ticket claimed!',
+          message: `${quantity} ticket${quantity !== 1 ? 's' : ''} added to your collection`,
+          duration: 4000
+        })
         router.push('/tickets')
         return
       }
@@ -53,13 +60,25 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
         throw new Error(data.error || 'Failed to claim ticket')
       }
 
-      // Show success message and redirect
-      alert(`✅ ${data.count} free ticket${data.count !== 1 ? 's' : ''} claimed successfully! Redirecting to your tickets...`)
+      // Show success toast and redirect
+      showToast({
+        type: 'success',
+        title: 'Tickets claimed successfully!',
+        message: `${data.count} free ticket${data.count !== 1 ? 's' : ''} added to your collection`,
+        duration: 4000
+      })
+      
       router.push('/tickets')
       router.refresh()
     } catch (err: any) {
       console.error('Claim error:', err)
       setError(err.message || 'Failed to claim ticket')
+      showToast({
+        type: 'error',
+        title: 'Failed to claim ticket',
+        message: err.message || 'Please try again later',
+        duration: 4000
+      })
       setLoading(false)
     }
   }
@@ -74,7 +93,12 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
         await new Promise(resolve => setTimeout(resolve, 800))
         setShowModal(false)
         setShowTieredModal(false)
-        alert(`✅ Demo: ${quantity} ticket${quantity !== 1 ? 's' : ''} purchased successfully! In production, this would create real tickets.`)
+        showToast({
+          type: 'success',
+          title: 'Tickets purchased!',
+          message: `${quantity} ticket${quantity !== 1 ? 's' : ''} successfully purchased`,
+          duration: 4000
+        })
         router.refresh()
         setLoading(false)
         return
@@ -102,6 +126,12 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
 
         // Redirect to Stripe checkout
         if (data.url) {
+          showToast({
+            type: 'info',
+            title: 'Redirecting to payment...',
+            message: 'You will be redirected to complete your purchase',
+            duration: 3000
+          })
           window.location.href = data.url
         }
       } else {
@@ -126,11 +156,23 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
 
         // Redirect to MonCash payment page
         if (data.paymentUrl) {
+          showToast({
+            type: 'info',
+            title: 'Redirecting to payment...',
+            message: 'You will be redirected to MonCash',
+            duration: 3000
+          })
           window.location.href = data.paymentUrl
         }
       }
     } catch (err: any) {
       setError(err.message || 'Failed to purchase ticket')
+      showToast({
+        type: 'error',
+        title: 'Purchase failed',
+        message: err.message || 'Please try again later',
+        duration: 4000
+      })
       setLoading(false)
     }
   }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/ui/Toast'
 
 interface FavoriteButtonProps {
   eventId: string
@@ -13,6 +14,7 @@ export default function FavoriteButton({ eventId, userId, initialIsFavorite = fa
   const [isFavorite, setIsFavorite] = useState(initialIsFavorite)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const { showToast } = useToast()
 
   async function toggleFavorite() {
     if (!userId) {
@@ -33,9 +35,23 @@ export default function FavoriteButton({ eventId, userId, initialIsFavorite = fa
 
       const data = await response.json()
       setIsFavorite(data.isFavorite)
+      
+      showToast({
+        type: 'success',
+        title: data.isFavorite ? 'Added to favorites!' : 'Removed from favorites',
+        message: data.isFavorite ? 'You can find this event in your favorites' : 'Event removed from your favorites',
+        duration: 3000
+      })
+      
       router.refresh()
     } catch (error) {
       console.error('Error toggling favorite:', error)
+      showToast({
+        type: 'error',
+        title: 'Failed to update favorites',
+        message: 'Please try again later',
+        duration: 4000
+      })
     } finally {
       setLoading(false)
     }

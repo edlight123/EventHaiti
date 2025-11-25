@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/ui/Toast'
 
 interface FollowButtonProps {
   organizerId: string
@@ -13,6 +14,7 @@ export default function FollowButton({ organizerId, userId, initialIsFollowing =
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const { showToast } = useToast()
 
   async function toggleFollow() {
     if (!userId) {
@@ -33,9 +35,23 @@ export default function FollowButton({ organizerId, userId, initialIsFollowing =
 
       const data = await response.json()
       setIsFollowing(data.isFollowing)
+      
+      showToast({
+        type: 'success',
+        title: data.isFollowing ? 'Now following!' : 'Unfollowed',
+        message: data.isFollowing ? "You'll get notified about their new events" : 'You will no longer receive notifications',
+        duration: 3000
+      })
+      
       router.refresh()
     } catch (error) {
       console.error('Error toggling follow:', error)
+      showToast({
+        type: 'error',
+        title: 'Failed to update following status',
+        message: 'Please try again later',
+        duration: 4000
+      })
     } finally {
       setLoading(false)
     }
