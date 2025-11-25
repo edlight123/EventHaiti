@@ -89,7 +89,7 @@ export default async function DashboardPage() {
               </div>
             </div>
             <p className="text-4xl font-bold text-brand-700 mb-2">{upcomingEvents.length}</p>
-            <p className="text-sm text-gray-600">Events you're attending</p>
+            <p className="text-sm text-gray-600">Events you&apos;re attending</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 hover:shadow-medium transition-shadow">

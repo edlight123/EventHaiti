@@ -53,7 +53,7 @@ export default async function OrganizerDashboard() {
         {/* Welcome Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome back, {user.full_name?.split(' ')[0] || 'Organizer'}! 👋</h1>
-          <p className="text-lg text-gray-600">Here's what's happening with your events</p>
+          <p className="text-lg text-gray-600">Here&apos;s what&apos;s happening with your events</p>
         </div>
 
         {/* Stats Grid */}
