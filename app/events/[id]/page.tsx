@@ -10,7 +10,10 @@ import FollowButton from '@/components/FollowButton'
 import WaitlistButton from '@/components/WaitlistButton'
 import ReviewsList from '@/components/ReviewsList'
 import EventShare from './EventShare'
+import EventCard from '@/components/EventCard'
+import Badge from '@/components/ui/Badge'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
+import { Calendar, MapPin, Clock, Users, Shield, TrendingUp, Star, Sparkles } from 'lucide-react'
 import type { Metadata } from 'next'
 
 export const revalidate = 0
@@ -104,6 +107,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   const remainingTickets = (event.total_tickets || 0) - (event.tickets_sold || 0)
   const isSoldOut = remainingTickets <= 0 && (event.total_tickets || 0) > 0
   const isFree = !event.ticket_price || event.ticket_price === 0
+  
+  // Premium badge logic
+  const isVIP = (event.ticket_price || 0) > 100
+  const isTrending = (event.tickets_sold || 0) > 10
+  const selloutSoon = !isSoldOut && remainingTickets < 10
 
   // Fetch reviews for this event
   let reviews: any[] = []
@@ -124,131 +132,266 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       }
     })) || []
   }
+  
+  // Fetch related events (same category, exclude current event)
+  let relatedEvents: any[] = []
+  if (!isDemoMode()) {
+    const supabase = await createClient()
+    const now = new Date().toISOString()
+    const { data: relatedData } = await supabase
+      .from('events')
+      .select('*, users!events_organizer_id_fkey(full_name, is_verified)')
+      .eq('category', event.category)
+      .eq('is_published', true)
+      .gte('start_datetime', now)
+      .neq('id', id)
+      .limit(3)
+    
+    relatedEvents = relatedData || []
+  } else {
+    // Use demo events for related section
+    relatedEvents = DEMO_EVENTS.filter(e => e.category === event.category && e.id !== id).slice(0, 3)
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar user={user} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content - Left Side */}
-          <div className="lg:col-span-2">
-            {/* Banner Image */}
-            {event.banner_image_url ? (
-              <div className="w-full h-96 rounded-2xl overflow-hidden mb-6 shadow-lg">
-                <img
-                  src={event.banner_image_url}
-                  alt={event.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="w-full h-96 rounded-2xl bg-gradient-to-br from-teal-100 to-orange-100 flex items-center justify-center mb-6 shadow-lg">
-                <span className="text-9xl">🎉</span>
-              </div>
-            )}
+      {/* PREMIUM HERO SECTION */}
+      <div className="relative bg-gray-900">
+        {/* Background Image with Overlay */}
+        {event.banner_image_url ? (
+          <div className="absolute inset-0">
+            <img
+              src={event.banner_image_url}
+              alt={event.title}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30" />
+          </div>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-800 via-brand-700 to-accent-600" />
+        )}
 
-            {/* Event Info Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-6">
-              <div className="mb-6">
-                <div className="flex items-start justify-between mb-4">
-                  <span className="inline-block px-4 py-1.5 text-sm font-semibold bg-teal-100 text-teal-800 rounded-full">
-                    {event.category}
-                  </span>
-                  <FavoriteButton eventId={event.id} userId={user?.id || null} />
-                </div>
-                <h1 className="text-4xl font-bold text-gray-900 mb-3">
-                  {event.title}
-                </h1>
-                <div className="flex items-center gap-2 text-lg text-gray-600">
-                  <span>By {event.users?.full_name || 'Event Organizer'}</span>
-                  {event.users?.is_verified && (
-                    <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full border border-blue-200">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                      <span className="text-xs font-semibold">Verified</span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Tags */}
-                {event.tags && event.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    {event.tags.map((tag: string) => (
-                      <span
-                        key={tag}
-                        className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-full"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+        {/* Hero Content */}
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
+          <div className="max-w-4xl">
+            {/* Premium Badges */}
+            <div className="flex flex-wrap items-center gap-2 mb-6">
+              <Badge variant="neutral" size="md">
+                {event.category}
+              </Badge>
+              {isVIP && (
+                <Badge variant="vip" size="md" icon={<Star className="w-4 h-4" />}>
+                  VIP Event
+                </Badge>
+              )}
+              {isTrending && (
+                <Badge variant="trending" size="md" icon={<TrendingUp className="w-4 h-4" />}>
+                  Trending
+                </Badge>
+              )}
+              {isSoldOut && (
+                <Badge variant="error" size="md">
+                  SOLD OUT
+                </Badge>
+              )}
+              {selloutSoon && (
+                <Badge variant="warning" size="md">
+                  Almost Sold Out
+                </Badge>
+              )}
+            </div>
+
+            {/* Title */}
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
+              {event.title}
+            </h1>
+
+            {/* Organizer */}
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-12 h-12 bg-gradient-to-br from-brand-400 to-accent-400 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                {(event.users?.full_name || 'E')[0].toUpperCase()}
+              </div>
+              <div>
+                <p className="text-white font-semibold">
+                  {event.users?.full_name || 'Event Organizer'}
+                </p>
+                {event.users?.is_verified && (
+                  <div className="flex items-center gap-1 text-blue-300 text-sm">
+                    <Shield className="w-4 h-4" />
+                    <span>Verified Organizer</span>
                   </div>
                 )}
               </div>
+            </div>
 
+            {/* Key Info - Horizontal on Desktop */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
               {/* Date & Time */}
-              <div className="flex items-start mb-6 p-4 bg-gray-50 rounded-lg">
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-                  <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+              <div className="flex items-start gap-3 bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
+                <div className="w-10 h-10 bg-accent-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Calendar className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 text-lg mb-1">
-                    {format(new Date(event.start_datetime), 'EEEE, MMMM d, yyyy')}
+                  <p className="text-xs text-gray-300 mb-1">Date & Time</p>
+                  <p className="text-white font-semibold text-sm">
+                    {format(new Date(event.start_datetime), 'MMM d, yyyy')}
                   </p>
-                  <p className="text-gray-600">
-                    {format(new Date(event.start_datetime), 'h:mm a')} - {format(new Date(event.end_datetime), 'h:mm a')} HTT
+                  <p className="text-gray-300 text-xs">
+                    {format(new Date(event.start_datetime), 'h:mm a')}
                   </p>
                 </div>
               </div>
 
               {/* Location */}
-              <div className="flex items-start mb-6 p-4 bg-gray-50 rounded-lg">
-                <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-                  <svg className="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
+              <div className="flex items-start gap-3 bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
+                <div className="w-10 h-10 bg-brand-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 text-lg mb-1">{event.venue_name}</p>
-                  <p className="text-gray-600">{event.address}</p>
-                  <p className="text-gray-600">{event.commune}, {event.city}</p>
+                  <p className="text-xs text-gray-300 mb-1">Location</p>
+                  <p className="text-white font-semibold text-sm line-clamp-1">
+                    {event.venue_name}
+                  </p>
+                  <p className="text-gray-300 text-xs line-clamp-1">
+                    {event.city}
+                  </p>
                 </div>
               </div>
 
-              {/* Description */}
-              <div className="border-t border-gray-200 pt-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">About this event</h2>
-                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{event.description}</p>
+              {/* Tickets */}
+              <div className="flex items-start gap-3 bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
+                <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Users className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-300 mb-1">Availability</p>
+                  <p className="text-white font-semibold text-sm">
+                    {isSoldOut ? 'Sold Out' : `${remainingTickets} tickets left`}
+                  </p>
+                  <p className="text-gray-300 text-xs">
+                    {event.total_tickets} total
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* MAIN CONTENT */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Left Column - Event Details */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* About Section */}
+            <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 md:p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Sparkles className="w-6 h-6 text-brand-600" />
+                About This Event
+              </h2>
+              <p className="text-gray-700 whitespace-pre-wrap leading-relaxed text-lg">
+                {event.description}
+              </p>
+              
+              {/* Tags */}
+              {event.tags && event.tags.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-500 mb-3">EVENT TAGS</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {event.tags.map((tag: string) => (
+                      <Badge key={tag} variant="neutral" size="md">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Venue Details */}
+            <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 md:p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <MapPin className="w-6 h-6 text-brand-600" />
+                Venue Information
+              </h2>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-500 mb-1">VENUE NAME</p>
+                  <p className="text-lg font-semibold text-gray-900">{event.venue_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-500 mb-1">ADDRESS</p>
+                  <p className="text-gray-700">{event.address}</p>
+                  <p className="text-gray-700">{event.commune}, {event.city}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Date & Time Details */}
+            <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 md:p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Clock className="w-6 h-6 text-brand-600" />
+                Date & Time
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-500 mb-1">START</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {format(new Date(event.start_datetime), 'EEEE, MMMM d, yyyy')}
+                  </p>
+                  <p className="text-gray-600">
+                    {format(new Date(event.start_datetime), 'h:mm a')} HTT
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-500 mb-1">END</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {format(new Date(event.end_datetime), 'EEEE, MMMM d, yyyy')}
+                  </p>
+                  <p className="text-gray-600">
+                    {format(new Date(event.end_datetime), 'h:mm a')} HTT
+                  </p>
+                </div>
               </div>
             </div>
 
             {/* Reviews Section */}
             {reviews.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+              <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 md:p-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Reviews</h2>
                 <ReviewsList reviews={reviews} />
               </div>
             )}
           </div>
 
-          {/* Sidebar - Right Side - Sticky */}
+          {/* Right Column - Sticky Sidebar (Desktop) */}
           <div className="lg:col-span-1">
-            <div className="sticky top-8">
+            <div className="sticky top-8 space-y-6">
+              
               {/* Ticket Purchase Card */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-6">
+              <div className="bg-white rounded-2xl shadow-medium border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-gray-900">Get Tickets</h3>
+                    <FavoriteButton eventId={event.id} userId={user?.id || null} />
+                  </div>
+                </div>
+
                 <div className="mb-6">
                   {isFree ? (
-                    <div>
-                      <span className="text-4xl font-bold text-green-600">FREE</span>
-                      <p className="text-sm text-gray-600 mt-1">No payment required</p>
+                    <div className="bg-success-50 border-2 border-success-200 rounded-xl p-4">
+                      <span className="text-3xl font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">
+                        FREE EVENT
+                      </span>
+                      <p className="text-sm text-success-700 mt-1 font-medium">No payment required</p>
                     </div>
                   ) : (
                     <div>
-                      <div className="flex items-baseline mb-2">
+                      <div className="flex items-baseline mb-1">
                         <span className="text-4xl font-bold text-gray-900">{event.ticket_price}</span>
                         <span className="text-xl text-gray-600 ml-2">{event.currency}</span>
                       </div>
@@ -257,71 +400,148 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                   )}
                 </div>
 
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                {/* Ticket Availability */}
+                <div className="mb-6 p-4 bg-gray-50 rounded-xl">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-600">Total tickets</span>
-                    <span className="font-semibold text-gray-900">{event.total_tickets || 0}</span>
+                    <span className="text-sm font-medium text-gray-600">Total Tickets</span>
+                    <span className="font-bold text-gray-900">{event.total_tickets || 0}</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Available</span>
-                    <span className="font-semibold text-teal-700">{Math.max(0, remainingTickets)}</span>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-gray-600">Available</span>
+                    <span className={`font-bold ${selloutSoon ? 'text-warning-600' : 'text-brand-700'}`}>
+                      {Math.max(0, remainingTickets)}
+                    </span>
                   </div>
                   
                   {/* Progress Bar */}
-                  <div className="mt-3">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
                       <div 
-                        className="bg-teal-600 h-2 rounded-full transition-all" 
+                        className={`h-2.5 rounded-full transition-all ${
+                          selloutSoon ? 'bg-warning-500' : 'bg-brand-600'
+                        }`}
                         style={{ width: `${(event.total_tickets || 0) > 0 ? (((event.total_tickets || 0) - remainingTickets) / (event.total_tickets || 0)) * 100 : 0}%` }}
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-1.5 font-medium">
                       {(event.total_tickets || 0) > 0 ? Math.round((((event.total_tickets || 0) - remainingTickets) / (event.total_tickets || 0)) * 100) : 0}% sold
                     </p>
                   </div>
                 </div>
 
-                {isSoldOut ? (
-                  <WaitlistButton eventId={event.id} userId={user?.id || null} />
-                ) : user ? (
-                  <BuyTicketButton eventId={event.id} userId={user.id} isFree={isFree} ticketPrice={event.ticket_price || 0} />
-                ) : (
-                  <a
-                    href="/auth/login"
-                    className="block w-full bg-orange-600 hover:bg-orange-700 text-white text-center font-bold py-4 px-6 rounded-lg transition-colors shadow-lg hover:shadow-xl"
-                  >
-                    Sign in to buy ticket
-                  </a>
-                )}
-
-                <p className="text-xs text-gray-500 text-center mt-4">
-                  🔒 Secure payment • Instant confirmation
-                </p>
-              </div>
-
-              {/* Organizer Info Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
-                <h3 className="font-bold text-gray-900 mb-3">Organized by</h3>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <div className="w-12 h-12 bg-gradient-to-br from-teal-400 to-orange-400 rounded-full flex items-center justify-center text-white font-bold text-lg mr-3">
-                      {(event.users?.full_name || 'E')[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">{event.users?.full_name || 'Event Organizer'}</p>
-                      <p className="text-sm text-gray-600">Event Organizer</p>
-                    </div>
-                  </div>
-                  {user && event.organizer_id && user.id !== event.organizer_id && (
-                    <FollowButton organizerId={event.organizer_id} userId={user.id} />
+                {/* CTA Button */}
+                <div className="space-y-3">
+                  {isSoldOut ? (
+                    <WaitlistButton eventId={event.id} userId={user?.id || null} />
+                  ) : user ? (
+                    <BuyTicketButton eventId={event.id} userId={user.id} isFree={isFree} ticketPrice={event.ticket_price || 0} />
+                  ) : (
+                    <a
+                      href="/auth/login"
+                      className="block w-full bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-center font-bold py-4 px-6 rounded-xl transition-all shadow-glow hover:shadow-hard"
+                    >
+                      Sign in to Buy Tickets
+                    </a>
                   )}
+
+                  <p className="text-xs text-gray-500 text-center flex items-center justify-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    Secure payment • Instant confirmation
+                  </p>
                 </div>
               </div>
 
-              {/* Share Section */}
-              <EventShare eventId={event.id} eventTitle={event.title} />
-              <ShareButtons eventId={event.id} eventTitle={event.title} />
+              {/* Organizer Card */}
+              <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Hosted By</h3>
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-brand-400 to-accent-400 rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
+                    {(event.users?.full_name || 'E')[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-lg truncate">
+                      {event.users?.full_name || 'Event Organizer'}
+                    </p>
+                    {event.users?.is_verified && (
+                      <div className="flex items-center gap-1 text-blue-600 text-sm mt-1">
+                        <Shield className="w-4 h-4" />
+                        <span className="font-medium">Verified Organizer</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {user && event.organizer_id && user.id !== event.organizer_id && (
+                  <FollowButton organizerId={event.organizer_id} userId={user.id} />
+                )}
+              </div>
+
+              {/* Share Card */}
+              <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Share Event</h3>
+                <EventShare eventId={event.id} eventTitle={event.title} />
+                <div className="mt-3">
+                  <ShareButtons eventId={event.id} eventTitle={event.title} />
+                </div>
+              </div>
             </div>
+          </div>
+        </div>
+
+        {/* Related Events Section */}
+        {relatedEvents.length > 0 && (
+          <div className="mt-16">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900">Similar Events</h2>
+                <p className="text-gray-600 mt-1">You might also be interested in these events</p>
+              </div>
+              <a 
+                href={`/discover?category=${event.category}`}
+                className="text-brand-600 hover:text-brand-700 font-semibold"
+              >
+                View All →
+              </a>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {relatedEvents.map((relatedEvent) => (
+                <EventCard key={relatedEvent.id} event={relatedEvent} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* STICKY MOBILE CTA - Bottom Bar (Hidden on Desktop) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 p-4 shadow-hard z-40">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            {isFree ? (
+              <p className="text-xl font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">
+                FREE
+              </p>
+            ) : (
+              <div className="flex items-baseline">
+                <span className="text-2xl font-bold text-gray-900">{event.ticket_price}</span>
+                <span className="text-sm text-gray-600 ml-1">{event.currency}</span>
+              </div>
+            )}
+            <p className="text-xs text-gray-600">
+              {isSoldOut ? 'Sold Out' : `${remainingTickets} tickets left`}
+            </p>
+          </div>
+          <div className="flex-1">
+            {isSoldOut ? (
+              <WaitlistButton eventId={event.id} userId={user?.id || null} />
+            ) : user ? (
+              <BuyTicketButton eventId={event.id} userId={user.id} isFree={isFree} ticketPrice={event.ticket_price || 0} />
+            ) : (
+              <a
+                href="/auth/login"
+                className="block w-full bg-gradient-to-r from-brand-500 to-brand-600 text-white text-center font-bold py-3 px-6 rounded-xl transition-all shadow-medium"
+              >
+                Sign in to Buy
+              </a>
+            )}
           </div>
         </div>
       </div>
