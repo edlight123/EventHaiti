@@ -3,6 +3,7 @@ import Navbar from '@/components/Navbar'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/firebase-db/server'
 import EventSelector from './EventSelector'
+import { QrCode, Sparkles } from 'lucide-react'
 
 export default async function ScanTicketPage() {
   const { user, error } = await requireAuth()
@@ -50,14 +51,20 @@ export default async function ScanTicketPage() {
   const events = [...todayEvents, ...otherEvents]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-brand-50">
       <Navbar user={user} />
 
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Scan Tickets</h1>
-          <p className="text-gray-600">
-            Select an event, then use your camera to scan attendee QR codes.
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="mb-8 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-brand-500 rounded-2xl mb-4 shadow-glow">
+            <QrCode className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">
+            Scan Tickets
+            <Sparkles className="w-8 h-8 text-purple-500" />
+          </h1>
+          <p className="text-lg text-gray-600">
+            Fast and secure ticket validation for your events
           </p>
         </div>
 

@@ -66,6 +66,14 @@ export default function Navbar({ user }: NavbarProps) {
               {user && (
                 <>
                   <Link
+                    href="/dashboard"
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      pathname === '/dashboard' ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    Dashboard
+                  </Link>
+                  <Link
                     href="/tickets"
                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       pathname?.startsWith('/tickets') ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
@@ -82,12 +90,12 @@ export default function Navbar({ user }: NavbarProps) {
                     Favorites
                   </Link>
                   <Link
-                    href="/organizer/events"
+                    href="/organizer"
                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       pathname?.startsWith('/organizer') ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
                     }`}
                   >
-                    My Events
+                    Organizer
                   </Link>
                 </>
               )}
