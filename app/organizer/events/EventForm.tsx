@@ -344,23 +344,6 @@ export default function EventForm({ userId, event }: EventFormProps) {
                   <ImageIcon className="w-5 h-5 text-brand-600" />
                   Event Banner Image
                 </label>
-                {formData.banner_image_url && (
-                  <div className="mb-4 relative rounded-xl overflow-hidden border-2 border-gray-200">
-                    <img 
-                      src={formData.banner_image_url} 
-                      alt="Banner preview" 
-                      className="w-full h-48 object-cover"
-                    />
-                    <Badge 
-                      variant="success" 
-                      size="md" 
-                      className="absolute top-3 right-3"
-                    >
-                      <Check className="w-4 h-4 mr-1" />
-                      Uploaded
-                    </Badge>
-                  </div>
-                )}
                 <ImageUpload
                   currentImage={formData.banner_image_url}
                   onImageUploaded={(url) => setFormData(prev => ({ ...prev, banner_image_url: url }))}
