@@ -3,6 +3,10 @@ import { getCurrentUser } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import SalesChart from '@/components/charts/SalesChart'
+import CategoryChart from '@/components/charts/CategoryChart'
+import { TrendingUp, DollarSign, Ticket, Calendar, ArrowLeft } from 'lucide-react'
+import Badge from '@/components/ui/Badge'
 
 export const revalidate = 0
 
@@ -56,6 +60,32 @@ export default async function AnalyticsPage() {
     }
   }).sort((a: any, b: any) => b.ticketCount - a.ticketCount)
 
+  // Prepare chart data - Sales over time (last 7 days)
+  const salesChartData = []
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date()
+    date.setDate(date.getDate() - i)
+    const dateStr = date.toISOString().split('T')[0]
+    
+    const dayTickets = allTickets.filter((t: any) => {
+      const ticketDate = new Date(t.created_at).toISOString().split('T')[0]
+      return ticketDate === dateStr && eventsData.some((e: any) => e.id === t.event_id)
+    })
+    
+    salesChartData.push({
+      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      sales: dayTickets.length,
+      revenue: dayTickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0),
+    })
+  }
+
+  // Category distribution
+  const categoryData: Record<string, number> = {}
+  eventsData.forEach((event: any) => {
+    categoryData[event.category] = (categoryData[event.category] || 0) + 1
+  })
+  const categoryChartData = Object.entries(categoryData).map(([name, value]) => ({ name, value }))
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar user={user} />
@@ -63,102 +93,154 @@ export default async function AnalyticsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
-            <p className="text-gray-600 mt-2">Track your event performance</p>
+            <h1 className="text-4xl font-bold text-gray-900 flex items-center gap-3">
+              <TrendingUp className="w-10 h-10 text-brand-600" />
+              Analytics Dashboard
+            </h1>
+            <p className="text-gray-600 mt-2 text-lg">Track your event performance and insights</p>
           </div>
           <Link
             href="/organizer/events"
-            className="text-orange-600 hover:text-orange-700 font-medium"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-brand-500 hover:shadow-medium transition-all font-semibold text-gray-700 hover:text-brand-700"
           >
-            ← Back to Events
+            <ArrowLeft className="w-5 h-5" />
+            Back to Events
           </Link>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-600">Total Events</h3>
-              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 hover:shadow-medium transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Total Events</h3>
+              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-blue-600" />
+              </div>
             </div>
-            <p className="text-3xl font-bold text-gray-900">{totalEvents}</p>
-            <p className="text-sm text-gray-500 mt-1">{publishedEvents} published</p>
+            <p className="text-4xl font-bold text-gray-900 mb-2">{totalEvents}</p>
+            <div className="flex items-center gap-2">
+              <Badge variant="success" size="sm">{publishedEvents} Published</Badge>
+            </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-600">Tickets Sold</h3>
-              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-              </svg>
+          <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 hover:shadow-medium transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Tickets Sold</h3>
+              <div className="w-12 h-12 bg-brand-50 rounded-xl flex items-center justify-center">
+                <Ticket className="w-6 h-6 text-brand-600" />
+              </div>
             </div>
-            <p className="text-3xl font-bold text-green-700">{totalTicketsSold}</p>
+            <p className="text-4xl font-bold text-brand-700 mb-2">{totalTicketsSold}</p>
+            <p className="text-sm text-gray-600">Across all events</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-600">Total Revenue</h3>
-              <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+          <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 hover:shadow-medium transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Total Revenue</h3>
+              <div className="w-12 h-12 bg-accent-50 rounded-xl flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-accent-600" />
+              </div>
             </div>
-            <p className="text-3xl font-bold text-orange-700">${totalRevenue.toFixed(2)}</p>
+            <p className="text-4xl font-bold text-accent-700 mb-2">${totalRevenue.toFixed(2)}</p>
+            <p className="text-sm text-gray-600">Lifetime earnings</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-600">Avg per Event</h3>
-              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
+          <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 hover:shadow-medium transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Avg per Event</h3>
+              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-purple-600" />
+              </div>
             </div>
-            <p className="text-3xl font-bold text-purple-700">
+            <p className="text-4xl font-bold text-purple-700 mb-2">
               {totalEvents > 0 ? (totalTicketsSold / totalEvents).toFixed(1) : '0'}
             </p>
-            <p className="text-sm text-gray-500 mt-1">tickets/event</p>
+            <p className="text-sm text-gray-600">Tickets per event</p>
+          </div>
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Sales Chart */}
+          <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <TrendingUp className="w-6 h-6 text-brand-600" />
+              Sales Trend (Last 7 Days)
+            </h2>
+            <SalesChart data={salesChartData} />
+            <div className="flex items-center justify-center gap-6 mt-4">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-brand-600 rounded-full"></div>
+                <span className="text-sm text-gray-600">Tickets Sold</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-accent-600 rounded-full"></div>
+                <span className="text-sm text-gray-600">Revenue</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Category Distribution */}
+          <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <Calendar className="w-6 h-6 text-accent-600" />
+              Events by Category
+            </h2>
+            {categoryChartData.length > 0 ? (
+              <CategoryChart data={categoryChartData} />
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-gray-500">
+                No category data available
+              </div>
+            )}
           </div>
         </div>
 
         {/* Top Performing Events */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Event Performance</h2>
+        <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <TrendingUp className="w-7 h-7 text-brand-600" />
+            Top Performing Events
+          </h2>
           {eventsWithSales.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600">No events yet. Create your first event to see analytics!</p>
+            <div className="text-center py-16">
+              <div className="text-7xl mb-4">📊</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">No Events Yet</h3>
+              <p className="text-gray-600 mb-6">Create your first event to see analytics!</p>
               <Link
                 href="/organizer/events/new"
-                className="inline-flex items-center px-6 py-3 mt-4 rounded-full bg-orange-600 text-white font-medium hover:bg-orange-700 transition"
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-bold hover:shadow-glow transition-all"
               >
+                <Calendar className="w-5 h-5" />
                 Create Event
               </Link>
             </div>
           ) : (
-            <div className="space-y-4">
-              {eventsWithSales.slice(0, 10).map((event: any) => (
-                <div key={event.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                  <div className="flex-1">
-                    <Link href={`/organizer/events/${event.id}`} className="font-medium text-gray-900 hover:text-orange-600">
+            <div className="space-y-3">
+              {eventsWithSales.slice(0, 10).map((event: any, index: number) => (
+                <div key={event.id} className="flex items-center gap-4 p-5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-100">
+                  <div className="w-10 h-10 bg-gradient-to-br from-brand-500 to-accent-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                    #{index + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Link href={`/organizer/events/${event.id}`} className="font-bold text-gray-900 hover:text-brand-700 transition-colors block truncate">
                       {event.title}
                     </Link>
                     <p className="text-sm text-gray-600 mt-1">
-                      {new Date(event.start_datetime).toLocaleDateString()}
+                      {new Date(event.start_datetime).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                     </p>
                   </div>
-                  <div className="flex items-center space-x-8">
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">Tickets</p>
-                      <p className="text-lg font-bold text-gray-900">{event.ticketCount}</p>
+                  <div className="flex items-center gap-6">
+                    <div className="text-center">
+                      <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Tickets</p>
+                      <p className="text-2xl font-bold text-brand-700">{event.ticketCount}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">Revenue</p>
-                      <p className="text-lg font-bold text-green-700">${event.revenue.toFixed(2)}</p>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Revenue</p>
+                      <p className="text-2xl font-bold text-accent-700">${event.revenue.toFixed(2)}</p>
                     </div>
                     {!event.is_published && (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
-                        Draft
-                      </span>
+                      <Badge variant="neutral" size="md">Draft</Badge>
                     )}
                   </div>
                 </div>
