@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 import { isDemoMode } from '@/lib/demo'
 import ImageUpload from '@/components/ImageUpload'
+import Input from '@/components/ui/Input'
+import Badge from '@/components/ui/Badge'
+import { Calendar, MapPin, DollarSign, Ticket, Tag, Image as ImageIcon, FileText, Clock, Check } from 'lucide-react'
 
 interface EventFormProps {
   userId: string
@@ -21,6 +24,7 @@ export default function EventForm({ userId, event }: EventFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [tags, setTags] = useState<string[]>(event?.tags || [])
   const [tagInput, setTagInput] = useState('')
+  const [currentStep, setCurrentStep] = useState(1)
 
   const [formData, setFormData] = useState({
     title: event?.title || '',
@@ -38,6 +42,14 @@ export default function EventForm({ userId, event }: EventFormProps) {
     banner_image_url: event?.banner_image_url || '',
     is_published: event?.is_published || false,
   })
+
+  const steps = [
+    { number: 1, title: 'Basic Info', icon: FileText },
+    { number: 2, title: 'Location', icon: MapPin },
+    { number: 3, title: 'Schedule', icon: Clock },
+    { number: 4, title: 'Tickets', icon: Ticket },
+    { number: 5, title: 'Details', icon: Tag },
+  ]
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     const { name, value, type } = e.target
@@ -122,372 +134,590 @@ export default function EventForm({ userId, event }: EventFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-      {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
-
-      <div className="space-y-6">
-        {/* Title */}
-        <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-            Event Title *
-          </label>
-          <input
-            type="text"
-            id="title"
-            name="title"
-            required
-            value={formData.title}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-            placeholder="e.g., Summer Music Festival 2025"
-          />
-        </div>
-
-        {/* Banner Image */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Event Banner Image
-          </label>
-          <ImageUpload
-            currentImage={formData.banner_image_url}
-            onImageUploaded={(url) => setFormData(prev => ({ ...prev, banner_image_url: url }))}
-          />
-        </div>
-
-        {/* Category */}
-        <div>
-          <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-            Category *
-          </label>
-          <select
-            id="category"
-            name="category"
-            required
-            value={formData.category}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-          >
-            {CATEGORIES.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Description */}
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-            Description *
-          </label>
-          <textarea
-            id="description"
-            name="description"
-            required
-            value={formData.description}
-            onChange={handleChange}
-            rows={4}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-            placeholder="Describe your event..."
-          />
-        </div>
-
-        {/* Venue Name */}
-        <div>
-          <label htmlFor="venue_name" className="block text-sm font-medium text-gray-700 mb-2">
-            Venue Name *
-          </label>
-          <input
-            type="text"
-            id="venue_name"
-            name="venue_name"
-            required
-            value={formData.venue_name}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-            placeholder="e.g., National Stadium"
-          />
-        </div>
-
-        {/* Location Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
-              City *
-            </label>
-            <select
-              id="city"
-              name="city"
-              required
-              value={formData.city}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-            >
-              {CITIES.map(city => (
-                <option key={city} value={city}>{city}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="commune" className="block text-sm font-medium text-gray-700 mb-2">
-              Commune *
-            </label>
-            <input
-              type="text"
-              id="commune"
-              name="commune"
-              required
-              value={formData.commune}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-              placeholder="e.g., Pétion-Ville"
-            />
-          </div>
-        </div>
-
-        {/* Address */}
-        <div>
-          <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
-            Full Address *
-          </label>
-          <input
-            type="text"
-            id="address"
-            name="address"
-            required
-            value={formData.address}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-            placeholder="e.g., 123 Rue de la République"
-          />
-        </div>
-
-        {/* Date & Time Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label htmlFor="start_datetime" className="block text-sm font-medium text-gray-700 mb-2">
-              Start Date & Time *
-            </label>
-            <input
-              type="datetime-local"
-              id="start_datetime"
-              name="start_datetime"
-              required
-              value={formData.start_datetime}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="end_datetime" className="block text-sm font-medium text-gray-700 mb-2">
-              End Date & Time *
-            </label>
-            <input
-              type="datetime-local"
-              id="end_datetime"
-              name="end_datetime"
-              required
-              value={formData.end_datetime}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-            />
-          </div>
-        </div>
-
-        {/* Pricing Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <label htmlFor="currency" className="block text-sm font-medium text-gray-700 mb-2">
-              Currency *
-            </label>
-            <select
-              id="currency"
-              name="currency"
-              required
-              value={formData.currency}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-            >
-              <option value="USD">USD ($)</option>
-              <option value="HTG">HTG (G)</option>
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="ticket_price" className="block text-sm font-medium text-gray-700 mb-2">
-              Ticket Price * (Enter 0 for free events)
-            </label>
-            <input
-              type="number"
-              id="ticket_price"
-              name="ticket_price"
-              required
-              min="0"
-              step="0.01"
-              value={formData.ticket_price}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-              placeholder="0 for free, or 25.00"
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              💡 This is your general admission price. After creating the event, you can add VIP, Early Bird, and other ticket tiers!
-            </p>
-          </div>
-
-          <div>
-            <label htmlFor="total_tickets" className="block text-sm font-medium text-gray-700 mb-2">
-              Total Tickets *
-            </label>
-            <input
-              type="number"
-              id="total_tickets"
-              name="total_tickets"
-              required
-              min="1"
-              value={formData.total_tickets}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-              placeholder="e.g., 100"
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              This is the total capacity. You can split this into different tiers after creating the event.
-            </p>
-          </div>
-        </div>
-
-        {/* Publish Checkbox */}
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            id="is_published"
-            name="is_published"
-            checked={formData.is_published}
-            onChange={handleChange}
-            className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
-          />
-          <label htmlFor="is_published" className="ml-2 block text-sm text-gray-700">
-            Publish event (make it visible to the public)
-          </label>
-        </div>
-
-        {/* Event Tags */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Event Tags
-          </label>
-          <p className="text-sm text-gray-500 mb-3">
-            Add tags to help people discover your event
-          </p>
-          
-          {/* Popular Tags */}
-          <div className="mb-3">
-            <p className="text-xs font-medium text-gray-600 mb-2">Popular tags:</p>
-            <div className="flex flex-wrap gap-2">
-              {POPULAR_TAGS.map(tag => (
+    <div className="space-y-6">
+      {/* Step Progress */}
+      <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6">
+        <div className="flex items-center justify-between">
+          {steps.map((step, index) => {
+            const Icon = step.icon
+            const isActive = currentStep === step.number
+            const isCompleted = currentStep > step.number
+            
+            return (
+              <div key={step.number} className="flex items-center flex-1">
                 <button
-                  key={tag}
                   type="button"
-                  onClick={() => {
-                    if (!tags.includes(tag)) {
-                      setTags([...tags, tag])
-                    }
-                  }}
-                  disabled={tags.includes(tag)}
-                  className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                    tags.includes(tag)
-                      ? 'bg-teal-100 text-teal-700 border-teal-300 cursor-not-allowed'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-teal-500 hover:text-teal-600'
+                  onClick={() => setCurrentStep(step.number)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                    isActive 
+                      ? 'bg-brand-50 border-2 border-brand-500' 
+                      : isCompleted
+                      ? 'bg-success-50 border-2 border-success-500'
+                      : 'bg-gray-50 border-2 border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  {tag}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Custom Tag Input */}
-          <div className="flex gap-2 mb-3">
-            <input
-              type="text"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  const trimmed = tagInput.trim().toLowerCase()
-                  if (trimmed && !tags.includes(trimmed)) {
-                    setTags([...tags, trimmed])
-                    setTagInput('')
-                  }
-                }
-              }}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent text-sm"
-              placeholder="Add custom tag (press Enter)"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                const trimmed = tagInput.trim().toLowerCase()
-                if (trimmed && !tags.includes(trimmed)) {
-                  setTags([...tags, trimmed])
-                  setTagInput('')
-                }
-              }}
-              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium"
-            >
-              Add Tag
-            </button>
-          </div>
-
-          {/* Selected Tags */}
-          {tags.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-gray-600 mb-2">Selected tags:</p>
-              <div className="flex flex-wrap gap-2">
-                {tags.map(tag => (
-                  <div
-                    key={tag}
-                    className="inline-flex items-center gap-1 px-3 py-1 bg-teal-600 text-white text-sm rounded-full"
-                  >
-                    <span>{tag}</span>
-                    <button
-                      type="button"
-                      onClick={() => setTags(tags.filter(t => t !== tag))}
-                      className="ml-1 hover:bg-teal-700 rounded-full p-0.5"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    isActive 
+                      ? 'bg-brand-600 text-white' 
+                      : isCompleted
+                      ? 'bg-success-600 text-white'
+                      : 'bg-gray-300 text-gray-600'
+                  }`}>
+                    {isCompleted ? <Check className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
                   </div>
-                ))}
+                  <div className="text-left hidden sm:block">
+                    <p className={`text-xs font-semibold uppercase tracking-wide ${
+                      isActive ? 'text-brand-700' : isCompleted ? 'text-success-700' : 'text-gray-500'
+                    }`}>
+                      Step {step.number}
+                    </p>
+                    <p className={`font-bold ${
+                      isActive ? 'text-brand-900' : isCompleted ? 'text-success-900' : 'text-gray-700'
+                    }`}>
+                      {step.title}
+                    </p>
+                  </div>
+                </button>
+                {index < steps.length - 1 && (
+                  <div className={`h-0.5 flex-1 mx-2 ${
+                    isCompleted ? 'bg-success-500' : 'bg-gray-200'
+                  }`}></div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-soft border border-gray-100 p-8">
+        {error && (
+          <div className="mb-6 bg-error-50 border-2 border-error-500 text-error-700 px-6 py-4 rounded-xl flex items-center gap-3">
+            <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-medium">{error}</span>
+          </div>
+        )}
+
+        <div className="space-y-8">
+          {/* Step 1: Basic Info */}
+          {currentStep === 1 && (
+            <div className="space-y-6 animate-fadeIn">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-brand-100 rounded-xl flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-brand-700" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Basic Information</h2>
+                  <p className="text-gray-600">Tell us about your event</p>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Event Title *
+                </label>
+                <Input
+                  type="text"
+                  id="title"
+                  name="title"
+                  required
+                  value={formData.title}
+                  onChange={handleChange}
+                  placeholder="e.g., Summer Music Festival 2025"
+                  className="text-lg"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Category *
+                </label>
+                <select
+                  id="category"
+                  name="category"
+                  required
+                  value={formData.category}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all text-base"
+                >
+                  {CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Description *
+                </label>
+                <textarea
+                  id="description"
+                  name="description"
+                  required
+                  value={formData.description}
+                  onChange={handleChange}
+                  rows={6}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all resize-none"
+                  placeholder="Describe your event in detail... What makes it special? What should attendees expect?"
+                />
+                <p className="text-sm text-gray-500 mt-2">{formData.description.length} characters</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-brand-600" />
+                  Event Banner Image
+                </label>
+                {formData.banner_image_url && (
+                  <div className="mb-4 relative rounded-xl overflow-hidden border-2 border-gray-200">
+                    <img 
+                      src={formData.banner_image_url} 
+                      alt="Banner preview" 
+                      className="w-full h-48 object-cover"
+                    />
+                    <Badge 
+                      variant="success" 
+                      size="md" 
+                      className="absolute top-3 right-3"
+                    >
+                      <Check className="w-4 h-4 mr-1" />
+                      Uploaded
+                    </Badge>
+                  </div>
+                )}
+                <ImageUpload
+                  currentImage={formData.banner_image_url}
+                  onImageUploaded={(url) => setFormData(prev => ({ ...prev, banner_image_url: url }))}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Location */}
+          {currentStep === 2 && (
+            <div className="space-y-6 animate-fadeIn">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-accent-100 rounded-xl flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-accent-700" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Location Details</h2>
+                  <p className="text-gray-600">Where will your event take place?</p>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="venue_name" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Venue Name *
+                </label>
+                <Input
+                  type="text"
+                  id="venue_name"
+                  name="venue_name"
+                  required
+                  value={formData.venue_name}
+                  onChange={handleChange}
+                  placeholder="e.g., National Stadium"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="city" className="block text-sm font-semibold text-gray-700 mb-2">
+                    City *
+                  </label>
+                  <select
+                    id="city"
+                    name="city"
+                    required
+                    value={formData.city}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all"
+                  >
+                    {CITIES.map(city => (
+                      <option key={city} value={city}>{city}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="commune" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Commune *
+                  </label>
+                  <Input
+                    type="text"
+                    id="commune"
+                    name="commune"
+                    required
+                    value={formData.commune}
+                    onChange={handleChange}
+                    placeholder="e.g., Pétion-Ville"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="address" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Full Address *
+                </label>
+                <Input
+                  type="text"
+                  id="address"
+                  name="address"
+                  required
+                  value={formData.address}
+                  onChange={handleChange}
+                  placeholder="e.g., 123 Rue de la République"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Schedule */}
+          {currentStep === 3 && (
+            <div className="space-y-6 animate-fadeIn">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-purple-700" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Event Schedule</h2>
+                  <p className="text-gray-600">When will your event happen?</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="start_datetime" className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-success-600" />
+                    Start Date & Time *
+                  </label>
+                  <input
+                    type="datetime-local"
+                    id="start_datetime"
+                    name="start_datetime"
+                    required
+                    value={formData.start_datetime}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="end_datetime" className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-error-600" />
+                    End Date & Time *
+                  </label>
+                  <input
+                    type="datetime-local"
+                    id="end_datetime"
+                    name="end_datetime"
+                    required
+                    value={formData.end_datetime}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              {formData.start_datetime && formData.end_datetime && (
+                <div className="bg-brand-50 border-2 border-brand-200 rounded-xl p-4">
+                  <p className="text-sm font-semibold text-brand-900 mb-2">Event Duration</p>
+                  <p className="text-brand-700">
+                    {(() => {
+                      const start = new Date(formData.start_datetime)
+                      const end = new Date(formData.end_datetime)
+                      const hours = Math.abs(end.getTime() - start.getTime()) / 36e5
+                      return hours < 24 
+                        ? `${hours.toFixed(1)} hours` 
+                        : `${(hours / 24).toFixed(1)} days`
+                    })()}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 4: Tickets */}
+          {currentStep === 4 && (
+            <div className="space-y-6 animate-fadeIn">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-success-100 rounded-xl flex items-center justify-center">
+                  <Ticket className="w-6 h-6 text-success-700" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Ticket Information</h2>
+                  <p className="text-gray-600">Set your pricing and capacity</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label htmlFor="currency" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Currency *
+                  </label>
+                  <select
+                    id="currency"
+                    name="currency"
+                    required
+                    value={formData.currency}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all"
+                  >
+                    <option value="USD">USD ($)</option>
+                    <option value="HTG">HTG (G)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="ticket_price" className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-accent-600" />
+                    Ticket Price *
+                  </label>
+                  <Input
+                    type="number"
+                    id="ticket_price"
+                    name="ticket_price"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={formData.ticket_price}
+                    onChange={handleChange}
+                    placeholder="0 for free"
+                  />
+                  {formData.ticket_price === '0' || formData.ticket_price === '' ? (
+                    <Badge variant="success" size="sm" className="mt-2">Free Event</Badge>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-2">General admission price</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="total_tickets" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Total Tickets *
+                  </label>
+                  <Input
+                    type="number"
+                    id="total_tickets"
+                    name="total_tickets"
+                    required
+                    min="1"
+                    value={formData.total_tickets}
+                    onChange={handleChange}
+                    placeholder="e.g., 100"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-blue-900 mb-1">Pro Tip: Ticket Tiers</h3>
+                    <p className="text-sm text-blue-700">
+                      This is your base general admission ticket. After creating the event, you can add premium tiers like VIP, Early Bird, and Group packages with different prices and perks!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 5: Tags & Publish */}
+          {currentStep === 5 && (
+            <div className="space-y-6 animate-fadeIn">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                  <Tag className="w-6 h-6 text-orange-700" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Tags & Publishing</h2>
+                  <p className="text-gray-600">Help people discover your event</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Event Tags
+                </label>
+                <p className="text-sm text-gray-600 mb-4">
+                  Add tags to help people discover your event
+                </p>
+                
+                {/* Popular Tags */}
+                <div className="mb-4">
+                  <p className="text-xs font-bold text-gray-700 mb-3 uppercase tracking-wide">Popular tags:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {POPULAR_TAGS.map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          if (!tags.includes(tag)) {
+                            setTags([...tags, tag])
+                          }
+                        }}
+                        disabled={tags.includes(tag)}
+                        className={`px-4 py-2 text-sm font-medium rounded-xl border-2 transition-all ${
+                          tags.includes(tag)
+                            ? 'bg-brand-100 text-brand-700 border-brand-300 cursor-not-allowed'
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-brand-500 hover:bg-brand-50 hover:text-brand-700'
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Tag Input */}
+                <div className="flex gap-3 mb-4">
+                  <Input
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        const trimmed = tagInput.trim().toLowerCase()
+                        if (trimmed && !tags.includes(trimmed)) {
+                          setTags([...tags, trimmed])
+                          setTagInput('')
+                        }
+                      }
+                    }}
+                    placeholder="Add custom tag (press Enter)"
+                    className="flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const trimmed = tagInput.trim().toLowerCase()
+                      if (trimmed && !tags.includes(trimmed)) {
+                        setTags([...tags, trimmed])
+                        setTagInput('')
+                      }
+                    }}
+                    className="px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-semibold transition-all hover:shadow-medium"
+                  >
+                    Add
+                  </button>
+                </div>
+
+                {/* Selected Tags */}
+                {tags.length > 0 && (
+                  <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
+                    <p className="text-xs font-bold text-gray-700 mb-3 uppercase tracking-wide">Selected tags ({tags.length}):</p>
+                    <div className="flex flex-wrap gap-2">
+                      {tags.map(tag => (
+                        <div
+                          key={tag}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 text-white font-medium rounded-xl shadow-soft"
+                        >
+                          <span>{tag}</span>
+                          <button
+                            type="button"
+                            onClick={() => setTags(tags.filter(t => t !== tag))}
+                            className="hover:bg-brand-700 rounded-full p-1 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-gradient-to-r from-brand-50 to-accent-50 border-2 border-brand-200 rounded-xl p-6">
+                <div className="flex items-start gap-4">
+                  <input
+                    type="checkbox"
+                    id="is_published"
+                    name="is_published"
+                    checked={formData.is_published}
+                    onChange={handleChange}
+                    className="mt-1 h-5 w-5 text-brand-600 focus:ring-brand-500 border-gray-300 rounded cursor-pointer"
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="is_published" className="block font-bold text-gray-900 mb-1 cursor-pointer">
+                      Publish event immediately
+                    </label>
+                    <p className="text-sm text-gray-600">
+                      Make your event visible to the public right away. You can unpublish it later if needed.
+                    </p>
+                  </div>
+                  {formData.is_published && (
+                    <Badge variant="success" size="lg">
+                      <Check className="w-4 h-4 mr-1" />
+                      Will Publish
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
           )}
         </div>
-      </div>
 
-      {/* Submit Button */}
-      <div className="mt-8 flex items-center justify-end space-x-4">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-6 py-3 bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Saving...' : event?.id ? 'Update Event' : 'Create Event'}
-        </button>
-      </div>
-    </form>
+        {/* Navigation Buttons */}
+        <div className="mt-10 pt-6 border-t-2 border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {currentStep > 1 && (
+              <button
+                type="button"
+                onClick={() => setCurrentStep(currentStep - 1)}
+                className="px-6 py-3 border-2 border-gray-200 rounded-xl font-semibold text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all"
+              >
+                ← Previous
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="px-6 py-3 text-gray-600 hover:text-gray-900 font-medium transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {currentStep < 5 ? (
+              <button
+                type="button"
+                onClick={() => setCurrentStep(currentStep + 1)}
+                className="px-8 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold transition-all hover:shadow-medium"
+              >
+                Next Step →
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-8 py-3 bg-gradient-to-r from-brand-600 to-accent-600 hover:from-brand-700 hover:to-accent-700 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-glow"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </span>
+                ) : (
+                  event?.id ? 'Update Event' : 'Create Event'
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      </form>
+    </div>
   )
 }
