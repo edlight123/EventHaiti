@@ -6,6 +6,8 @@ import SearchBar from '@/components/SearchBar'
 import CategoryGrid from '@/components/CategoryGrid'
 import DateFilters from '@/components/DateFilters'
 import EventSearchFilters from '@/components/EventSearchFilters'
+import FeaturedCarousel from '@/components/FeaturedCarousel'
+import { SkeletonEventCard } from '@/components/ui/Skeleton'
 import { BRAND } from '@/config/brand'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import type { Database } from '@/types/database'
@@ -162,84 +164,198 @@ export default async function HomePage({
     events.sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
   }
 
+  // Organize events into sections
+  const now = new Date()
+  
+  // Use top events with most tickets sold as "featured"
+  const featuredEvents = [...events]
+    .sort((a, b) => (b.tickets_sold || 0) - (a.tickets_sold || 0))
+    .slice(0, 5)
+    .map(e => ({
+      id: e.id,
+      title: e.title,
+      description: e.description,
+      date: new Date(e.start_datetime),
+      imageUrl: e.banner_image_url || '/placeholder-event.jpg',
+      location: `${e.venue_name}, ${e.city}`,
+      category: e.category,
+      price: e.ticket_price,
+      isFeatured: true,
+      isVIP: (e.ticket_price || 0) > 100,
+    }))
+  
+  const trendingEvents = events.filter(e => (e.tickets_sold || 0) > 10).slice(0, 6)
+  const thisWeekEnd = new Date(now)
+  thisWeekEnd.setDate(now.getDate() + 7)
+  const upcomingThisWeek = events.filter(e => new Date(e.start_datetime) <= thisWeekEnd).slice(0, 6)
+  
+  // Check if we're in search/filter mode
+  const isSearching = params.q || params.location || params.city || params.category || params.dateFrom || params.dateTo
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gray-50">
       <Navbar user={user} />
 
       {/* Demo Mode Banner */}
       {isDemoMode() && (
-        <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-b border-yellow-200">
+        <div className="bg-gradient-to-r from-warning-50 to-warning-100 border-b border-warning-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-            <div className="flex items-center gap-2 text-yellow-800">
+            <div className="flex items-center gap-2 text-warning-800">
               <span className="text-lg">🎭</span>
               <p className="text-sm font-medium">
-                <strong>Demo Mode:</strong> You&apos;re viewing sample events. Login with <code className="bg-yellow-100 px-1.5 py-0.5 rounded">demo-organizer@eventhaiti.com</code> or <code className="bg-yellow-100 px-1.5 py-0.5 rounded">demo-attendee@eventhaiti.com</code> (password: <code className="bg-yellow-100 px-1.5 py-0.5 rounded">demo123</code>)
+                <strong>Demo Mode:</strong> You&apos;re viewing sample events. Login with <code className="bg-warning-100 px-1.5 py-0.5 rounded">demo-organizer@eventhaiti.com</code> or <code className="bg-warning-100 px-1.5 py-0.5 rounded">demo-attendee@eventhaiti.com</code> (password: <code className="bg-warning-100 px-1.5 py-0.5 rounded">demo123</code>)
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Hero Section with Search */}
-      <div className="relative bg-gradient-to-br from-teal-600 via-teal-700 to-orange-600 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative">
-          <div className="text-center mb-10">
-            <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-6 drop-shadow-lg">
-              {BRAND.tagline || 'Discover Events in Haiti'}
-            </h1>
-            <p className="text-xl md:text-2xl text-teal-50 max-w-2xl mx-auto mb-10 drop-shadow-md">
-              Find and book tickets for concerts, parties, conferences, festivals, and more across Haiti.
-            </p>
+      {/* HERO: Featured Carousel OR Search Hero */}
+      {!isSearching && featuredEvents.length > 0 ? (
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <FeaturedCarousel events={featuredEvents} />
+        </div>
+      ) : (
+        <div className="relative bg-gradient-to-br from-brand-600 via-brand-700 to-accent-600 overflow-hidden">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative">
+            <div className="text-center mb-8">
+              <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-lg">
+                {isSearching ? 'Find Your Perfect Event' : BRAND.tagline || 'Discover Events in Haiti'}
+              </h1>
+              <p className="text-lg md:text-xl text-brand-50 max-w-2xl mx-auto drop-shadow-md">
+                Search concerts, parties, conferences, festivals, and more across Haiti
+              </p>
+            </div>
+            <SearchBar />
           </div>
-          
-          <SearchBar />
-          
-          {/* Filters inside hero for better visibility */}
-          <div className="mt-8">
-            <EventSearchFilters />
-          </div>
+        </div>
+      )}
+
+      {/* Search/Filter Bar (always visible below hero) */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <EventSearchFilters />
         </div>
       </div>
 
-      {/* Events Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {/* Category Icons */}
-        <div className="mb-16">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8">Browse by Category</h2>
-          <CategoryGrid />
-        </div>
-
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">
-            {params.q || params.location || params.city || params.category 
-              ? 'Search Results' 
-              : 'Upcoming Events'}
-          </h2>
-        </div>
-
-        {events && events.length > 0 ? (
-          <>
-            <p className="text-gray-600 mb-8 text-lg">{events.length} events found</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {events.map((event) => (
-                <EventCard key={event.id} event={event} />
-              ))}
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        
+        {/* SEARCH RESULTS VIEW */}
+        {isSearching ? (
+          <div className="space-y-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900">Search Results</h2>
+                <p className="text-gray-600 mt-2">{events.length} events found</p>
+              </div>
             </div>
-          </>
+
+            {events.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {events.map((event) => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20 bg-white rounded-3xl shadow-soft">
+                <div className="text-7xl mb-6">🔍</div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">No events found</h3>
+                <p className="text-gray-600 mb-6">Try adjusting your search or filters</p>
+                <a
+                  href="/"
+                  className="inline-block px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-xl hover:shadow-glow transition-all duration-300 font-semibold"
+                >
+                  View All Events
+                </a>
+              </div>
+            )}
+          </div>
         ) : (
-          <div className="text-center py-16 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200 shadow-lg">
-            <div className="text-7xl mb-6">🔍</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">No events found</h3>
-            <p className="text-gray-600 mb-6 text-lg">
-              Try adjusting your search or filters
-            </p>
-            <a
-              href="/"
-              className="inline-block px-8 py-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-xl hover:from-teal-700 hover:to-teal-800 shadow-lg hover:shadow-xl transition-all duration-300 font-medium"
-            >
-              View all events
-            </a>
+          /* DISCOVERY VIEW - Premium Sections */
+          <div className="space-y-16">
+            
+            {/* Browse by Category */}
+            <section>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">Browse by Category</h2>
+              <CategoryGrid />
+            </section>
+
+            {/* Trending Events */}
+            {trendingEvents.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900">🔥 Trending Now</h2>
+                    <p className="text-gray-600 mt-1">Hot events everyone is talking about</p>
+                  </div>
+                  <a href="/discover?sort=popular" className="text-brand-600 hover:text-brand-700 font-semibold">
+                    View All →
+                  </a>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {trendingEvents.map((event) => (
+                    <EventCard key={event.id} event={event} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Upcoming This Week */}
+            {upcomingThisWeek.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900">📅 This Week</h2>
+                    <p className="text-gray-600 mt-1">Don&apos;t miss out on these upcoming events</p>
+                  </div>
+                  <a href="/discover?date=week" className="text-brand-600 hover:text-brand-700 font-semibold">
+                    View All →
+                  </a>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {upcomingThisWeek.map((event) => (
+                    <EventCard key={event.id} event={event} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* All Upcoming Events */}
+            <section>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-900">All Upcoming Events</h2>
+                  <p className="text-gray-600 mt-1">{events.length} events happening soon</p>
+                </div>
+              </div>
+              {events.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {events.slice(0, 12).map((event) => (
+                    <EventCard key={event.id} event={event} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-20 bg-white rounded-3xl shadow-soft">
+                  <div className="text-7xl mb-6">📭</div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">No upcoming events</h3>
+                  <p className="text-gray-600">Check back soon for new events!</p>
+                </div>
+              )}
+              
+              {events.length > 12 && (
+                <div className="text-center mt-8">
+                  <a
+                    href="/discover"
+                    className="inline-block px-8 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-xl hover:shadow-glow transition-all duration-300 font-semibold"
+                  >
+                    Explore All Events
+                  </a>
+                </div>
+              )}
+            </section>
+
           </div>
         )}
       </div>
