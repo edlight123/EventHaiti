@@ -43,13 +43,13 @@ export default async function DashboardPage() {
 
     // Separate upcoming and past
     upcomingEvents = ticketedEvents
-      .filter(e => new Date(e.start_datetime) > now)
-      .sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
+      .filter((e: any) => new Date(e.start_datetime) > now)
+      .sort((a: any, b: any) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
       .slice(0, 3)
     
     pastEvents = ticketedEvents
-      .filter(e => new Date(e.start_datetime) <= now)
-      .sort((a, b) => new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime())
+      .filter((e: any) => new Date(e.start_datetime) <= now)
+      .sort((a: any, b: any) => new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime())
       .slice(0, 3)
 
     // Fetch favorites
@@ -192,7 +192,7 @@ export default async function DashboardPage() {
                       <Calendar className="w-4 h-4" />
                       {new Date(event.start_datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </div>
-                    <Badge variant="brand" size="sm">Attending</Badge>
+                    <Badge variant="primary" size="sm">Attending</Badge>
                   </div>
                 </Link>
               ))}

@@ -58,7 +58,7 @@ export default function AdvancedSearch() {
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
               {activeFiltersCount > 0 && (
-                <Badge variant="brand" size="sm">{activeFiltersCount} filters</Badge>
+                <Badge variant="primary" size="sm">{activeFiltersCount} filters</Badge>
               )}
               <button
                 type="button"
