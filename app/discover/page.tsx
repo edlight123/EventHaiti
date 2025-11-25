@@ -2,7 +2,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { getTrendingEvents, getNearbyEvents } from '@/lib/recommendations'
 import EventCard from '@/components/EventCard'
 import Navbar from '@/components/Navbar'
-import SearchBar from '@/components/SearchBar'
+import AdvancedSearch from '@/components/AdvancedSearch'
 import Badge from '@/components/ui/Badge'
 import { TrendingUp, MapPin, Sparkles, Calendar, Star } from 'lucide-react'
 
@@ -36,7 +36,7 @@ export default async function DiscoverPage() {
               Explore trending events, find nearby experiences, and discover your next adventure
             </p>
           </div>
-          <SearchBar />
+          <AdvancedSearch />
         </div>
       </div>
 
