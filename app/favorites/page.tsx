@@ -2,8 +2,10 @@ import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 import EventCard from '@/components/EventCard'
+import EmptyState from '@/components/EmptyState'
 import Link from 'next/link'
 import type { Database } from '@/types/database'
+import { Heart, TrendingUp } from 'lucide-react'
 
 type Event = Database['public']['Tables']['events']['Row']
 
@@ -65,23 +67,14 @@ export default async function FavoritesPage() {
         </div>
 
         {favoriteEvents.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-100 mb-4">
-              <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No favorites yet</h3>
-            <p className="text-gray-600 mb-6">
-              Start exploring events and save your favorites
-            </p>
-            <Link
-              href="/"
-              className="inline-flex items-center px-6 py-3 rounded-full bg-orange-600 text-white font-medium hover:bg-orange-700 transition"
-            >
-              Discover Events
-            </Link>
-          </div>
+          <EmptyState
+            icon={Heart}
+            title="No favorites yet"
+            description="Start exploring events and save your favorites to see them here"
+            actionLabel="Discover Events"
+            actionHref="/"
+            actionIcon={TrendingUp}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {favoriteEvents.map((event) => (

@@ -1,10 +1,12 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { requireAuth } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
+import EmptyState from '@/components/EmptyState'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
+import { Calendar, Plus } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -323,19 +325,14 @@ export default async function OrganizerEventsPage() {
             })}
           </div>
         ) : (
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-16 text-center">
-            <div className="text-7xl mb-6">📅</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">No events yet</h3>
-            <p className="text-gray-600 mb-8 text-lg">
-              Create your first event to start selling tickets.
-            </p>
-            <Link
-              href="/organizer/events/new"
-              className="inline-block px-8 py-3 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              + Create Event
-            </Link>
-          </div>
+          <EmptyState
+            icon={Calendar}
+            title="No events yet"
+            description="Create your first event to start selling tickets and managing attendees."
+            actionLabel="Create Event"
+            actionHref="/organizer/events/new"
+            actionIcon={Plus}
+          />
         )}
       </div>
     </div>

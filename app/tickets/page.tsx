@@ -1,10 +1,12 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { requireAuth } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
+import EmptyState from '@/components/EmptyState'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { isDemoMode, DEMO_TICKETS, DEMO_EVENTS } from '@/lib/demo'
+import { Ticket, TrendingUp } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -169,19 +171,14 @@ export default async function MyTicketsPage() {
             })}
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-            <div className="text-6xl mb-4">🎟️</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No tickets yet</h3>
-            <p className="text-gray-600 mb-6">
-              When you purchase tickets, they&apos;ll appear here.
-            </p>
-            <Link
-              href="/"
-              className="inline-block px-6 py-3 bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-medium"
-            >
-              Browse Events
-            </Link>
-          </div>
+          <EmptyState
+            icon={Ticket}
+            title="No tickets yet"
+            description="When you purchase tickets, they'll appear here with QR codes for easy check-in."
+            actionLabel="Browse Events"
+            actionHref="/"
+            actionIcon={TrendingUp}
+          />
         )}
       </div>
     </div>
