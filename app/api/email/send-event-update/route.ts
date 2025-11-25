@@ -2,7 +2,7 @@ import { Resend } from 'resend'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const resend = new Resend(process.env.RESEND_API_KEY || '')
 
 /**
  * Sends an update notification to all attendees of an event

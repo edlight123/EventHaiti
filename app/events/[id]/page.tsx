@@ -9,7 +9,6 @@ import FavoriteButton from '@/components/FavoriteButton'
 import FollowButton from '@/components/FollowButton'
 import WaitlistButton from '@/components/WaitlistButton'
 import ReviewsList from '@/components/ReviewsList'
-import EventShare from './EventShare'
 import EventCard from '@/components/EventCard'
 import Badge from '@/components/ui/Badge'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
@@ -454,7 +453,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               {/* Organizer Card */}
               <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Hosted By</h3>
-                <div className="flex items-start gap-3 mb-4">
+                <a href={`/profile/organizer/${event.organizer_id}`} className="flex items-start gap-3 mb-4 hover:opacity-80 transition-opacity">
                   <div className="w-14 h-14 bg-gradient-to-br from-brand-400 to-accent-400 rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
                     {(event.users?.full_name || 'E')[0].toUpperCase()}
                   </div>
@@ -469,7 +468,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                       </div>
                     )}
                   </div>
-                </div>
+                </a>
                 {user && event.organizer_id && user.id !== event.organizer_id && (
                   <FollowButton organizerId={event.organizer_id} userId={user.id} />
                 )}
@@ -478,10 +477,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               {/* Share Card */}
               <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Share Event</h3>
-                <EventShare eventId={event.id} eventTitle={event.title} />
-                <div className="mt-3">
-                  <ShareButtons eventId={event.id} eventTitle={event.title} />
-                </div>
+                <ShareButtons eventId={event.id} eventTitle={event.title} />
               </div>
             </div>
           </div>

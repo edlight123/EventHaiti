@@ -1,7 +1,7 @@
 import { Resend } from 'resend'
 import { createClient } from '@/lib/firebase-db/server'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const resend = new Resend(process.env.RESEND_API_KEY || '')
 
 /**
  * This endpoint sends reminder emails to attendees 24 hours before an event

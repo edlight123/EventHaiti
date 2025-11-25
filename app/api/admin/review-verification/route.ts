@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { Resend } from 'resend'
 import { adminDb } from '@/lib/firebase/admin'
 
-const resend = new Resend(process.env.RESEND_API_KEY || '')
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@eventhaiti.com').split(',')
 
 export async function POST(request: NextRequest) {
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     const organizer = userToUpdate
 
     // Send notification email to organizer
-    if (organizer?.email) {
+    if (organizer?.email && resend) {
       try {
         if (status === 'approved') {
           await resend.emails.send({
