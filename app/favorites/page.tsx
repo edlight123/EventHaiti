@@ -42,7 +42,7 @@ export default async function FavoritesPage() {
   
   try {
     const { data: favorites, error } = await supabase
-      .from('favorites')
+      .from('event_favorites')
       .select(`
         event:events (*)
       `)
@@ -53,7 +53,7 @@ export default async function FavoritesPage() {
     }
   } catch (error) {
     // Table doesn't exist yet, show empty state
-    console.log('Favorites table not found')
+    console.log('Event favorites table not found')
   }
 
   return (
