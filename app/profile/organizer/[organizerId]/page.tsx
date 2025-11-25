@@ -93,6 +93,19 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
 
   const totalTicketsSold = ticketStats?.reduce((sum: number, event: any) => sum + (event.tickets_sold || 0), 0) || 0
 
+  // Check if current user is following this organizer
+  let isFollowing = false
+  if (user) {
+    const { data: followData } = await supabase
+      .from('organizer_follows')
+      .select('id')
+      .eq('organizer_id', organizerId)
+      .eq('user_id', user.id)
+      .single()
+    
+    isFollowing = !!followData
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar user={user} />
@@ -142,7 +155,7 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
               {/* Follow Button */}
               {user && user.id !== organizerId && (
                 <div className="max-w-xs">
-                  <FollowButton organizerId={organizerId} userId={user.id} />
+                  <FollowButton organizerId={organizerId} userId={user.id} initialIsFollowing={isFollowing} />
                 </div>
               )}
             </div>
