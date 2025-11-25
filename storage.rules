@@ -1,18 +1,3 @@
-# Firebase Storage Setup Instructions
-
-## Issue
-Permission errors blocking file uploads from the web application to Firebase Storage.
-
-## Quick Fix - Update Storage Security Rules
-
-### Step 1: Go to Firebase Console
-1. Visit [Firebase Console](https://console.firebase.google.com/)
-2. Select your project: **event-haiti**
-3. Navigate to: **Storage** → **Rules**
-
-### Step 2: Copy and Apply These Rules
-
-```
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
@@ -51,39 +36,3 @@ service firebase.storage {
     }
   }
 }
-```
-
-### Step 3: Publish
-Click **Publish** to save the rules.
-
-### Step 4: Test
-Try uploading an event image again. It should work now!
-
----
-
-## Alternative: Deploy Rules via CLI
-
-If you have Firebase CLI installed:
-
-```bash
-firebase deploy --only storage
-```
-
-This will deploy the `storage.rules` file in the project root.
-
----
-
-## Troubleshooting
-
-If still having issues:
-
-1. **Check Firebase Storage is enabled**:
-   - Go to Firebase Console → Storage
-   - Ensure Storage is activated for your project
-
-2. **Verify bucket name**:
-   - Should be: `event-haiti.firebasestorage.app`
-
-3. **Check browser console** for any new errors
-
-4. **Clear browser cache** and try again
