@@ -84,7 +84,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     event = {
       ...event,
       users: {
-        full_name: 'Demo Organizer'
+        full_name: 'Demo Organizer',
+        is_verified: true
       }
     }
   } else {
@@ -152,6 +153,20 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     relatedEvents = DEMO_EVENTS.filter(e => e.category === event.category && e.id !== id).slice(0, 3)
   }
 
+  // Check if user is following this organizer
+  let isFollowing = false
+  if (!isDemoMode() && user && event.organizer_id) {
+    const supabase = await createClient()
+    const { data: followData } = await supabase
+      .from('organizer_follows')
+      .select('id')
+      .eq('organizer_id', event.organizer_id)
+      .eq('user_id', user.id)
+      .single()
+    
+    isFollowing = !!followData
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar user={user} />
@@ -208,7 +223,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
             </h1>
 
             {/* Organizer */}
-            <div className="flex items-center gap-3 mb-8">
+            <a href={`/profile/organizer/${event.organizer_id}`} className="flex items-center gap-3 mb-8 hover:opacity-80 transition-opacity">
               <div className="w-12 h-12 bg-gradient-to-br from-brand-400 to-accent-400 rounded-full flex items-center justify-center text-white font-bold text-lg">
                 {(event.users?.full_name || 'E')[0].toUpperCase()}
               </div>
@@ -223,7 +238,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                   </div>
                 )}
               </div>
-            </div>
+            </a>
 
             {/* Key Info - Horizontal on Desktop */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
@@ -470,7 +485,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                   </div>
                 </a>
                 {user && event.organizer_id && user.id !== event.organizer_id && (
-                  <FollowButton organizerId={event.organizer_id} userId={user.id} />
+                  <FollowButton organizerId={event.organizer_id} userId={user.id} initialIsFollowing={isFollowing} />
                 )}
               </div>
 
