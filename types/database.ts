@@ -438,6 +438,53 @@ export interface Database {
           action_taken?: string | null
         }
       }
+      ticket_tiers: {
+        Row: {
+          id: string
+          event_id: string
+          name: string
+          description: string | null
+          price: number
+          total_quantity: number
+          sold_quantity: number
+          sort_order: number
+          is_active: boolean
+          sales_start: string | null
+          sales_end: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          name: string
+          description?: string | null
+          price: number
+          total_quantity: number
+          sold_quantity?: number
+          sort_order?: number
+          is_active?: boolean
+          sales_start?: string | null
+          sales_end?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          name?: string
+          description?: string | null
+          price?: number
+          total_quantity?: number
+          sold_quantity?: number
+          sort_order?: number
+          is_active?: boolean
+          sales_start?: string | null
+          sales_end?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
   }
 }

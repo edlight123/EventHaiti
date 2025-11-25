@@ -164,12 +164,15 @@ export default function EventForm({ userId, event }: EventFormProps) {
           const tiersData = ticketTiers
             .filter(tier => tier.name && tier.price && tier.quantity)
             .map(tier => ({
+              id: `tier_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
               event_id: data.id,
               name: tier.name,
               price: parseFloat(tier.price),
-              quantity: parseInt(tier.quantity),
-              available: parseInt(tier.quantity),
+              total_quantity: parseInt(tier.quantity),
+              sold_quantity: 0,
               description: tier.description || null,
+              is_active: true,
+              sort_order: 0,
             }))
 
           if (tiersData.length > 0) {
