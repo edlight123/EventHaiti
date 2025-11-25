@@ -684,7 +684,7 @@ export default function EventForm({ userId, event }: EventFormProps) {
 
                 {ticketTiers.length === 0 && (
                   <div className="text-center py-6 text-purple-700">
-                    <p className="text-sm">No tiers added yet. Click "Add Tier" to create special ticket types.</p>
+                    <p className="text-sm">No tiers added yet. Click &quot;Add Tier&quot; to create special ticket types.</p>
                   </div>
                 )}
               </div>
