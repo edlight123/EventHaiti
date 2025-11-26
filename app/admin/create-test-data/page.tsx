@@ -306,7 +306,7 @@ export default function CreateTestDataPage() {
                 <span className="text-2xl mr-3">⚠️</span>
                 <div className="text-sm text-amber-800">
                   <p className="font-semibold mb-1">Temporary Admin Page</p>
-                  <p>This page should be deleted after testing. It's only for development purposes.</p>
+                  <p>This page should be deleted after testing. It&apos;s only for development purposes.</p>
                 </div>
               </div>
             </div>
