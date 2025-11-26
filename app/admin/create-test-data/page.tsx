@@ -1,0 +1,327 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
+import { db } from '@/lib/firebase/client'
+import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'firebase/firestore'
+
+export default function CreateTestDataPage() {
+  const { user, loading } = useAuth()
+  const router = useRouter()
+  const [creating, setCreating] = useState(false)
+  const [results, setResults] = useState<string[]>([])
+
+  const testEvents = [
+    {
+      title: 'Tech Innovation Summit 2025',
+      description: 'Join Haiti\'s premier technology conference featuring keynote speakers, workshops, and networking opportunities. Explore the latest innovations in AI, blockchain, and digital transformation shaping Haiti\'s tech landscape.',
+      category: 'Technology',
+      location: 'Port-au-Prince Convention Center',
+      address: '123 Tech Avenue, Pétion-Ville, Port-au-Prince',
+      date: new Date('2025-12-15T09:00:00'),
+      price: 2500,
+      currency: 'HTG',
+      totalTickets: 500,
+      imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
+      isVirtual: false,
+      isFeatured: true
+    },
+    {
+      title: 'Haiti Jazz & Arts Festival',
+      description: 'Experience the vibrant sounds of Haitian jazz and international artists in this week-long celebration of music and culture. Features live performances, art exhibitions, and culinary experiences.',
+      category: 'Music',
+      location: 'Jacmel Waterfront',
+      address: 'Beach Road, Jacmel',
+      date: new Date('2026-01-20T18:00:00'),
+      price: 1500,
+      currency: 'HTG',
+      totalTickets: 1000,
+      imageUrl: 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=800',
+      isVirtual: false,
+      isFeatured: true
+    },
+    {
+      title: 'Entrepreneurship Workshop Series',
+      description: 'A comprehensive 6-week program designed for aspiring entrepreneurs. Learn business fundamentals, financial planning, marketing strategies, and pitch preparation from successful Haitian business leaders.',
+      category: 'Education',
+      location: 'Business Innovation Hub',
+      address: '45 Commerce Street, Port-au-Prince',
+      date: new Date('2025-12-08T14:00:00'),
+      price: 3000,
+      currency: 'HTG',
+      totalTickets: 150,
+      imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800',
+      isVirtual: false,
+      isFeatured: false
+    },
+    {
+      title: 'Haitian Cuisine Masterclass',
+      description: 'Learn to prepare authentic Haitian dishes from renowned Chef Marie-Louise. This hands-on cooking class covers traditional recipes, local ingredients, and modern twists on classic favorites.',
+      category: 'Food & Drink',
+      location: 'Culinary Arts Studio',
+      address: '78 Gourmet Lane, Pétion-Ville',
+      date: new Date('2025-12-22T10:00:00'),
+      price: 1800,
+      currency: 'HTG',
+      totalTickets: 40,
+      imageUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800',
+      isVirtual: false,
+      isFeatured: false
+    },
+    {
+      title: 'Charity 5K Run for Education',
+      description: 'Run for a cause! Support education initiatives across Haiti while staying fit. All proceeds go toward building libraries and providing school supplies in underserved communities.',
+      category: 'Sports',
+      location: 'Champ de Mars',
+      address: 'Champ de Mars, Port-au-Prince',
+      date: new Date('2026-01-10T06:00:00'),
+      price: 500,
+      currency: 'HTG',
+      totalTickets: 2000,
+      imageUrl: 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=800',
+      isVirtual: false,
+      isFeatured: true
+    },
+    {
+      title: 'Art Gallery Opening: Haitian Masters',
+      description: 'Grand opening of a new exhibition showcasing works by Haiti\'s most celebrated contemporary artists. Enjoy wine, light refreshments, and meet the artists in this elegant evening event.',
+      category: 'Arts & Culture',
+      location: 'Musée d\'Art Haïtien',
+      address: '201 Art Boulevard, Port-au-Prince',
+      date: new Date('2025-12-28T19:00:00'),
+      price: 0,
+      currency: 'HTG',
+      totalTickets: 300,
+      imageUrl: 'https://images.unsplash.com/photo-1531243269054-5ebf6f34081e?w=800',
+      isVirtual: false,
+      isFeatured: true
+    },
+    {
+      title: 'Digital Marketing Bootcamp',
+      description: 'Master the fundamentals of digital marketing including social media strategy, SEO, content creation, and analytics. Perfect for small business owners and marketing professionals.',
+      category: 'Business',
+      location: 'Online via Zoom',
+      address: 'Virtual Event',
+      date: new Date('2025-12-18T15:00:00'),
+      price: 2000,
+      currency: 'HTG',
+      totalTickets: 500,
+      imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800',
+      isVirtual: true,
+      isFeatured: false
+    }
+  ]
+
+  const createTestEvents = async () => {
+    if (!user) {
+      setResults(['❌ You must be logged in to create test events'])
+      return
+    }
+
+    setCreating(true)
+    setResults(['🔄 Starting event creation...', ''])
+
+    try {
+      // Get user document
+      const usersQuery = query(collection(db, 'users'), where('email', '==', user.email))
+      const userSnapshot = await getDocs(usersQuery)
+      
+      if (userSnapshot.empty) {
+        setResults(prev => [...prev, '❌ User document not found in database'])
+        return
+      }
+
+      const userId = userSnapshot.docs[0].id
+      setResults(prev => [...prev, `✅ Found user: ${user.email}`, `✅ User ID: ${userId}`, ''])
+
+      let successCount = 0
+      let errorCount = 0
+
+      for (const event of testEvents) {
+        try {
+          const eventData = {
+            ...event,
+            organizerId: userId,
+            status: 'published',
+            ticketsSold: 0,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          }
+
+          const docRef = await addDoc(collection(db, 'events'), eventData)
+          setResults(prev => [...prev, `✅ Created: ${event.title} (ID: ${docRef.id})`])
+          successCount++
+        } catch (error: any) {
+          setResults(prev => [...prev, `❌ Failed: ${event.title} - ${error.message}`])
+          errorCount++
+        }
+      }
+
+      setResults(prev => [
+        ...prev,
+        '',
+        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        `✅ Successfully created ${successCount} events`,
+        errorCount > 0 ? `❌ Failed to create ${errorCount} events` : '',
+        '',
+        '🎉 Done! You can now view the events at /discover'
+      ])
+
+    } catch (error: any) {
+      setResults(prev => [...prev, '', `❌ Error: ${error.message}`])
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Authentication Required</h1>
+          <p className="text-gray-600 mb-6">
+            You must be logged in to access this page.
+          </p>
+          <button
+            onClick={() => router.push('/auth/login')}
+            className="w-full px-6 py-3 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 transition"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-8 py-6">
+            <h1 className="text-3xl font-bold text-white mb-2">
+              🧪 Create Test Events
+            </h1>
+            <p className="text-teal-50">
+              Generate 7 sample events with images for testing
+            </p>
+          </div>
+
+          {/* Content */}
+          <div className="p-8">
+            {/* User Info */}
+            <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-teal-800">
+                <span className="font-semibold">Logged in as:</span> {user.email}
+              </p>
+              <p className="text-sm text-teal-600 mt-1">
+                Events will be created under this account
+              </p>
+            </div>
+
+            {/* Event Preview */}
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-3">
+                Events to be created ({testEvents.length}):
+              </h2>
+              <div className="bg-gray-50 rounded-lg p-4 max-h-48 overflow-y-auto">
+                <ul className="space-y-2 text-sm text-gray-700">
+                  {testEvents.map((event, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="text-teal-600 mr-2">•</span>
+                      <div>
+                        <span className="font-medium">{event.title}</span>
+                        <span className="text-gray-500 ml-2">
+                          ({event.category}, {event.price === 0 ? 'FREE' : `${event.currency} ${event.price.toLocaleString()}`})
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <button
+              onClick={createTestEvents}
+              disabled={creating}
+              className={`w-full px-6 py-4 rounded-lg font-semibold text-white transition-all transform ${
+                creating
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-teal-600 hover:bg-teal-700 hover:scale-[1.02] active:scale-[0.98]'
+              }`}
+            >
+              {creating ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Creating Events...
+                </span>
+              ) : (
+                '🚀 Create Test Events Now'
+              )}
+            </button>
+
+            {/* Results Output */}
+            {results.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Output:</h3>
+                <div className="bg-gray-900 text-gray-100 rounded-lg p-4 font-mono text-sm max-h-96 overflow-y-auto">
+                  {results.map((line, index) => (
+                    <div key={index} className="mb-1">
+                      {line}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Warning */}
+            <div className="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <span className="text-2xl mr-3">⚠️</span>
+                <div className="text-sm text-amber-800">
+                  <p className="font-semibold mb-1">Temporary Admin Page</p>
+                  <p>This page should be deleted after testing. It's only for development purposes.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            {results.some(r => r.includes('Successfully created')) && (
+              <div className="mt-6 flex gap-4">
+                <button
+                  onClick={() => router.push('/discover')}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
+                >
+                  View Events
+                </button>
+                <button
+                  onClick={() => router.push('/organizer/events')}
+                  className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition"
+                >
+                  Manage Events
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
