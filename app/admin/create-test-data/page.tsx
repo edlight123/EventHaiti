@@ -1,16 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/useAuth'
-import { db } from '@/lib/firebase/client'
+import { auth, db } from '@/lib/firebase/client'
+import { onAuthStateChanged, User } from 'firebase/auth'
 import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'firebase/firestore'
 
 export default function CreateTestDataPage() {
-  const { user, loading } = useAuth()
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
   const [creating, setCreating] = useState(false)
   const [results, setResults] = useState<string[]>([])
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user)
+      setLoading(false)
+    })
+    return () => unsubscribe()
+  }, [])
 
   const testEvents = [
     {
