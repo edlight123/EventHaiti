@@ -27,98 +27,112 @@ export default function CreateTestDataPage() {
       description: 'Join Haiti\'s premier technology conference featuring keynote speakers, workshops, and networking opportunities. Explore the latest innovations in AI, blockchain, and digital transformation shaping Haiti\'s tech landscape.',
       category: 'Technology',
       location: 'Port-au-Prince Convention Center',
+      city: 'Port-au-Prince',
       address: '123 Tech Avenue, Pétion-Ville, Port-au-Prince',
-      date: new Date('2025-12-15T09:00:00'),
-      price: 2500,
-      currency: 'HTG',
-      totalTickets: 500,
-      imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
-      isVirtual: false,
-      isFeatured: true
+      start_datetime: '2025-12-15T09:00:00',
+      end_datetime: '2025-12-15T18:00:00',
+      ticket_price: 2500,
+      total_tickets: 500,
+      image_url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
+      is_virtual: false,
+      is_featured: true,
+      is_published: true
     },
     {
       title: 'Haiti Jazz & Arts Festival',
       description: 'Experience the vibrant sounds of Haitian jazz and international artists in this week-long celebration of music and culture. Features live performances, art exhibitions, and culinary experiences.',
       category: 'Music',
       location: 'Jacmel Waterfront',
+      city: 'Jacmel',
       address: 'Beach Road, Jacmel',
-      date: new Date('2026-01-20T18:00:00'),
-      price: 1500,
-      currency: 'HTG',
-      totalTickets: 1000,
-      imageUrl: 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=800',
-      isVirtual: false,
-      isFeatured: true
+      start_datetime: '2026-01-20T18:00:00',
+      end_datetime: '2026-01-20T23:00:00',
+      ticket_price: 1500,
+      total_tickets: 1000,
+      image_url: 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=800',
+      is_virtual: false,
+      is_featured: true,
+      is_published: true
     },
     {
       title: 'Entrepreneurship Workshop Series',
       description: 'A comprehensive 6-week program designed for aspiring entrepreneurs. Learn business fundamentals, financial planning, marketing strategies, and pitch preparation from successful Haitian business leaders.',
       category: 'Education',
       location: 'Business Innovation Hub',
+      city: 'Port-au-Prince',
       address: '45 Commerce Street, Port-au-Prince',
-      date: new Date('2025-12-08T14:00:00'),
-      price: 3000,
-      currency: 'HTG',
-      totalTickets: 150,
-      imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800',
-      isVirtual: false,
-      isFeatured: false
+      start_datetime: '2025-12-08T14:00:00',
+      end_datetime: '2025-12-08T17:00:00',
+      ticket_price: 3000,
+      total_tickets: 150,
+      image_url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800',
+      is_virtual: false,
+      is_featured: false,
+      is_published: true
     },
     {
       title: 'Haitian Cuisine Masterclass',
       description: 'Learn to prepare authentic Haitian dishes from renowned Chef Marie-Louise. This hands-on cooking class covers traditional recipes, local ingredients, and modern twists on classic favorites.',
       category: 'Food & Drink',
       location: 'Culinary Arts Studio',
+      city: 'Pétion-Ville',
       address: '78 Gourmet Lane, Pétion-Ville',
-      date: new Date('2025-12-22T10:00:00'),
-      price: 1800,
-      currency: 'HTG',
-      totalTickets: 40,
-      imageUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800',
-      isVirtual: false,
-      isFeatured: false
+      start_datetime: '2025-12-22T10:00:00',
+      end_datetime: '2025-12-22T14:00:00',
+      ticket_price: 1800,
+      total_tickets: 40,
+      image_url: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800',
+      is_virtual: false,
+      is_featured: false,
+      is_published: true
     },
     {
       title: 'Charity 5K Run for Education',
       description: 'Run for a cause! Support education initiatives across Haiti while staying fit. All proceeds go toward building libraries and providing school supplies in underserved communities.',
       category: 'Sports',
       location: 'Champ de Mars',
+      city: 'Port-au-Prince',
       address: 'Champ de Mars, Port-au-Prince',
-      date: new Date('2026-01-10T06:00:00'),
-      price: 500,
-      currency: 'HTG',
-      totalTickets: 2000,
-      imageUrl: 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=800',
-      isVirtual: false,
-      isFeatured: true
+      start_datetime: '2026-01-10T06:00:00',
+      end_datetime: '2026-01-10T09:00:00',
+      ticket_price: 500,
+      total_tickets: 2000,
+      image_url: 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=800',
+      is_virtual: false,
+      is_featured: true,
+      is_published: true
     },
     {
       title: 'Art Gallery Opening: Haitian Masters',
       description: 'Grand opening of a new exhibition showcasing works by Haiti\'s most celebrated contemporary artists. Enjoy wine, light refreshments, and meet the artists in this elegant evening event.',
       category: 'Arts & Culture',
       location: 'Musée d\'Art Haïtien',
+      city: 'Port-au-Prince',
       address: '201 Art Boulevard, Port-au-Prince',
-      date: new Date('2025-12-28T19:00:00'),
-      price: 0,
-      currency: 'HTG',
-      totalTickets: 300,
-      imageUrl: 'https://images.unsplash.com/photo-1531243269054-5ebf6f34081e?w=800',
-      isVirtual: false,
-      isFeatured: true
+      start_datetime: '2025-12-28T19:00:00',
+      end_datetime: '2025-12-28T22:00:00',
+      ticket_price: 0,
+      total_tickets: 300,
+      image_url: 'https://images.unsplash.com/photo-1531243269054-5ebf6f34081e?w=800',
+      is_virtual: false,
+      is_featured: true,
+      is_published: true
     },
     {
       title: 'Digital Marketing Bootcamp',
       description: 'Master the fundamentals of digital marketing including social media strategy, SEO, content creation, and analytics. Perfect for small business owners and marketing professionals.',
       category: 'Business',
       location: 'Online via Zoom',
+      city: 'Virtual',
       address: 'Virtual Event',
-      date: new Date('2025-12-18T15:00:00'),
-      price: 2000,
-      currency: 'HTG',
-      totalTickets: 500,
-      imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800',
-      isVirtual: true,
-      isFeatured: false
+      start_datetime: '2025-12-18T15:00:00',
+      end_datetime: '2025-12-18T18:00:00',
+      ticket_price: 2000,
+      total_tickets: 500,
+      image_url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800',
+      is_virtual: true,
+      is_featured: false,
+      is_published: true
     }
   ]
 
@@ -151,11 +165,10 @@ export default function CreateTestDataPage() {
         try {
           const eventData = {
             ...event,
-            organizerId: userId,
-            status: 'published',
-            ticketsSold: 0,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
+            organizer_id: userId,
+            tickets_sold: 0,
+            created_at: serverTimestamp(),
+            updated_at: serverTimestamp()
           }
 
           const docRef = await addDoc(collection(db, 'events'), eventData)
@@ -254,7 +267,7 @@ export default function CreateTestDataPage() {
                       <div>
                         <span className="font-medium">{event.title}</span>
                         <span className="text-gray-500 ml-2">
-                          ({event.category}, {event.price === 0 ? 'FREE' : `${event.currency} ${event.price.toLocaleString()}`})
+                          ({event.category}, {event.ticket_price === 0 ? 'FREE' : `HTG ${event.ticket_price.toLocaleString()}`})
                         </span>
                       </div>
                     </li>
