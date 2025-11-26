@@ -23,16 +23,36 @@ export default function AddToWalletButton({ ticket, event }: AddToWalletButtonPr
     await new Promise(resolve => setTimeout(resolve, 500))
     
     try {
-      // Find the QR code canvas element
-      const qrCodeElement = document.querySelector('canvas') as HTMLCanvasElement
+      // Find the QR code SVG element
+      const qrCodeElement = document.querySelector('svg') as SVGElement
       if (!qrCodeElement) {
         alert('QR code not found. Please wait a moment and try again.')
         setIsDownloading(false)
         return
       }
 
-      // Get QR code as data URL
-      const qrDataUrl = qrCodeElement.toDataURL('image/png')
+      // Convert SVG to PNG for better PDF compatibility
+      const svgData = new XMLSerializer().serializeToString(qrCodeElement)
+      
+      // Create canvas to convert SVG to PNG
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const img = new Image()
+      
+      // Wait for image to load
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => {
+          canvas.width = img.width
+          canvas.height = img.height
+          ctx?.drawImage(img, 0, 0)
+          resolve()
+        }
+        img.onerror = reject
+        img.src = 'data:image/svg+xml;base64,' + btoa(svgData)
+      })
+      
+      // Get QR code as PNG data URL
+      const qrDataUrl = canvas.toDataURL('image/png')
 
       // Create a clean, printable version
       const printWindow = window.open('', '_blank')
