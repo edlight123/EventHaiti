@@ -167,6 +167,20 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     isFollowing = !!followData
   }
 
+  // Check if user has favorited this event
+  let isFavorite = false
+  if (!isDemoMode() && user) {
+    const supabase = await createClient()
+    const { data: favoriteData } = await supabase
+      .from('event_favorites')
+      .select('id')
+      .eq('event_id', id)
+      .eq('user_id', user.id)
+      .single()
+    
+    isFavorite = !!favoriteData
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar user={user} />
@@ -391,7 +405,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-2">
                     <h3 className="text-lg font-bold text-gray-900">Get Tickets</h3>
-                    <FavoriteButton eventId={event.id} userId={user?.id || null} />
+                    <FavoriteButton eventId={event.id} userId={user?.id || null} initialIsFavorite={isFavorite} />
                   </div>
                 </div>
 
