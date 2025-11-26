@@ -91,16 +91,28 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   } else {
     // Fetch from database
     const supabase = await createClient()
-    const { data } = await supabase
+    
+    // First get the event
+    const { data: eventData } = await supabase
       .from('events')
-      .select('*, users!events_organizer_id_fkey(full_name, is_verified)')
+      .select('*')
       .eq('id', id)
       .single()
 
-    event = data
-
-    if (!event || (!event.is_published && event.organizer_id !== user?.id)) {
+    if (!eventData || (!eventData.is_published && eventData.organizer_id !== user?.id)) {
       notFound()
+    }
+
+    // Then get the organizer data separately
+    const { data: organizerData } = await supabase
+      .from('users')
+      .select('full_name, is_verified')
+      .eq('id', eventData.organizer_id)
+      .single()
+
+    event = {
+      ...eventData,
+      users: organizerData
     }
   }
 
