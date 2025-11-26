@@ -13,18 +13,30 @@ export default function AddToWalletButton({ ticket, event }: AddToWalletButtonPr
   const [isDownloading, setIsDownloading] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
 
+  // Close dropdown when clicking outside
+  const dropdownRef = useState<HTMLDivElement | null>(null)
+
   const handleDownloadPDF = async () => {
     setIsDownloading(true)
     try {
+      // Find the QR code canvas element
+      const qrCodeElement = document.querySelector('canvas') as HTMLCanvasElement
+      if (!qrCodeElement) {
+        alert('QR code not found. Please try again.')
+        setIsDownloading(false)
+        return
+      }
+
+      // Get QR code as data URL
+      const qrDataUrl = qrCodeElement.toDataURL('image/png')
+
       // Create a clean, printable version
       const printWindow = window.open('', '_blank')
       if (!printWindow) {
         alert('Please allow popups to download your ticket')
+        setIsDownloading(false)
         return
       }
-
-      const qrCodeElement = document.querySelector('canvas')
-      const qrDataUrl = qrCodeElement ? (qrCodeElement as HTMLCanvasElement).toDataURL() : ''
 
       printWindow.document.write(`
         <!DOCTYPE html>
@@ -223,20 +235,17 @@ export default function AddToWalletButton({ ticket, event }: AddToWalletButtonPr
       alert('Failed to generate ticket PDF')
     } finally {
       setIsDownloading(false)
-      setShowOptions(false)
     }
   }
 
   const handleAddToAppleWallet = () => {
     // For now, show instructions
     alert('Apple Wallet integration coming soon! Use "Download PDF" to save your ticket.')
-    setShowOptions(false)
   }
 
   const handleAddToGooglePay = () => {
     // For now, show instructions
     alert('Google Pay integration coming soon! Use "Download PDF" to save your ticket.')
-    setShowOptions(false)
   }
 
   return (
