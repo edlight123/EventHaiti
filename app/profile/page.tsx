@@ -113,7 +113,7 @@ export default async function ProfilePage() {
                   
                   <div className="flex gap-2">
                     <Link
-                      href="/profile/settings"
+                      href="/settings"
                       className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all"
                     >
                       <Settings className="w-4 h-4" />
@@ -316,7 +316,7 @@ export default async function ProfilePage() {
               
               <div className="space-y-2">
                 <Link
-                  href="/profile/settings"
+                  href="/settings"
                   className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 transition-colors"
                 >
                   <Settings className="w-5 h-5" />

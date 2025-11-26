@@ -59,6 +59,8 @@ export async function getCurrentUser() {
     full_name: userData?.full_name || '',
     role: userData?.role || 'attendee',
     phone_number: userData?.phone_number || null,
+    is_verified: userData?.is_verified || false,
+    verification_status: userData?.verification_status || 'none',
     created_at: userData?.created_at || new Date().toISOString(),
     updated_at: userData?.updated_at || new Date().toISOString()
   } as any
