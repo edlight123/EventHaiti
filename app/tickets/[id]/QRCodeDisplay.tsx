@@ -9,11 +9,13 @@ interface QRCodeDisplayProps {
 
 export default function QRCodeDisplay({ value, size = 256 }: QRCodeDisplayProps) {
   return (
-    <QRCodeSVG
-      value={value}
-      size={size}
-      level="H"
-      includeMargin={true}
-    />
+    <div id="ticket-qr-code">
+      <QRCodeSVG
+        value={value}
+        size={size}
+        level="H"
+        includeMargin={true}
+      />
+    </div>
   )
 }

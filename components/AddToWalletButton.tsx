@@ -23,9 +23,12 @@ export default function AddToWalletButton({ ticket, event }: AddToWalletButtonPr
     await new Promise(resolve => setTimeout(resolve, 500))
     
     try {
-      // Find the QR code SVG element
-      const qrCodeElement = document.querySelector('svg') as SVGElement
+      // Find the QR code SVG element by its container
+      const qrContainer = document.getElementById('ticket-qr-code')
+      const qrCodeElement = qrContainer?.querySelector('svg') as SVGElement
+      
       if (!qrCodeElement) {
+        console.error('QR code not found. Container:', qrContainer)
         alert('QR code not found. Please wait a moment and try again.')
         setIsDownloading(false)
         return
@@ -33,6 +36,7 @@ export default function AddToWalletButton({ ticket, event }: AddToWalletButtonPr
 
       // Convert SVG to PNG for better PDF compatibility
       const svgData = new XMLSerializer().serializeToString(qrCodeElement)
+      console.log('SVG data length:', svgData.length)
       
       // Create canvas to convert SVG to PNG
       const canvas = document.createElement('canvas')
@@ -42,17 +46,23 @@ export default function AddToWalletButton({ ticket, event }: AddToWalletButtonPr
       // Wait for image to load
       await new Promise<void>((resolve, reject) => {
         img.onload = () => {
-          canvas.width = img.width
-          canvas.height = img.height
+          canvas.width = img.width || 300
+          canvas.height = img.height || 300
+          console.log('Canvas size:', canvas.width, 'x', canvas.height)
           ctx?.drawImage(img, 0, 0)
           resolve()
         }
-        img.onerror = reject
+        img.onerror = (error) => {
+          console.error('Image load error:', error)
+          reject(error)
+        }
         img.src = 'data:image/svg+xml;base64,' + btoa(svgData)
       })
       
       // Get QR code as PNG data URL
       const qrDataUrl = canvas.toDataURL('image/png')
+      console.log('QR Data URL length:', qrDataUrl.length)
+      console.log('QR Data URL preview:', qrDataUrl.substring(0, 100))
 
       // Create a clean, printable version
       const printWindow = window.open('', '_blank')
