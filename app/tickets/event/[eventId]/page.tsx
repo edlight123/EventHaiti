@@ -160,7 +160,7 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
               {validTickets.map((ticket, index) => (
                 <div
                   key={ticket.id}
-                  className="group relative bg-white rounded-2xl shadow-medium border-2 border-gray-200 hover:border-brand-400 hover:shadow-hard transition-all overflow-hidden"
+                  className="group relative bg-white rounded-2xl shadow-medium border-2 border-gray-200 hover:border-brand-400 hover:shadow-hard transition-all overflow-visible"
                 >
                   {/* Ticket Number Badge */}
                   <div className="absolute top-4 right-4 z-10">

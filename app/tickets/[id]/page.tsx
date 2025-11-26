@@ -103,7 +103,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           
           {/* Main Ticket Card */}
           <div className="lg:col-span-2">
-            <div className="relative bg-white rounded-3xl shadow-hard border-2 border-gray-200 overflow-hidden">
+            <div className="relative bg-white rounded-3xl shadow-hard border-2 border-gray-200 overflow-visible">
               
               {/* Status Banner */}
               <div className={`relative h-2 ${

@@ -18,11 +18,15 @@ export default function AddToWalletButton({ ticket, event }: AddToWalletButtonPr
 
   const handleDownloadPDF = async () => {
     setIsDownloading(true)
+    
+    // Give the page time to render the QR code if it hasn't yet
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
     try {
       // Find the QR code canvas element
       const qrCodeElement = document.querySelector('canvas') as HTMLCanvasElement
       if (!qrCodeElement) {
-        alert('QR code not found. Please try again.')
+        alert('QR code not found. Please wait a moment and try again.')
         setIsDownloading(false)
         return
       }
@@ -270,7 +274,7 @@ export default function AddToWalletButton({ ticket, event }: AddToWalletButtonPr
 
       {/* Options Dropdown */}
       {showOptions && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border-2 border-gray-200 overflow-hidden z-10">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border-2 border-gray-200 overflow-hidden z-50">
           <button
             onClick={handleDownloadPDF}
             className="w-full flex items-center gap-3 px-6 py-4 hover:bg-gray-50 transition-colors text-left border-b border-gray-100"
