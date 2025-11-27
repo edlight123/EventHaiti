@@ -379,8 +379,19 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-gray-500 mb-1">ADDRESS</p>
-                  <p className="text-gray-700">{event.address}</p>
-                  <p className="text-gray-700">{event.commune}, {event.city}</p>
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address || `${event.venue_name}, ${event.commune}, ${event.city}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block hover:bg-gray-50 -mx-2 px-2 py-1 rounded transition-colors"
+                  >
+                    <p className="text-gray-700">{event.address}</p>
+                    <p className="text-gray-700">{event.commune}, {event.city}</p>
+                    <p className="text-sm text-brand-600 mt-1 flex items-center gap-1">
+                      <MapPin className="w-4 h-4" />
+                      Open in Google Maps →
+                    </p>
+                  </a>
                 </div>
               </div>
             </div>
