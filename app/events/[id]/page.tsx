@@ -110,9 +110,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       .eq('id', eventData.organizer_id)
       .single()
 
+    // Handle case where organizer data might not exist
     event = {
       ...eventData,
-      users: organizerData
+      users: organizerData || {
+        full_name: 'Event Organizer',
+        is_verified: false
+      }
     }
   }
 
