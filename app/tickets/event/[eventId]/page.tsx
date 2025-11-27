@@ -122,9 +122,14 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-1">Date & Time</p>
-                  <p className="font-bold text-gray-900">{format(new Date(event.start_datetime), 'EEEE, MMM d, yyyy')}</p>
+                  <p className="font-bold text-gray-900">
+                    {event.start_datetime ? format(new Date(event.start_datetime), 'EEEE, MMM d, yyyy') : 'Date TBA'}
+                  </p>
                   <p className="text-sm text-gray-600">
-                    {format(new Date(event.start_datetime), 'h:mm a')} - {format(new Date(event.end_datetime), 'h:mm a')}
+                    {event.start_datetime && event.end_datetime 
+                      ? `${format(new Date(event.start_datetime), 'h:mm a')} - ${format(new Date(event.end_datetime), 'h:mm a')}`
+                      : 'Time TBA'
+                    }
                   </p>
                 </div>
               </div>
@@ -135,8 +140,8 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-accent-600 uppercase tracking-wider mb-1">Venue</p>
-                  <p className="font-bold text-gray-900 truncate">{event.venue_name}</p>
-                  <p className="text-sm text-gray-600 truncate">{event.commune}, {event.city}</p>
+                  <p className="font-bold text-gray-900 truncate">{event.venue_name || 'Venue TBA'}</p>
+                  <p className="text-sm text-gray-600 truncate">{event.commune || 'Location'}, {event.city || 'TBA'}</p>
                 </div>
               </div>
             </div>
@@ -208,7 +213,7 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
                   {/* Purchase Info */}
                   <div className="px-4 pb-4">
                     <p className="text-xs text-gray-500 text-center">
-                      Purchased {format(new Date(ticket.purchased_at), 'MMM d, yyyy')}
+                      {ticket.purchased_at ? `Purchased ${format(new Date(ticket.purchased_at), 'MMM d, yyyy')}` : 'Ticket'}
                     </p>
                   </div>
                 </div>
@@ -254,7 +259,7 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
                         Checked In
                       </Badge>
                       <p className="text-sm text-gray-600">
-                        {format(new Date(ticket.checked_in_at), 'MMM d, yyyy • h:mm a')}
+                        {ticket.checked_in_at ? format(new Date(ticket.checked_in_at), 'MMM d, yyyy • h:mm a') : 'Used'}
                       </p>
                     </div>
                   </div>
