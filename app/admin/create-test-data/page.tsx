@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase/client'
 import { onAuthStateChanged, User } from 'firebase/auth'
-import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, query, where, getDocs, serverTimestamp, deleteDoc, doc } from 'firebase/firestore'
 
 export default function CreateTestDataPage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const [creating, setCreating] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [results, setResults] = useState<string[]>([])
 
   useEffect(() => {
@@ -20,6 +21,51 @@ export default function CreateTestDataPage() {
     })
     return () => unsubscribe()
   }, [])
+
+  const deleteAndRecreateEvents = async () => {
+    if (!user) {
+      setResults(['❌ You must be logged in to manage test events'])
+      return
+    }
+
+    setDeleting(true)
+    setResults(['🗑️ Deleting existing test events...', ''])
+
+    try {
+      // Get user document
+      const usersQuery = query(collection(db, 'users'), where('email', '==', user.email))
+      const userSnapshot = await getDocs(usersQuery)
+      
+      if (userSnapshot.empty) {
+        setResults(prev => [...prev, '❌ User document not found in database'])
+        return
+      }
+
+      const userId = userSnapshot.docs[0].id
+      setResults(prev => [...prev, `✅ Found user: ${user.email}`, ''])
+
+      // Delete existing events for this user
+      const eventsQuery = query(collection(db, 'events'), where('organizer_id', '==', userId))
+      const eventsSnapshot = await getDocs(eventsQuery)
+      
+      let deletedCount = 0
+      for (const eventDoc of eventsSnapshot.docs) {
+        await deleteDoc(eventDoc.ref)
+        setResults(prev => [...prev, `🗑️ Deleted: ${eventDoc.data().title}`])
+        deletedCount++
+      }
+
+      setResults(prev => [...prev, '', `✅ Deleted ${deletedCount} existing events`, '', '🔄 Creating new test events...', ''])
+      setDeleting(false)
+      
+      // Now create new events
+      await createTestEvents(userId)
+
+    } catch (error: any) {
+      setResults(prev => [...prev, '', `❌ Error: ${error.message}`])
+      setDeleting(false)
+    }
+  }
 
   const testEvents = [
     {
@@ -164,27 +210,33 @@ export default function CreateTestDataPage() {
     }
   ]
 
-  const createTestEvents = async () => {
+  const createTestEvents = async (userId?: string) => {
     if (!user) {
       setResults(['❌ You must be logged in to create test events'])
       return
     }
 
     setCreating(true)
-    setResults(['🔄 Starting event creation...', ''])
+    
+    // Only add these messages if we're not already deleting
+    if (!deleting) {
+      setResults(['🔄 Starting event creation...', ''])
+    }
 
     try {
-      // Get user document
-      const usersQuery = query(collection(db, 'users'), where('email', '==', user.email))
-      const userSnapshot = await getDocs(usersQuery)
-      
-      if (userSnapshot.empty) {
-        setResults(prev => [...prev, '❌ User document not found in database'])
-        return
-      }
+      // Get user ID if not provided
+      if (!userId) {
+        const usersQuery = query(collection(db, 'users'), where('email', '==', user.email))
+        const userSnapshot = await getDocs(usersQuery)
+        
+        if (userSnapshot.empty) {
+          setResults(prev => [...prev, '❌ User document not found in database'])
+          return
+        }
 
-      const userId = userSnapshot.docs[0].id
-      setResults(prev => [...prev, `✅ Found user: ${user.email}`, `✅ User ID: ${userId}`, ''])
+        userId = userSnapshot.docs[0].id
+        setResults(prev => [...prev, `✅ Found user: ${user.email}`, `✅ User ID: ${userId}`, ''])
+      }
 
       let successCount = 0
       let errorCount = 0
@@ -304,28 +356,52 @@ export default function CreateTestDataPage() {
               </div>
             </div>
 
-            {/* Action Button */}
-            <button
-              onClick={createTestEvents}
-              disabled={creating}
-              className={`w-full px-6 py-4 rounded-lg font-semibold text-white transition-all transform ${
-                creating
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-teal-600 hover:bg-teal-700 hover:scale-[1.02] active:scale-[0.98]'
-              }`}
-            >
-              {creating ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Creating Events...
-                </span>
-              ) : (
-                '🚀 Create Test Events Now'
-              )}
-            </button>
+            {/* Action Buttons */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                onClick={() => createTestEvents()}
+                disabled={creating || deleting}
+                className={`px-6 py-4 rounded-lg font-semibold text-white transition-all transform ${
+                  creating || deleting
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-teal-600 hover:bg-teal-700 hover:scale-[1.02] active:scale-[0.98]'
+                }`}
+              >
+                {creating ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Creating Events...
+                  </span>
+                ) : (
+                  '🚀 Create Test Events'
+                )}
+              </button>
+
+              <button
+                onClick={deleteAndRecreateEvents}
+                disabled={creating || deleting}
+                className={`px-6 py-4 rounded-lg font-semibold text-white transition-all transform ${
+                  creating || deleting
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-orange-600 hover:bg-orange-700 hover:scale-[1.02] active:scale-[0.98]'
+                }`}
+              >
+                {deleting ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Deleting & Recreating...
+                  </span>
+                ) : (
+                  '🔄 Delete Old & Create Fresh'
+                )}
+              </button>
+            </div>
 
             {/* Results Output */}
             {results.length > 0 && (
