@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase/client'
 import { onAuthStateChanged, User } from 'firebase/auth'
-import { collection, addDoc, query, where, getDocs, serverTimestamp, deleteDoc, doc } from 'firebase/firestore'
+import { collection, addDoc, query, where, getDocs, serverTimestamp, deleteDoc, doc, setDoc } from 'firebase/firestore'
 
 export default function CreateTestDataPage() {
   const [user, setUser] = useState<User | null>(null)
@@ -254,21 +254,25 @@ export default function CreateTestDataPage() {
 
       for (const event of testEvents) {
         try {
+          // Create event with a pre-generated ID
+          const eventId = doc(collection(db, 'events')).id
+          
           const eventData = {
             ...event,
+            id: eventId,
             organizer_id: userId,
             tickets_sold: 0,
             created_at: serverTimestamp(),
             updated_at: serverTimestamp()
           }
 
-          const docRef = await addDoc(collection(db, 'events'), eventData)
-          setResults(prev => [...prev, `✅ Created: ${event.title} (ID: ${docRef.id})`])
+          await setDoc(doc(db, 'events', eventId), eventData)
+          setResults(prev => [...prev, `✅ Created: ${event.title} (ID: ${eventId})`])
 
           // Create ticket tiers for this event
           const tiers = [
             {
-              event_id: docRef.id,
+              event_id: eventId,
               name: 'General Admission',
               description: 'Standard entry ticket with full event access',
               price: event.ticket_price,
@@ -282,7 +286,7 @@ export default function CreateTestDataPage() {
               updated_at: serverTimestamp()
             },
             {
-              event_id: docRef.id,
+              event_id: eventId,
               name: 'VIP Access',
               description: 'Premium seating, exclusive lounge access, and complimentary refreshments',
               price: event.ticket_price * 2,
@@ -296,7 +300,7 @@ export default function CreateTestDataPage() {
               updated_at: serverTimestamp()
             },
             {
-              event_id: docRef.id,
+              event_id: eventId,
               name: 'Early Bird',
               description: 'Discounted tickets for early registrations',
               price: Math.floor(event.ticket_price * 0.75), // 25% discount
@@ -312,7 +316,8 @@ export default function CreateTestDataPage() {
           ]
 
           for (const tier of tiers) {
-            await addDoc(collection(db, 'ticket_tiers'), tier)
+            const tierId = doc(collection(db, 'ticket_tiers')).id
+            await setDoc(doc(db, 'ticket_tiers', tierId), { ...tier, id: tierId })
           }
           
           setResults(prev => [...prev, `   ↳ Added 3 ticket tiers`])
