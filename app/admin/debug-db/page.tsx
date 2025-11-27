@@ -33,10 +33,15 @@ export default function DebugDBPage() {
 
       // Get all events
       const eventsSnapshot = await getDocs(collection(db, 'events'))
-      const allEvents = eventsSnapshot.docs.map(doc => ({
-        firestoreId: doc.id,
-        ...doc.data()
-      }))
+      const allEvents = eventsSnapshot.docs.map(doc => {
+        const data = doc.data()
+        return {
+          firestoreId: doc.id,
+          hasIdField: 'id' in data,
+          idFieldValue: data.id,
+          ...data
+        }
+      })
 
       // Get events by this user
       const userEventsQuery = query(collection(db, 'events'), where('organizer_id', '==', userId))
