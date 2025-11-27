@@ -50,22 +50,39 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
 
   // Fetch organizer's events
   const now = new Date().toISOString()
-  const { data: upcomingEvents } = await supabase
+  const { data: upcomingEventsRaw } = await supabase
     .from('events')
-    .select('*, users!events_organizer_id_fkey(full_name, is_verified)')
+    .select('*')
     .eq('organizer_id', organizerId)
     .eq('is_published', true)
     .gte('start_datetime', now)
     .order('start_datetime', { ascending: true })
 
-  const { data: pastEvents } = await supabase
+  const { data: pastEventsRaw } = await supabase
     .from('events')
-    .select('*, users!events_organizer_id_fkey(full_name, is_verified)')
+    .select('*')
     .eq('organizer_id', organizerId)
     .eq('is_published', true)
     .lt('start_datetime', now)
     .order('start_datetime', { ascending: false })
     .limit(6)
+
+  // Add organizer info to each event
+  const upcomingEvents = upcomingEventsRaw?.map((event: any) => ({
+    ...event,
+    users: {
+      full_name: organizer.full_name,
+      is_verified: organizer.is_verified
+    }
+  }))
+
+  const pastEvents = pastEventsRaw?.map((event: any) => ({
+    ...event,
+    users: {
+      full_name: organizer.full_name,
+      is_verified: organizer.is_verified
+    }
+  }))
 
   // Count followers
   const { data: followersData } = await supabase
@@ -100,7 +117,7 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
       .from('organizer_follows')
       .select('id')
       .eq('organizer_id', organizerId)
-      .eq('user_id', user.id)
+      .eq('follower_id', user.id)
       .single()
     
     isFollowing = !!followData

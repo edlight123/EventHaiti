@@ -50,15 +50,30 @@ export default async function FavoritesPage() {
     if (!favError && favorites && favorites.length > 0) {
       const eventIds = favorites.map((f: any) => f.event_id)
       
-      // Then fetch the actual events with organizer info
+      // Then fetch the actual events
       const { data: events, error: eventsError } = await supabase
         .from('events')
-        .select('*, users!events_organizer_id_fkey(full_name, is_verified)')
+        .select('*')
         .in('id', eventIds)
         .eq('is_published', true)
       
       if (!eventsError && events) {
-        favoriteEvents = events
+        // Fetch organizer info for each event
+        const eventsWithOrganizers = await Promise.all(
+          events.map(async (event: any) => {
+            const { data: organizerData } = await supabase
+              .from('users')
+              .select('full_name, is_verified')
+              .eq('id', event.organizer_id)
+              .single()
+            
+            return {
+              ...event,
+              users: organizerData || { full_name: 'Event Organizer', is_verified: false }
+            }
+          })
+        )
+        favoriteEvents = eventsWithOrganizers
       }
     }
   } catch (error) {
