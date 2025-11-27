@@ -66,6 +66,24 @@ export default function DebugDBPage() {
         ...doc.data()
       }))
 
+      // Test date comparison
+      const now = new Date().toISOString()
+      const nowDate = new Date()
+      console.log('Testing date comparisons:')
+      console.log('Now as ISO string:', now)
+      console.log('Now as Date:', nowDate)
+      
+      // Try to query upcoming events
+      const upcomingQuery = query(
+        collection(db, 'events'),
+        where('organizer_id', '==', userId),
+        where('start_datetime', '>=', now)
+      )
+      const upcomingSnapshot = await getDocs(upcomingQuery)
+      const upcomingEvents = upcomingSnapshot.docs.map(doc => doc.data())
+      
+      console.log('Upcoming events found:', upcomingEvents.length)
+
       // Get organizer_follows
       const followsSnapshot = await getDocs(collection(db, 'organizer_follows'))
       const allFollows = followsSnapshot.docs.map(doc => ({
@@ -83,20 +101,24 @@ export default function DebugDBPage() {
       setResults({
         userId,
         userEmail: user.email,
+        currentTime: now,
         totalEvents: allEvents.length,
         userEvents: userEvents.length,
+        upcomingEventsCount: upcomingEvents.length,
         totalFavorites: allFavorites.length,
         userFavorites: userFavorites.length,
         totalFollows: allFollows.length,
         totalTiers: allTiers.length,
         sampleEvent: allEvents[0],
         sampleUserEvent: userEvents[0],
+        sampleUpcomingEvent: upcomingEvents[0],
         sampleFavorite: allFavorites[0],
         sampleUserFavorite: userFavorites[0],
         sampleFollow: allFollows[0],
         sampleTier: allTiers[0],
         allEvents: allEvents.slice(0, 3),
         allUserEvents: userEvents,
+        allUpcomingEvents: upcomingEvents,
         allUserFavorites: userFavorites,
       })
     } catch (error: any) {
