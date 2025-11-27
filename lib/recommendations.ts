@@ -213,23 +213,29 @@ export async function getTrendingEvents(limit: number = 10) {
 
 /**
  * Get events near a specific location
- * For now, using city-based matching
- * Could be enhanced with geocoding for actual distance calculation
+ * Matches by city OR commune to handle cases like Pétion-Ville
  */
 export async function getNearbyEvents(city: string, limit: number = 10) {
   const supabase = await createClient()
   const now = new Date().toISOString()
 
-  const { data: events } = await supabase
+  // First, get all upcoming published events
+  const { data: allEvents } = await supabase
     .from('events')
     .select('*')
     .eq('is_published', true)
-    .eq('city', city)
     .gte('start_datetime', now)
     .order('start_datetime', { ascending: true })
-    .limit(limit)
 
-  return events || []
+  if (!allEvents) return []
+
+  // Filter in memory to match city OR commune (since we can't use OR queries in Firebase wrapper)
+  const nearbyEvents = allEvents.filter((event: any) => 
+    event.city === city || event.commune === city || 
+    event.city?.includes(city) || event.commune?.includes(city)
+  )
+
+  return nearbyEvents.slice(0, limit)
 }
 
 /**
