@@ -49,13 +49,24 @@ export default function CreateTestDataPage() {
       const eventsSnapshot = await getDocs(eventsQuery)
       
       let deletedCount = 0
+      let deletedTiersCount = 0
+      
       for (const eventDoc of eventsSnapshot.docs) {
+        // Delete ticket tiers for this event
+        const tiersQuery = query(collection(db, 'ticket_tiers'), where('event_id', '==', eventDoc.id))
+        const tiersSnapshot = await getDocs(tiersQuery)
+        
+        for (const tierDoc of tiersSnapshot.docs) {
+          await deleteDoc(tierDoc.ref)
+          deletedTiersCount++
+        }
+        
         await deleteDoc(eventDoc.ref)
         setResults(prev => [...prev, `🗑️ Deleted: ${eventDoc.data().title}`])
         deletedCount++
       }
 
-      setResults(prev => [...prev, '', `✅ Deleted ${deletedCount} existing events`, '', '🔄 Creating new test events...', ''])
+      setResults(prev => [...prev, '', `✅ Deleted ${deletedCount} events and ${deletedTiersCount} ticket tiers`, '', '🔄 Creating new test events...', ''])
       setDeleting(false)
       
       // Now create new events
@@ -210,130 +221,6 @@ export default function CreateTestDataPage() {
     }
   ]
 
-  // Create ticket tiers based on event type and price
-  const createTicketTiersForEvent = (event: typeof testEvents[0]) => {
-    // Free events don't need tiers
-    if (event.ticket_price === 0) {
-      return [{
-        name: 'Free Admission',
-        description: 'Free entry to the event',
-        price: 0,
-        total_quantity: event.total_tickets,
-        sold_quantity: 0,
-        sort_order: 0,
-        is_active: true,
-        sales_start: null,
-        sales_end: null
-      }]
-    }
-
-    // For paid events, create tiered pricing
-    const basePrice = event.ticket_price
-    
-    // Different tier structures based on event category
-    if (event.category === 'Technology' || event.category === 'Business') {
-      // Professional events: Early Bird, Regular, VIP
-      return [
-        {
-          name: 'Early Bird',
-          description: 'Limited early bird discount - save 30%!',
-          price: Math.round(basePrice * 0.7),
-          total_quantity: Math.floor(event.total_tickets * 0.3),
-          sold_quantity: 0,
-          sort_order: 0,
-          is_active: true,
-          sales_start: null,
-          sales_end: new Date(new Date(event.start_datetime).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString() // 1 week before
-        },
-        {
-          name: 'General Admission',
-          description: 'Standard entry to the event',
-          price: basePrice,
-          total_quantity: Math.floor(event.total_tickets * 0.5),
-          sold_quantity: 0,
-          sort_order: 1,
-          is_active: true,
-          sales_start: null,
-          sales_end: null
-        },
-        {
-          name: 'VIP Pass',
-          description: 'VIP access with premium seating, networking lounge, and exclusive perks',
-          price: Math.round(basePrice * 1.5),
-          total_quantity: Math.floor(event.total_tickets * 0.2),
-          sold_quantity: 0,
-          sort_order: 2,
-          is_active: true,
-          sales_start: null,
-          sales_end: null
-        }
-      ]
-    } else if (event.category === 'Music' || event.category === 'Arts & Culture') {
-      // Entertainment events: Standard, Premium, VIP
-      return [
-        {
-          name: 'Standard',
-          description: 'General admission standing area',
-          price: basePrice,
-          total_quantity: Math.floor(event.total_tickets * 0.6),
-          sold_quantity: 0,
-          sort_order: 0,
-          is_active: true,
-          sales_start: null,
-          sales_end: null
-        },
-        {
-          name: 'Premium',
-          description: 'Reserved seating with better view',
-          price: Math.round(basePrice * 1.3),
-          total_quantity: Math.floor(event.total_tickets * 0.3),
-          sold_quantity: 0,
-          sort_order: 1,
-          is_active: true,
-          sales_start: null,
-          sales_end: null
-        },
-        {
-          name: 'VIP',
-          description: 'Front row seating, meet & greet, exclusive lounge access',
-          price: Math.round(basePrice * 2),
-          total_quantity: Math.floor(event.total_tickets * 0.1),
-          sold_quantity: 0,
-          sort_order: 2,
-          is_active: true,
-          sales_start: null,
-          sales_end: null
-        }
-      ]
-    } else {
-      // Other events: Regular and Group tickets
-      return [
-        {
-          name: 'Individual',
-          description: 'Single admission ticket',
-          price: basePrice,
-          total_quantity: Math.floor(event.total_tickets * 0.7),
-          sold_quantity: 0,
-          sort_order: 0,
-          is_active: true,
-          sales_start: null,
-          sales_end: null
-        },
-        {
-          name: 'Group (5+)',
-          description: 'Group discount for 5 or more people - save 20%',
-          price: Math.round(basePrice * 0.8),
-          total_quantity: Math.floor(event.total_tickets * 0.3),
-          sold_quantity: 0,
-          sort_order: 1,
-          is_active: true,
-          sales_start: null,
-          sales_end: null
-        }
-      ]
-    }
-  }
-
   const createTestEvents = async (userId?: string) => {
     if (!user) {
       setResults(['❌ You must be logged in to create test events'])
@@ -376,20 +263,59 @@ export default function CreateTestDataPage() {
           }
 
           const docRef = await addDoc(collection(db, 'events'), eventData)
-          
+          setResults(prev => [...prev, `✅ Created: ${event.title} (ID: ${docRef.id})`])
+
           // Create ticket tiers for this event
-          const ticketTiers = createTicketTiersForEvent(event)
-          for (const tier of ticketTiers) {
-            const tierData = {
-              ...tier,
+          const tiers = [
+            {
               event_id: docRef.id,
+              name: 'General Admission',
+              description: 'Standard entry ticket with full event access',
+              price: event.ticket_price,
+              total_quantity: Math.floor(event.total_tickets * 0.6), // 60% of tickets
+              sold_quantity: 0,
+              sort_order: 1,
+              is_active: true,
+              sales_start: null,
+              sales_end: null,
+              created_at: serverTimestamp(),
+              updated_at: serverTimestamp()
+            },
+            {
+              event_id: docRef.id,
+              name: 'VIP Access',
+              description: 'Premium seating, exclusive lounge access, and complimentary refreshments',
+              price: event.ticket_price * 2,
+              total_quantity: Math.floor(event.total_tickets * 0.25), // 25% of tickets
+              sold_quantity: 0,
+              sort_order: 2,
+              is_active: true,
+              sales_start: null,
+              sales_end: null,
+              created_at: serverTimestamp(),
+              updated_at: serverTimestamp()
+            },
+            {
+              event_id: docRef.id,
+              name: 'Early Bird',
+              description: 'Discounted tickets for early registrations',
+              price: Math.floor(event.ticket_price * 0.75), // 25% discount
+              total_quantity: Math.floor(event.total_tickets * 0.15), // 15% of tickets
+              sold_quantity: 0,
+              sort_order: 0,
+              is_active: true,
+              sales_start: null,
+              sales_end: new Date(new Date(event.start_datetime).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(), // Ends 7 days before event
               created_at: serverTimestamp(),
               updated_at: serverTimestamp()
             }
-            await addDoc(collection(db, 'ticket_tiers'), tierData)
+          ]
+
+          for (const tier of tiers) {
+            await addDoc(collection(db, 'ticket_tiers'), tier)
           }
           
-          setResults(prev => [...prev, `✅ Created: ${event.title} (ID: ${docRef.id}) with ${ticketTiers.length} ticket tiers`])
+          setResults(prev => [...prev, `   ↳ Added 3 ticket tiers`])
           successCount++
         } catch (error: any) {
           setResults(prev => [...prev, `❌ Failed: ${event.title} - ${error.message}`])
