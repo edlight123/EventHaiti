@@ -19,7 +19,7 @@ export default function ShareButtons({ eventId, eventTitle, eventDate, eventVenu
     let message = `🎉 ${eventTitle}\n\n`
     if (eventDate) message += `📅 ${eventDate}\n`
     if (eventVenue) message += `📍 ${eventVenue}\n\n`
-    message += `Get your tickets now! 🎟️`
+    message += `Get your tickets now! 🎫`
     return message
   }
 
@@ -45,7 +45,7 @@ export default function ShareButtons({ eventId, eventTitle, eventDate, eventVenu
   }
 
   const handleShareTwitter = () => {
-    const message = `🎉 ${eventTitle}\n\nGet your tickets now! 🎟️`
+    const message = `🎉 ${eventTitle}\n\nGet your tickets now! 🎫`
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}&url=${encodeURIComponent(eventUrl)}`
     window.open(twitterUrl, '_blank', 'width=600,height=400')
   }
