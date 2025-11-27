@@ -555,10 +555,12 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               </div>
 
               {/* Share Card */}
-              <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Share Event</h3>
-                <ShareButtons eventId={event.id} eventTitle={event.title} />
-              </div>
+              <ShareButtons 
+                eventId={event.id} 
+                eventTitle={event.title}
+                eventDate={format(new Date(event.start_datetime), 'MMM d, yyyy')}
+                eventVenue={`${event.venue_name}, ${event.city}`}
+              />
             </div>
           </div>
         </div>
