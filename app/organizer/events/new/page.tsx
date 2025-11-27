@@ -79,7 +79,7 @@ export default async function NewEventPage() {
                       <div className="text-left">
                         <p className="font-semibold text-blue-900 mb-1">What happens next?</p>
                         <p className="text-sm text-blue-800">
-                          You'll receive an email once your account is verified. Thank you for your patience!
+                          You&apos;ll receive an email once your account is verified. Thank you for your patience!
                         </p>
                       </div>
                     </div>
@@ -111,7 +111,7 @@ export default async function NewEventPage() {
                         <ul className="text-sm text-red-800 space-y-1">
                           <li>• Photos are blurry or unclear</li>
                           <li>• ID card is not fully visible</li>
-                          <li>• Selfie doesn't match ID photo</li>
+                          <li>• Selfie doesn&apos;t match ID photo</li>
                         </ul>
                       </div>
                     </div>
@@ -136,7 +136,7 @@ export default async function NewEventPage() {
                       <svg className="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      What you'll need:
+                      What you&apos;ll need:
                     </h3>
                     <ul className="space-y-3 text-sm text-brand-800">
                       <li className="flex items-start gap-3">
@@ -147,7 +147,7 @@ export default async function NewEventPage() {
                         </div>
                         <div>
                           <p className="font-semibold text-gray-900">Valid Haitian National ID Card</p>
-                          <p className="text-gray-600">Make sure it's not expired</p>
+                          <p className="text-gray-600">Make sure it&apos;s not expired</p>
                         </div>
                       </li>
                       <li className="flex items-start gap-3">
