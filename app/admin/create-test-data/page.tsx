@@ -83,7 +83,7 @@ export default function CreateTestDataPage() {
       price: 2500,
       currency: 'HTG',
       total_tickets: 500,
-      banner_image_url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
+      banner_image_url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
       is_virtual: false,
       is_featured: true,
       is_published: true
@@ -103,7 +103,7 @@ export default function CreateTestDataPage() {
       price: 1500,
       currency: 'HTG',
       total_tickets: 1000,
-      banner_image_url: 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=800',
+      banner_image_url: 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?auto=format&fit=crop&w=1200&q=80',
       is_virtual: false,
       is_featured: true,
       is_published: true
@@ -123,7 +123,7 @@ export default function CreateTestDataPage() {
       price: 3000,
       currency: 'HTG',
       total_tickets: 150,
-      banner_image_url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800',
+      banner_image_url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80',
       is_virtual: false,
       is_featured: false,
       is_published: true
@@ -143,7 +143,7 @@ export default function CreateTestDataPage() {
       price: 1800,
       currency: 'HTG',
       total_tickets: 40,
-      banner_image_url: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800',
+      banner_image_url: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1200&q=80',
       is_virtual: false,
       is_featured: false,
       is_published: true
@@ -163,7 +163,7 @@ export default function CreateTestDataPage() {
       price: 500,
       currency: 'HTG',
       total_tickets: 2000,
-      banner_image_url: 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=800',
+      banner_image_url: 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?auto=format&fit=crop&w=1200&q=80',
       is_virtual: false,
       is_featured: true,
       is_published: true
@@ -183,7 +183,7 @@ export default function CreateTestDataPage() {
       price: 0,
       currency: 'HTG',
       total_tickets: 300,
-      banner_image_url: 'https://images.unsplash.com/photo-1531243269054-5ebf6f34081e?w=800',
+      banner_image_url: 'https://images.unsplash.com/photo-1531243269054-5ebf6f34081e?auto=format&fit=crop&w=1200&q=80',
       is_virtual: false,
       is_featured: true,
       is_published: true
@@ -203,7 +203,7 @@ export default function CreateTestDataPage() {
       price: 2000,
       currency: 'HTG',
       total_tickets: 500,
-      banner_image_url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800',
+      banner_image_url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80',
       is_virtual: true,
       is_featured: false,
       is_published: true
