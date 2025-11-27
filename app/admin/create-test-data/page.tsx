@@ -210,6 +210,130 @@ export default function CreateTestDataPage() {
     }
   ]
 
+  // Create ticket tiers based on event type and price
+  const createTicketTiersForEvent = (event: typeof testEvents[0]) => {
+    // Free events don't need tiers
+    if (event.ticket_price === 0) {
+      return [{
+        name: 'Free Admission',
+        description: 'Free entry to the event',
+        price: 0,
+        total_quantity: event.total_tickets,
+        sold_quantity: 0,
+        sort_order: 0,
+        is_active: true,
+        sales_start: null,
+        sales_end: null
+      }]
+    }
+
+    // For paid events, create tiered pricing
+    const basePrice = event.ticket_price
+    
+    // Different tier structures based on event category
+    if (event.category === 'Technology' || event.category === 'Business') {
+      // Professional events: Early Bird, Regular, VIP
+      return [
+        {
+          name: 'Early Bird',
+          description: 'Limited early bird discount - save 30%!',
+          price: Math.round(basePrice * 0.7),
+          total_quantity: Math.floor(event.total_tickets * 0.3),
+          sold_quantity: 0,
+          sort_order: 0,
+          is_active: true,
+          sales_start: null,
+          sales_end: new Date(new Date(event.start_datetime).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString() // 1 week before
+        },
+        {
+          name: 'General Admission',
+          description: 'Standard entry to the event',
+          price: basePrice,
+          total_quantity: Math.floor(event.total_tickets * 0.5),
+          sold_quantity: 0,
+          sort_order: 1,
+          is_active: true,
+          sales_start: null,
+          sales_end: null
+        },
+        {
+          name: 'VIP Pass',
+          description: 'VIP access with premium seating, networking lounge, and exclusive perks',
+          price: Math.round(basePrice * 1.5),
+          total_quantity: Math.floor(event.total_tickets * 0.2),
+          sold_quantity: 0,
+          sort_order: 2,
+          is_active: true,
+          sales_start: null,
+          sales_end: null
+        }
+      ]
+    } else if (event.category === 'Music' || event.category === 'Arts & Culture') {
+      // Entertainment events: Standard, Premium, VIP
+      return [
+        {
+          name: 'Standard',
+          description: 'General admission standing area',
+          price: basePrice,
+          total_quantity: Math.floor(event.total_tickets * 0.6),
+          sold_quantity: 0,
+          sort_order: 0,
+          is_active: true,
+          sales_start: null,
+          sales_end: null
+        },
+        {
+          name: 'Premium',
+          description: 'Reserved seating with better view',
+          price: Math.round(basePrice * 1.3),
+          total_quantity: Math.floor(event.total_tickets * 0.3),
+          sold_quantity: 0,
+          sort_order: 1,
+          is_active: true,
+          sales_start: null,
+          sales_end: null
+        },
+        {
+          name: 'VIP',
+          description: 'Front row seating, meet & greet, exclusive lounge access',
+          price: Math.round(basePrice * 2),
+          total_quantity: Math.floor(event.total_tickets * 0.1),
+          sold_quantity: 0,
+          sort_order: 2,
+          is_active: true,
+          sales_start: null,
+          sales_end: null
+        }
+      ]
+    } else {
+      // Other events: Regular and Group tickets
+      return [
+        {
+          name: 'Individual',
+          description: 'Single admission ticket',
+          price: basePrice,
+          total_quantity: Math.floor(event.total_tickets * 0.7),
+          sold_quantity: 0,
+          sort_order: 0,
+          is_active: true,
+          sales_start: null,
+          sales_end: null
+        },
+        {
+          name: 'Group (5+)',
+          description: 'Group discount for 5 or more people - save 20%',
+          price: Math.round(basePrice * 0.8),
+          total_quantity: Math.floor(event.total_tickets * 0.3),
+          sold_quantity: 0,
+          sort_order: 1,
+          is_active: true,
+          sales_start: null,
+          sales_end: null
+        }
+      ]
+    }
+  }
+
   const createTestEvents = async (userId?: string) => {
     if (!user) {
       setResults(['❌ You must be logged in to create test events'])
@@ -252,7 +376,20 @@ export default function CreateTestDataPage() {
           }
 
           const docRef = await addDoc(collection(db, 'events'), eventData)
-          setResults(prev => [...prev, `✅ Created: ${event.title} (ID: ${docRef.id})`])
+          
+          // Create ticket tiers for this event
+          const ticketTiers = createTicketTiersForEvent(event)
+          for (const tier of ticketTiers) {
+            const tierData = {
+              ...tier,
+              event_id: docRef.id,
+              created_at: serverTimestamp(),
+              updated_at: serverTimestamp()
+            }
+            await addDoc(collection(db, 'ticket_tiers'), tierData)
+          }
+          
+          setResults(prev => [...prev, `✅ Created: ${event.title} (ID: ${docRef.id}) with ${ticketTiers.length} ticket tiers`])
           successCount++
         } catch (error: any) {
           setResults(prev => [...prev, `❌ Failed: ${event.title} - ${error.message}`])
