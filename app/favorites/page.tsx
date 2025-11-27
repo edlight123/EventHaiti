@@ -41,11 +41,19 @@ export default async function FavoritesPage() {
   let favoriteEvents: Event[] = []
   
   try {
+    console.log('=== FAVORITES PAGE QUERY ===')
+    console.log('User ID:', user.id)
+    
     // First, get the event IDs from favorites
     const { data: favorites, error: favError } = await supabase
       .from('event_favorites')
       .select('event_id')
       .eq('user_id', user.id)
+    
+    console.log('Favorites query result:', { count: favorites?.length, error: favError })
+    if (favorites?.length) {
+      console.log('Favorite event IDs:', favorites.map((f: any) => f.event_id))
+    }
     
     if (!favError && favorites && favorites.length > 0) {
       const eventIds = favorites.map((f: any) => f.event_id)
@@ -56,6 +64,8 @@ export default async function FavoritesPage() {
         .select('*')
         .in('id', eventIds)
         .eq('is_published', true)
+      
+      console.log('Events query result:', { count: events?.length, error: eventsError })
       
       if (!eventsError && events) {
         // Fetch organizer info for each event
@@ -78,7 +88,7 @@ export default async function FavoritesPage() {
     }
   } catch (error) {
     // Table doesn't exist yet, show empty state
-    console.log('Event favorites table not found:', error)
+    console.error('Error fetching favorites:', error)
   }
 
   return (

@@ -50,7 +50,11 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
 
   // Fetch organizer's events
   const now = new Date().toISOString()
-  const { data: upcomingEventsRaw } = await supabase
+  console.log('=== ORGANIZER PROFILE QUERIES ===')
+  console.log('Organizer ID:', organizerId)
+  console.log('Current time:', now)
+  
+  const { data: upcomingEventsRaw, error: upcomingError } = await supabase
     .from('events')
     .select('*')
     .eq('organizer_id', organizerId)
@@ -58,7 +62,12 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
     .gte('start_datetime', now)
     .order('start_datetime', { ascending: true })
 
-  const { data: pastEventsRaw } = await supabase
+  console.log('Upcoming events result:', { count: upcomingEventsRaw?.length, error: upcomingError })
+  if (upcomingEventsRaw?.length) {
+    console.log('First upcoming event:', upcomingEventsRaw[0])
+  }
+
+  const { data: pastEventsRaw, error: pastError } = await supabase
     .from('events')
     .select('*')
     .eq('organizer_id', organizerId)
@@ -66,6 +75,19 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
     .lt('start_datetime', now)
     .order('start_datetime', { ascending: false })
     .limit(6)
+
+  console.log('Past events result:', { count: pastEventsRaw?.length, error: pastError })
+  
+  // Also check ALL events for this organizer (no date filter)
+  const { data: allEvents } = await supabase
+    .from('events')
+    .select('*')
+    .eq('organizer_id', organizerId)
+  
+  console.log('Total events for organizer (any date):', allEvents?.length)
+  if (allEvents?.length) {
+    console.log('Sample event dates:', allEvents.slice(0, 3).map((e: any) => ({ title: e.title, start: e.start_datetime })))
+  }
 
   // Add organizer info to each event
   const upcomingEvents = upcomingEventsRaw?.map((event: any) => ({
