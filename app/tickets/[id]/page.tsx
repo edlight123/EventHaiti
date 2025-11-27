@@ -224,12 +224,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                     </div>
                   </div>
 
-                  <a 
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address || `${event.venue_name}, ${event.commune}, ${event.city}`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-start gap-3 hover:bg-gray-50 -mx-2 px-2 py-2 rounded-lg transition-colors"
-                  >
+                  <div className="flex items-start gap-3">
                     <div className="w-10 h-10 bg-accent-100 rounded-lg flex items-center justify-center flex-shrink-0">
                       <MapPin className="w-5 h-5 text-accent-600" />
                     </div>
@@ -237,9 +232,29 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Venue</p>
                       <p className="font-bold text-gray-900 text-sm">{event.venue_name}</p>
                       <p className="text-sm text-gray-600">{event.commune}, {event.city}</p>
-                      <p className="text-xs text-accent-600 mt-1">Click to open in maps →</p>
+                      <div className="flex gap-2 mt-2">
+                        <a
+                          href={`https://maps.apple.com/?q=${encodeURIComponent(event.address || `${event.venue_name}, ${event.commune}, ${event.city}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-accent-600 hover:text-accent-700 font-medium flex items-center gap-1"
+                        >
+                          <MapPin className="w-3 h-3" />
+                          Apple Maps
+                        </a>
+                        <span className="text-gray-300">|</span>
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address || `${event.venue_name}, ${event.commune}, ${event.city}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-accent-600 hover:text-accent-700 font-medium flex items-center gap-1"
+                        >
+                          <MapPin className="w-3 h-3" />
+                          Google Maps
+                        </a>
+                      </div>
                     </div>
-                  </a>
+                  </div>
 
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
