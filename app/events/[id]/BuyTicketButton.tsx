@@ -303,7 +303,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Total Amount:</span>
                 <span className="text-xl font-bold text-teal-700">
-                  {((selectedTierPrice || ticketPrice) * quantity / 100).toFixed(2)} HTG
+                  {((selectedTierPrice || ticketPrice) * quantity).toLocaleString()} HTG
                 </span>
               </div>
               {promoCode && (
