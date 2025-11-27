@@ -54,7 +54,7 @@ export default async function MyTicketsPage() {
       console.log('ALL tickets in database:', allTicketsData?.length || 0)
       
       // Filter for this user
-      const ticketsData = allTicketsData?.filter((t: any) => t.attendee_id === user.id)
+      const ticketsData = allTicketsData?.filter((t: any) => t.attendee_id === user.id) || []
       console.log('Tickets for this user:', ticketsData?.length || 0)
       
       if (!ticketsData || ticketsData.length === 0) {
@@ -66,7 +66,7 @@ export default async function MyTicketsPage() {
           .from('events')
           .select('*')
         
-        const eventsData = eventsQuery.data
+        const eventsData = eventsQuery.data || []
         
         // Group tickets by event
         const ticketsByEvent = new Map()
