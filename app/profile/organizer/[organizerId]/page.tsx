@@ -54,29 +54,29 @@ export default async function OrganizerProfilePage({ params }: { params: Promise
   console.log('Organizer ID:', organizerId)
   console.log('Current time:', now)
   
-  const { data: upcomingEventsRaw, error: upcomingError } = await supabase
+  // Fetch all events by this organizer, then filter in memory to avoid needing complex indexes
+  const { data: allOrganizerEvents, error: allEventsError } = await supabase
     .from('events')
     .select('*')
     .eq('organizer_id', organizerId)
-    .eq('is_published', true)
-    .gte('start_datetime', now)
-    .order('start_datetime', { ascending: true })
 
-  console.log('Upcoming events result:', { count: upcomingEventsRaw?.length, error: upcomingError })
+  console.log('All organizer events:', { count: allOrganizerEvents?.length, error: allEventsError })
+
+  // Filter upcoming and past events in memory
+  const upcomingEventsRaw = allOrganizerEvents?.filter((event: any) => 
+    event.is_published && event.start_datetime >= now
+  ).sort((a: any, b: any) => a.start_datetime.localeCompare(b.start_datetime))
+
+  const pastEventsRaw = allOrganizerEvents?.filter((event: any) => 
+    event.is_published && event.start_datetime < now
+  ).sort((a: any, b: any) => b.start_datetime.localeCompare(a.start_datetime)).slice(0, 6)
+
+  console.log('Upcoming events result:', { count: upcomingEventsRaw?.length })
   if (upcomingEventsRaw?.length) {
     console.log('First upcoming event:', upcomingEventsRaw[0])
   }
 
-  const { data: pastEventsRaw, error: pastError } = await supabase
-    .from('events')
-    .select('*')
-    .eq('organizer_id', organizerId)
-    .eq('is_published', true)
-    .lt('start_datetime', now)
-    .order('start_datetime', { ascending: false })
-    .limit(6)
-
-  console.log('Past events result:', { count: pastEventsRaw?.length, error: pastError })
+  console.log('Past events result:', { count: pastEventsRaw?.length })
   
   // Also check ALL events for this organizer (no date filter)
   const { data: allEvents } = await supabase
