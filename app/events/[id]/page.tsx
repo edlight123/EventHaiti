@@ -93,22 +93,32 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     const supabase = await createClient()
     
     // First get the event
-    const { data: eventData } = await supabase
+    const { data: eventData, error: eventError } = await supabase
       .from('events')
       .select('*')
       .eq('id', id)
       .single()
 
-    if (!eventData || (!eventData.is_published && eventData.organizer_id !== user?.id)) {
+    console.log('Event query result:', { eventData, eventError, id })
+
+    if (!eventData) {
+      console.log('Event not found, returning 404')
+      notFound()
+    }
+
+    if (!eventData.is_published && eventData.organizer_id !== user?.id) {
+      console.log('Event not published and user is not organizer, returning 404')
       notFound()
     }
 
     // Then get the organizer data separately
-    const { data: organizerData } = await supabase
+    const { data: organizerData, error: organizerError } = await supabase
       .from('users')
       .select('full_name, is_verified')
       .eq('id', eventData.organizer_id)
       .single()
+
+    console.log('Organizer query result:', { organizerData, organizerError, organizerId: eventData.organizer_id })
 
     // Handle case where organizer data might not exist
     event = {
