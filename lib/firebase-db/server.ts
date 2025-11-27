@@ -233,6 +233,24 @@ class ServerQueryBuilder {
         return { data: Array.isArray(this.pendingInsert) ? results : results[0], error: null }
       }
 
+      // Special case: querying by document ID
+      if (this.constraints.length === 1 && 
+          this.constraints[0].field === 'id' && 
+          this.constraints[0].op === '==') {
+        console.log('Server query - fetching by document ID:', this.constraints[0].value)
+        const docRef = adminDb.collection(this.collectionName).doc(this.constraints[0].value as string)
+        const docSnapshot = await docRef.get()
+        
+        if (!docSnapshot.exists) {
+          console.log('Server query - document not found')
+          return { data: this.singleDoc ? null : [], error: null }
+        }
+        
+        const docData = { id: docSnapshot.id, ...docSnapshot.data() }
+        console.log('Server query - document found:', docData)
+        return { data: this.singleDoc ? docData : [docData], error: null }
+      }
+
       // Regular query
       let query: any = adminDb.collection(this.collectionName)
 
