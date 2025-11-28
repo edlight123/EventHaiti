@@ -25,6 +25,9 @@ import {
   Sparkles
 } from 'lucide-react'
 import Badge from '@/components/ui/Badge'
+import PullToRefresh from '@/components/PullToRefresh'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
+import { revalidatePath } from 'next/cache'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -61,6 +64,13 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
   }
 
   const { id } = await params
+  
+  // Server action for pull-to-refresh
+  async function refreshPage() {
+    'use server'
+    revalidatePath(`/tickets/${id}`)
+  }
+  
   let ticket: any = null
 
   if (isDemoMode()) {
@@ -118,10 +128,11 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
   const isValid = (serializedTicket.status === 'valid' || serializedTicket.status === 'active') && !serializedTicket.checked_in_at
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50">
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+    <PullToRefresh onRefresh={refreshPage}>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 pb-mobile-nav">
+        <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Back Button */}
         <a
@@ -355,6 +366,9 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           </div>
         )}
       </div>
+      
+      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
+    </PullToRefresh>
   )
 }
