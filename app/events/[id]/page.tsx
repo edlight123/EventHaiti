@@ -16,6 +16,9 @@ import Badge from '@/components/ui/Badge'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import { Calendar, MapPin, Clock, Users, Shield, TrendingUp, Star, Sparkles } from 'lucide-react'
 import type { Metadata } from 'next'
+import PullToRefresh from '@/components/PullToRefresh'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
+import { revalidatePath } from 'next/cache'
 
 export const revalidate = 0
 
@@ -71,6 +74,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser()
   const { id } = await params
+  
+  // Server action for pull-to-refresh
+  async function refreshPage() {
+    'use server'
+    revalidatePath(`/events/${id}`)
+  }
   
   let event: any = null
   
@@ -210,8 +219,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+    <PullToRefresh onRefresh={refreshPage}>
+      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+        <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
       {/* PREMIUM HERO SECTION - Compact on Mobile */}
       <div className="relative bg-gray-900 max-h-[40vh] md:max-h-none overflow-hidden">
@@ -634,6 +644,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
       </div>
+      
+      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
+    </PullToRefresh>
   )
 }

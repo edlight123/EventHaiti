@@ -8,6 +8,8 @@ import { format } from 'date-fns'
 import QRCodeDisplay from '@/app/tickets/[id]/QRCodeDisplay'
 import AddToWalletButton from '@/components/AddToWalletButton'
 import { isDemoMode, DEMO_TICKETS, DEMO_EVENTS } from '@/lib/demo'
+import PullToRefresh from '@/components/PullToRefresh'
+import { revalidatePath } from 'next/cache'
 import { 
   Calendar, 
   MapPin, 
@@ -59,6 +61,12 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
   }
 
   const { eventId } = await params
+  
+  // Server action for pull-to-refresh
+  async function refreshPage() {
+    'use server'
+    revalidatePath(`/tickets/event/${eventId}`)
+  }
   
   // Validate eventId
   if (!eventId) {
@@ -116,10 +124,11 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
   const usedTickets = serializedTickets.filter(t => t && t.checked_in_at)
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+    <PullToRefresh onRefresh={refreshPage}>
+      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+        <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
         
         {/* Event Hero Card - Compact Mobile */}
         <div className="relative bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6">
@@ -421,5 +430,6 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
       
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
+    </PullToRefresh>
   )
 }
