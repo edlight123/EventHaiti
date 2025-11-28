@@ -81,8 +81,28 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
   }
 
   const event = ticket.events as any
-  const eventPassed = isPast(new Date(event.end_datetime))
-  const isValid = (ticket.status === 'valid' || ticket.status === 'active') && !ticket.checked_in_at
+  
+  // Convert Firestore Timestamps to plain strings
+  const serializedEvent = {
+    ...event,
+    start_datetime: event.start_datetime?.toDate ? event.start_datetime.toDate().toISOString() : event.start_datetime,
+    end_datetime: event.end_datetime?.toDate ? event.end_datetime.toDate().toISOString() : event.end_datetime,
+    created_at: event.created_at?.toDate ? event.created_at.toDate().toISOString() : event.created_at,
+    updated_at: event.updated_at?.toDate ? event.updated_at.toDate().toISOString() : event.updated_at,
+    date: event.date?.toDate ? event.date.toDate().toISOString() : event.date,
+  }
+
+  const serializedTicket = {
+    ...ticket,
+    purchased_at: ticket.purchased_at?.toDate ? ticket.purchased_at.toDate().toISOString() : ticket.purchased_at,
+    checked_in_at: ticket.checked_in_at?.toDate ? ticket.checked_in_at.toDate().toISOString() : ticket.checked_in_at,
+    created_at: ticket.created_at?.toDate ? ticket.created_at.toDate().toISOString() : ticket.created_at,
+    updated_at: ticket.updated_at?.toDate ? ticket.updated_at.toDate().toISOString() : ticket.updated_at,
+    events: serializedEvent,
+  }
+  
+  const eventPassed = isPast(new Date(serializedEvent.end_datetime || serializedEvent.start_datetime || serializedEvent.date))
+  const isValid = (serializedTicket.status === 'valid' || serializedTicket.status === 'active') && !serializedTicket.checked_in_at
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50">
@@ -118,13 +138,13 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                   <Badge variant="success" size="lg" icon={<CheckCircle2 className="w-4 h-4" />}>
                     Valid
                   </Badge>
-                ) : ticket.checked_in_at ? (
+                ) : serializedTicket.checked_in_at ? (
                   <Badge variant="neutral" size="lg" icon={<CheckCircle2 className="w-4 h-4" />}>
                     Used
                   </Badge>
                 ) : (
                   <Badge variant="neutral" size="lg" icon={<XCircle className="w-4 h-4" />}>
-                    {ticket.status}
+                    {serializedTicket.status}
                   </Badge>
                 )}
               </div>
@@ -137,22 +157,22 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                       ? 'bg-gradient-to-br from-gray-50 to-white border-gray-100' 
                       : 'bg-gray-100 border-gray-200'
                   }`}>
-                    <QRCodeDisplay value={ticket.qr_code_data} size={280} />
+                    <QRCodeDisplay value={serializedTicket.qr_code_data} size={280} />
                   </div>
 
                   <div className="mt-6 space-y-2">
                     <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Ticket Code</p>
-                    <p className="text-lg font-mono font-bold text-gray-900">{ticket.id.slice(0, 20)}...</p>
+                    <p className="text-lg font-mono font-bold text-gray-900">{serializedTicket.id.slice(0, 20)}...</p>
                   </div>
 
-                  {ticket.checked_in_at && (
+                  {serializedTicket.checked_in_at && (
                     <div className="mt-6 p-4 bg-green-50 border-2 border-green-200 rounded-xl">
                       <div className="flex items-center gap-2 text-green-700 mb-1">
                         <CheckCircle2 className="w-5 h-5" />
                         <span className="font-bold">Checked In</span>
                       </div>
                       <p className="text-sm text-green-600">
-                        {format(new Date(ticket.checked_in_at), 'MMM d, yyyy • h:mm a')}
+                        {format(new Date(serializedTicket.checked_in_at), 'MMM d, yyyy • h:mm a')}
                       </p>
                     </div>
                   )}
@@ -171,10 +191,10 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                         Manage Ticket
                       </h3>
                       <TicketActions
-                        ticketId={ticket.id}
-                        ticketStatus={ticket.status}
-                        checkedIn={ticket.checked_in || false}
-                        eventTitle={event.title}
+                        ticketId={serializedTicket.id}
+                        ticketStatus={serializedTicket.status}
+                        checkedIn={serializedTicket.checked_in || false}
+                        eventTitle={serializedEvent.title}
                       />
                     </div>
                   )}
@@ -188,22 +208,22 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
             
             {/* Event Info Card */}
             <div className="bg-white rounded-2xl shadow-medium border-2 border-gray-200 overflow-hidden">
-              {event.banner_image_url && (
-                <div className="relative h-32 bg-gradient-to-br from-brand-600 to-accent-500">
+              {serializedEvent.banner_image_url && (
+                <div className="h-48 bg-gradient-to-br from-brand-600 to-accent-500 relative overflow-hidden">
                   <img
-                    src={event.banner_image_url}
-                    alt={event.title}
+                    src={serializedEvent.banner_image_url}
+                    alt={serializedEvent.title}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </div>
               )}
 
               <div className="p-6 space-y-4">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-1">{event.title}</h2>
+                  <h2 className="text-xl font-bold text-gray-900 mb-1">{serializedEvent.title}</h2>
                   <a 
-                    href={`/events/${event.id}`}
+                    href={`/events/${serializedEvent.id}`}
                     className="text-sm text-brand-600 hover:text-brand-700 font-medium"
                   >
                     View Event Details →
@@ -217,9 +237,9 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Date</p>
-                      <p className="font-bold text-gray-900 text-sm">{format(new Date(event.start_datetime), 'MMM d, yyyy')}</p>
+                      <p className="font-bold text-gray-900 text-sm">{format(new Date(serializedEvent.start_datetime || serializedEvent.date), 'MMM d, yyyy')}</p>
                       <p className="text-sm text-gray-600">
-                        {format(new Date(event.start_datetime), 'h:mm a')}
+                        {format(new Date(serializedEvent.start_datetime || serializedEvent.date), 'h:mm a')}
                       </p>
                     </div>
                   </div>
@@ -230,11 +250,11 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Venue</p>
-                      <p className="font-bold text-gray-900 text-sm">{event.venue_name}</p>
-                      <p className="text-sm text-gray-600">{event.commune}, {event.city}</p>
+                      <p className="font-bold text-gray-900 text-sm">{serializedEvent.venue_name || serializedEvent.location}</p>
+                      <p className="text-sm text-gray-600">{serializedEvent.commune}, {serializedEvent.city}</p>
                       <div className="flex gap-2 mt-2">
                         <a
-                          href={`https://maps.apple.com/?q=${encodeURIComponent(event.address || `${event.venue_name}, ${event.commune}, ${event.city}`)}`}
+                          href={`https://maps.apple.com/?q=${encodeURIComponent(serializedEvent.address || `${serializedEvent.venue_name || serializedEvent.location}, ${serializedEvent.commune}, ${serializedEvent.city}`)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-accent-600 hover:text-accent-700 font-medium flex items-center gap-1"
@@ -244,7 +264,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                         </a>
                         <span className="text-gray-300">|</span>
                         <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address || `${event.venue_name}, ${event.commune}, ${event.city}`)}`}
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(serializedEvent.address || `${serializedEvent.venue_name || serializedEvent.location}, ${serializedEvent.commune}, ${serializedEvent.city}`)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-accent-600 hover:text-accent-700 font-medium flex items-center gap-1"
@@ -272,9 +292,9 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Purchased</p>
-                      <p className="font-bold text-gray-900 text-sm">{format(new Date(ticket.purchased_at), 'MMM d, yyyy')}</p>
+                      <p className="font-bold text-gray-900 text-sm">{format(new Date(serializedTicket.purchased_at), 'MMM d, yyyy')}</p>
                       <p className="text-sm text-gray-600">
-                        {format(new Date(ticket.purchased_at), 'h:mm a')}
+                        {format(new Date(serializedTicket.purchased_at), 'h:mm a')}
                       </p>
                     </div>
                   </div>
