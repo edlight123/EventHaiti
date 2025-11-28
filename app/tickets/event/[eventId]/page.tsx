@@ -34,6 +34,10 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
 
   const { eventId } = await params
   
+  console.log('=== EVENT TICKETS PAGE ===')
+  console.log('Event ID:', eventId)
+  console.log('User ID:', user?.id)
+  
   // Validate eventId
   if (!eventId) {
     console.error('No eventId provided')
@@ -77,12 +81,21 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
     }
   } catch (err) {
     console.error('Error fetching tickets/event:', err)
+    console.error('Error details:', err instanceof Error ? err.message : String(err))
+    console.error('Stack:', err instanceof Error ? err.stack : 'No stack')
     // Set empty values to show not found
     tickets = []
     event = null
   }
 
+  console.log('=== QUERY RESULTS ===')
+  console.log('Event found:', !!event)
+  console.log('Event data:', event ? JSON.stringify(event, null, 2) : 'null')
+  console.log('Tickets count:', tickets?.length || 0)
+  console.log('Tickets data:', tickets ? JSON.stringify(tickets, null, 2) : 'null')
+
   if (!event || !tickets || tickets.length === 0) {
+    console.log('Showing 404 - event or tickets missing')
     notFound()
   }
 
