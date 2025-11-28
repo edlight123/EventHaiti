@@ -34,13 +34,8 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
 
   const { eventId } = await params
   
-  console.log('=== EVENT TICKETS PAGE ===')
-  console.log('Event ID:', eventId)
-  console.log('User ID:', user?.id)
-  
   // Validate eventId
   if (!eventId) {
-    console.error('No eventId provided')
     notFound()
   }
 
@@ -66,8 +61,6 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
         t && t.event_id === eventId && t.attendee_id === user.id
       ) || []
 
-      console.log('Filtered tickets for event:', eventId, 'Count:', userEventTickets.length)
-
       // Get event details
       const { data: allEvents } = await supabase
         .from('events')
@@ -75,26 +68,16 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
 
       event = allEvents?.find((e: any) => e && e.id === eventId)
       
-      console.log('Event found:', event ? 'Yes' : 'No', event?.title || 'N/A')
-      
       tickets = userEventTickets
     }
   } catch (err) {
-    console.error('Error fetching tickets/event:', err)
-    console.error('Error details:', err instanceof Error ? err.message : String(err))
-    console.error('Stack:', err instanceof Error ? err.stack : 'No stack')
+    console.error('Error fetching tickets/event:', err instanceof Error ? err.message : String(err))
     // Set empty values to show not found
     tickets = []
     event = null
   }
 
-  console.log('=== QUERY RESULTS ===')
-  console.log('Event found:', !!event)
-  console.log('Event title:', event?.title || 'null')
-  console.log('Tickets count:', tickets?.length || 0)
-
   if (!event || !tickets || tickets.length === 0) {
-    console.log('Showing 404 - event or tickets missing')
     notFound()
   }
 
