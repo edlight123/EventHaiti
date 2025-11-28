@@ -63,12 +63,13 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
     tickets = userEventTickets
   }
 
-  if (!event || tickets.length === 0) {
+  if (!event || !tickets || tickets.length === 0) {
     notFound()
   }
 
-  const validTickets = tickets.filter(t => !t.checked_in_at && t.status === 'valid')
-  const usedTickets = tickets.filter(t => t.checked_in_at)
+  // Additional validation
+  const validTickets = tickets.filter(t => t && !t.checked_in_at && t.status === 'valid')
+  const usedTickets = tickets.filter(t => t && t.checked_in_at)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50">
@@ -180,12 +181,18 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
                   {/* QR Code Section */}
                   <div className="p-6 text-center">
                     <div className="inline-block p-6 bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-inner border-2 border-gray-100">
-                      <QRCodeDisplay value={ticket.qr_code_data} size={200} />
+                      {ticket.qr_code_data ? (
+                        <QRCodeDisplay value={ticket.qr_code_data} size={200} />
+                      ) : (
+                        <div className="w-[200px] h-[200px] flex items-center justify-center bg-gray-100 rounded-lg">
+                          <p className="text-sm text-gray-500">QR Code Unavailable</p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-4 space-y-1">
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Ticket ID</p>
-                      <p className="text-sm font-mono text-gray-900">{ticket.id.slice(0, 16)}...</p>
+                      <p className="text-sm font-mono text-gray-900">{ticket.id ? ticket.id.slice(0, 16) + '...' : 'N/A'}</p>
                     </div>
                   </div>
 
@@ -251,7 +258,13 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
 
                   <div className="p-6 text-center">
                     <div className="inline-block p-6 bg-gray-100 rounded-2xl border-2 border-gray-200">
-                      <QRCodeDisplay value={ticket.qr_code_data} size={180} />
+                      {ticket.qr_code_data ? (
+                        <QRCodeDisplay value={ticket.qr_code_data} size={180} />
+                      ) : (
+                        <div className="w-[180px] h-[180px] flex items-center justify-center bg-gray-200 rounded-lg">
+                          <p className="text-sm text-gray-500">QR Code Used</p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-4 space-y-2">
@@ -266,7 +279,7 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
 
                   <div className="px-4 pb-4">
                     <p className="text-xs text-gray-500 text-center font-mono">
-                      {ticket.id.slice(0, 16)}...
+                      {ticket.id ? ticket.id.slice(0, 16) + '...' : 'N/A'}
                     </p>
                   </div>
                 </div>
