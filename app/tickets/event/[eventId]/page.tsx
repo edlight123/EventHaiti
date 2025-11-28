@@ -33,34 +33,53 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
   }
 
   const { eventId } = await params
+  
+  // Validate eventId
+  if (!eventId) {
+    console.error('No eventId provided')
+    notFound()
+  }
+
   let tickets: any[] = []
   let event: any = null
 
-  if (isDemoMode()) {
-    // Find demo tickets for this event
-    const demoTickets = DEMO_TICKETS.filter(t => t.event_id === eventId && t.attendee_id === user.id)
-    event = DEMO_EVENTS.find(e => e.id === eventId)
-    tickets = demoTickets
-  } else {
-    // Fetch real tickets from database
-    const supabase = await createClient()
-    
-    // Get all tickets and filter
-    const { data: allTickets } = await supabase
-      .from('tickets')
-      .select('*')
+  try {
+    if (isDemoMode()) {
+      // Find demo tickets for this event
+      const demoTickets = DEMO_TICKETS.filter(t => t.event_id === eventId && t.attendee_id === user.id)
+      event = DEMO_EVENTS.find(e => e.id === eventId)
+      tickets = demoTickets
+    } else {
+      // Fetch real tickets from database
+      const supabase = await createClient()
+      
+      // Get all tickets and filter
+      const { data: allTickets } = await supabase
+        .from('tickets')
+        .select('*')
 
-    const userEventTickets = allTickets?.filter((t: any) => 
-      t.event_id === eventId && t.attendee_id === user.id
-    ) || []
+      const userEventTickets = allTickets?.filter((t: any) => 
+        t && t.event_id === eventId && t.attendee_id === user.id
+      ) || []
 
-    // Get event details
-    const { data: allEvents } = await supabase
-      .from('events')
-      .select('*')
+      console.log('Filtered tickets for event:', eventId, 'Count:', userEventTickets.length)
 
-    event = allEvents?.find((e: any) => e.id === eventId)
-    tickets = userEventTickets
+      // Get event details
+      const { data: allEvents } = await supabase
+        .from('events')
+        .select('*')
+
+      event = allEvents?.find((e: any) => e && e.id === eventId)
+      
+      console.log('Event found:', event ? 'Yes' : 'No', event?.title || 'N/A')
+      
+      tickets = userEventTickets
+    }
+  } catch (err) {
+    console.error('Error fetching tickets/event:', err)
+    // Set empty values to show not found
+    tickets = []
+    event = null
   }
 
   if (!event || !tickets || tickets.length === 0) {
@@ -123,15 +142,24 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-1">Date & Time</p>
-                  <p className="font-bold text-gray-900">
-                    {event.start_datetime ? format(new Date(event.start_datetime), 'EEEE, MMM d, yyyy') : 'Date TBA'}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {event.start_datetime && event.end_datetime 
-                      ? `${format(new Date(event.start_datetime), 'h:mm a')} - ${format(new Date(event.end_datetime), 'h:mm a')}`
-                      : 'Time TBA'
-                    }
-                  </p>
+                  {event.start_datetime ? (
+                    <>
+                      <p className="font-bold text-gray-900">
+                        {format(new Date(event.start_datetime), 'EEEE, MMM d, yyyy')}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {event.end_datetime 
+                          ? `${format(new Date(event.start_datetime), 'h:mm a')} - ${format(new Date(event.end_datetime), 'h:mm a')}`
+                          : format(new Date(event.start_datetime), 'h:mm a')
+                        }
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-bold text-gray-900">Date TBA</p>
+                      <p className="text-sm text-gray-600">Time TBA</p>
+                    </>
+                  )}
                 </div>
               </div>
 
