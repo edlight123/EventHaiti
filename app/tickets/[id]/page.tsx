@@ -131,10 +131,10 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           <span className="font-medium">All Tickets</span>
         </a>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="max-w-2xl mx-auto">
           
           {/* Main Ticket Card */}
-          <div className="lg:col-span-2">
+          <div>
             <div className="relative bg-white rounded-3xl shadow-hard border-2 border-gray-200 overflow-visible">
               
               {/* Status Banner */}
@@ -191,17 +191,13 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                 </div>
               </div>
 
-              {/* Save & Share Actions */}
+              {/* Actions */}
               {!isDemoMode() && (
                 <div className="px-6 pb-6 space-y-3">
                   <AddToWalletButton ticket={ticket} event={event} />
                   
                   {isValid && (
                     <div className="pt-4 border-t-2 border-dashed border-gray-200">
-                      <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <Share2 className="w-4 h-4" />
-                        Manage Ticket
-                      </h3>
                       <TicketActions
                         ticketId={serializedTicket.id}
                         ticketStatus={serializedTicket.status}
@@ -215,10 +211,10 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
             </div>
           </div>
 
-          {/* Event Details Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
+          {/* Event Details */}
+          <div className="mt-6 space-y-6">
             
-            {/* Event Info Card */}
+            {/* Event Info */}
             <div className="bg-white rounded-2xl shadow-medium border-2 border-gray-200 overflow-hidden">
               {serializedEvent.banner_image_url && (
                 <div className="h-48 bg-gradient-to-br from-brand-600 to-accent-500 relative overflow-hidden">
