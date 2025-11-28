@@ -3,12 +3,20 @@ import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import { isAdmin, getAdminEmails } from '@/lib/admin'
+import PullToRefresh from '@/components/PullToRefresh'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
+import { revalidatePath } from 'next/cache'
 
 export const revalidate = 0
 
 const ADMIN_EMAILS = getAdminEmails()
 
 export default async function AdminDashboard() {
+  async function refreshPage() {
+    'use server'
+    revalidatePath('/admin')
+  }
+
   try {
     const user = await getCurrentUser()
 
@@ -103,8 +111,9 @@ export default async function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar user={user} isAdmin={true} />
+    <PullToRefresh onRefresh={refreshPage}>
+      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+        <Navbar user={user} isAdmin={true} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
@@ -231,7 +240,10 @@ export default async function AdminDashboard() {
           </a>
         </div>
       </div>
+      
+      <MobileNavWrapper user={null} isAdmin={true} />
     </div>
+    </PullToRefresh>
   )
   } catch (error) {
     console.error('Admin dashboard fatal error:', error)
