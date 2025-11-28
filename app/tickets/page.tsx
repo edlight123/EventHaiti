@@ -80,8 +80,21 @@ export default async function MyTicketsPage() {
         // Create events with ticket counts
         eventsWithTickets = Array.from(ticketsByEvent.entries()).map(([eventId, tickets]) => {
           const event = eventsData?.find((e: any) => e.id === eventId)
+          
+          // Serialize Firestore Timestamps to ISO strings
+          const serializedEvent = event ? {
+            ...event,
+            start_datetime: event.start_datetime?.toDate ? event.start_datetime.toDate().toISOString() : event.start_datetime,
+            end_datetime: event.end_datetime?.toDate ? event.end_datetime.toDate().toISOString() : event.end_datetime,
+            date: event.date?.toDate ? event.date.toDate().toISOString() : event.date,
+            created_at: event.created_at?.toDate ? event.created_at.toDate().toISOString() : event.created_at,
+            createdAt: event.createdAt?.toDate ? event.createdAt.toDate().toISOString() : event.createdAt,
+            updated_at: event.updated_at?.toDate ? event.updated_at.toDate().toISOString() : event.updated_at,
+            updatedAt: event.updatedAt?.toDate ? event.updatedAt.toDate().toISOString() : event.updatedAt,
+          } : null
+          
           return {
-            event,
+            event: serializedEvent,
             tickets,
             ticketCount: (tickets as any[]).length
           }
