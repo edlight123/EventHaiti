@@ -10,14 +10,14 @@
 4. `/dashboard` - User dashboard ✓ (mobile nav)
 
 ### 🔶 Partially Optimized (Needs Work)
-5. `/events/[id]` - Event details ⚠️
-6. `/tickets` - My tickets ⚠️
-7. `/tickets/[id]` - Ticket detail ⚠️
+5. `/events/[id]` - Event details ✓ (optimized Week 1)
+6. `/tickets` - My tickets ✓ (optimized Week 1)
+7. `/tickets/[id]` - Ticket detail ✓ (optimized Week 1)
 8. `/profile` - User profile ⚠️
 9. `/settings` - User settings ⚠️
-12. `/organizer/events/[id]` - Event detail (organizer) ⚠️
-14. `/organizer/events/[id]/check-in` - Check-in page ⚠️
-16. `/organizer/analytics` - Analytics ⚠️
+12. `/organizer/events/[id]` - Event detail (organizer) ✓ (optimized Week 2)
+14. `/organizer/events/[id]/check-in` - Check-in page ✓ (optimized Week 2)
+16. `/organizer/analytics` - Analytics ✓ (optimized Week 2)
 
 ### ❌ Not Mobile-Optimized (Critical)
 18. `/categories` - Category browse
@@ -32,10 +32,10 @@
 27. `/purchase/failed` - Purchase error ✓
 28. `/tickets/event/[eventId]` - Event tickets list
 29. `/tickets/transfer/[token]` - Transfer accept
-30. `/organizer/settings` - Organizer settings ⚠️
-31. `/organizer/verify` - Verification request ⚠️
-32. `/organizer/promo-codes` - Promo code management ⚠️
-33. `/profile/organizer/[organizerId]` - Public organizer profile
+30. `/organizer/settings` - Organizer settings ✓ (optimized Week 2)
+31. `/organizer/verify` - Verification request ✓ (optimized Week 2)
+32. `/organizer/promo-codes` - Promo code management ✓ (optimized Week 2)
+33. `/profile/organizer/[organizerId]` - Public organizer profile ✓ (optimized Week 2)
 34. `/legal/privacy` - Privacy policy
 35. `/legal/terms` - Terms of service
 36. `/legal/refunds` - Refund policy
@@ -433,12 +433,18 @@ const AdminPanel = dynamic(() => import('./AdminPanel'), {
 - [x] Purchase success/failed mobile layout
 
 ### Week 2: Organizer Experience (Phase 4)
-- [x] Organizer events horizontal cards
-- [x] Create/edit event wizard (pages optimized; wizard in `EventForm`)
-- [x] QR scanner mobile view
-- [ ] Analytics responsive charts
-- [ ] Check-in page mobile layout
-- [ ] Promo codes mobile table
+- [x] Organizer dashboard (horizontal stats, compact quick actions, pull-to-refresh)
+- [x] Organizer events list (horizontal cards, pull-to-refresh, mobile nav)
+- [x] Create event page (compact header, pull-to-refresh, mobile nav)
+- [x] Edit event page (compact header, pull-to-refresh, mobile nav)
+- [x] QR scanner mobile view (compact header, pull-to-refresh, mobile nav)
+- [x] Analytics responsive charts (horizontal metrics, responsive charts, compact typography)
+- [x] Check-in page mobile layout (horizontal metrics, compact list, pull-to-refresh)
+- [x] Promo codes mobile table (horizontal metrics, sticky create button, compact list)
+- [x] Organizer event detail (horizontal metrics, horizontal action bar, pull-to-refresh, mobile nav)
+- [x] Organizer settings (pull-to-refresh, mobile nav, compact header)
+- [x] Organizer verify page (mobile nav, compact info boxes, responsive padding)
+- [x] Public organizer profile (horizontal stats, compact hero, mobile nav)
 
 ### Week 3: Layout Consistency (Phase 5)
 - [ ] Update typography scale
