@@ -1,18 +1,27 @@
 import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
+import PullToRefresh from '@/components/PullToRefresh'
 import { getCurrentUser } from '@/lib/auth'
+import { revalidatePath } from 'next/cache'
 
 export default async function PrivacyPolicyPage() {
   const user = await getCurrentUser()
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Privacy Policy</h1>
-        <p className="text-gray-600 mb-8">Last updated: November 23, 2025</p>
+      <PullToRefresh
+        onRefresh={async () => {
+          'use server'
+          revalidatePath('/legal/privacy')
+        }}
+      >
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">Privacy Policy</h1>
+          <p className="text-[13px] sm:text-base text-gray-600 mb-6 sm:mb-8">Last updated: November 23, 2025</p>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 prose prose-teal max-w-none">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8 prose prose-sm sm:prose prose-teal max-w-none">
           <h2>1. Information We Collect</h2>
           
           <h3>Personal Information</h3>
@@ -152,6 +161,8 @@ export default async function PrivacyPolicyPage() {
           </ul>
         </div>
       </div>
+      </PullToRefresh>
+      <MobileNavWrapper user={user} />
     </div>
   )
 }
