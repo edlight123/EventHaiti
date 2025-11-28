@@ -10,6 +10,30 @@ import TicketCard from './TicketCard'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+// Helper function to serialize all Timestamp objects recursively
+function serializeTimestamps(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj
+  
+  // Check if it's a Firestore Timestamp
+  if (obj.toDate && typeof obj.toDate === 'function') {
+    return obj.toDate().toISOString()
+  }
+  
+  // Handle arrays
+  if (Array.isArray(obj)) {
+    return obj.map(item => serializeTimestamps(item))
+  }
+  
+  // Handle plain objects
+  const serialized: any = {}
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      serialized[key] = serializeTimestamps(obj[key])
+    }
+  }
+  return serialized
+}
+
 export default async function MyTicketsPage() {
   const { user, error } = await requireAuth()
 
@@ -81,17 +105,8 @@ export default async function MyTicketsPage() {
         eventsWithTickets = Array.from(ticketsByEvent.entries()).map(([eventId, tickets]) => {
           const event = eventsData?.find((e: any) => e.id === eventId)
           
-          // Serialize Firestore Timestamps to ISO strings
-          const serializedEvent = event ? {
-            ...event,
-            start_datetime: event.start_datetime?.toDate ? event.start_datetime.toDate().toISOString() : event.start_datetime,
-            end_datetime: event.end_datetime?.toDate ? event.end_datetime.toDate().toISOString() : event.end_datetime,
-            date: event.date?.toDate ? event.date.toDate().toISOString() : event.date,
-            created_at: event.created_at?.toDate ? event.created_at.toDate().toISOString() : event.created_at,
-            createdAt: event.createdAt?.toDate ? event.createdAt.toDate().toISOString() : event.createdAt,
-            updated_at: event.updated_at?.toDate ? event.updated_at.toDate().toISOString() : event.updated_at,
-            updatedAt: event.updatedAt?.toDate ? event.updatedAt.toDate().toISOString() : event.updatedAt,
-          } : null
+          // Serialize ALL Firestore Timestamps recursively
+          const serializedEvent = event ? serializeTimestamps(event) : null
           
           return {
             event: serializedEvent,
