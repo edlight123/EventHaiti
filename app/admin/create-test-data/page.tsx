@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { auth, db } from '@/lib/firebase/client'
 import { onAuthStateChanged, User } from 'firebase/auth'
 import { collection, addDoc, query, where, getDocs, serverTimestamp, deleteDoc, doc, setDoc } from 'firebase/firestore'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
 
 export default function CreateTestDataPage() {
   const [user, setUser] = useState<User | null>(null)
@@ -377,21 +378,22 @@ export default function CreateTestDataPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 py-12">
+    <>
+    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-12">
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-8 py-6">
-            <h1 className="text-3xl font-bold text-white mb-2">
+          <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-4 sm:px-8 py-4 sm:py-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">
               🧪 Create Test Events
             </h1>
-            <p className="text-teal-50">
+            <p className="text-[13px] sm:text-base text-teal-50">
               Generate 7 sample events with images for testing
             </p>
           </div>
 
           {/* Content */}
-          <div className="p-8">
+          <div className="p-4 sm:p-8">
             {/* User Info */}
             <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 mb-6">
               <p className="text-sm text-teal-800">
@@ -517,5 +519,7 @@ export default function CreateTestDataPage() {
         </div>
       </div>
     </div>
+    <MobileNavWrapper user={null} />
+    </>
   )
 }

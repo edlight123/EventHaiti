@@ -5,6 +5,7 @@
 
 import { useState } from 'react'
 import { CameraQRScanner } from '@/components/CameraQRScanner'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
 
 export default function AttendanceWithCameraExample() {
   const [scanMode, setScanMode] = useState<'upload' | 'camera'>('upload')
@@ -82,20 +83,21 @@ export default function AttendanceWithCameraExample() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <>
+    <div className="min-h-screen bg-gray-50 py-6 sm:py-12 px-4 sm:px-6 lg:px-8 pb-mobile-nav">
       <div className="mx-auto max-w-2xl">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Event Check-In</h1>
-          <p className="mt-2 text-sm text-gray-600">
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Event Check-In</h1>
+          <p className="mt-1 sm:mt-2 text-[13px] sm:text-sm text-gray-600">
             Scan QR codes to check in attendees
           </p>
         </div>
 
         {/* Scan Mode Toggle */}
-        <div className="mb-6 flex justify-center gap-4">
+        <div className="mb-4 sm:mb-6 flex justify-center gap-3 sm:gap-4">
           <button
             onClick={() => setScanMode('upload')}
-            className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+            className={`px-4 sm:px-6 py-2 rounded-lg text-[13px] sm:text-base font-medium transition-colors min-h-[44px] ${
               scanMode === 'upload'
                 ? 'bg-orange-600 text-white'
                 : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
@@ -105,7 +107,7 @@ export default function AttendanceWithCameraExample() {
           </button>
           <button
             onClick={() => setScanMode('camera')}
-            className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+            className={`px-4 sm:px-6 py-2 rounded-lg text-[13px] sm:text-base font-medium transition-colors min-h-[44px] ${
               scanMode === 'camera'
                 ? 'bg-orange-600 text-white'
                 : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
@@ -116,7 +118,7 @@ export default function AttendanceWithCameraExample() {
         </div>
 
         {/* Scanner Area */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6">
           {scanMode === 'camera' ? (
             <CameraQRScanner
               onScan={handleQRScan}
@@ -205,5 +207,7 @@ export default function AttendanceWithCameraExample() {
         </div>
       </div>
     </div>
+    <MobileNavWrapper user={null} />
+    </>
   )
 }

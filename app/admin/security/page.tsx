@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
 
 interface SuspiciousActivity {
   id: string
@@ -117,15 +118,16 @@ export default function SecurityDashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Security Dashboard</h1>
-        <p className="mt-2 text-gray-600">
+    <>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-mobile-nav">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Security Dashboard</h1>
+        <p className="mt-1 sm:mt-2 text-[13px] sm:text-base text-gray-600">
           Monitor and review suspicious activities
         </p>
         {unreviewedCount > 0 && (
-          <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-800 font-medium">
+          <div className="mt-3 sm:mt-4 bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
+            <p className="text-[13px] sm:text-base text-red-800 font-medium">
               ⚠️ {unreviewedCount} unreviewed suspicious {unreviewedCount === 1 ? 'activity' : 'activities'}
             </p>
           </div>
@@ -133,17 +135,17 @@ export default function SecurityDashboard() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Filters</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-[11px] sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
               Review Status
             </label>
             <select
               value={filter.reviewed}
               onChange={(e) => setFilter({ ...filter, reviewed: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-[15px] sm:text-base min-h-[44px]"
             >
               <option value="">All</option>
               <option value="false">Unreviewed</option>
@@ -152,13 +154,13 @@ export default function SecurityDashboard() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-[11px] sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
               Severity
             </label>
             <select
               value={filter.severity}
               onChange={(e) => setFilter({ ...filter, severity: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-[15px] sm:text-base min-h-[44px]"
             >
               <option value="">All</option>
               <option value="critical">Critical</option>
@@ -169,13 +171,13 @@ export default function SecurityDashboard() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-[11px] sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
               Activity Type
             </label>
             <select
               value={filter.activityType}
               onChange={(e) => setFilter({ ...filter, activityType: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-[15px] sm:text-base min-h-[44px]"
             >
               <option value="">All</option>
               <option value="rapid_purchases">Rapid Purchases</option>
@@ -191,19 +193,19 @@ export default function SecurityDashboard() {
 
       {/* Activities List */}
       {loading ? (
-        <div className="text-center py-12">
-          <p className="text-gray-600">Loading activities...</p>
+        <div className="text-center py-8 sm:py-12">
+          <p className="text-[13px] sm:text-base text-gray-600">Loading activities...</p>
         </div>
       ) : activities.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <p className="text-gray-600">No suspicious activities found</p>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 sm:p-12 text-center">
+          <p className="text-[13px] sm:text-base text-gray-600">No suspicious activities found</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {activities.map((activity) => (
             <div
               key={activity.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -296,5 +298,7 @@ export default function SecurityDashboard() {
         </div>
       )}
     </div>
+    <MobileNavWrapper user={null} />
+    </>
   )
 }

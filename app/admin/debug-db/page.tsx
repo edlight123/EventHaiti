@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { auth, db } from '@/lib/firebase/client'
 import { onAuthStateChanged, User } from 'firebase/auth'
 import { collection, getDocs, query, where } from 'firebase/firestore'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
 
 export default function DebugDBPage() {
   const [user, setUser] = useState<User | null>(null)
@@ -150,15 +151,16 @@ export default function DebugDBPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <>
+    <div className="min-h-screen bg-gray-50 p-4 pb-mobile-nav">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">Database Debug Tool</h1>
+        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6">Database Debug Tool</h1>
           
           <button
             onClick={checkDatabase}
             disabled={loading}
-            className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-lg font-semibold disabled:opacity-50 mb-6"
+            className="bg-teal-600 hover:bg-teal-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg text-[15px] sm:text-base font-semibold disabled:opacity-50 mb-4 sm:mb-6 min-h-[44px] w-full sm:w-auto"
           >
             {loading ? 'Checking...' : 'Check Database'}
           </button>
@@ -173,5 +175,7 @@ export default function DebugDBPage() {
         </div>
       </div>
     </div>
+    <MobileNavWrapper user={null} />
+    </>
   )
 }
