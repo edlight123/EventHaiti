@@ -19,6 +19,13 @@ export default function AddToWalletButton({ ticket, event }: AddToWalletButtonPr
   const handleDownloadPDF = async () => {
     setIsDownloading(true)
     
+    // Validate required fields
+    if (!event || !ticket) {
+      alert('Ticket data is incomplete')
+      setIsDownloading(false)
+      return
+    }
+    
     // Give the page time to render the QR code if it hasn't yet
     await new Promise(resolve => setTimeout(resolve, 500))
     
@@ -219,22 +226,22 @@ export default function AddToWalletButton({ ticket, event }: AddToWalletButtonPr
               
               <div class="detail-row">
                 <div class="detail-label">Date:</div>
-                <div class="detail-value">${format(new Date(event.start_datetime), 'EEEE, MMMM d, yyyy')}</div>
+                <div class="detail-value">${event.start_datetime ? format(new Date(event.start_datetime), 'EEEE, MMMM d, yyyy') : 'TBA'}</div>
               </div>
               
               <div class="detail-row">
                 <div class="detail-label">Time:</div>
-                <div class="detail-value">${format(new Date(event.start_datetime), 'h:mm a')} - ${format(new Date(event.end_datetime), 'h:mm a')}</div>
+                <div class="detail-value">${event.start_datetime && event.end_datetime ? `${format(new Date(event.start_datetime), 'h:mm a')} - ${format(new Date(event.end_datetime), 'h:mm a')}` : 'TBA'}</div>
               </div>
               
               <div class="detail-row">
                 <div class="detail-label">Venue:</div>
-                <div class="detail-value">${event.venue_name}<br>${event.commune}, ${event.city}</div>
+                <div class="detail-value">${event.venue_name || 'TBA'}<br>${event.commune ? event.commune + ', ' : ''}${event.city || 'TBA'}</div>
               </div>
               
               <div class="detail-row">
                 <div class="detail-label">Purchased:</div>
-                <div class="detail-value">${format(new Date(ticket.purchased_at), 'MMM d, yyyy h:mm a')}</div>
+                <div class="detail-value">${ticket.purchased_at ? format(new Date(ticket.purchased_at), 'MMM d, yyyy h:mm a') : 'N/A'}</div>
               </div>
             </div>
             
