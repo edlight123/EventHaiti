@@ -98,9 +98,26 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
     notFound()
   }
 
+  // Convert Firestore Timestamps to plain strings for client components
+  const serializedEvent = {
+    ...event,
+    start_datetime: event.start_datetime?.toDate ? event.start_datetime.toDate().toISOString() : event.start_datetime,
+    end_datetime: event.end_datetime?.toDate ? event.end_datetime.toDate().toISOString() : event.end_datetime,
+    created_at: event.created_at?.toDate ? event.created_at.toDate().toISOString() : event.created_at,
+    updated_at: event.updated_at?.toDate ? event.updated_at.toDate().toISOString() : event.updated_at,
+  }
+
+  const serializedTickets = tickets.map(ticket => ({
+    ...ticket,
+    purchased_at: ticket.purchased_at?.toDate ? ticket.purchased_at.toDate().toISOString() : ticket.purchased_at,
+    checked_in_at: ticket.checked_in_at?.toDate ? ticket.checked_in_at.toDate().toISOString() : ticket.checked_in_at,
+    created_at: ticket.created_at?.toDate ? ticket.created_at.toDate().toISOString() : ticket.created_at,
+    updated_at: ticket.updated_at?.toDate ? ticket.updated_at.toDate().toISOString() : ticket.updated_at,
+  }))
+
   // Additional validation
-  const validTickets = tickets.filter(t => t && !t.checked_in_at && t.status === 'valid')
-  const usedTickets = tickets.filter(t => t && t.checked_in_at)
+  const validTickets = serializedTickets.filter(t => t && !t.checked_in_at && t.status === 'valid')
+  const usedTickets = serializedTickets.filter(t => t && t.checked_in_at)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50">
@@ -111,11 +128,11 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
         {/* Event Hero Card */}
         <div className="relative bg-white rounded-3xl shadow-hard border border-gray-200 overflow-hidden mb-8">
           {/* Banner Image */}
-          {event.banner_image_url ? (
+          {serializedEvent.banner_image_url ? (
             <div className="relative h-56 sm:h-72 bg-gradient-to-br from-brand-600 to-accent-500">
               <img
-                src={event.banner_image_url}
-                alt={event.title}
+                src={serializedEvent.banner_image_url}
+                alt={serializedEvent.title}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
@@ -133,7 +150,7 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-3">
                   <Badge variant="success" size="lg" icon={<Sparkles className="w-4 h-4" />}>
-                    {tickets.length} Ticket{tickets.length !== 1 ? 's' : ''}
+                    {serializedTickets.length} Ticket{serializedTickets.length !== 1 ? 's' : ''}
                   </Badge>
                   {validTickets.length > 0 && (
                     <Badge variant="primary" size="md">
@@ -141,7 +158,7 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
                     </Badge>
                   )}
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">{String(event.title || 'Event')}</h1>
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">{String(serializedEvent.title || 'Event')}</h1>
                 <p className="text-gray-600">Your tickets are ready to use</p>
               </div>
             </div>
@@ -154,15 +171,15 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-1">Date & Time</p>
-                  {event.start_datetime ? (
+                  {serializedEvent.start_datetime ? (
                     <>
                       <p className="font-bold text-gray-900">
-                        {format(new Date(event.start_datetime), 'EEEE, MMM d, yyyy')}
+                        {format(new Date(serializedEvent.start_datetime), 'EEEE, MMM d, yyyy')}
                       </p>
                       <p className="text-sm text-gray-600">
-                        {event.end_datetime 
-                          ? `${format(new Date(event.start_datetime), 'h:mm a')} - ${format(new Date(event.end_datetime), 'h:mm a')}`
-                          : format(new Date(event.start_datetime), 'h:mm a')
+                        {serializedEvent.end_datetime 
+                          ? `${format(new Date(serializedEvent.start_datetime), 'h:mm a')} - ${format(new Date(serializedEvent.end_datetime), 'h:mm a')}`
+                          : format(new Date(serializedEvent.start_datetime), 'h:mm a')
                         }
                       </p>
                     </>
@@ -181,8 +198,8 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-accent-600 uppercase tracking-wider mb-1">Venue</p>
-                  <p className="font-bold text-gray-900 truncate">{String(event.venue_name || 'Venue TBA')}</p>
-                  <p className="text-sm text-gray-600 truncate">{String(event.commune || 'Location')}, {String(event.city || 'TBA')}</p>
+                  <p className="font-bold text-gray-900 truncate">{String(serializedEvent.venue_name || 'Venue TBA')}</p>
+                  <p className="text-sm text-gray-600 truncate">{String(serializedEvent.commune || 'Location')}, {String(serializedEvent.city || 'TBA')}</p>
                 </div>
               </div>
             </div>
@@ -242,7 +259,7 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
                       <>
                         <AddToWalletButton
                           ticket={ticket}
-                          event={event}
+                          event={serializedEvent}
                         />
                         
                         <a
