@@ -3,10 +3,11 @@ import { requireAuth } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
+import PullToRefresh from '@/components/PullToRefresh'
 import EmptyState from '@/components/EmptyState'
 import { redirect } from 'next/navigation'
 import { isDemoMode, DEMO_TICKETS, DEMO_EVENTS } from '@/lib/demo'
-import { Ticket, TrendingUp } from 'lucide-react'
+import { Ticket, TrendingUp, Clock, CheckCircle2 } from 'lucide-react'
 import TicketCard from './TicketCard'
 
 export const dynamic = 'force-dynamic'
@@ -126,14 +127,28 @@ export default async function MyTicketsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">My Tickets</h1>
+      <PullToRefresh onRefresh={async () => {
+        'use server'
+        const { revalidatePath } = await import('next/cache')
+        revalidatePath('/tickets')
+      }}>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+          {/* Header - Refined */}
+          <div className="mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">My Tickets</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              {eventsWithTickets.length > 0 
+                ? `${eventsWithTickets.length} event${eventsWithTickets.length !== 1 ? 's' : ''} with tickets`
+                : 'No tickets yet'
+              }
+            </p>
+          </div>
 
         {eventsWithTickets && eventsWithTickets.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {eventsWithTickets.map((item) => {
               const event = item.event
               if (!event || !event.id) {
@@ -164,7 +179,8 @@ export default async function MyTicketsPage() {
             actionIcon={TrendingUp}
           />
         )}
-      </div>
+        </div>
+      </PullToRefresh>
       
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
