@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
 import TransferAcceptForm from './TransferAcceptForm'
 
 export const dynamic = 'force-dynamic'
@@ -25,23 +26,24 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
 
   if (transfersQuery.empty) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
         <Navbar user={user} />
-        <div className="max-w-2xl mx-auto px-4 py-12">
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <div className="text-6xl mb-4">❌</div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Transfer Not Found</h1>
-            <p className="text-gray-600 mb-6">
+        <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-6 sm:p-8 text-center">
+            <div className="text-5xl sm:text-6xl mb-3 sm:mb-4">❌</div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Transfer Not Found</h1>
+            <p className="text-[13px] sm:text-base text-gray-600 mb-4 sm:mb-6">
               This transfer link is invalid or has expired.
             </p>
             <a
               href="/tickets"
-              className="inline-block px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700"
+              className="inline-block px-5 sm:px-6 py-2.5 sm:py-3 bg-teal-600 text-white text-[15px] sm:text-base font-semibold rounded-lg hover:bg-teal-700 min-h-[44px]"
             >
               View My Tickets
             </a>
           </div>
         </div>
+        <MobileNavWrapper user={user} />
       </div>
     )
   }
@@ -58,25 +60,26 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
     })
 
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
         <Navbar user={user} />
-        <div className="max-w-2xl mx-auto px-4 py-12">
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <div className="text-6xl mb-4">⏰</div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Transfer Expired</h1>
-            <p className="text-gray-600 mb-6">
+        <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-6 sm:p-8 text-center">
+            <div className="text-5xl sm:text-6xl mb-3 sm:mb-4">⏰</div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Transfer Expired</h1>
+            <p className="text-[13px] sm:text-base text-gray-600 mb-4 sm:mb-6">
               This transfer link expired on {new Date(transfer.expires_at).toLocaleString()}.
               <br />
               Transfer links are only valid for 24 hours.
             </p>
             <a
               href="/tickets"
-              className="inline-block px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700"
+              className="inline-block px-5 sm:px-6 py-2.5 sm:py-3 bg-teal-600 text-white text-[15px] sm:text-base font-semibold rounded-lg hover:bg-teal-700 min-h-[44px]"
             >
               View My Tickets
             </a>
           </div>
         </div>
+        <MobileNavWrapper user={user} />
       </div>
     )
   }
@@ -84,27 +87,28 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
   // Check if already responded to
   if (transfer.status !== 'pending') {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
         <Navbar user={user} />
-        <div className="max-w-2xl mx-auto px-4 py-12">
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <div className="text-6xl mb-4">
+        <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-6 sm:p-8 text-center">
+            <div className="text-5xl sm:text-6xl mb-3 sm:mb-4">
               {transfer.status === 'accepted' ? '✅' : '❌'}
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
               Transfer {transfer.status === 'accepted' ? 'Completed' : 'Cancelled'}
             </h1>
-            <p className="text-gray-600 mb-6">
+            <p className="text-[13px] sm:text-base text-gray-600 mb-4 sm:mb-6">
               This transfer has already been {transfer.status}.
             </p>
             <a
               href="/tickets"
-              className="inline-block px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700"
+              className="inline-block px-5 sm:px-6 py-2.5 sm:py-3 bg-teal-600 text-white text-[15px] sm:text-base font-semibold rounded-lg hover:bg-teal-700 min-h-[44px]"
             >
               View My Tickets
             </a>
           </div>
         </div>
+        <MobileNavWrapper user={user} />
       </div>
     )
   }
@@ -114,17 +118,18 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
   
   if (!ticketDoc.exists) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
         <Navbar user={user} />
-        <div className="max-w-2xl mx-auto px-4 py-12">
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <div className="text-6xl mb-4">❌</div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Ticket Not Found</h1>
-            <p className="text-gray-600">
+        <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-6 sm:p-8 text-center">
+            <div className="text-5xl sm:text-6xl mb-3 sm:mb-4">❌</div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Ticket Not Found</h1>
+            <p className="text-[13px] sm:text-base text-gray-600">
               The ticket associated with this transfer no longer exists.
             </p>
           </div>
         </div>
+        <MobileNavWrapper user={user} />
       </div>
     )
   }
@@ -140,9 +145,9 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
   const sender = senderDoc.exists ? senderDoc.data() : null
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} />
-      <div className="max-w-2xl mx-auto px-4 py-12">
+      <div className="max-w-2xl mx-auto px-4 py-6 sm:py-12">
         <TransferAcceptForm
           transfer={transfer}
           ticket={ticket}
@@ -151,6 +156,7 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
           currentUser={user}
         />
       </div>
+      <MobileNavWrapper user={user} />
     </div>
   )
 }
