@@ -4,6 +4,30 @@
 import { adminDb, adminStorage } from '../firebase/admin'
 import { getServerSession } from '../firebase/server'
 
+// Helper function to serialize Firestore Timestamps recursively
+function serializeFirestoreData(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj
+  
+  // Check if it's a Firestore Timestamp
+  if (obj.toDate && typeof obj.toDate === 'function') {
+    return obj.toDate().toISOString()
+  }
+  
+  // Handle arrays
+  if (Array.isArray(obj)) {
+    return obj.map(item => serializeFirestoreData(item))
+  }
+  
+  // Handle plain objects
+  const serialized: any = {}
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      serialized[key] = serializeFirestoreData(obj[key])
+    }
+  }
+  return serialized
+}
+
 class ServerQueryBuilder {
   private collectionName: string
   private constraints: any[] = []
@@ -209,7 +233,16 @@ class ServerQueryBuilder {
         })
         await batch.commit()
 
-        return { data: snapshot.docs.map((d: any) => ({ id: d.id, ...d.data(), ...updateData })), error: null }
+        return { 
+          data: snapshot.docs.map((d: any) => 
+            serializeFirestoreData({ 
+              id: d.id, 
+              ...d.data(), 
+              ...updateData 
+            })
+          ), 
+          error: null 
+        }
       }
       
       // Handle pending insert
@@ -246,7 +279,10 @@ class ServerQueryBuilder {
           return { data: this.singleDoc ? null : [], error: null }
         }
         
-        const docData = { id: docSnapshot.id, ...docSnapshot.data() }
+        const docData = serializeFirestoreData({ 
+          id: docSnapshot.id, 
+          ...docSnapshot.data() 
+        })
         console.log('Server query - document found:', docData)
         return { data: this.singleDoc ? docData : [docData], error: null }
       }
@@ -278,10 +314,12 @@ class ServerQueryBuilder {
       const snapshot = await query.get()
       console.log('Query returned', snapshot.docs.length, 'documents')
       
-      const data = snapshot.docs.map((doc: any) => ({
-        id: doc.id,
-        ...doc.data()
-      }))
+      const data = snapshot.docs.map((doc: any) => 
+        serializeFirestoreData({
+          id: doc.id,
+          ...doc.data()
+        })
+      )
 
       console.log('Mapped data:', data)
 
