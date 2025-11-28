@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import EventCard from '@/components/EventCard'
+import EventCardHorizontal from '@/components/EventCardHorizontal'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import SearchBar from '@/components/SearchBar'
@@ -255,11 +256,21 @@ export default async function HomePage({
             </div>
 
             {events.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {events.map((event) => (
-                  <EventCard key={event.id} event={event} />
-                ))}
-              </div>
+              <>
+                {/* Mobile: Horizontal Cards */}
+                <div className="md:hidden space-y-4">
+                  {events.map((event) => (
+                    <EventCardHorizontal key={event.id} event={event} />
+                  ))}
+                </div>
+                
+                {/* Desktop: Grid Cards */}
+                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {events.map((event) => (
+                    <EventCard key={event.id} event={event} />
+                  ))}
+                </div>
+              </>
             ) : (
               <div className="text-center py-20 bg-white rounded-3xl shadow-soft">
                 <div className="text-7xl mb-6">🔍</div>
@@ -301,7 +312,14 @@ export default async function HomePage({
                     View All →
                   </a>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Mobile: Horizontal Cards */}
+                <div className="md:hidden space-y-4">
+                  {trendingEvents.map((event) => (
+                    <EventCardHorizontal key={event.id} event={event} />
+                  ))}
+                </div>
+                {/* Desktop: Grid Cards */}
+                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {trendingEvents.map((event) => (
                     <EventCard key={event.id} event={event} />
                   ))}
@@ -321,7 +339,14 @@ export default async function HomePage({
                     View All →
                   </a>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Mobile: Horizontal Cards */}
+                <div className="md:hidden space-y-4">
+                  {upcomingThisWeek.map((event) => (
+                    <EventCardHorizontal key={event.id} event={event} />
+                  ))}
+                </div>
+                {/* Desktop: Grid Cards */}
+                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {upcomingThisWeek.map((event) => (
                     <EventCard key={event.id} event={event} />
                   ))}
@@ -338,11 +363,20 @@ export default async function HomePage({
                 </div>
               </div>
               {events.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {events.slice(0, 12).map((event) => (
-                    <EventCard key={event.id} event={event} />
-                  ))}
-                </div>
+                <>
+                  {/* Mobile: Horizontal Cards */}
+                  <div className="md:hidden space-y-4">
+                    {events.slice(0, 12).map((event) => (
+                      <EventCardHorizontal key={event.id} event={event} />
+                    ))}
+                  </div>
+                  {/* Desktop: Grid Cards */}
+                  <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {events.slice(0, 12).map((event) => (
+                      <EventCard key={event.id} event={event} />
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div className="text-center py-20 bg-white rounded-3xl shadow-soft">
                   <div className="text-7xl mb-6">📭</div>

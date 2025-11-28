@@ -9,6 +9,19 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: BRAND.name,
   description: `Discover and buy tickets for events in Haiti - ${BRAND.name}`,
+  manifest: '/manifest.json',
+  themeColor: '#0F766E',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: BRAND.name,
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+  },
 }
 
 export default function RootLayout({
