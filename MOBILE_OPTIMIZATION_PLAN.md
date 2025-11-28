@@ -15,14 +15,9 @@
 7. `/tickets/[id]` - Ticket detail ⚠️
 8. `/profile` - User profile ⚠️
 9. `/settings` - User settings ⚠️
-10. `/organizer` - Organizer dashboard ⚠️
-11. `/organizer/events` - Event management ⚠️
 12. `/organizer/events/[id]` - Event detail (organizer) ⚠️
-13. `/organizer/events/[id]/edit` - Edit event ⚠️
 14. `/organizer/events/[id]/check-in` - Check-in page ⚠️
-15. `/organizer/events/new` - Create event ⚠️
 16. `/organizer/analytics` - Analytics ⚠️
-17. `/organizer/scan` - QR scanner ⚠️
 
 ### ❌ Not Mobile-Optimized (Critical)
 18. `/categories` - Category browse
@@ -31,15 +26,15 @@
 21. `/admin/users` - User management
 22. `/admin/verify` - Verification review
 23. `/admin/analytics` - Platform analytics
-24. `/auth/login` - Login page
-25. `/auth/signup` - Sign up page
-26. `/purchase/success` - Purchase confirmation
-27. `/purchase/failed` - Purchase error
+24. `/auth/login` - Login page ✓
+25. `/auth/signup` - Sign up page ✓
+26. `/purchase/success` - Purchase confirmation ✓
+27. `/purchase/failed` - Purchase error ✓
 28. `/tickets/event/[eventId]` - Event tickets list
 29. `/tickets/transfer/[token]` - Transfer accept
-30. `/organizer/settings` - Organizer settings
-31. `/organizer/verify` - Verification request
-32. `/organizer/promo-codes` - Promo code management
+30. `/organizer/settings` - Organizer settings ⚠️
+31. `/organizer/verify` - Verification request ⚠️
+32. `/organizer/promo-codes` - Promo code management ⚠️
 33. `/profile/organizer/[organizerId]` - Public organizer profile
 34. `/legal/privacy` - Privacy policy
 35. `/legal/terms` - Terms of service
@@ -429,18 +424,18 @@ const AdminPanel = dynamic(() => import('./AdminPanel'), {
 ## 📋 Implementation Checklist
 
 ### Week 1: Critical Pages (Phase 3)
-- [ ] Event detail sticky CTA
-- [ ] Event detail horizontal related cards
-- [ ] Event detail collapsible sections
-- [ ] Tickets page horizontal cards
-- [ ] Ticket detail fullscreen QR
-- [ ] Auth pages mobile forms
-- [ ] Purchase success/failed mobile layout
+- [x] Event detail sticky CTA
+- [x] Event detail horizontal related cards
+- [x] Event detail collapsible sections
+- [x] Tickets page horizontal cards
+- [x] Ticket detail fullscreen QR
+- [x] Auth pages mobile forms
+- [x] Purchase success/failed mobile layout
 
 ### Week 2: Organizer Experience (Phase 4)
-- [ ] Organizer events horizontal cards
-- [ ] Create/edit event wizard
-- [ ] QR scanner mobile view
+- [x] Organizer events horizontal cards
+- [x] Create/edit event wizard (pages optimized; wizard in `EventForm`)
+- [x] QR scanner mobile view
 - [ ] Analytics responsive charts
 - [ ] Check-in page mobile layout
 - [ ] Promo codes mobile table
