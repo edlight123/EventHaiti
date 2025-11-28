@@ -22,9 +22,9 @@ export default function CategoryGrid() {
           href={category.href}
           className="group"
         >
-          <div className="relative bg-white rounded-2xl shadow-medium hover:shadow-hard transition-all duration-300 overflow-hidden border-2 border-gray-100 group-hover:border-brand-200 group-hover:scale-105 group-hover:-translate-y-1">
+          <div className="relative bg-white rounded-xl shadow-medium hover:shadow-hard transition-all duration-300 overflow-hidden border-2 border-gray-100 group-hover:border-brand-200 group-hover:scale-105 group-hover:-translate-y-1">
             {/* Gradient Background with Glassmorphism */}
-            <div className={`relative h-24 md:h-28 bg-gradient-to-br ${category.color} flex items-center justify-center overflow-hidden`}>
+            <div className={`relative h-12 md:h-14 bg-gradient-to-br ${category.color} flex items-center justify-center overflow-hidden`}>
               {/* Subtle Pattern Overlay */}
               <div className="absolute inset-0 bg-white/10 group-hover:bg-white/20 transition-colors backdrop-blur-[1px]"></div>
               
@@ -32,14 +32,14 @@ export default function CategoryGrid() {
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-white/30 to-transparent"></div>
               
               {/* Icon */}
-              <span className="text-4xl md:text-5xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 relative z-10 filter drop-shadow-lg">
+              <span className="text-2xl md:text-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 relative z-10 filter drop-shadow-lg">
                 {category.icon}
               </span>
             </div>
             
             {/* Card Content */}
-            <div className="p-4 text-center bg-gradient-to-b from-white to-gray-50/50">
-              <p className="font-bold text-gray-900 text-sm md:text-base group-hover:text-brand-600 transition-colors duration-300">
+            <div className="p-2 text-center bg-gradient-to-b from-white to-gray-50/50">
+              <p className="font-bold text-gray-900 text-xs md:text-sm group-hover:text-brand-600 transition-colors duration-300">
                 {category.name}
               </p>
             </div>
