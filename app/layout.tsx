@@ -11,6 +11,14 @@ export const metadata: Metadata = {
   description: `Discover and buy tickets for events in Haiti - ${BRAND.name}`,
   manifest: '/manifest.json',
   themeColor: '#0F766E',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/icon-192.svg', type: 'image/svg+xml' },
+    ],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',

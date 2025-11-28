@@ -1,8 +1,10 @@
 import { getCurrentUser } from '@/lib/auth'
 import { getTrendingEvents, getNearbyEvents } from '@/lib/recommendations'
 import EventCard from '@/components/EventCard'
+import EventCardHorizontal from '@/components/EventCardHorizontal'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
+import PullToRefresh from '@/components/PullToRefresh'
 import AdvancedSearch from '@/components/AdvancedSearch'
 import Badge from '@/components/ui/Badge'
 import { isAdmin } from '@/lib/admin'
@@ -42,7 +44,12 @@ export default async function DiscoverPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
+      <PullToRefresh onRefresh={async () => {
+        'use server'
+        const { revalidatePath } = await import('next/cache')
+        revalidatePath('/discover')
+      }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
         {/* Trending Events */}
         <section>
           <div className="flex items-center justify-between mb-8">
@@ -59,18 +66,35 @@ export default async function DiscoverPage() {
           </div>
           
           {trendingEvents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {trendingEvents.map((event: any, index: number) => (
-                <div key={event.id} className="relative animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
-                  {index < 3 && (
-                    <div className="absolute -top-3 -left-3 z-10 w-12 h-12 bg-gradient-to-br from-yellow-400 via-accent-500 to-accent-600 rounded-full flex items-center justify-center text-white font-bold shadow-hard ring-4 ring-white">
-                      #{index + 1}
-                    </div>
-                  )}
-                  <EventCard event={event} />
-                </div>
-              ))}
-            </div>
+            <>
+              {/* Mobile: Horizontal Cards */}
+              <div className="md:hidden space-y-4">
+                {trendingEvents.map((event: any, index: number) => (
+                  <div key={event.id} className="relative animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
+                    {index < 3 && (
+                      <div className="absolute top-2 left-2 z-10 w-10 h-10 bg-gradient-to-br from-yellow-400 via-accent-500 to-accent-600 rounded-full flex items-center justify-center text-white font-bold shadow-hard text-sm">
+                        #{index + 1}
+                      </div>
+                    )}
+                    <EventCardHorizontal event={event} />
+                  </div>
+                ))}
+              </div>
+              
+              {/* Desktop: Grid Cards */}
+              <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {trendingEvents.map((event: any, index: number) => (
+                  <div key={event.id} className="relative animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
+                    {index < 3 && (
+                      <div className="absolute -top-3 -left-3 z-10 w-12 h-12 bg-gradient-to-br from-yellow-400 via-accent-500 to-accent-600 rounded-full flex items-center justify-center text-white font-bold shadow-hard ring-4 ring-white">
+                        #{index + 1}
+                      </div>
+                    )}
+                    <EventCard event={event} />
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
             <div className="text-center py-20 bg-white rounded-3xl shadow-soft">
               <div className="text-7xl mb-4">🔥</div>
@@ -96,11 +120,21 @@ export default async function DiscoverPage() {
           </div>
 
           {nearbyEvents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {nearbyEvents.map((event: any) => (
-                <EventCard key={event.id} event={event} />
-              ))}
-            </div>
+            <>
+              {/* Mobile: Horizontal Cards */}
+              <div className="md:hidden space-y-4">
+                {nearbyEvents.map((event: any) => (
+                  <EventCardHorizontal key={event.id} event={event} />
+                ))}
+              </div>
+              
+              {/* Desktop: Grid Cards */}
+              <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {nearbyEvents.map((event: any) => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
+            </>
           ) : (
             <div className="text-center py-20 bg-white rounded-3xl shadow-soft">
               <div className="text-7xl mb-4">📍</div>
@@ -133,7 +167,8 @@ export default async function DiscoverPage() {
             ))}
           </div>
         </section>
-      </div>
+        </div>
+      </PullToRefresh>
       
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>

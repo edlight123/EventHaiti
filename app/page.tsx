@@ -9,6 +9,7 @@ import CategoryGrid from '@/components/CategoryGrid'
 import DateFilters from '@/components/DateFilters'
 import EventSearchFilters from '@/components/EventSearchFilters'
 import FeaturedCarousel from '@/components/FeaturedCarousel'
+import PullToRefresh from '@/components/PullToRefresh'
 import { SkeletonEventCard } from '@/components/ui/Skeleton'
 import { BRAND } from '@/config/brand'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
@@ -243,10 +244,16 @@ export default async function HomePage({
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <PullToRefresh onRefresh={async () => {
+        'use server'
+        // This will trigger a full page refresh to reload events
+        const { revalidatePath } = await import('next/cache')
+        revalidatePath('/')
+      }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         
-        {/* SEARCH RESULTS VIEW */}
-        {isSearching ? (
+          {/* SEARCH RESULTS VIEW */}
+          {isSearching ? (
           <div className="space-y-8">
             <div className="flex items-center justify-between">
               <div>
@@ -399,7 +406,8 @@ export default async function HomePage({
 
           </div>
         )}
-      </div>
+        </div>
+      </PullToRefresh>
       
       {/* Mobile Bottom Navigation */}
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />

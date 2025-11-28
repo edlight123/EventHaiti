@@ -4,6 +4,8 @@ import { isAdmin } from '@/lib/admin'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import EventCard from '@/components/EventCard'
+import EventCardHorizontal from '@/components/EventCardHorizontal'
+import PullToRefresh from '@/components/PullToRefresh'
 import EmptyState from '@/components/EmptyState'
 import Link from 'next/link'
 import type { Database } from '@/types/database'
@@ -97,29 +99,45 @@ export default async function FavoritesPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Favorites</h1>
-          <p className="text-gray-600 mt-2">Events you&apos;ve saved for later</p>
-        </div>
-
-        {favoriteEvents.length === 0 ? (
-          <EmptyState
-            icon={Heart}
-            title="No favorites yet"
-            description="Start exploring events and save your favorites to see them here"
-            actionLabel="Discover Events"
-            actionHref="/"
-            actionIcon={TrendingUp}
-          />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {favoriteEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
+      <PullToRefresh onRefresh={async () => {
+        'use server'
+        const { revalidatePath } = await import('next/cache')
+        revalidatePath('/favorites')
+      }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">My Favorites</h1>
+            <p className="text-gray-600 mt-2">Events you&apos;ve saved for later</p>
           </div>
-        )}
-      </div>
+
+          {favoriteEvents.length === 0 ? (
+            <EmptyState
+              icon={Heart}
+              title="No favorites yet"
+              description="Start exploring events and save your favorites to see them here"
+              actionLabel="Discover Events"
+              actionHref="/"
+              actionIcon={TrendingUp}
+            />
+          ) : (
+            <>
+              {/* Mobile: Horizontal Cards */}
+              <div className="md:hidden space-y-4">
+                {favoriteEvents.map((event) => (
+                  <EventCardHorizontal key={event.id} event={event} />
+                ))}
+              </div>
+              
+              {/* Desktop: Grid Cards */}
+              <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {favoriteEvents.map((event) => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </PullToRefresh>
       
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>

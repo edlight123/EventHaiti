@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad32" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0F766E;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#14B8A6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7.2" fill="url(#grad32)"/>
+  <text x="16" y="21.866666666666667" font-family="system-ui, -apple-system, sans-serif" font-size="17.6" font-weight="700" fill="white" text-anchor="middle">EH</text>
+</svg>
