@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
+import PullToRefresh from '@/components/PullToRefresh'
 import { redirect } from 'next/navigation'
 import { User, Mail, Phone, Shield, Bell, Lock, Trash2, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -16,38 +18,43 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <PullToRefresh onRefresh={async () => {
+        'use server'
+        const { revalidatePath } = await import('next/cache')
+        revalidatePath('/settings')
+      }}>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
         
-        {/* Back Button */}
-        <Link 
-          href="/profile"
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="font-medium">Back to Profile</span>
-        </Link>
+          {/* Back Button */}
+          <Link 
+            href="/profile"
+            className="inline-flex items-center gap-1.5 md:gap-2 text-gray-600 hover:text-gray-900 mb-4 md:mb-6 transition-colors text-[13px] md:text-base"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="font-medium">Back to Profile</span>
+          </Link>
 
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
-          <p className="text-gray-600 mt-2">Manage your account preferences and settings</p>
-        </div>
+          {/* Header */}
+          <div className="mb-6 md:mb-8">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Account Settings</h1>
+            <p className="text-[13px] md:text-base text-gray-600 mt-1 md:mt-2">Manage your account preferences and settings</p>
+          </div>
 
-        {/* Settings Sections */}
-        <div className="space-y-6">
+          {/* Settings Sections */}
+          <div className="space-y-4 md:space-y-6">
           
           {/* Personal Information */}
-          <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-brand-100 flex items-center justify-center">
-                <User className="w-5 h-5 text-brand-600" />
+          <div className="bg-white rounded-xl md:rounded-2xl shadow-soft border border-gray-100 p-4 md:p-6">
+            <div className="flex items-center gap-2.5 md:gap-3 mb-4 md:mb-6">
+              <div className="w-9 h-9 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-brand-100 flex items-center justify-center flex-shrink-0">
+                <User className="w-4 h-4 md:w-5 md:h-5 text-brand-600" />
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Personal Information</h2>
-                <p className="text-sm text-gray-600">Update your personal details</p>
+              <div className="min-w-0">
+                <h2 className="text-lg md:text-xl font-bold text-gray-900">Personal Information</h2>
+                <p className="text-[13px] md:text-sm text-gray-600">Update your personal details</p>
               </div>
             </div>
 
@@ -207,7 +214,9 @@ export default async function SettingsPage() {
           </div>
 
         </div>
-      </div>
+      </PullToRefresh>
+
+      <MobileNavWrapper user={user} />
     </div>
   )
 }

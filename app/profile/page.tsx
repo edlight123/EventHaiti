@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
+import PullToRefresh from '@/components/PullToRefresh'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { 
@@ -58,15 +60,20 @@ export default async function ProfilePage() {
   const followerCount = followers?.length || 0
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <PullToRefresh onRefresh={async () => {
+        'use server'
+        const { revalidatePath } = await import('next/cache')
+        revalidatePath('/profile')
+      }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
         
         {/* Header Card */}
-        <div className="bg-white rounded-2xl shadow-soft border border-gray-100 overflow-hidden mb-6">
+        <div className="bg-white rounded-xl md:rounded-2xl shadow-soft border border-gray-100 overflow-hidden mb-4 md:mb-6">
           {/* Hero Background */}
-          <div className="relative h-48 bg-gradient-to-br from-brand-600 via-brand-500 to-accent-500">
+          <div className="relative h-32 md:h-48 bg-gradient-to-br from-brand-600 via-brand-500 to-accent-500">
             <div className="absolute inset-0 bg-black/10"></div>
             {/* Decorative circles */}
             <div className="absolute top-10 right-20 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
@@ -74,38 +81,39 @@ export default async function ProfilePage() {
           </div>
 
           {/* Profile Info */}
-          <div className="relative px-8 pb-8">
+          <div className="relative px-4 md:px-8 pb-4 md:pb-8">
             {/* Avatar */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-end -mt-16 mb-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-end -mt-12 md:-mt-16 mb-4 md:mb-6">
               <div className="relative">
-                <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-brand-400 to-accent-400 flex items-center justify-center text-white font-bold text-5xl shadow-hard border-4 border-white">
+                <div className="w-24 h-24 md:w-32 md:h-32 rounded-xl md:rounded-2xl bg-gradient-to-br from-brand-400 to-accent-400 flex items-center justify-center text-white font-bold text-4xl md:text-5xl shadow-hard border-4 border-white">
                   {user.full_name?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 {user.is_verified && (
-                  <div className="absolute -bottom-2 -right-2 bg-blue-500 text-white rounded-full p-2 shadow-lg">
-                    <Shield className="w-5 h-5" />
+                  <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 bg-blue-500 text-white rounded-full p-1.5 md:p-2 shadow-lg">
+                    <Shield className="w-4 h-4 md:w-5 md:h-5" />
                   </div>
                 )}
               </div>
               
-              <div className="mt-4 sm:mt-0 sm:ml-6 flex-1">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div>
-                    <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                      {user.full_name}
+              <div className="mt-3 md:mt-0 sm:ml-6 flex-1 w-full">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4">
+                  <div className="min-w-0">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2 md:gap-3">
+                      <span className="truncate">{user.full_name}</span>
                       {user.is_verified && (
-                        <Badge variant="success" size="md" icon={<Shield className="w-4 h-4" />}>
-                          Verified
+                        <Badge variant="success" size="md" icon={<Shield className="w-3 h-3 md:w-4 md:h-4" />}>
+                          <span className="hidden sm:inline">Verified</span>
+                          <span className="sm:hidden">✓</span>
                         </Badge>
                       )}
                     </h1>
-                    <p className="text-gray-600 mt-1 flex items-center gap-2">
-                      <Mail className="w-4 h-4" />
-                      {user.email}
+                    <p className="text-[13px] md:text-base text-gray-600 mt-1 flex items-center gap-2 truncate">
+                      <Mail className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
+                      <span className="truncate">{user.email}</span>
                     </p>
                     {user.phone_number && (
-                      <p className="text-gray-600 mt-1 flex items-center gap-2">
-                        <Phone className="w-4 h-4" />
+                      <p className="text-[13px] md:text-base text-gray-600 mt-1 flex items-center gap-2">
+                        <Phone className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
                         {user.phone_number}
                       </p>
                     )}
@@ -114,7 +122,7 @@ export default async function ProfilePage() {
                   <div className="flex gap-2">
                     <Link
                       href="/settings"
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all"
+                      className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 rounded-lg md:rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-[13px] md:text-base transition-all whitespace-nowrap"
                     >
                       <Settings className="w-4 h-4" />
                       Settings
@@ -125,75 +133,75 @@ export default async function ProfilePage() {
             </div>
 
             {/* Role Badge */}
-            <div className="flex items-center gap-2 mb-6">
+            <div className="flex items-center gap-2 mb-4 md:mb-6">
               <Badge variant={user.role === 'organizer' ? 'vip' : 'primary'} size="lg">
                 {user.role === 'organizer' ? 'Event Organizer' : 'Event Attendee'}
               </Badge>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-gradient-to-br from-brand-50 to-brand-100 rounded-xl p-4 border border-brand-200">
-                <div className="flex items-center gap-2 text-brand-600 mb-2">
-                  <Ticket className="w-5 h-5" />
-                  <span className="text-sm font-semibold">Tickets</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
+              <div className="bg-gradient-to-br from-brand-50 to-brand-100 rounded-lg md:rounded-xl p-3 md:p-4 border border-brand-200">
+                <div className="flex items-center gap-1.5 md:gap-2 text-brand-600 mb-1.5 md:mb-2">
+                  <Ticket className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+                  <span className="text-[11px] md:text-sm font-semibold">Tickets</span>
                 </div>
-                <p className="text-3xl font-bold text-brand-900">{ticketCount}</p>
-                <p className="text-xs text-brand-600 mt-1">Events attended</p>
+                <p className="text-2xl md:text-3xl font-bold text-brand-900">{ticketCount}</p>
+                <p className="text-[10px] md:text-xs text-brand-600 mt-0.5 md:mt-1">Events attended</p>
               </div>
 
-              <div className="bg-gradient-to-br from-accent-50 to-accent-100 rounded-xl p-4 border border-accent-200">
-                <div className="flex items-center gap-2 text-accent-600 mb-2">
-                  <Heart className="w-5 h-5" />
-                  <span className="text-sm font-semibold">Favorites</span>
+              <div className="bg-gradient-to-br from-accent-50 to-accent-100 rounded-lg md:rounded-xl p-3 md:p-4 border border-accent-200">
+                <div className="flex items-center gap-1.5 md:gap-2 text-accent-600 mb-1.5 md:mb-2">
+                  <Heart className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+                  <span className="text-[11px] md:text-sm font-semibold">Favorites</span>
                 </div>
-                <p className="text-3xl font-bold text-accent-900">{favoriteCount}</p>
-                <p className="text-xs text-accent-600 mt-1">Saved events</p>
+                <p className="text-2xl md:text-3xl font-bold text-accent-900">{favoriteCount}</p>
+                <p className="text-[10px] md:text-xs text-accent-600 mt-0.5 md:mt-1">Saved events</p>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
-                <div className="flex items-center gap-2 text-purple-600 mb-2">
-                  <Calendar className="w-5 h-5" />
-                  <span className="text-sm font-semibold">Events</span>
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg md:rounded-xl p-3 md:p-4 border border-purple-200">
+                <div className="flex items-center gap-1.5 md:gap-2 text-purple-600 mb-1.5 md:mb-2">
+                  <Calendar className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+                  <span className="text-[11px] md:text-sm font-semibold">Events</span>
                 </div>
-                <p className="text-3xl font-bold text-purple-900">{eventCount}</p>
-                <p className="text-xs text-purple-600 mt-1">Events created</p>
+                <p className="text-2xl md:text-3xl font-bold text-purple-900">{eventCount}</p>
+                <p className="text-[10px] md:text-xs text-purple-600 mt-0.5 md:mt-1">Events created</p>
               </div>
 
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
-                <div className="flex items-center gap-2 text-blue-600 mb-2">
-                  <Users className="w-5 h-5" />
-                  <span className="text-sm font-semibold">Followers</span>
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg md:rounded-xl p-3 md:p-4 border border-blue-200">
+                <div className="flex items-center gap-1.5 md:gap-2 text-blue-600 mb-1.5 md:mb-2">
+                  <Users className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+                  <span className="text-[11px] md:text-sm font-semibold">Followers</span>
                 </div>
-                <p className="text-3xl font-bold text-blue-900">{followerCount}</p>
-                <p className="text-xs text-blue-600 mt-1">People following</p>
+                <p className="text-2xl md:text-3xl font-bold text-blue-900">{followerCount}</p>
+                <p className="text-[10px] md:text-xs text-blue-600 mt-0.5 md:mt-1">People following</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           
           {/* Main Actions */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <TrendingUp className="w-6 h-6 text-brand-600" />
+            <div className="bg-white rounded-xl md:rounded-2xl shadow-soft border border-gray-100 p-4 md:p-6">
+              <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-brand-600" />
                 Quick Actions
               </h2>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:gap-3">
                 <Link
                   href="/tickets"
-                  className="group relative overflow-hidden flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-brand-400 hover:bg-brand-50 transition-all"
+                  className="group relative overflow-hidden flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-lg md:rounded-xl border-2 border-gray-200 hover:border-brand-400 hover:bg-brand-50 transition-all"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-brand-100 group-hover:bg-brand-200 flex items-center justify-center text-brand-600 transition-colors">
-                    <Ticket className="w-6 h-6" />
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-brand-100 group-hover:bg-brand-200 flex items-center justify-center text-brand-600 transition-colors flex-shrink-0">
+                    <Ticket className="w-5 h-5 md:w-6 md:h-6" />
                   </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">My Tickets</p>
-                    <p className="text-sm text-gray-600">{ticketCount} ticket{ticketCount !== 1 ? 's' : ''}</p>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-[13px] md:text-base text-gray-900">My Tickets</p>
+                    <p className="text-[11px] md:text-sm text-gray-600 truncate">{ticketCount} ticket{ticketCount !== 1 ? 's' : ''}</p>
                   </div>
                 </Link>
 
@@ -344,7 +352,9 @@ export default async function ProfilePage() {
             </div>
           </div>
         </div>
-      </div>
+      </PullToRefresh>
+
+      <MobileNavWrapper user={user} />
     </div>
   )
 }
