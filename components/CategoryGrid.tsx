@@ -15,21 +15,37 @@ const categories = [
 
 export default function CategoryGrid() {
   return (
-    <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
       {categories.map((category) => (
         <Link
           key={category.name}
           href={category.href}
-          className="group flex-shrink-0"
+          className="group"
         >
-          <div className="bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 group-hover:scale-110 group-hover:-translate-y-2 w-28">
-            <div className={`h-24 bg-gradient-to-br ${category.color} flex items-center justify-center relative overflow-hidden`}>
-              <div className="absolute inset-0 bg-white/10 group-hover:bg-white/20 transition-colors"></div>
-              <span className="text-4xl transform group-hover:scale-125 transition-transform duration-500 relative z-10">{category.icon}</span>
+          <div className="relative bg-white rounded-2xl shadow-medium hover:shadow-hard transition-all duration-300 overflow-hidden border-2 border-gray-100 group-hover:border-brand-200 group-hover:scale-105 group-hover:-translate-y-1">
+            {/* Gradient Background with Glassmorphism */}
+            <div className={`relative h-32 md:h-36 bg-gradient-to-br ${category.color} flex items-center justify-center overflow-hidden`}>
+              {/* Subtle Pattern Overlay */}
+              <div className="absolute inset-0 bg-white/10 group-hover:bg-white/20 transition-colors backdrop-blur-[1px]"></div>
+              
+              {/* Glow Effect on Hover */}
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-white/30 to-transparent"></div>
+              
+              {/* Icon */}
+              <span className="text-5xl md:text-6xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 relative z-10 filter drop-shadow-lg">
+                {category.icon}
+              </span>
             </div>
-            <div className="p-4 text-center bg-gradient-to-b from-white to-gray-50">
-              <p className="font-bold text-gray-900 text-sm whitespace-nowrap overflow-hidden text-ellipsis group-hover:text-teal-700 transition-colors">{category.name}</p>
+            
+            {/* Card Content */}
+            <div className="p-4 text-center bg-gradient-to-b from-white to-gray-50/50">
+              <p className="font-bold text-gray-900 text-sm md:text-base group-hover:text-brand-600 transition-colors duration-300">
+                {category.name}
+              </p>
             </div>
+
+            {/* Hover Glow Ring */}
+            <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none ring-2 ring-brand-400/50 ring-offset-2"></div>
           </div>
         </Link>
       ))}

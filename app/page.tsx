@@ -278,7 +278,12 @@ export default async function HomePage({
             
             {/* Browse by Category */}
             <section>
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">Browse by Category</h2>
+              <div className="mb-8">
+                <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 via-brand-600 to-gray-900 bg-clip-text text-transparent mb-2">
+                  Browse by Category
+                </h2>
+                <p className="text-gray-600 text-lg">Find events that match your interests</p>
+              </div>
               <CategoryGrid />
             </section>
 
