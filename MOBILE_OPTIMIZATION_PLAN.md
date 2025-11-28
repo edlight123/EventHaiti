@@ -446,6 +446,18 @@ const AdminPanel = dynamic(() => import('./AdminPanel'), {
 - [x] Organizer verify page (mobile nav, compact info boxes, responsive padding)
 - [x] Public organizer profile (horizontal stats, compact hero, mobile nav)
 
+### Week 2+: User-Facing Pages
+- [x] User profile (compact hero h-32, smaller avatar, horizontal stats)
+- [x] User settings (compact sections, responsive inputs, pull-to-refresh, mobile nav)
+- [x] Categories browser (compact header, responsive grid, pull-to-refresh, mobile nav)
+
+### Week 2+: Admin Pages (5 pages)
+- [x] Admin dashboard (horizontal stats, responsive table, compact actions, pull-to-refresh, mobile nav)
+- [ ] Admin events moderation (responsive table, compact filters, mobile actions)
+- [ ] Admin users management (responsive table, search/filter mobile, quick actions)
+- [ ] Admin verifications (compact review cards, mobile approve/reject, document previews)
+- [ ] Admin analytics (horizontal metrics, responsive charts, data tables)
+
 ### Week 3: Layout Consistency (Phase 5)
 - [ ] Update typography scale
 - [ ] Fix button sizes (min-h-[44px])
