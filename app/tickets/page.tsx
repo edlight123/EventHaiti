@@ -113,7 +113,12 @@ export default async function MyTicketsPage() {
               return (
                 <TicketCard
                   key={event.id}
-                  event={event}
+                  eventId={event.id}
+                  title={event.title}
+                  bannerImageUrl={event.banner_image_url}
+                  startDatetime={event.start_datetime}
+                  venueName={event.venue_name}
+                  city={event.city}
                   ticketCount={item.ticketCount}
                 />
               )
