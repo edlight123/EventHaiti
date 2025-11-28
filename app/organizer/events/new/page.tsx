@@ -1,5 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
+import PullToRefresh from '@/components/PullToRefresh'
 import { redirect } from 'next/navigation'
 import EventForm from '../EventForm'
 import { createClient } from '@/lib/firebase-db/server'
@@ -48,37 +50,37 @@ export default async function NewEventPage() {
   // If not verified (check both is_verified and verification_status), redirect to verification page
   if (userData?.is_verified !== true && userData?.verification_status !== 'approved') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-yellow-50">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-yellow-50 pb-mobile-nav">
         <Navbar user={user} />
 
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="bg-white rounded-3xl shadow-medium border-2 border-yellow-200 p-10">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16">
+          <div className="bg-white rounded-xl md:rounded-3xl shadow-medium border border-yellow-200 p-6 md:p-10">
             <div className="text-center">
-              <div className="w-20 h-20 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-soft">
-                <svg className="w-10 h-10 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-soft">
+                <svg className="w-8 h-8 md:w-10 md:h-10 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
               </div>
               
-              <h1 className="text-3xl font-bold text-gray-900 mb-3">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 md:mb-3">
                 {verificationStatus === 'pending' ? '⏳ Verification Pending' : '🔒 Verification Required'}
               </h1>
               
               {verificationStatus === 'pending' ? (
                 <>
-                  <p className="text-lg text-gray-600 mb-8 max-w-xl mx-auto">
+                  <p className="text-base md:text-lg text-gray-600 mb-6 md:mb-8 max-w-xl mx-auto">
                     Your verification request is being reviewed by our team. This usually takes 24-48 hours.
                   </p>
-                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-2xl p-6 mb-8">
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl md:rounded-2xl p-5 md:p-6 mb-6 md:mb-8">
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-500 rounded-lg md:rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
                       <div className="text-left">
                         <p className="font-semibold text-blue-900 mb-1">What happens next?</p>
-                        <p className="text-sm text-blue-800">
+                        <p className="text-[13px] md:text-sm text-blue-800">
                           You&apos;ll receive an email once your account is verified. Thank you for your patience!
                         </p>
                       </div>
@@ -86,7 +88,7 @@ export default async function NewEventPage() {
                   </div>
                   <Link
                     href="/organizer/events"
-                    className="inline-flex items-center gap-2 px-8 py-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold transition-all shadow-soft hover:shadow-medium"
+                    className="inline-flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold transition-all shadow-soft hover:shadow-medium"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -96,19 +98,19 @@ export default async function NewEventPage() {
                 </>
               ) : verificationStatus === 'rejected' ? (
                 <>
-                  <p className="text-lg text-gray-600 mb-8 max-w-xl mx-auto">
+                  <p className="text-base md:text-lg text-gray-600 mb-6 md:mb-8 max-w-xl mx-auto">
                     Unfortunately, your verification request was not approved. Please try again with clearer photos of your ID.
                   </p>
-                  <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-2xl p-6 mb-8">
+                  <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl md:rounded-2xl p-5 md:p-6 mb-6 md:mb-8">
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-10 h-10 md:w-12 md:h-12 bg-red-500 rounded-lg md:rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
                       </div>
                       <div className="text-left">
                         <p className="font-semibold text-red-900 mb-1">Common reasons for rejection:</p>
-                        <ul className="text-sm text-red-800 space-y-1">
+                        <ul className="text-[13px] md:text-sm text-red-800 space-y-1">
                           <li>• Photos are blurry or unclear</li>
                           <li>• ID card is not fully visible</li>
                           <li>• Selfie doesn&apos;t match ID photo</li>
@@ -118,7 +120,7 @@ export default async function NewEventPage() {
                   </div>
                   <Link
                     href="/organizer/verify"
-                    className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-brand-600 to-accent-600 hover:from-brand-700 hover:to-accent-700 text-white rounded-xl font-bold transition-all shadow-soft hover:shadow-glow"
+                    className="inline-flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-brand-600 to-accent-600 hover:from-brand-700 hover:to-accent-700 text-white rounded-xl font-bold transition-all shadow-soft hover:shadow-glow"
                   >
                     Try Again
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,17 +130,17 @@ export default async function NewEventPage() {
                 </>
               ) : (
                 <>
-                  <p className="text-lg text-gray-600 mb-8 max-w-xl mx-auto">
+                  <p className="text-base md:text-lg text-gray-600 mb-6 md:mb-8 max-w-xl mx-auto">
                     To create events on EventHaiti, you need to verify your identity first. This helps keep our community safe and trustworthy.
                   </p>
-                  <div className="bg-gradient-to-r from-brand-50 to-accent-50 border-2 border-brand-200 rounded-2xl p-8 mb-8 text-left max-w-lg mx-auto">
+                  <div className="bg-gradient-to-r from-brand-50 to-accent-50 border border-brand-200 rounded-xl md:rounded-2xl p-6 md:p-8 mb-6 md:mb-8 text-left max-w-lg mx-auto">
                     <h3 className="font-bold text-brand-900 mb-4 text-lg flex items-center gap-2">
                       <svg className="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       What you&apos;ll need:
                     </h3>
-                    <ul className="space-y-3 text-sm text-brand-800">
+                    <ul className="space-y-3 text-[13px] md:text-sm text-brand-800">
                       <li className="flex items-start gap-3">
                         <div className="w-6 h-6 bg-brand-500 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                           <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -176,7 +178,7 @@ export default async function NewEventPage() {
                   </div>
                   <Link
                     href="/organizer/verify"
-                    className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-brand-600 to-accent-600 hover:from-brand-700 hover:to-accent-700 text-white rounded-xl font-bold transition-all shadow-soft hover:shadow-glow text-lg"
+                    className="inline-flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-brand-600 to-accent-600 hover:from-brand-700 hover:to-accent-700 text-white rounded-xl font-bold transition-all shadow-soft hover:shadow-glow text-base md:text-lg"
                   >
                     Start Verification
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -188,34 +190,43 @@ export default async function NewEventPage() {
             </div>
           </div>
         </div>
+        <MobileNavWrapper user={user} />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-brand-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-brand-50 pb-mobile-nav">
       <Navbar user={user} />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-brand-500 to-accent-500 rounded-xl flex items-center justify-center shadow-glow">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-brand-700 to-accent-700 bg-clip-text text-transparent">
-                Create New Event
-              </h1>
-              <p className="text-gray-600 mt-1">Share your amazing event with the world</p>
+      <PullToRefresh onRefresh={async () => {
+        'use server'
+        const { revalidatePath } = await import('next/cache')
+        revalidatePath('/organizer/events/new')
+      }}>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+          {/* Header Section */}
+          <div className="mb-6 md:mb-8">
+            <div className="flex items-center gap-3 mb-2 md:mb-3">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-brand-500 to-accent-500 rounded-lg md:rounded-xl flex items-center justify-center shadow-glow">
+                <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-brand-700 to-accent-700 bg-clip-text text-transparent">
+                  Create New Event
+                </h1>
+                <p className="text-[13px] md:text-base text-gray-600 mt-1">Share your amazing event with the world</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <EventForm userId={user.id} />
-      </div>
+          <EventForm userId={user.id} />
+        </div>
+      </PullToRefresh>
+
+      <MobileNavWrapper user={user} />
     </div>
   )
 }
