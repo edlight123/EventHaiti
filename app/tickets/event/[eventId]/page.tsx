@@ -90,9 +90,8 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
 
   console.log('=== QUERY RESULTS ===')
   console.log('Event found:', !!event)
-  console.log('Event data:', event ? JSON.stringify(event, null, 2) : 'null')
+  console.log('Event title:', event?.title || 'null')
   console.log('Tickets count:', tickets?.length || 0)
-  console.log('Tickets data:', tickets ? JSON.stringify(tickets, null, 2) : 'null')
 
   if (!event || !tickets || tickets.length === 0) {
     console.log('Showing 404 - event or tickets missing')
@@ -142,7 +141,7 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
                     </Badge>
                   )}
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">{event.title}</h1>
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">{String(event.title || 'Event')}</h1>
                 <p className="text-gray-600">Your tickets are ready to use</p>
               </div>
             </div>
@@ -182,8 +181,8 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-accent-600 uppercase tracking-wider mb-1">Venue</p>
-                  <p className="font-bold text-gray-900 truncate">{event.venue_name || 'Venue TBA'}</p>
-                  <p className="text-sm text-gray-600 truncate">{event.commune || 'Location'}, {event.city || 'TBA'}</p>
+                  <p className="font-bold text-gray-900 truncate">{String(event.venue_name || 'Venue TBA')}</p>
+                  <p className="text-sm text-gray-600 truncate">{String(event.commune || 'Location')}, {String(event.city || 'TBA')}</p>
                 </div>
               </div>
             </div>
