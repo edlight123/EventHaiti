@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import VerifyOrganizerForm from './VerifyOrganizerForm'
@@ -42,7 +43,7 @@ export default async function AdminVerifyPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar user={user} />
+      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
       
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Breadcrumb */}

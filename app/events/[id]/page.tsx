@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 import Navbar from '@/components/Navbar'
 import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
@@ -209,7 +210,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar user={user} />
+      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
       {/* PREMIUM HERO SECTION */}
       <div className="relative bg-gray-900">

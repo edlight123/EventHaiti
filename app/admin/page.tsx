@@ -2,10 +2,11 @@ import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
+import { isAdmin, getAdminEmails } from '@/lib/admin'
 
 export const revalidate = 0
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e)
+const ADMIN_EMAILS = getAdminEmails()
 
 export default async function AdminDashboard() {
   try {
@@ -103,7 +104,7 @@ export default async function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar user={user} />
+      <Navbar user={user} isAdmin={true} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">

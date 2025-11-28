@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import Badge from '@/components/ui/Badge'
+import { isAdmin } from '@/lib/admin'
 import { Calendar, Heart, Ticket, TrendingUp, Star, ArrowRight, Sparkles, Clock } from 'lucide-react'
 import { isDemoMode, DEMO_EVENTS, DEMO_TICKETS } from '@/lib/demo'
 
@@ -67,7 +68,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar user={user} />
+      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Header */}

@@ -4,6 +4,7 @@ import EventCard from '@/components/EventCard'
 import Navbar from '@/components/Navbar'
 import AdvancedSearch from '@/components/AdvancedSearch'
 import Badge from '@/components/ui/Badge'
+import { isAdmin } from '@/lib/admin'
 import { TrendingUp, MapPin, Sparkles, Calendar, Star } from 'lucide-react'
 
 export default async function DiscoverPage() {
@@ -18,7 +19,7 @@ export default async function DiscoverPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar user={user} />
+      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
       
       {/* Premium Hero with Search */}
       <div className="relative bg-gradient-to-br from-brand-600 via-brand-700 to-accent-600 overflow-hidden">

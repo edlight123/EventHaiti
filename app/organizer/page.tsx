@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { requireAuth } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
@@ -47,7 +48,7 @@ export default async function OrganizerDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar user={user} />
+      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Header */}

@@ -10,6 +10,7 @@ import FeaturedCarousel from '@/components/FeaturedCarousel'
 import { SkeletonEventCard } from '@/components/ui/Skeleton'
 import { BRAND } from '@/config/brand'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
+import { isAdmin } from '@/lib/admin'
 import type { Database } from '@/types/database'
 
 type Event = Database['public']['Tables']['events']['Row']
@@ -194,7 +195,7 @@ export default async function HomePage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar user={user} />
+      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
       {/* Demo Mode Banner */}
       {isDemoMode() && (

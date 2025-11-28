@@ -16,9 +16,10 @@ interface NavbarProps {
     email: string
     role: 'attendee' | 'organizer'
   } | null
+  isAdmin?: boolean
 }
 
-export default function Navbar({ user }: NavbarProps) {
+export default function Navbar({ user, isAdmin = false }: NavbarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -97,6 +98,16 @@ export default function Navbar({ user }: NavbarProps) {
                   >
                     Organizer
                   </Link>
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        pathname?.startsWith('/admin') ? 'bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      Admin
+                    </Link>
+                  )}
                 </>
               )}
             </div>
@@ -205,6 +216,17 @@ export default function Navbar({ user }: NavbarProps) {
                   >
                     My Events
                   </Link>
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`block px-3 py-2 rounded-lg text-sm font-medium ${
+                        pathname?.startsWith('/admin') ? 'bg-orange-50 text-orange-700' : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      Admin
+                    </Link>
+                  )}
                   <Link
                     href="/profile"
                     onClick={() => setMobileMenuOpen(false)}

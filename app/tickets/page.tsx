@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { requireAuth } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 import Navbar from '@/components/Navbar'
 import EmptyState from '@/components/EmptyState'
 import { redirect } from 'next/navigation'
@@ -125,7 +126,7 @@ export default async function MyTicketsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar user={user} />
+      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">My Tickets</h1>
