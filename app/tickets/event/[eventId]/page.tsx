@@ -25,6 +25,30 @@ import Badge from '@/components/ui/Badge'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+// Helper function to serialize all Timestamp objects recursively
+function serializeTimestamps(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj
+  
+  // Check if it's a Firestore Timestamp
+  if (obj.toDate && typeof obj.toDate === 'function') {
+    return obj.toDate().toISOString()
+  }
+  
+  // Handle arrays
+  if (Array.isArray(obj)) {
+    return obj.map(item => serializeTimestamps(item))
+  }
+  
+  // Handle plain objects
+  const serialized: any = {}
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      serialized[key] = serializeTimestamps(obj[key])
+    }
+  }
+  return serialized
+}
+
 export default async function EventTicketsPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { user, error } = await requireAuth()
 
@@ -81,22 +105,9 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
     notFound()
   }
 
-  // Convert Firestore Timestamps to plain strings for client components
-  const serializedEvent = {
-    ...event,
-    start_datetime: event.start_datetime?.toDate ? event.start_datetime.toDate().toISOString() : event.start_datetime,
-    end_datetime: event.end_datetime?.toDate ? event.end_datetime.toDate().toISOString() : event.end_datetime,
-    created_at: event.created_at?.toDate ? event.created_at.toDate().toISOString() : event.created_at,
-    updated_at: event.updated_at?.toDate ? event.updated_at.toDate().toISOString() : event.updated_at,
-  }
-
-  const serializedTickets = tickets.map(ticket => ({
-    ...ticket,
-    purchased_at: ticket.purchased_at?.toDate ? ticket.purchased_at.toDate().toISOString() : ticket.purchased_at,
-    checked_in_at: ticket.checked_in_at?.toDate ? ticket.checked_in_at.toDate().toISOString() : ticket.checked_in_at,
-    created_at: ticket.created_at?.toDate ? ticket.created_at.toDate().toISOString() : ticket.created_at,
-    updated_at: ticket.updated_at?.toDate ? ticket.updated_at.toDate().toISOString() : ticket.updated_at,
-  }))
+  // Serialize ALL Firestore Timestamps recursively
+  const serializedEvent = serializeTimestamps(event)
+  const serializedTickets = tickets.map(ticket => serializeTimestamps(ticket))
 
   // Additional validation
   const validTickets = serializedTickets.filter(t => t && !t.checked_in_at && t.status === 'valid')
