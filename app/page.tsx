@@ -2,6 +2,7 @@ import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import EventCard from '@/components/EventCard'
 import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
 import SearchBar from '@/components/SearchBar'
 import CategoryGrid from '@/components/CategoryGrid'
 import DateFilters from '@/components/DateFilters'
@@ -194,7 +195,7 @@ export default async function HomePage({
   const isSearching = params.q || params.location || params.city || params.category || params.dateFrom || params.dateTo
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
       {/* Demo Mode Banner */}
@@ -221,10 +222,10 @@ export default async function HomePage({
           <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative">
             <div className="text-center mb-8">
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-lg">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-lg">
                 {isSearching ? 'Find Your Perfect Event' : BRAND.tagline || 'Discover Events in Haiti'}
               </h1>
-              <p className="text-lg md:text-xl text-brand-50 max-w-2xl mx-auto drop-shadow-md">
+              <p className="text-base sm:text-lg md:text-xl text-brand-50 max-w-2xl mx-auto drop-shadow-md">
                 Search concerts, parties, conferences, festivals, and more across Haiti
               </p>
             </div>
@@ -248,8 +249,8 @@ export default async function HomePage({
           <div className="space-y-8">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-3xl font-bold text-gray-900">Search Results</h2>
-                <p className="text-gray-600 mt-2">{events.length} events found</p>
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Search Results</h2>
+                <p className="text-sm sm:text-base text-gray-600 mt-2">{events.length} events found</p>
               </div>
             </div>
 
@@ -365,6 +366,9 @@ export default async function HomePage({
           </div>
         )}
       </div>
+      
+      {/* Mobile Bottom Navigation */}
+      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
   )
 }

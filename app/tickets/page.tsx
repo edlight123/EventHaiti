@@ -2,6 +2,7 @@ import { createClient } from '@/lib/firebase-db/server'
 import { requireAuth } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
 import EmptyState from '@/components/EmptyState'
 import { redirect } from 'next/navigation'
 import { isDemoMode, DEMO_TICKETS, DEMO_EVENTS } from '@/lib/demo'
@@ -164,6 +165,8 @@ export default async function MyTicketsPage() {
           />
         )}
       </div>
+      
+      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
   )
 }

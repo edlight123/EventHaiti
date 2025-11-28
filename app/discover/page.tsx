@@ -2,6 +2,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { getTrendingEvents, getNearbyEvents } from '@/lib/recommendations'
 import EventCard from '@/components/EventCard'
 import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
 import AdvancedSearch from '@/components/AdvancedSearch'
 import Badge from '@/components/ui/Badge'
 import { isAdmin } from '@/lib/admin'
@@ -133,6 +134,8 @@ export default async function DiscoverPage() {
           </div>
         </section>
       </div>
+      
+      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
   )
 }

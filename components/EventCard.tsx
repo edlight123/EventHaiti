@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { format } from 'date-fns'
 import Badge from './ui/Badge'
 import { TrendingUp, Star, Sparkles } from 'lucide-react'
@@ -43,11 +44,14 @@ export default function EventCard({ event }: EventCardProps) {
         
         {/* Image Container with Gradient Overlay */}
         {event.banner_image_url ? (
-          <div className="h-56 bg-gray-200 overflow-hidden relative">
-            <img
+          <div className="h-48 sm:h-56 bg-gray-200 overflow-hidden relative">
+            <Image
               src={event.banner_image_url}
               alt={event.title}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+              fill
+              className="object-cover group-hover:scale-110 transition-transform duration-700"
+              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              priority={false}
             />
             {/* Premium gradient overlay for better text contrast */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -86,8 +90,8 @@ export default function EventCard({ event }: EventCardProps) {
             </div>
           </div>
         ) : (
-          <div className="h-56 bg-gradient-to-br from-brand-100 via-brand-50 to-accent-100 flex items-center justify-center relative group-hover:from-brand-200 group-hover:to-accent-200 transition-all duration-500">
-            <span className="text-5xl group-hover:scale-110 transition-transform duration-500">🎉</span>
+          <div className="h-48 sm:h-56 bg-gradient-to-br from-brand-100 via-brand-50 to-accent-100 flex items-center justify-center relative group-hover:from-brand-200 group-hover:to-accent-200 transition-all duration-500">
+            <span className="text-4xl sm:text-5xl group-hover:scale-110 transition-transform duration-500">🎉</span>
             
             {/* Badges for placeholder images too */}
             <div className="absolute top-3 left-3 flex flex-col gap-2">
@@ -138,11 +142,11 @@ export default function EventCard({ event }: EventCardProps) {
             )}
           </div>
 
-          <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-brand-700 transition-colors duration-300">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-brand-700 transition-colors duration-300">
             {event.title}
           </h3>
 
-          <p className="text-sm text-gray-600 mb-4 line-clamp-2 leading-relaxed">
+          <p className="text-sm text-gray-600 mb-3 sm:mb-4 line-clamp-2 leading-relaxed">
             {event.description}
           </p>
 

@@ -32,7 +32,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   `,
   ghost: `
     text-brand-primary hover:bg-brand-50
-    active:bg-brand-100
+    active:bg-brand-100 active:scale-98
   `,
   danger: `
     bg-gradient-to-r from-error-500 to-error-600
@@ -43,10 +43,10 @@ const variantStyles: Record<ButtonVariant, string> = {
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'px-3 py-1.5 text-sm rounded-lg',
-  md: 'px-4 py-2 text-base rounded-xl',
-  lg: 'px-6 py-3 text-lg rounded-xl',
-  xl: 'px-8 py-4 text-xl rounded-2xl',
+  sm: 'px-4 py-2.5 text-sm rounded-lg min-h-[40px]',
+  md: 'px-5 py-3 text-base rounded-xl min-h-[44px]',
+  lg: 'px-6 py-3.5 text-lg rounded-xl min-h-[48px]',
+  xl: 'px-8 py-4 text-xl rounded-2xl min-h-[56px]',
 };
 
 export default function Button({

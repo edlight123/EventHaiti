@@ -2,6 +2,7 @@ import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
 import EventCard from '@/components/EventCard'
 import EmptyState from '@/components/EmptyState'
 import Link from 'next/link'
@@ -119,6 +120,8 @@ export default async function FavoritesPage() {
           </div>
         )}
       </div>
+      
+      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
   )
 }

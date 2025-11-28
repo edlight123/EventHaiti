@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import Badge from '@/components/ui/Badge'
@@ -248,6 +249,8 @@ export default async function DashboardPage() {
           </div>
         )}
       </div>
+      
+      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
   )
 }

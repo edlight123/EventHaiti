@@ -33,6 +33,7 @@ export default function Input({
         <input
           className={`
             w-full px-4 py-3 rounded-xl border-2 transition-all
+            text-base min-h-[44px]
             ${icon ? 'pl-10' : ''}
             ${error 
               ? 'border-error-500 focus:border-error-600 focus:ring-4 focus:ring-error-50' 
@@ -81,6 +82,7 @@ export function TextArea({
       <textarea
         className={`
           w-full px-4 py-3 rounded-xl border-2 transition-all
+          text-base min-h-[100px]
           ${error 
             ? 'border-error-500 focus:border-error-600 focus:ring-4 focus:ring-error-50' 
             : 'border-gray-200 focus:border-brand-primary focus:ring-4 focus:ring-brand-50'

@@ -11,6 +11,18 @@ body {
   @apply bg-gray-50 text-gray-900;
 }
 
+/* Mobile bottom nav spacing */
+@media (max-width: 768px) {
+  .pb-mobile-nav {
+    padding-bottom: 80px;
+  }
+}
+
+/* Safe area insets for mobile devices */
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 /* Hide scrollbar but keep functionality */
 .scrollbar-hide {
   -ms-overflow-style: none;
