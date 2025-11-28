@@ -11,6 +11,7 @@ import FollowButton from '@/components/FollowButton'
 import WaitlistButton from '@/components/WaitlistButton'
 import ReviewsList from '@/components/ReviewsList'
 import EventCard from '@/components/EventCard'
+import EventCardHorizontal from '@/components/EventCardHorizontal'
 import Badge from '@/components/ui/Badge'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import { Calendar, MapPin, Clock, Users, Shield, TrendingUp, Star, Sparkles } from 'lucide-react'
@@ -212,8 +213,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     <div className="min-h-screen bg-gray-50">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
-      {/* PREMIUM HERO SECTION */}
-      <div className="relative bg-gray-900">
+      {/* PREMIUM HERO SECTION - Compact on Mobile */}
+      <div className="relative bg-gray-900 max-h-[40vh] md:max-h-none overflow-hidden">
         {/* Background Image with Overlay */}
         {event.banner_image_url ? (
           <div className="absolute inset-0">
@@ -229,7 +230,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         )}
 
         {/* Hero Content */}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-20">
           <div className="max-w-4xl">
             {/* Premium Badges */}
             <div className="flex flex-wrap items-center gap-2 mb-6">
@@ -258,74 +259,74 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               )}
             </div>
 
-            {/* Title */}
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
+            {/* Title - Refined sizing */}
+            <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white mb-3 md:mb-4 leading-tight">
               {event.title}
             </h1>
 
-            {/* Organizer */}
-            <a href={`/profile/organizer/${event.organizer_id}`} className="flex items-center gap-3 mb-8 hover:opacity-80 transition-opacity">
-              <div className="w-12 h-12 bg-gradient-to-br from-brand-400 to-accent-400 rounded-full flex items-center justify-center text-white font-bold text-lg">
+            {/* Organizer - Compact on mobile */}
+            <a href={`/profile/organizer/${event.organizer_id}`} className="flex items-center gap-2 md:gap-3 mb-4 md:mb-8 hover:opacity-80 transition-opacity">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-brand-400 to-accent-400 rounded-full flex items-center justify-center text-white font-bold text-base md:text-lg">
                 {(event.users?.full_name || 'E')[0].toUpperCase()}
               </div>
               <div>
-                <p className="text-white font-semibold">
+                <p className="text-white font-semibold text-sm md:text-base">
                   {event.users?.full_name || 'Event Organizer'}
                 </p>
                 {event.users?.is_verified && (
-                  <div className="flex items-center gap-1 text-blue-300 text-sm">
-                    <Shield className="w-4 h-4" />
-                    <span>Verified Organizer</span>
+                  <div className="flex items-center gap-1 text-blue-300 text-xs md:text-sm">
+                    <Shield className="w-3 h-3 md:w-4 md:h-4" />
+                    <span>Verified</span>
                   </div>
                 )}
               </div>
             </a>
 
-            {/* Key Info - Horizontal on Desktop */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+            {/* Key Info - Compact & refined */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
               {/* Date & Time */}
-              <div className="flex items-start gap-3 bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
-                <div className="w-10 h-10 bg-accent-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Calendar className="w-5 h-5 text-white" />
+              <div className="flex items-start gap-2.5 bg-white/10 backdrop-blur-md rounded-xl p-3 md:p-4 border border-white/20">
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-accent-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Calendar className="w-4 h-4 md:w-5 md:h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-300 mb-1">Date & Time</p>
-                  <p className="text-white font-semibold text-sm">
+                  <p className="text-[11px] md:text-xs text-gray-300 mb-0.5">Date & Time</p>
+                  <p className="text-white font-semibold text-[13px] md:text-sm">
                     {format(new Date(event.start_datetime), 'MMM d, yyyy')}
                   </p>
-                  <p className="text-gray-300 text-xs">
+                  <p className="text-gray-300 text-[11px] md:text-xs">
                     {format(new Date(event.start_datetime), 'h:mm a')}
                   </p>
                 </div>
               </div>
 
               {/* Location */}
-              <div className="flex items-start gap-3 bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
-                <div className="w-10 h-10 bg-brand-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-5 h-5 text-white" />
+              <div className="flex items-start gap-2.5 bg-white/10 backdrop-blur-md rounded-xl p-3 md:p-4 border border-white/20">
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-brand-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-4 h-4 md:w-5 md:h-5 text-white" />
                 </div>
-                <div>
-                  <p className="text-xs text-gray-300 mb-1">Location</p>
-                  <p className="text-white font-semibold text-sm line-clamp-1">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] md:text-xs text-gray-300 mb-0.5">Location</p>
+                  <p className="text-white font-semibold text-[13px] md:text-sm line-clamp-1">
                     {event.venue_name}
                   </p>
-                  <p className="text-gray-300 text-xs line-clamp-1">
+                  <p className="text-gray-300 text-[11px] md:text-xs line-clamp-1">
                     {event.city}
                   </p>
                 </div>
               </div>
 
               {/* Tickets */}
-              <div className="flex items-start gap-3 bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
-                <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Users className="w-5 h-5 text-white" />
+              <div className="flex items-start gap-2.5 bg-white/10 backdrop-blur-md rounded-xl p-3 md:p-4 border border-white/20">
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Users className="w-4 h-4 md:w-5 md:h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-300 mb-1">Availability</p>
-                  <p className="text-white font-semibold text-sm">
-                    {isSoldOut ? 'Sold Out' : `${remainingTickets} tickets left`}
+                  <p className="text-[11px] md:text-xs text-gray-300 mb-0.5">Availability</p>
+                  <p className="text-white font-semibold text-[13px] md:text-sm">
+                    {isSoldOut ? 'Sold Out' : `${remainingTickets} left`}
                   </p>
-                  <p className="text-gray-300 text-xs">
+                  <p className="text-gray-300 text-[11px] md:text-xs">
                     {event.total_tickets} total
                   </p>
                 </div>
@@ -342,23 +343,23 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           {/* Left Column - Event Details */}
           <div className="lg:col-span-2 space-y-6">
             
-            {/* About Section */}
-            <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 md:p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Sparkles className="w-6 h-6 text-brand-600" />
+            {/* About Section - Refined typography */}
+            <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-4 md:p-6">
+              <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-brand-600" />
                 About This Event
               </h2>
-              <p className="text-gray-700 whitespace-pre-wrap leading-relaxed text-lg">
+              <p className="text-[15px] text-gray-700 whitespace-pre-wrap leading-relaxed">
                 {event.description}
               </p>
               
               {/* Tags */}
               {event.tags && event.tags.length > 0 && (
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-500 mb-3">EVENT TAGS</h3>
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <h3 className="text-xs font-semibold text-gray-500 mb-2">EVENT TAGS</h3>
                   <div className="flex flex-wrap gap-2">
                     {event.tags.map((tag: string) => (
-                      <Badge key={tag} variant="neutral" size="md">
+                      <Badge key={tag} variant="neutral" size="sm">
                         {tag}
                       </Badge>
                     ))}
@@ -367,32 +368,32 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               )}
             </div>
 
-            {/* Venue Details */}
-            <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 md:p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <MapPin className="w-6 h-6 text-brand-600" />
+            {/* Venue Details - Refined */}
+            <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-4 md:p-6">
+              <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-brand-600" />
                 Venue Information
               </h2>
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 <div>
-                  <p className="text-sm font-semibold text-gray-500 mb-1">VENUE NAME</p>
-                  <p className="text-lg font-semibold text-gray-900">{event.venue_name}</p>
+                  <p className="text-xs font-semibold text-gray-500 mb-1">VENUE NAME</p>
+                  <p className="text-base font-semibold text-gray-900">{event.venue_name}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-500 mb-1">ADDRESS</p>
-                  <div className="space-y-2">
+                  <p className="text-xs font-semibold text-gray-500 mb-1">ADDRESS</p>
+                  <div className="space-y-1.5">
                     <div>
-                      <p className="text-gray-700">{event.address}</p>
-                      <p className="text-gray-700">{event.commune}, {event.city}</p>
+                      <p className="text-[15px] text-gray-700">{event.address}</p>
+                      <p className="text-[15px] text-gray-700">{event.commune}, {event.city}</p>
                     </div>
-                    <div className="flex gap-3 pt-1">
+                    <div className="flex gap-3 pt-0.5">
                       <a
                         href={`https://maps.apple.com/?q=${encodeURIComponent(event.address || `${event.venue_name}, ${event.commune}, ${event.city}`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1"
                       >
-                        <MapPin className="w-4 h-4" />
+                        <MapPin className="w-3.5 h-3.5" />
                         Apple Maps
                       </a>
                       <span className="text-gray-300">|</span>
@@ -411,38 +412,38 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               </div>
             </div>
 
-            {/* Date & Time Details */}
-            <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 md:p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Clock className="w-6 h-6 text-brand-600" />
+            {/* Date & Time Details - Refined */}
+            <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-4 md:p-6">
+              <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-brand-600" />
                 Date & Time
               </h2>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <p className="text-sm font-semibold text-gray-500 mb-1">START</p>
-                  <p className="text-lg font-semibold text-gray-900">
+                  <p className="text-xs font-semibold text-gray-500 mb-1">START</p>
+                  <p className="text-base font-semibold text-gray-900">
                     {format(new Date(event.start_datetime), 'EEEE, MMMM d, yyyy')}
                   </p>
-                  <p className="text-gray-600">
+                  <p className="text-sm text-gray-600">
                     {format(new Date(event.start_datetime), 'h:mm a')} HTT
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-500 mb-1">END</p>
-                  <p className="text-lg font-semibold text-gray-900">
+                  <p className="text-xs font-semibold text-gray-500 mb-1">END</p>
+                  <p className="text-base font-semibold text-gray-900">
                     {format(new Date(event.end_datetime), 'EEEE, MMMM d, yyyy')}
                   </p>
-                  <p className="text-gray-600">
+                  <p className="text-sm text-gray-600">
                     {format(new Date(event.end_datetime), 'h:mm a')} HTT
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Reviews Section */}
+            {/* Reviews Section - Refined */}
             {reviews.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 md:p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Reviews</h2>
+              <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-4 md:p-6">
+                <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4">Reviews</h2>
                 <ReviewsList reviews={reviews} />
               </div>
             )}
@@ -566,22 +567,31 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
 
-        {/* Related Events Section */}
+        {/* Related Events Section - Horizontal on mobile */}
         {relatedEvents.length > 0 && (
-          <div className="mt-16">
-            <div className="flex items-center justify-between mb-6">
+          <div className="mt-12 md:mt-16">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-3xl font-bold text-gray-900">Similar Events</h2>
-                <p className="text-gray-600 mt-1">You might also be interested in these events</p>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900">Similar Events</h2>
+                <p className="text-sm text-gray-600 mt-0.5">You might also be interested in</p>
               </div>
               <a 
                 href={`/discover?category=${event.category}`}
-                className="text-brand-600 hover:text-brand-700 font-semibold"
+                className="text-sm text-brand-600 hover:text-brand-700 font-semibold"
               >
                 View All →
               </a>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            {/* Mobile: Horizontal cards */}
+            <div className="md:hidden space-y-4">
+              {relatedEvents.map((relatedEvent) => (
+                <EventCardHorizontal key={relatedEvent.id} event={relatedEvent} />
+              ))}
+            </div>
+            
+            {/* Desktop: Grid cards */}
+            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {relatedEvents.map((relatedEvent) => (
                 <EventCard key={relatedEvent.id} event={relatedEvent} />
               ))}
@@ -590,25 +600,25 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         )}
       </div>
 
-      {/* STICKY MOBILE CTA - Bottom Bar (Hidden on Desktop) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 p-4 shadow-hard z-40">
-        <div className="flex items-center justify-between gap-4">
-          <div>
+      {/* STICKY MOBILE CTA - Refined & compact */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 shadow-hard z-40 safe-area-inset-bottom">
+        <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-shrink-0">
             {isFree ? (
-              <p className="text-xl font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">
+              <p className="text-lg font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">
                 FREE
               </p>
             ) : (
               <div className="flex items-baseline">
-                <span className="text-2xl font-bold text-gray-900">{event.ticket_price}</span>
-                <span className="text-sm text-gray-600 ml-1">{event.currency}</span>
+                <span className="text-xl font-bold text-gray-900">{event.ticket_price}</span>
+                <span className="text-xs text-gray-600 ml-1">{event.currency}</span>
               </div>
             )}
-            <p className="text-xs text-gray-600">
-              {isSoldOut ? 'Sold Out' : `${remainingTickets} tickets left`}
+            <p className="text-[11px] text-gray-600">
+              {isSoldOut ? 'Sold Out' : `${remainingTickets} left`}
             </p>
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {isSoldOut ? (
               <WaitlistButton eventId={event.id} userId={user?.id || null} />
             ) : user ? (
@@ -616,7 +626,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
             ) : (
               <a
                 href="/auth/login"
-                className="block w-full bg-gradient-to-r from-brand-500 to-brand-600 text-white text-center font-bold py-3 px-6 rounded-xl transition-all shadow-medium"
+                className="block w-full bg-gradient-to-r from-brand-500 to-brand-600 text-white text-center font-semibold py-3 px-5 rounded-xl transition-all shadow-medium text-[15px]"
               >
                 Sign in to Buy
               </a>
