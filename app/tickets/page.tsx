@@ -107,9 +107,12 @@ export default async function MyTicketsPage() {
           <div className="space-y-4">
             {eventsWithTickets.map((item) => {
               const event = item.event
-              if (!event) {
+              if (!event || !event.id) {
+                console.error('Event missing or no event.id:', event)
                 return null
               }
+
+              console.log('Rendering ticket card for event:', event.id, event.title)
 
               return (
                 <Link
