@@ -2,6 +2,8 @@ import { createClient } from '@/lib/firebase-db/server'
 import { requireAuth } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
+import PullToRefresh from '@/components/PullToRefresh'
 import EmptyState from '@/components/EmptyState'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -92,13 +94,20 @@ export default async function OrganizerEventsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+
+      <PullToRefresh onRefresh={async () => {
+        'use server'
+        const { revalidatePath } = await import('next/cache')
+        revalidatePath('/organizer/events')
+      }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12">
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Verification Status Banner */}
         {!isDemoMode() && userData && !userData.is_verified && (
-          <div className={`mb-6 rounded-lg p-4 border ${
+          <div className={`mb-4 md:mb-6 rounded-xl p-4 border ${
             userData.verification_status === 'pending'
               ? 'bg-blue-50 border-blue-200'
               : userData.verification_status === 'rejected'
@@ -170,11 +179,11 @@ export default async function OrganizerEventsPage() {
         )}
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-          <h1 className="text-3xl font-bold text-gray-900">My Events</h1>
-          <div className="flex flex-wrap gap-3">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">My Events</h1>
+          <div className="flex flex-wrap gap-2 md:gap-3">
             <Link
               href="/organizer/analytics"
-              className="inline-flex items-center px-4 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-700"
+              className="inline-flex items-center px-3 md:px-4 py-2 text-sm md:text-base rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-700"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -183,7 +192,7 @@ export default async function OrganizerEventsPage() {
             </Link>
             <Link
               href="/organizer/promo-codes"
-              className="inline-flex items-center px-4 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700"
+              className="inline-flex items-center px-3 md:px-4 py-2 text-sm md:text-base rounded-lg bg-green-600 text-white font-medium hover:bg-green-700"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -192,7 +201,7 @@ export default async function OrganizerEventsPage() {
             </Link>
             <Link
               href="/organizer/scan"
-              className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700"
+              className="inline-flex items-center px-3 md:px-4 py-2 text-sm md:text-base rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
@@ -201,7 +210,7 @@ export default async function OrganizerEventsPage() {
             </Link>
             <Link
               href="/organizer/events/new"
-              className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-medium"
+              className="px-3 md:px-4 py-2 text-sm md:text-base bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-medium"
             >
               + Create Event
             </Link>
@@ -209,7 +218,7 @@ export default async function OrganizerEventsPage() {
         </div>
 
         {events && events.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {events.map((event) => {
               const ticketsSold = event.tickets_sold || 0
               const totalTickets = event.total_tickets || 0
@@ -218,9 +227,9 @@ export default async function OrganizerEventsPage() {
 
               return (
                 <div key={event.id} className="bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 group hover:-translate-y-2">
-                  {/* Event Banner/Thumbnail */}
+                  {/* Event Banner */}
                   {event.banner_image_url ? (
-                    <div className="h-48 bg-gray-200 overflow-hidden relative">
+                    <div className="h-40 md:h-48 bg-gray-200 overflow-hidden relative">
                       <img
                         src={event.banner_image_url}
                         alt={event.title}
@@ -234,7 +243,8 @@ export default async function OrganizerEventsPage() {
                     </div>
                   ) : (
                     <div className="h-48 bg-gradient-to-br from-teal-100 via-teal-50 to-orange-100 flex items-center justify-center relative">
-                      <span className="text-5xl">🎉</span>
+                    <div className="h-40 md:h-48 bg-gradient-to-br from-teal-100 via-teal-50 to-orange-100 flex items-center justify-center relative">
+                      <span className="text-4xl md:text-5xl">🎉</span>
                       {isSoldOut && (
                         <div className="absolute top-3 right-3 bg-gradient-to-r from-red-600 to-red-700 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
                           SOLD OUT
@@ -244,8 +254,9 @@ export default async function OrganizerEventsPage() {
                   )}
 
                   <div className="p-6">
-                    {/* Status Badge & Category */}
-                    <div className="flex items-center justify-between mb-3">
+                  <div className="p-4 md:p-6">
+                    {/* Badges */}
+                    <div className="flex items-center justify-between mb-2 md:mb-3">
                       <span className="inline-block px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 rounded-full border border-teal-200">
                         {event.category}
                       </span>
@@ -259,14 +270,14 @@ export default async function OrganizerEventsPage() {
                     </div>
 
                     {/* Event Title */}
-                    <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-teal-700 transition-colors">
+                    <h3 className="text-base md:text-xl font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-teal-700 transition-colors">
                       {event.title}
                     </h3>
 
                     {/* Event Details */}
-                    <div className="space-y-3 mb-5">
-                      <div className="flex items-center text-sm text-gray-700">
-                        <div className="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center mr-3">
+                    <div className="space-y-2 md:space-y-3 mb-4 md:mb-5">
+                      <div className="flex items-center text-[13px] md:text-sm text-gray-700">
+                        <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-orange-50 flex items-center justify-center mr-2 md:mr-3">
                           <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
@@ -275,7 +286,8 @@ export default async function OrganizerEventsPage() {
                       </div>
 
                       <div className="flex items-center text-sm text-gray-700">
-                        <div className="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center mr-3">
+                      <div className="flex items-center text-[13px] md:text-sm text-gray-700">
+                        <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-orange-50 flex items-center justify-center mr-2 md:mr-3">
                           <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -286,7 +298,7 @@ export default async function OrganizerEventsPage() {
                     </div>
 
                     {/* Ticket Sales Progress */}
-                    <div className="mb-5">
+                    <div className="mb-4 md:mb-5">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-sm font-medium text-gray-700">Ticket Sales</span>
                         <span className="text-sm font-bold text-gray-900">{ticketsSold} / {totalTickets}</span>
@@ -306,7 +318,7 @@ export default async function OrganizerEventsPage() {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-3">
+                    <div className="flex gap-2 md:gap-3">
                       <Link
                         href={`/organizer/events/${event.id}`}
                         className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border-2 border-teal-200 transition-all duration-300 text-center"
@@ -336,6 +348,10 @@ export default async function OrganizerEventsPage() {
           />
         )}
       </div>
+        </div>
+      </PullToRefresh>
+
+      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
   )
 }
