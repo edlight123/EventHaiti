@@ -95,7 +95,7 @@ export default async function MyTicketsPage() {
           
           return {
             event: serializedEvent,
-            tickets,
+            // Don't include tickets array to avoid any serialization issues
             ticketCount: (tickets as any[]).length
           }
         }).filter(item => item.event) // Only include items with valid events
