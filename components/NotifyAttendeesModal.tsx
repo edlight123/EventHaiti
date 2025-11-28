@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import BottomSheet from '@/components/ui/BottomSheet'
 
 interface NotifyAttendeesModalProps {
   eventId: string
@@ -55,20 +56,13 @@ export default function NotifyAttendeesModal({ eventId, isOpen, onClose }: Notif
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-teal-700 to-orange-600 text-white p-6 rounded-t-xl">
-          <h2 className="text-2xl font-bold">Notify Attendees</h2>
-          <p className="text-teal-50 mt-1">Send an update to all ticket holders</p>
-        </div>
-
-        <div className="p-6 space-y-6">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
+    <BottomSheet isOpen={isOpen} onClose={onClose} title="Notify Attendees">
+      <div className="space-y-6">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
 
           {/* Update Type */}
           <div>
@@ -159,7 +153,6 @@ export default function NotifyAttendeesModal({ eventId, isOpen, onClose }: Notif
             </button>
           </div>
         </div>
-      </div>
-    </div>
-  )
+      </BottomSheet>
+    )
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import BottomSheet from '@/components/ui/BottomSheet'
 
 interface TransferTicketModalProps {
   ticketId: string
@@ -69,19 +70,9 @@ export default function TransferTicketModal({
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Transfer Ticket</h2>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="mb-6">
+        <BottomSheet isOpen={isOpen} onClose={() => setIsOpen(false)} title="Transfer Ticket">
+          <div className="space-y-4">
+            <div>
               <p className="text-gray-600 mb-2">
                 Transfer your ticket for <strong>{eventTitle}</strong> to another user.
               </p>
@@ -155,7 +146,7 @@ export default function TransferTicketModal({
               </div>
             </form>
           </div>
-        </div>
+        </BottomSheet>
       )}
     </>
   )

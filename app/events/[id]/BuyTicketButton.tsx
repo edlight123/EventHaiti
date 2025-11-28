@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 import { isDemoMode } from '@/lib/demo'
 import TieredTicketSelector from '@/components/TieredTicketSelector'
+import BottomSheet from '@/components/ui/BottomSheet'
 import { useToast } from '@/components/ui/Toast'
 
 interface BuyTicketButtonProps {
@@ -236,25 +237,17 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
 
           {/* Tiered Ticket Selection Modal */}
           {showTieredModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-              <div className="bg-white rounded-2xl max-w-2xl w-full p-6 my-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-900">Select Tickets</h3>
-                  <button
-                    onClick={() => setShowTieredModal(false)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <TieredTicketSelector
-                  eventId={eventId}
-                  userId={userId}
-                  onPurchase={handleTieredPurchase}
-                />
-              </div>
-            </div>
+            <BottomSheet 
+              isOpen={showTieredModal} 
+              onClose={() => setShowTieredModal(false)}
+              title="Select Tickets"
+            >
+              <TieredTicketSelector
+                eventId={eventId}
+                userId={userId}
+                onPurchase={handleTieredPurchase}
+              />
+            </BottomSheet>
           )}
         </>
       )}
@@ -266,15 +259,18 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
       )}
 
       {showModal && !isFree && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Choose Payment Method</h3>
-            <p className="text-gray-700 mb-4">
+        <BottomSheet 
+          isOpen={showModal} 
+          onClose={() => setShowModal(false)}
+          title="Choose Payment Method"
+        >
+          <div className="space-y-4">
+            <p className="text-gray-700">
               Select how you&apos;d like to pay for your {quantity} ticket{quantity !== 1 ? 's' : ''}
             </p>
 
             {/* Quantity Selector */}
-            <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
               <span className="text-sm font-medium text-gray-700">Quantity</span>
               <div className="flex items-center space-x-3">
                 <button
@@ -299,7 +295,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
               </div>
             </div>
 
-            <div className="bg-teal-50 rounded-lg p-4 mb-6">
+            <div className="bg-teal-50 rounded-lg p-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Total Amount:</span>
                 <span className="text-xl font-bold text-teal-700">
@@ -314,12 +310,12 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 {error}
               </div>
             )}
 
-            <div className="space-y-3 mb-6">
+            <div className="space-y-3">
               {/* Stripe Option */}
               <button
                 onClick={() => handlePurchase('stripe')}
@@ -373,7 +369,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
               {loading ? 'Processing...' : 'Cancel'}
             </button>
           </div>
-        </div>
+        </BottomSheet>
       )}
     </>
   )
