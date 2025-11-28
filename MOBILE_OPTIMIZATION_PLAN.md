@@ -458,7 +458,13 @@ const AdminPanel = dynamic(() => import('./AdminPanel'), {
 - [x] Admin verifications (compact review cards, mobile approve/reject, responsive modals)
 - [x] Admin analytics (horizontal metrics 4 cards, compact overview cards, platform health)
 
-### Week 3: Layout Consistency (Phase 5)
+### Week 2+: Legal Pages (3 pages) ✅ ALL COMPLETE
+- [x] Privacy policy (pull-to-refresh, mobile nav, prose-sm mobile, compact layout)
+- [x] Terms of service (pull-to-refresh, mobile nav, readable typography, compact)
+- [x] Refund policy (pull-to-refresh, mobile nav, responsive prose, compact layout)
+
+### Week 2+: Additional Pages (1 page) ✅ 
+- [x] Ticket transfer acceptance (compact error states, touch-friendly buttons, mobile nav)
 - [ ] Update typography scale
 - [ ] Fix button sizes (min-h-[44px])
 - [ ] Fix input sizes (min-h-[44px])
