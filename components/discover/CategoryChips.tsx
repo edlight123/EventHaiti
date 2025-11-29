@@ -4,9 +4,25 @@ import React from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FilterChip } from '@/components/FilterChip'
 import { CATEGORIES } from '@/lib/filters/config'
+import { Music, Trophy, Palette, Briefcase, Utensils, GraduationCap, Laptop, HeartPulse, PartyPopper, Church, Sparkles } from 'lucide-react'
 
 interface CategoryChipsProps {
   selectedCategories: string[]
+}
+
+// Category icon mapping
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+  'Music': <Music className="w-3.5 h-3.5" />,
+  'Sports': <Trophy className="w-3.5 h-3.5" />,
+  'Arts & Culture': <Palette className="w-3.5 h-3.5" />,
+  'Business': <Briefcase className="w-3.5 h-3.5" />,
+  'Food & Drink': <Utensils className="w-3.5 h-3.5" />,
+  'Education': <GraduationCap className="w-3.5 h-3.5" />,
+  'Technology': <Laptop className="w-3.5 h-3.5" />,
+  'Health & Wellness': <HeartPulse className="w-3.5 h-3.5" />,
+  'Party': <PartyPopper className="w-3.5 h-3.5" />,
+  'Religious': <Church className="w-3.5 h-3.5" />,
+  'Other': <Sparkles className="w-3.5 h-3.5" />
 }
 
 export function CategoryChips({ selectedCategories }: CategoryChipsProps) {
@@ -34,12 +50,18 @@ export function CategoryChips({ selectedCategories }: CategoryChipsProps) {
     <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
       <div className="flex gap-2 min-w-max">
         {CATEGORIES.map(category => (
-          <FilterChip
+          <button
             key={category}
-            label={category}
-            active={selectedCategories.includes(category)}
             onClick={() => handleCategoryToggle(category)}
-          />
+            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all whitespace-nowrap
+              ${selectedCategories.includes(category)
+                ? 'bg-black text-white shadow-sm' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+          >
+            {CATEGORY_ICONS[category]}
+            {category}
+          </button>
         ))}
       </div>
     </div>
