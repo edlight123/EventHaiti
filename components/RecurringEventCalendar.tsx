@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { RecurrenceRule } from '@/lib/recurring-events'
 
 interface EventInstance {
@@ -32,11 +32,7 @@ export default function RecurringEventCalendar({
   const [selectedMonth, setSelectedMonth] = useState(new Date())
   const [selectedInstance, setSelectedInstance] = useState<EventInstance | null>(null)
 
-  useEffect(() => {
-    fetchInstances()
-  }, [eventId, selectedMonth])
-
-  const fetchInstances = async () => {
+  const fetchInstances = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -60,7 +56,11 @@ export default function RecurringEventCalendar({
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId, selectedMonth])
+
+  useEffect(() => {
+    fetchInstances()
+  }, [fetchInstances])
 
   const handleCancelInstance = async (instanceId: string) => {
     if (!confirm('Are you sure you want to cancel this event instance?')) {

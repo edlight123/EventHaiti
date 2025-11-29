@@ -76,69 +76,95 @@ export default async function AdminUsersPage() {
               <p className="text-[13px] sm:text-base text-gray-500">No users found</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 sm:px-6 py-2.5 sm:py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="px-3 sm:px-6 py-2.5 sm:py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
-                      Role
-                    </th>
-                    <th className="px-3 sm:px-6 py-2.5 sm:py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
-                      Verification
-                    </th>
-                    <th className="hidden sm:table-cell px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
-                      Joined
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {allUsers.map((u: any) => (
-                    <tr key={u.id} className="hover:bg-gray-50">
-                      <td className="px-3 sm:px-6 py-3 sm:py-4">
-                        <div className="flex items-center">
-                          <div className="min-w-0">
-                            <div className="text-[13px] sm:text-sm font-medium text-gray-900 truncate">
-                              {u.full_name || 'No name'}
-                            </div>
-                            <div className="text-[11px] sm:text-[13px] text-gray-500 truncate">{u.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4">
-                        <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 inline-flex text-[10px] sm:text-xs leading-5 font-semibold rounded-full ${
-                          u.role === 'organizer'
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-blue-100 text-blue-800'
+            <>
+              {/* Mobile: stacked cards */}
+              <div className="sm:hidden divide-y divide-gray-100">
+                {allUsers.map((u: any) => (
+                  <div key={u.id} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-gray-900 truncate">{u.full_name || 'No name'}</div>
+                        <div className="text-[13px] text-gray-500 truncate">{u.email}</div>
+                      </div>
+                      <div>
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          u.role === 'organizer' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
                         }`}>
                           {u.role || 'attendee'}
                         </span>
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4">
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <div>
                         {u.role === 'organizer' ? (
                           u.is_verified ? (
-                            <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 inline-flex text-[10px] sm:text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                              ✓ Verified
-                            </span>
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✓ Verified</span>
                           ) : (
-                            <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 inline-flex text-[10px] sm:text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
                               {u.verification_status === 'pending' ? 'Pending' : 'Not Verified'}
                             </span>
                           )
                         ) : (
-                          <span className="text-[11px] sm:text-[13px] text-gray-400">N/A</span>
+                          <span className="text-[13px] text-gray-400">N/A</span>
                         )}
-                      </td>
-                      <td className="hidden sm:table-cell px-6 py-4 text-[13px] text-gray-500 whitespace-nowrap">
+                      </div>
+                      <div className="text-[13px] text-gray-500">
                         {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
-                      </td>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">User</th>
+                      <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                      <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Verification</th>
+                      <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Joined</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {allUsers.map((u: any) => (
+                      <tr key={u.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-gray-900 truncate">{u.full_name || 'No name'}</div>
+                            <div className="text-[13px] text-gray-500 truncate">{u.email}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            u.role === 'organizer' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {u.role || 'attendee'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          {u.role === 'organizer' ? (
+                            u.is_verified ? (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✓ Verified</span>
+                            ) : (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                {u.verification_status === 'pending' ? 'Pending' : 'Not Verified'}
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-[13px] text-gray-400">N/A</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-[13px] text-gray-500 whitespace-nowrap">
+                          {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>

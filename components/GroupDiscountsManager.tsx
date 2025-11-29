@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface GroupDiscount {
@@ -26,11 +26,7 @@ export default function GroupDiscountsManager({ eventId }: GroupDiscountsManager
     discountPercentage: '',
   })
 
-  useEffect(() => {
-    fetchDiscounts()
-  }, [eventId])
-
-  const fetchDiscounts = async () => {
+  const fetchDiscounts = useCallback(async () => {
     try {
       console.log('Fetching group discounts for event:', eventId)
       const response = await fetch(`/api/group-discounts?eventId=${eventId}`)
@@ -43,7 +39,11 @@ export default function GroupDiscountsManager({ eventId }: GroupDiscountsManager
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId])
+
+  useEffect(() => {
+    fetchDiscounts()
+  }, [fetchDiscounts])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

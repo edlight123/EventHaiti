@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import Image from 'next/image'
 import Badge from '@/components/ui/Badge'
 import { isAdmin } from '@/lib/admin'
 import { Calendar, Heart, Ticket, TrendingUp, Star, ArrowRight, Sparkles, Clock } from 'lucide-react'
@@ -181,7 +182,15 @@ export default async function DashboardPage() {
                 >
                   {event.banner_image_url ? (
                     <div className="h-40 bg-gray-200 overflow-hidden">
-                      <img src={event.banner_image_url} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      {/* Use Next.js Image for optimized loading */}
+                      <Image
+                        src={event.banner_image_url}
+                        alt={event.title}
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        priority={false}
+                      />
                     </div>
                   ) : (
                     <div className="h-40 bg-gradient-to-br from-brand-100 to-accent-100 flex items-center justify-center">
@@ -228,7 +237,13 @@ export default async function DashboardPage() {
                 >
                   {event.banner_image_url ? (
                     <div className="h-40 bg-gray-200 overflow-hidden">
-                      <img src={event.banner_image_url} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 grayscale group-hover:grayscale-0" />
+                      <Image
+                        src={event.banner_image_url}
+                        alt={event.title}
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        className="object-cover group-hover:scale-105 transition-transform duration-300 grayscale group-hover:grayscale-0"
+                      />
                     </div>
                   ) : (
                     <div className="h-40 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">

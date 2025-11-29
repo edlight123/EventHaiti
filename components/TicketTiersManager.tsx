@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface TicketTier {
@@ -34,11 +34,7 @@ export default function TicketTiersManager({ eventId }: TicketTiersManagerProps)
     salesEnd: '',
   })
 
-  useEffect(() => {
-    fetchTiers()
-  }, [eventId])
-
-  const fetchTiers = async () => {
+  const fetchTiers = useCallback(async () => {
     try {
       console.log('Fetching tiers for event:', eventId)
       const response = await fetch(`/api/ticket-tiers?eventId=${eventId}`)
@@ -51,7 +47,11 @@ export default function TicketTiersManager({ eventId }: TicketTiersManagerProps)
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId])
+
+  useEffect(() => {
+    fetchTiers()
+  }, [fetchTiers])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface TicketTier {
@@ -39,12 +39,7 @@ export default function TieredTicketSelector({ eventId, userId, onPurchase }: Ti
   const [promoLoading, setPromoLoading] = useState(false)
   const [promoError, setPromoError] = useState('')
 
-  useEffect(() => {
-    fetchTiers()
-    fetchGroupDiscounts()
-  }, [eventId])
-
-  const fetchTiers = async () => {
+  const fetchTiers = useCallback(async () => {
     try {
       const response = await fetch(`/api/ticket-tiers?eventId=${eventId}`)
       if (!response.ok) throw new Error('Failed to fetch tiers')
@@ -65,9 +60,8 @@ export default function TieredTicketSelector({ eventId, userId, onPurchase }: Ti
     } finally {
       setLoading(false)
     }
-  }
-
-  const fetchGroupDiscounts = async () => {
+  }, [eventId])
+  const fetchGroupDiscounts = useCallback(async () => {
     try {
       const response = await fetch(`/api/group-discounts?eventId=${eventId}`)
       if (!response.ok) throw new Error('Failed to fetch group discounts')
@@ -76,7 +70,12 @@ export default function TieredTicketSelector({ eventId, userId, onPurchase }: Ti
     } catch (error) {
       console.error('Error fetching group discounts:', error)
     }
-  }
+  }, [eventId])
+
+  useEffect(() => {
+    fetchTiers()
+    fetchGroupDiscounts()
+  }, [fetchTiers, fetchGroupDiscounts])
 
   const isTierAvailable = (tier: TicketTier): boolean => {
     const now = new Date()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 interface EventSession {
   id: string
@@ -39,11 +39,7 @@ export default function EventSessionsManager({
     speakers: '',
   })
 
-  useEffect(() => {
-    fetchSessions()
-  }, [eventId])
-
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch(`/api/event-sessions?eventId=${eventId}`)
@@ -57,7 +53,11 @@ export default function EventSessionsManager({
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId])
+
+  useEffect(() => {
+    fetchSessions()
+  }, [fetchSessions])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

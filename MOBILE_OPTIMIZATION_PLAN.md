@@ -623,3 +623,406 @@ sm:text-sm md:text-base lg:text-lg
 
 **Total Estimated Time:** 5 weeks (1 senior engineer full-time)
 **Expected Impact:** 50% increase in mobile engagement, 40% increase in mobile conversions
+
+---
+
+## 🔍 Mobile UX Audit Summary (Nov 28, 2025)
+
+This section consolidates per-page mobile issues and targeted improvements identified during the latest audit. Focus is on wrappers, spacing, typography, tap targets, overflow, and refresh behavior.
+
+### Core
+- `app/page.tsx` (Home)
+  - Issues: Potentially dense hero/cards; long titles; bottom overlap risk.
+  - Improvements: Ensure `pb-mobile-nav`; `line-clamp-2`; card `p-3`; `text-sm` body.
+
+- `app/discover/page.tsx`
+  - Issues: Long lists need skeletons; image overflow.
+  - Improvements: Add skeletons; images `overflow-hidden object-cover rounded-lg`.
+
+- `app/categories/page.tsx`
+  - Issues: Chip hit areas; horizontal scroll affordance.
+  - Improvements: Chip `min-h-[40px] px-3 text-sm`; `overflow-x-auto snap-x`.
+
+- `app/dashboard/page.tsx`
+  - Issues: Dense stats; confirm spacing.
+  - Improvements: Horizontal metrics (`overflow-x-auto snap-x gap-2`); `pb-mobile-nav`.
+
+### Events
+- `app/events/[id]/page.tsx`
+  - Issues: Badge overflow; sticky CTA overlapping content.
+  - Improvements: Horizontal metrics; CTA safe-area offset; compact badges.
+
+### Tickets
+- `app/tickets/page.tsx`
+  - Issues: List density; empty state clarity.
+  - Improvements: Skeletons; clear empty state card.
+
+- `app/tickets/[id]/page.tsx`
+  - Issues: QR size/contrast; tight actions.
+  - Improvements: Larger QR; `space-y-2`; `text-sm` labels.
+
+- `app/tickets/event/[eventId]/page.tsx`
+  - Issues: Multi-card overflow; filters spacing.
+  - Improvements: Card `p-3`; filter row `min-h-44`.
+
+- `app/tickets/transfer/[token]/page.tsx`
+  - Issues: Section stacking; heading hierarchy.
+  - Improvements: `space-y-3`; headings `text-base font-medium`.
+
+### Organizer
+- `app/organizer/page.tsx`
+  - Issues: Search/filter tap targets.
+  - Improvements: `min-h-44` controls; card padding.
+
+- `app/organizer/events/*`
+  - Issues: Table overflow; cramped actions.
+  - Improvements: Mobile-stacked rows; hide non-essential columns.
+
+- `app/organizer/analytics/page.tsx`
+  - Issues: Chart legends crowding.
+  - Improvements: Simplify legends; horizontal metric cards.
+
+- `app/organizer/scan/page.tsx`
+  - Issues: Permission clarity; control sizes.
+  - Improvements: Full-screen safe area; big scan button; permission helper.
+
+### Admin
+- `app/admin/page.tsx`
+  - Issues: Admin-only nav correctness; dense overview.
+  - Improvements: Validate `isAdmin`; compact cards/tables.
+
+- `app/admin/events|users|analytics/page.tsx`
+  - Issues: Table overflow; filter controls.
+  - Improvements: Stack rows; hide columns; `min-h-44` filters; `text-xs` cells.
+
+### Profile & Settings
+- `app/profile/page.tsx`
+  - Issues: Avatar controls; list density.
+  - Improvements: Bigger avatar button; `space-y-3` sections.
+
+- `app/profile/organizer/[organizerId]/page.tsx`
+  - Issues: Details overflow; link spacing.
+  - Improvements: Truncate long text; `gap-2` chips.
+
+- `app/settings/page.tsx`
+  - Issues: Toggle hit areas; form spacing.
+  - Improvements: Toggles `min-h-44`; inputs `h-11`; helper `text-xs`.
+
+### Legal
+- `app/legal/*`
+  - Issues: Long text readability.
+  - Improvements: `prose prose-sm max-w-screen-sm`; paragraph spacing.
+
+### Auth & Purchase (no bottom nav)
+- `app/auth/login|signup/page.tsx`
+  - Issues: Keyboard overlap; error messaging.
+  - Improvements: Form `px-4 py-6`; inputs `h-11 text-sm`; password toggle; spaced social buttons.
+
+- `app/purchase/success|failed/page.tsx`
+  - Issues: CTA visibility; guidance.
+  - Improvements: Prominent CTA; concise messages; `w-full h-11` buttons.
+
+### Cross-Cutting Actions
+- Standardize typography: `text-sm` body, `text-xs` meta, `text-base` headers.
+- Ensure tap targets: `min-h-[44px]`, `px-3 py-2`, `space-y-2`.
+- Horizontal metrics: `overflow-x-auto snap-x snap-center gap-2`.
+- Tables: Mobile stacking (`grid`/`flex-col`), hide non-critical columns.
+- Bottom nav spacing: Always `pb-mobile-nav` where `MobileNavWrapper` exists.
+- Refresh: `PullToRefresh` + `revalidatePath` for dynamic lists/details.
+
+### Immediate Next Steps
+- Verify auth/purchase pages for compact form and CTA patterns.
+- Apply stacked-table pattern to admin/users and organizer/events where needed.
+- Add skeleton loaders to long lists (discover/tickets).
+
+## Build & Metadata Status (Nov 28, 2025)
+- Reusable component added: `components/ui/LoadingSkeleton.tsx` for consistent list skeletons.
+- Migrated global metadata to `export const viewport` in `app/layout.tsx`.
+- Removed deprecated `themeColor` and `viewport` from `metadata` export.
+- Build compiles successfully; only expected dynamic server usage notices remain for API routes.
+
+## Skeleton Loaders (Nov 29, 2025)
+- Added route-level loading UIs:
+  - `app/discover/loading.tsx` (minimal hero placeholder + two list skeleton sections)
+  - `app/tickets/loading.tsx` (compact header placeholder + list skeleton)
+  - `app/organizer/events/loading.tsx` (header placeholders + list skeleton)
+- Pattern: List-focused `LoadingSkeleton` respecting `pb-mobile-nav` safe area.
+### Tuning (Nov 29, 2025 — Evening)
+- Discover: Added header placeholders for Trending and Nearby; rows tuned to `8` and `6` respectively for realistic feed density.
+- Tickets: Header placeholders retained; rows tuned to `5` for a lighter feel.
+- Organizer Events: Added header + subheading placeholders and a filters row; rows tuned to `6` for balanced grid loading.
+
+Build Validation: Ran `npm run build` after tuning — compiled successfully. Dynamic server usage notices for routes using `cookies`, `request.url`, or `request.headers` remain expected.
+
+### Polish (Nov 29, 2025 — Late Evening)
+- Small-screen spacing tightened by ~2px on header placeholders across Discover, Tickets, Organizer Events.
+- Subtle shimmer added (`animate-pulse`) to header placeholders to improve perceived motion without distracting from list skeletons.
+- Files touched:
+  - `app/discover/loading.tsx`
+  - `app/tickets/loading.tsx`
+  - `app/organizer/events/loading.tsx`
+- Build re-validated: `npm run build` compiled successfully; expected dynamic server notices unchanged.
+ - Introduced `animated` prop to `LoadingSkeleton` to toggle row shimmer; section fallbacks now pass `animated={false}` to keep motion focused on headers.
+
+## Consistency (Nov 29, 2025)
+- Added `app/favorites/loading.tsx` with navbar + header shimmer and static list placeholders (8 rows)
+- Added `app/categories/loading.tsx` with navbar + header shimmer, category grid placeholders, and static list for selected category (9 rows)
+- Ensures loading UIs present even before Suspense boundaries resolve
+- Next step: Review any remaining long lists for uniform fallback and spacing
+ - Added `app/profile/loading.tsx` with avatar/name shimmer and static section placeholders
+ - Added `app/settings/loading.tsx` with header shimmer and static settings sections
+ - Added `app/organizer/loading.tsx` with header shimmer, metric card placeholders, and recent events list skeleton
+ - Added `app/profile/organizer/[organizerId]/loading.tsx` with avatar/name shimmer, metrics, and event grid skeleton
+ - Added `app/dashboard/loading.tsx` with header shimmer, metric cards, and recent activity list
+
+### Safe-Area Audit (Nov 29, 2025 — Night)
+- Ensured bottom safe-area padding via `pb-mobile-nav` across loading UIs where MobileNavWrapper is present.
+- Newly patched pages:
+  - `app/settings/loading.tsx`
+  - `app/organizer/loading.tsx`
+  - `app/profile/organizer/[organizerId]/loading.tsx`
+  - `app/dashboard/loading.tsx`
+  - `app/loading.tsx` (global)
+- Already compliant:
+  - `app/discover/loading.tsx`, `app/tickets/loading.tsx`, `app/favorites/loading.tsx`, `app/categories/loading.tsx`, `app/organizer/events/loading.tsx`, `app/profile/loading.tsx`
+- Result: Consistent safe-area spacing across all loading UIs.
+
+## Suspense Streaming (Nov 29, 2025)
+- Discover: Wrapped data sections in `Suspense` with fallbacks
+  - `app/discover/page.tsx`
+  - `app/discover/sections/TrendingSection.tsx`
+  - `app/discover/sections/NearbySection.tsx`
+- Tickets: Delegated list fetching to async server component under `Suspense`
+  - `app/tickets/page.tsx`
+  - `app/tickets/sections/MyTicketsList.tsx`
+- Organizer Events: Grid list streams under `Suspense` with matching skeleton
+  - `app/organizer/events/page.tsx`
+  - `app/organizer/events/sections/OrganizerEventsList.tsx`
+- Result: Smoother loading transitions; skeletons display during server resolution and PullToRefresh.
+- Build: `npm run build` compiled successfully; only expected dynamic server usage notices on API/auth routes.
+
+## PWA Install & Prompt (Nov 29, 2025 — Night)
+### Added Assets & Configuration
+- `public/manifest.json` with `name`, `short_name`, `start_url`, `display: standalone`, theme/background colors, maskable SVG icons (192 / 512), shortcuts (Home, Tickets, Discover), and screenshots placeholders.
+- Icons: `public/icon-192.svg`, `public/icon-512.svg` (gradient brand background + EH monogram).
+- Service worker: `public/sw.js` (static asset precache, runtime cache, placeholder push + notificationclick handlers).
+
+### Install UX Implementation
+- `components/pwa/PWAInstallPrompt.tsx`: Client component listening for `beforeinstallprompt` (Chrome/Edge/Android) and showing a custom install banner with CTA (Install / Maybe Later).
+- iOS Safari handling: Detects iOS + not standalone; shows instruction banner (“Share → Add to Home Screen”). (iOS does not support `beforeinstallprompt`).
+- Added to root layout: `<PWAInstallPrompt />` rendered after `children` to ensure it can appear once hydration completes.
+- Automatic SW registration: Inside prompt component `useEffect` ensures `/sw.js` is registered if not already.
+
+### Behavior Summary
+- Chrome/Android: Defer native prompt until user taps Install, providing a branded soft prompt first (improves acceptance rate).
+- iOS Safari: Graceful manual Add to Home Screen instructions; no intrusive permission request.
+- Dismiss state persisted in-memory for session (suppresses re-prompt until reload); future enhancement: persist in `localStorage` or server profile.
+
+### Follow-Up Enhancements (Optional)
+- Persist dismissal timestamp to avoid re-showing for X days.
+- Integrate analytics event on accept/dismiss.
+- Add a settings toggle to re-trigger prompt (e.g., under Profile > Settings > Device).
+- Expand SW caching: include critical route shells (`/tickets`, `/discover`) and use Cache-Control heuristics.
+- Add offline fallback page (`/offline.html`) to manifest and SW asset list.
+- Supply real screenshot images (replace placeholders) for richer install experience on some platforms.
+
+### Validation Checklist
+- Manifest served at `/manifest.json` with correct MIME (Next.js static files). Link via `metadata.manifest` in `app/layout.tsx` (already present).
+- Icons reachable at referenced paths (verified in repository).
+- SW registered (component logic) and responds to fetch events (runtime caching). Installation banner appears on fresh Chrome session not yet installed.
+- iOS prompt shows only when not running in standalone.
+
+### Impact
+- Increases install conversion by offering clear, contextual guidance per platform.
+- Establishes foundation for offline ticket access & push reminders (extend push handler later).
+
+## Offline & Push Notifications (Nov 29, 2025 — Night)
+### Offline Fallback
+- Added `public/offline.html` lightweight fallback surfaced when navigation requests fail with no cache.
+- Enhanced `public/sw.js`:
+  - Versioned caches (`eventhaiti-static-v2`, `eventhaiti-nav-v1`).
+  - Precache offline assets + icons + manifest.
+  - Navigation network-first strategy with offline fallback.
+  - Retains runtime caching for static GET requests.
+
+### Push Subscription Scaffold
+- Client helper: `lib/push.ts` (request permission, subscribe with VAPID public key, POST to API).
+- API endpoints:
+  - `POST /api/push/subscribe` stores subscription in Firestore (`pushSubscriptions` collection, doc id = endpoint).
+  - `POST /api/push/test` sends test notification via `web-push` (requires `NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY`).
+- UI: `components/pwa/EnableNotificationsButton.tsx` floating action (enable + test when subscribed). Injected in `app/layout.tsx`.
+- Service worker push handlers display notifications with icon and deep link.
+
+### Next Enhancements
+- Associate subscriptions with authenticated user (add userId & topics array).
+- Store dismissal state for install and notification prompts in `localStorage` to reduce re-prompts.
+- Add segmented topics (reminders, organizer updates, transfers) using `data` payload.
+- Integrate offline page styling with brand + actionable cached tickets link.
+- Add `/offline.html` to manifest `screenshots` if desirable for completeness.
+
+### Keys & Env Requirements
+- Generate VAPID keys; set `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (public) and `VAPID_PRIVATE_KEY` (server only).
+- Without keys, test route returns 500 and button shows error.
+
+### Impact
+- Improves resilience in poor connectivity (navigation attempts gracefully degrade).
+- Establishes base for re-engagement via push (reminders, ticket transfers, organizer alerts).
+
+### VAPID Key Status (Nov 29, 2025)
+Keys generated and stored in `.env.local`:
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY` set (safe to expose to client)
+- `VAPID_PRIVATE_KEY` set (server-side only; never commit publicly)
+
+Rotation & Security:
+- Rotate keys if private key exposure suspected.
+- For rotation: generate new pair, update env, redeploy, optionally keep old for 24h during transition.
+- Do NOT place private key in documentation or version control beyond local `.env.local` / deployment secrets.
+
+### Push Notification Enhancements (Topics & Pruning)
+Implemented (Nov 29, 2025):
+- Topic support: Subscriptions can include a `topics` array (stored & merged).
+- Targeted send endpoint: `POST /api/push/send` with `{ title, body, url, topics }` filters recipients by topic.
+- Unsubscribe endpoint: `POST /api/push/unsubscribe` deletes subscription by `endpoint`.
+- Dead subscription pruning: Test and send routes remove endpoints returning 404/410 (expired).
+
+UI & Service Worker Additions (Nov 29, 2025 — Late):
+- Client UI supports topic pre-selection (Reminders, Promotions, Platform Updates) before enabling notifications.
+- Unsubscribe button removes subscription from Firestore and calls `PushSubscription.unsubscribe()`.
+- Service worker push handler adds default actionable buttons (Tickets / Home) via `actions` API.
+- Action routing logic: notification click with action navigates to `/tickets` or `/`; fallback uses payload `data.url`.
+- Added `timestamp`, `tag`, `renotify: false` for grouping and to avoid duplicate alert noise.
+
+Endpoints Summary:
+- `POST /api/push/subscribe` body: `{ endpoint, keys, topics?: string[] }`
+- `POST /api/push/unsubscribe` body: `{ endpoint }`
+- `POST /api/push/test` (broadcast test; prunes expired)
+- `POST /api/push/send` body: `{ title?, body?, url?, topics?: string[], data?: {} }` (topic-filtered send + pruning)
+
+Next Enhancements:
+- Add rich notification actions based on event context ("View Event", "Transfer Ticket").
+- Provide settings page for per-topic toggles and granular opt-outs.
+- Integrate authenticated `userId` in subscription docs for user-targeted sends.
+- Add analytics logging (success, pruned, latency) to Firestore collection (e.g. `pushDispatchLogs`).
+
+Planned Next:
+- User association: attach `userId` when auth context available for per-user targeting.
+- Rich actions: add notification `actions` (e.g. "View Ticket", "Open Event") and deep-link handling in SW.
+- Preferences UI: per-topic opt-in/out page in user settings.
+- Analytics: log send results + pruned counts for monitoring health.
+
+## Notification Preferences & User Association (Nov 29, 2025 — Night)
+### Implemented Additions
+- Subscription API enhanced: `POST /api/push/subscribe` now accepts optional `userId` and persists it alongside `endpoint`, `keys`, and `topics` in Firestore (`pushSubscriptions` collection).
+- Client library updated: `subscribeToPush(publicKey, topics, userId?)` forwards `userId` when available.
+- Enable button patched: `components/pwa/EnableNotificationsButton.tsx` fetches session via `/api/auth/session` and passes `userId` into subscribe flow.
+- Preferences page added: `/settings/notifications` renders `components/settings/NotificationPreferences.tsx`.
+- New component features:
+  - Topic chip selection (Reminders, Promotions, Updates) prior to subscription.
+  - Enable / Disable push subscription (handles permission + Firestore doc deletion).
+  - Local persistence of selected topics via `localStorage` key `eh_push_topics`.
+  - Test notification trigger (calls `/api/push/test`).
+  - Displays current `Notification.permission` and subscription `endpoint`.
+  - Graceful error states (missing VAPID key, denied permission, unsubscribe failure).
+- README updated with push & preferences documentation.
+
+### Firestore Subscription Doc Shape (Post-Update)
+```jsonc
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/...",
+  "keys": { "p256dh": "...", "auth": "..." },
+  "topics": ["reminders", "promotions"], // optional
+  "userId": "uid_abc123" // optional (null/absent if anonymous)
+}
+```
+
+### Targeting Pathways Enabled
+- Topic broadcast: send to all docs containing specific topic(s).
+- User targeting (future): filter by `userId` for direct notifications (e.g., ticket transfer updates).
+- Hybrid: topic AND user filters (e.g., only reminders for a specific organizer attendee segment).
+
+### Build Verification
+- Ran `npm run build` post-component addition: succeeded; only expected dynamic server usage notices (cookies/headers) for API routes.
+
+### Upcoming Enhancements
+- Add `/api/push/send-user` for direct userId targeting without topic filtering.
+- Introduce subscription analytics collection (dispatch counts, pruned endpoints, topic distribution).
+- Rate limiting / quota safeguards for send endpoints.
+- UI refinements: last received timestamp, per-topic mute toggles, permission recovery guidance when `denied`.
+- SW improvements: distinct notification `tag` strategies per topic to prevent overwrite collisions.
+
+### Operational Notes
+- If permission becomes `denied`, re-subscribe flow cannot proceed until user manually changes browser site settings.
+- Consider daily pruning cron to remove docs without active `PushSubscription` rather than only opportunistic pruning on sends.
+- Ensure private VAPID key never leaks into client bundles or logs.
+
+### Conversion & Engagement Expectation
+## Push Dispatch Logging & Rate Limiting (Nov 29, 2025 — Late Night)
+### Implemented
+- Added `/api/push/send-user` endpoint (kind: user) with per-user hourly rate limit (20/hour) persisted in `pushRateLimits/{userId}`.
+- Extended existing endpoints (`/api/push/send`, `/api/push/test`, `/api/push/send-user`) to log dispatch metadata to `pushDispatchLogs` collection.
+- Logs capture: kind, topics/userId, title, body, url, sentCount, successCount, pruned endpoints, timestamp.
+
+### Rate Limiting Strategy
+- Simple fixed window (1 hour) counter per user for targeted sends.
+- Future improvement: sliding window or token bucket; topic-level quota.
+- Guard rails prevent burst abuse while allowing normal reminder flows.
+
+### Monitoring Plan (Next Steps)
+- Add aggregated dashboard: success vs. pruned ratio trend, topic distribution pie, per-user send volume.
+- Alert on high prune ratio (>30%) indicating stale subscriptions or VAPID issues.
+- Track average success latency (web-push promise timing) to gauge delivery performance.
+
+### Future Hardening
+- Implement global broadcast throttle (e.g. max 5 broadcasts/minute) to avoid accidental spam.
+- Add admin API key enforcement for send endpoints.
+- Enrich logs with `durationMs` and `failureReasons` counts.
+- Scheduled daily prune job for endpoints not seen in 30 days.
+
+### Impact
+- Visibility into push health enables early detection of delivery regressions.
+- Rate limiting reduces risk of notification fatigue, improving CTR retention.
+- Personalized topics + user-level segmentation projected to increase notification CTR by 20–30% versus unsegmented broadcast.
+- Anticipated retention lift: +10–15% weekly active users when reminders & promotions are tuned.
+
+## User-Targeted Push, Rate Limiting & Analytics (Nov 29, 2025 — Late Night)
+### Implemented
+- Added endpoint `POST /api/push/send-user` supporting body `{ userId, title?, body?, url?, data? }`.
+- Rate limit: Max 20 user-targeted sends per user per rolling hour (`pushRateLimits` collection: `{ count, resetAt }`).
+- Automatic pruning of expired endpoints (status 404/410) identical to topic broadcast logic.
+- Analytics logging: Writes to `pushDispatchLogs` with `kind: 'user'`, counts, pruned endpoints, timestamp.
+- Helper `sendUserNotification` exported from `lib/push.ts`.
+
+### Data Collections
+`pushRateLimits/{userId}`:
+```jsonc
+{ "count": 7, "resetAt": 1732857600000 }
+```
+`pushDispatchLogs/{autoId}`:
+```jsonc
+{ "kind": "user", "userId": "uid_123", "title": "Ticket Update", "sentCount": 1, "successCount": 1, "pruned": [], "timestamp": "2025-11-29T04:12:00.000Z" }
+```
+
+### Future Hardening
+- Migrate rate limit to token bucket for smoother burst handling.
+- Add organizer-level quota & elevated system bypass.
+- Include latency and payload size metrics in logs.
+- Dashboard aggregation: daily sends, unique users, prune rate trend.
+- Alerting on high prune percentage (>10%) to indicate stale subscriptions.
+
+### Developer Usage Examples
+```ts
+// Server or client (if privileged context)
+await sendUserNotification('uid_123', 'Reminder', 'Event starts in 1 hour', '/events/abc')
+
+// Raw fetch
+await fetch('/api/push/send-user', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ userId: 'uid_123', title: 'Ticket Transferred', body: 'You received a ticket', url: '/tickets' })
+})
+```
+
+### Operational Notes
+- 429 responses indicate hourly cap reached; client should surface a non-intrusive warning.
+- Logging failures are non-fatal (endpoint returns success even if analytics write fails).
+- Ensure Firestore indexes if querying by additional fields later (e.g. `where('kind','==','user')`).

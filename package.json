@@ -26,6 +26,7 @@
     "recharts": "^3.5.0",
     "resend": "^6.5.2",
     "stripe": "^20.0.0",
+    "web-push": "^3.6.7",
     "zod": "^3.22.4"
   },
   "devDependencies": {

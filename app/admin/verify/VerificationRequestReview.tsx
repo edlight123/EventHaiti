@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 interface Props {
   request: any
@@ -100,10 +101,12 @@ export default function VerificationRequestReview({ request, user }: Props) {
               onClick={() => setSelectedImage(request.id_front_url)}
               className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
             >
-              <img
+              <Image
                 src={request.id_front_url}
                 alt="ID Front"
-                className="w-full h-full object-cover"
+                fill
+                sizes="(max-width: 640px) 33vw, 33vw"
+                className="object-cover"
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-10 transition-opacity">
                 <svg className="w-8 h-8 text-white opacity-0 hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -120,10 +123,12 @@ export default function VerificationRequestReview({ request, user }: Props) {
               onClick={() => setSelectedImage(request.id_back_url)}
               className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
             >
-              <img
+              <Image
                 src={request.id_back_url}
                 alt="ID Back"
-                className="w-full h-full object-cover"
+                fill
+                sizes="(max-width: 640px) 33vw, 33vw"
+                className="object-cover"
               />
             </div>
           </div>
@@ -135,10 +140,12 @@ export default function VerificationRequestReview({ request, user }: Props) {
               onClick={() => setSelectedImage(request.face_photo_url)}
               className="relative aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
             >
-              <img
+              <Image
                 src={request.face_photo_url}
                 alt="Face"
-                className="w-full h-full object-cover"
+                fill
+                sizes="(max-width: 640px) 33vw, 33vw"
+                className="object-cover"
               />
             </div>
           </div>
@@ -178,12 +185,16 @@ export default function VerificationRequestReview({ request, user }: Props) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <img
-              src={selectedImage}
-              alt="Verification document"
-              className="max-w-full max-h-screen object-contain rounded-lg"
-              onClick={(e) => e.stopPropagation()}
-            />
+            <div className="relative w-[90vw] max-w-4xl h-[80vh]">
+              <Image
+                src={selectedImage}
+                alt="Verification document"
+                fill
+                className="object-contain rounded-lg"
+                sizes="90vw"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
           </div>
         </div>
       )}

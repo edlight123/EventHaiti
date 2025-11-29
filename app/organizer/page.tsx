@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
+import Image from 'next/image'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import PullToRefresh from '@/components/PullToRefresh'
 import Link from 'next/link'
@@ -191,7 +192,13 @@ export default async function OrganizerDashboard() {
                   >
                     {event.banner_image_url ? (
                       <div className="h-40 md:h-48 bg-gray-200 overflow-hidden">
-                        <img src={event.banner_image_url} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        <Image
+                          src={event.banner_image_url}
+                          alt={event.title}
+                          fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
                       </div>
                     ) : (
                       <div className="h-40 md:h-48 bg-gradient-to-br from-brand-100 to-accent-100 flex items-center justify-center">

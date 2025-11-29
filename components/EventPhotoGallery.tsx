@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
@@ -27,11 +27,7 @@ export default function EventPhotoGallery({ eventId, userId, isOrganizer }: Even
   const [loading, setLoading] = useState(true)
   const [selectedPhoto, setSelectedPhoto] = useState<EventPhoto | null>(null)
 
-  useEffect(() => {
-    fetchPhotos()
-  }, [eventId])
-
-  const fetchPhotos = async () => {
+  const fetchPhotos = useCallback(async () => {
     try {
       const response = await fetch(`/api/event-photos?eventId=${eventId}`)
       if (!response.ok) throw new Error('Failed to fetch photos')
@@ -42,7 +38,13 @@ export default function EventPhotoGallery({ eventId, userId, isOrganizer }: Even
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId])
+
+  useEffect(() => {
+    fetchPhotos()
+  }, [fetchPhotos])
+
+  
 
   const handleDelete = async (photoId: string) => {
     if (!confirm('Are you sure you want to delete this photo?')) return

@@ -10,6 +10,8 @@ import EmptyState from '@/components/EmptyState'
 import Link from 'next/link'
 import type { Database } from '@/types/database'
 import { Heart, TrendingUp } from 'lucide-react'
+import { Suspense } from 'react'
+import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 
 type Event = Database['public']['Tables']['events']['Row']
 
@@ -120,7 +122,7 @@ export default async function FavoritesPage() {
               actionIcon={TrendingUp}
             />
           ) : (
-            <>
+            <Suspense fallback={<LoadingSkeleton rows={8} animated={false} />}>
               {/* Mobile: Horizontal Cards */}
               <div className="md:hidden space-y-4">
                 {favoriteEvents.map((event) => (
@@ -134,7 +136,7 @@ export default async function FavoritesPage() {
                   <EventCard key={event.id} event={event} />
                 ))}
               </div>
-            </>
+            </Suspense>
           )}
         </div>
       </PullToRefresh>

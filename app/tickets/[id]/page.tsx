@@ -28,6 +28,7 @@ import Badge from '@/components/ui/Badge'
 import PullToRefresh from '@/components/PullToRefresh'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { revalidatePath } from 'next/cache'
+import Image from 'next/image'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -230,10 +231,12 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
             <div className="bg-white rounded-2xl shadow-medium border-2 border-gray-200 overflow-hidden">
               {serializedEvent.banner_image_url && (
                 <div className="h-48 bg-gradient-to-br from-brand-600 to-accent-500 relative overflow-hidden">
-                  <img
+                  <Image
                     src={serializedEvent.banner_image_url}
                     alt={serializedEvent.title}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </div>

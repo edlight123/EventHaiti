@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { firebaseDb as supabase } from '@/lib/firebase-db/client'
+import Image from 'next/image'
 
 interface ImageUploadProps {
   currentImage?: string | null
@@ -93,11 +94,15 @@ export default function ImageUpload({
       <div className="relative">
         {preview ? (
           <div className="relative group">
-            <img
-              src={preview}
-              alt="Preview"
-              className="w-full h-64 object-cover rounded-xl border-2 border-gray-200"
-            />
+            <div className="relative w-full h-64">
+              <Image
+                src={preview}
+                alt="Preview"
+                fill
+                sizes="100vw"
+                className="object-cover rounded-xl border-2 border-gray-200"
+              />
+            </div>
             <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
               <button
                 type="button"

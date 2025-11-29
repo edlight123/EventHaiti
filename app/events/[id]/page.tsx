@@ -19,6 +19,7 @@ import type { Metadata } from 'next'
 import PullToRefresh from '@/components/PullToRefresh'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { revalidatePath } from 'next/cache'
+import Image from 'next/image'
 
 export const revalidate = 0
 
@@ -228,10 +229,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         {/* Background Image with Overlay */}
         {event.banner_image_url ? (
           <div className="absolute inset-0">
-            <img
+            <Image
               src={event.banner_image_url}
               alt={event.title}
-              className="w-full h-full object-cover"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 100vw"
+              className="object-cover"
+              priority
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30" />
           </div>

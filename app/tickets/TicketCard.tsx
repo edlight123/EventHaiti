@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { format } from 'date-fns'
+import Image from 'next/image'
 
 interface TicketCardProps {
   eventId: string
@@ -35,11 +36,13 @@ export default function TicketCard({
     >
       <div className="flex">
         {bannerImageUrl ? (
-          <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-auto bg-gray-200 flex-shrink-0">
-            <img
+          <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-auto bg-gray-200 flex-shrink-0 relative">
+            <Image
               src={bannerImageUrl}
               alt={title}
-              className="w-full h-full object-cover"
+              fill
+              sizes="(max-width: 768px) 33vw, (max-width: 1200px) 25vw, 200px"
+              className="object-cover"
             />
           </div>
         ) : (

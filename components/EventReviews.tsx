@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface Review {
@@ -30,11 +30,7 @@ export default function EventReviews({ eventId, userId, hasAttended }: EventRevi
   const [submitting, setSubmitting] = useState(false)
   const router = useRouter()
 
-  useEffect(() => {
-    fetchReviews()
-  }, [eventId])
-
-  async function fetchReviews() {
+  const fetchReviews = useCallback(async () => {
     try {
       const response = await fetch(`/api/events/reviews?eventId=${eventId}`)
       const data = await response.json()
@@ -49,7 +45,11 @@ export default function EventReviews({ eventId, userId, hasAttended }: EventRevi
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId])
+
+  useEffect(() => {
+    fetchReviews()
+  }, [fetchReviews])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

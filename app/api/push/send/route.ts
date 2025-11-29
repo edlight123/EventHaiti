@@ -1,0 +1,73 @@
+import { NextResponse } from 'next/server'
+// @ts-expect-error no types
+import webpush from 'web-push'
+import { adminDb } from '@/lib/firebase/admin'
+
+export const runtime = 'nodejs'
+
+interface SendPayload {
+  title?: string
+  body?: string
+  url?: string
+  topics?: string[]
+  data?: Record<string, any>
+}
+
+export async function POST(req: Request) {
+  if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+    return NextResponse.json({ error: 'VAPID keys not set' }, { status: 500 })
+  }
+  let payload: SendPayload
+  try {
+    payload = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
+
+  const title = payload.title || 'EventHaiti'
+  const body = payload.body || 'Notification'
+  const url = payload.url || '/'
+  const topicsFilter = Array.isArray(payload.topics) && payload.topics.length ? payload.topics : null
+
+  const snap = await adminDb.collection('pushSubscriptions').get()
+  const subs: any[] = snap.docs
+    .map((d: any) => ({ endpoint: d.id, keys: d.data().keys, topics: (d.data().topics || []) as string[] }))
+    .filter((s: any) => !topicsFilter || s.topics.some((t: string) => topicsFilter.includes(t)))
+
+  if (!subs.length) return NextResponse.json({ error: 'No matching subscriptions' }, { status: 404 })
+
+  webpush.setVapidDetails('mailto:support@eventhaiti.com', process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY)
+
+  const notificationPayload = JSON.stringify({
+    title,
+    body,
+    data: { url, ...payload.data }
+  })
+
+  const results = await Promise.all(subs.map(s => webpush
+    .sendNotification({ endpoint: s.endpoint, keys: s.keys }, notificationPayload)
+    .then(() => ({ endpoint: s.endpoint, ok: true }))
+    .catch((e: any) => ({ endpoint: s.endpoint, ok: false, error: String(e?.message || 'error'), statusCode: e?.statusCode }))
+  ))
+
+  // Prune expired (410 Gone or 404 Not Found)
+  const expired = results.filter((r: any) => !r.ok && (r.statusCode === 410 || r.statusCode === 404))
+  await Promise.all(expired.map((r: any) => adminDb.collection('pushSubscriptions').doc(r.endpoint).delete()))
+
+  // Dispatch log (non-blocking)
+  try {
+    await adminDb.collection('pushDispatchLogs').add({
+      kind: 'topic',
+      topics: topicsFilter || [],
+      title,
+      body,
+      url,
+      sentCount: results.length,
+      successCount: results.filter((r: any) => r.ok).length,
+      pruned: expired.map((e: any) => e.endpoint),
+      timestamp: new Date().toISOString()
+    })
+  } catch {}
+
+  return NextResponse.json({ sent: results, pruned: expired.map((e: any) => e.endpoint) })
+}

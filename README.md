@@ -458,3 +458,95 @@ EventHaiti is designed with multi-tenancy in mind for future expansion to HaitiP
 ---
 
 **Built with ❤️ for Haiti** 🇭🇹
+
+## 🔔 Push Notifications & Preferences (New)
+
+Real-time and segmented notifications are supported via a progressive enhancement layer:
+- Service Worker (`public/sw.js`) handles push events, offline caching, and notification action clicks.
+- API endpoints: `POST /api/push/subscribe`, `POST /api/push/unsubscribe`, `POST /api/push/send`, `POST /api/push/test`.
+- Topic opt-in: Users choose among `reminders`, `promotions`, `updates` for targeted sends.
+- User association: Subscriptions may include a `userId` enabling user-specific targeting.
+- Automatic pruning: Invalid/expired endpoints removed during send operations.
+
+### Managing Preferences
+Navigate to `/settings/notifications` to adjust topics and manage your subscription.
+The page renders `components/settings/NotificationPreferences.tsx` providing:
+- Enable / disable push subscription
+- Topic chips with local persistence (`localStorage` key: `eh_push_topics`)
+- Test notification trigger button
+- Visibility into current permission state and subscription endpoint
+
+### Environment Requirements
+Add VAPID keys to `.env.local`:
+```
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=your_public_key
+VAPID_PRIVATE_KEY=your_private_key
+```
+Generate with the `web-push` library or existing tooling.
+
+### Sending Notifications
+- Topic broadcast: POST `/api/push/send` body:
+```json
+{ "title": "Promo", "body": "New discount!", "topics": ["promotions"] }
+```
+Omit `topics` to broadcast to all.
+
+- User-targeted: POST `/api/push/send-user` body:
+```json
+{ "userId": "uid_abc123", "title": "Reminder", "body": "Event starting soon", "url": "/tickets" }
+```
+Applies per-user rate limit (default: 20 notifications/hour) and prunes expired endpoints.
+
+- Test broadcast: POST `/api/push/test` (no body) for system validation.
+
+### Dispatch Logging
+All send/test/user endpoints append a document to `pushDispatchLogs` with:
+```jsonc
+{
+   "kind": "topic|user|test",
+   "topics": ["promotions"], // topic only
+   "userId": "uid_abc123",    // user only
+   "title": "Promo",
+   "body": "New discount!",
+   "url": "/tickets",
+   "sentCount": 3,
+   "successCount": 3,
+   "pruned": ["endpoint1"],
+   "timestamp": "2025-11-29T02:15:00.000Z"
+}
+```
+
+Use this collection for future analytics (CTR, failure rates, topic adoption).
+
+### User-Targeted Notifications (New)
+Endpoint: `POST /api/push/send-user`
+Body example:
+```json
+{ "userId": "uid_abc123", "title": "Ticket Update", "body": "Your ticket was transferred", "url": "/tickets" }
+```
+Behavior:
+- Looks up subscriptions where `userId` matches.
+- Rate limits per user (`20/hour`) via `pushRateLimits` collection.
+- Prunes expired endpoints (404/410) automatically.
+- Logs dispatch analytics in `pushDispatchLogs` with counts & pruned list.
+
+Helper (client/server): `sendUserNotification(userId, title?, body?, url?, data?)` in `lib/push.ts`.
+
+### Dispatch Logging
+Each send (topic or user) can be extended to log to `pushDispatchLogs`:
+```jsonc
+{
+   "kind": "user", // or "topic"
+   "userId": "uid_abc123", // optional for topic
+   "title": "Ticket Update",
+   "sentCount": 2,
+   "successCount": 2,
+   "pruned": [],
+   "timestamp": "2025-11-29T03:12:45.000Z"
+}
+```
+
+### Rate Limiting Notes
+- Current simple window: 1 hour rolling (stored `resetAt`).
+- Increase robustness later with token bucket or per-role limits (organizer vs system).
+- 429 response returns `{ error: 'Rate limit exceeded', limit: 20 }`.

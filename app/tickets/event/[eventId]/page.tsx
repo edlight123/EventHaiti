@@ -10,6 +10,7 @@ import AddToWalletButton from '@/components/AddToWalletButton'
 import { isDemoMode, DEMO_TICKETS, DEMO_EVENTS } from '@/lib/demo'
 import PullToRefresh from '@/components/PullToRefresh'
 import { revalidatePath } from 'next/cache'
+import Image from 'next/image'
 import { 
   Calendar, 
   MapPin, 
@@ -135,10 +136,12 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
           {/* Banner Image - Compact */}
           {serializedEvent.banner_image_url ? (
             <div className="relative h-32 sm:h-48 md:h-56 bg-gradient-to-br from-brand-600 to-accent-500">
-              <img
+              <Image
                 src={serializedEvent.banner_image_url}
                 alt={serializedEvent.title}
-                className="w-full h-full object-cover"
+                fill
+                sizes="(max-width: 640px) 100vw, (max-width: 768px) 100vw, (max-width: 1024px) 80vw, 60vw"
+                className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
             </div>

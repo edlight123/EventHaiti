@@ -6,6 +6,8 @@ import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import SearchBar from '@/components/SearchBar'
 import CategoryGrid from '@/components/CategoryGrid'
+import { Suspense } from 'react'
+import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import DateFilters from '@/components/DateFilters'
 import EventSearchFilters from '@/components/EventSearchFilters'
 import FeaturedCarousel from '@/components/FeaturedCarousel'
@@ -304,7 +306,9 @@ export default async function HomePage({
                 </h2>
                 <p className="text-gray-600 text-lg">Find events that match your interests</p>
               </div>
-              <CategoryGrid />
+              <Suspense fallback={<div className="space-y-3"><div className="h-6 w-40 bg-gray-200 rounded animate-pulse" /><LoadingSkeleton rows={9} animated={false} /></div>}>
+                <CategoryGrid />
+              </Suspense>
             </section>
 
             {/* Trending Events */}
@@ -319,18 +323,20 @@ export default async function HomePage({
                     View All →
                   </a>
                 </div>
-                {/* Mobile: Horizontal Cards */}
-                <div className="md:hidden space-y-4">
-                  {trendingEvents.map((event) => (
-                    <EventCardHorizontal key={event.id} event={event} />
-                  ))}
-                </div>
-                {/* Desktop: Grid Cards */}
-                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {trendingEvents.map((event) => (
-                    <EventCard key={event.id} event={event} />
-                  ))}
-                </div>
+                <Suspense fallback={<LoadingSkeleton rows={6} animated={false} />}>
+                  {/* Mobile: Horizontal Cards */}
+                  <div className="md:hidden space-y-4">
+                    {trendingEvents.map((event) => (
+                      <EventCardHorizontal key={event.id} event={event} />
+                    ))}
+                  </div>
+                  {/* Desktop: Grid Cards */}
+                  <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {trendingEvents.map((event) => (
+                      <EventCard key={event.id} event={event} />
+                    ))}
+                  </div>
+                </Suspense>
               </section>
             )}
 
@@ -346,18 +352,20 @@ export default async function HomePage({
                     View All →
                   </a>
                 </div>
-                {/* Mobile: Horizontal Cards */}
-                <div className="md:hidden space-y-4">
-                  {upcomingThisWeek.map((event) => (
-                    <EventCardHorizontal key={event.id} event={event} />
-                  ))}
-                </div>
-                {/* Desktop: Grid Cards */}
-                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {upcomingThisWeek.map((event) => (
-                    <EventCard key={event.id} event={event} />
-                  ))}
-                </div>
+                <Suspense fallback={<LoadingSkeleton rows={6} animated={false} />}>
+                  {/* Mobile: Horizontal Cards */}
+                  <div className="md:hidden space-y-4">
+                    {upcomingThisWeek.map((event) => (
+                      <EventCardHorizontal key={event.id} event={event} />
+                    ))}
+                  </div>
+                  {/* Desktop: Grid Cards */}
+                  <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {upcomingThisWeek.map((event) => (
+                      <EventCard key={event.id} event={event} />
+                    ))}
+                  </div>
+                </Suspense>
               </section>
             )}
 
@@ -370,7 +378,7 @@ export default async function HomePage({
                 </div>
               </div>
               {events.length > 0 ? (
-                <>
+                <Suspense fallback={<LoadingSkeleton rows={8} animated={false} />}>
                   {/* Mobile: Horizontal Cards */}
                   <div className="md:hidden space-y-4">
                     {events.slice(0, 12).map((event) => (
@@ -383,7 +391,7 @@ export default async function HomePage({
                       <EventCard key={event.id} event={event} />
                     ))}
                   </div>
-                </>
+                </Suspense>
               ) : (
                 <div className="text-center py-20 bg-white rounded-3xl shadow-soft">
                   <div className="text-7xl mb-6">📭</div>

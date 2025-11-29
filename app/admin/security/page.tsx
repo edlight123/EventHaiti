@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 
@@ -55,11 +55,7 @@ export default function SecurityDashboard() {
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [actionText, setActionText] = useState('')
 
-  useEffect(() => {
-    fetchActivities()
-  }, [filter])
-
-  const fetchActivities = async () => {
+  const fetchActivities = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
@@ -81,7 +77,11 @@ export default function SecurityDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filter])
+
+  useEffect(() => {
+    fetchActivities()
+  }, [fetchActivities])
 
   const handleReview = async (activityId: string, action: string) => {
     try {

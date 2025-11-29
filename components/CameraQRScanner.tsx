@@ -4,7 +4,7 @@
 // Uses browser MediaDevices API to scan QR codes in real-time
 // Alternative to file upload for ticket check-in
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import jsQR from 'jsqr'
 
 interface CameraQRScannerProps {
@@ -38,21 +38,99 @@ export function CameraQRScanner({
     setConsoleLog(prev => [...prev.slice(-4), msg]) // Keep last 5 messages
   }
 
-  // Don't auto-start on iOS - wait for user interaction
-  useEffect(() => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    if (!isIOS) {
-      startCamera()
-    } else {
-      // On iOS, just set to waiting state
-      setHasPermission(null)
-    }
-    return () => {
-      stopCamera()
-    }
-  }, [])
+  
+  const scanFrame = useCallback(() => {
+    const video = videoRef.current
+    const canvas = canvasRef.current
 
-  const startCamera = async () => {
+    if (!video) {
+      addLog('scanFrame: no video')
+      return
+    }
+    
+    if (!canvas) {
+      addLog('scanFrame: no canvas')
+      return
+    }
+    
+    // Don't check isScanning here - the interval controls when we scan
+    
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+      addLog(`scanFrame: video readyState=${video.readyState}`)
+      return
+    }
+
+    const context = canvas.getContext('2d', { willReadFrequently: true })
+    if (!context) return
+
+    // Set canvas internal resolution to match video
+    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      console.log(`Canvas sized: ${canvas.width}x${canvas.height}`)
+      
+      // Also set CSS size to match parent
+      const parent = canvas.parentElement
+      if (parent) {
+        canvas.style.width = '100%'
+        canvas.style.height = '100%'
+      }
+    }
+
+    if (canvas.width === 0 || canvas.height === 0) {
+      console.log('Canvas has zero dimensions, skipping frame')
+      return
+    }
+
+    try {
+      // Clear canvas first
+      context.clearRect(0, 0, canvas.width, canvas.height)
+      
+      // Draw video frame
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
+      
+      // Update frame counter for debugging
+      setFrameCount(prev => prev + 1)
+      
+      // Get image data
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+      
+      // Scan for QR code
+      const code = jsQR(imageData.data, canvas.width, canvas.height, {
+        inversionAttempts: 'attemptBoth'
+      })
+
+      if (code?.data) {
+        console.log('✓ QR Code found:', code.data)
+        
+        // Stop scanning
+        if (scanIntervalRef.current) {
+          clearInterval(scanIntervalRef.current)
+          scanIntervalRef.current = null
+        }
+        setIsScanning(false)
+        
+        // Call handler
+        onScan(code.data)
+      }
+    } catch (err) {
+      console.error('Scan frame error:', err)
+    }
+  }, [onScan])
+
+  const startScanning = useCallback(() => {
+    addLog('startScanning called')
+    setDebugInfo('Starting scan interval...')
+    
+    // Scan for QR codes every 100ms
+    scanIntervalRef.current = setInterval(() => {
+      scanFrame()
+    }, 100)
+    
+    addLog(`Scan interval set: ${scanIntervalRef.current}`)
+  }, [scanFrame])
+
+  const startCamera = useCallback(async () => {
     try {
       setError(null)
       setHasPermission(null)
@@ -138,7 +216,7 @@ export function CameraQRScanner({
                 
                 // Force Safari to render the video - trigger repaint
                 video.style.transform = 'translateZ(0)'
-                video.style.webkitTransform = 'translateZ(0)'
+                ;(video.style as any).webkitTransform = 'translateZ(0)'
                 
                 // Try forcing a layout recalculation
                 void video.offsetHeight
@@ -199,9 +277,9 @@ export function CameraQRScanner({
       setHasPermission(false)
       onError?.(err instanceof Error ? err : new Error(errorMessage))
     }
-  }
+  }, [onError, startScanning])
 
-  const stopCamera = () => {
+  const stopCamera = useCallback(() => {
     if (scanIntervalRef.current) {
       clearInterval(scanIntervalRef.current)
       scanIntervalRef.current = null
@@ -214,98 +292,20 @@ export function CameraQRScanner({
     }
 
     setIsScanning(false)
-  }
-
-  const startScanning = () => {
-    addLog('startScanning called')
-    setDebugInfo('Starting scan interval...')
-    
-    // Scan for QR codes every 100ms
-    scanIntervalRef.current = setInterval(() => {
-      scanFrame()
-    }, 100)
-    
-    addLog(`Scan interval set: ${scanIntervalRef.current}`)
-  }
-
-  const scanFrame = () => {
-    const video = videoRef.current
-    const canvas = canvasRef.current
-
-    if (!video) {
-      addLog('scanFrame: no video')
-      return
+  }, [])
+  
+  // Don't auto-start on iOS - wait for user interaction
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    if (!isIOS) {
+      startCamera()
+    } else {
+      setHasPermission(null)
     }
-    
-    if (!canvas) {
-      addLog('scanFrame: no canvas')
-      return
+    return () => {
+      stopCamera()
     }
-    
-    // Don't check isScanning here - the interval controls when we scan
-    
-    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-      addLog(`scanFrame: video readyState=${video.readyState}`)
-      return
-    }
-
-    const context = canvas.getContext('2d', { willReadFrequently: true })
-    if (!context) return
-
-    // Set canvas internal resolution to match video
-    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-      console.log(`Canvas sized: ${canvas.width}x${canvas.height}`)
-      
-      // Also set CSS size to match parent
-      const parent = canvas.parentElement
-      if (parent) {
-        canvas.style.width = '100%'
-        canvas.style.height = '100%'
-      }
-    }
-
-    if (canvas.width === 0 || canvas.height === 0) {
-      console.log('Canvas has zero dimensions, skipping frame')
-      return
-    }
-
-    try {
-      // Clear canvas first
-      context.clearRect(0, 0, canvas.width, canvas.height)
-      
-      // Draw video frame
-      context.drawImage(video, 0, 0, canvas.width, canvas.height)
-      
-      // Update frame counter for debugging
-      setFrameCount(prev => prev + 1)
-      
-      // Get image data
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-      
-      // Scan for QR code
-      const code = jsQR(imageData.data, canvas.width, canvas.height, {
-        inversionAttempts: 'attemptBoth'
-      })
-
-      if (code?.data) {
-        console.log('✓ QR Code found:', code.data)
-        
-        // Stop scanning
-        if (scanIntervalRef.current) {
-          clearInterval(scanIntervalRef.current)
-          scanIntervalRef.current = null
-        }
-        setIsScanning(false)
-        
-        // Call handler
-        onScan(code.data)
-      }
-    } catch (err) {
-      console.error('Scan frame error:', err)
-    }
-  }
+  }, [startCamera, stopCamera])
 
   const drawBox = (
     context: CanvasRenderingContext2D,
