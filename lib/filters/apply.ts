@@ -20,10 +20,11 @@ export function filterEvents(events: Event[], filters: EventFilters): Event[] {
     if (start || end) {
       filtered = filtered.filter(event => {
         const eventDate = new Date(event.start_datetime)
-        // Use >= for start comparison to include events on the start date
-        if (start && eventDate < start) return false
-        // Use <= for end comparison to include events on the end date
-        if (end && eventDate > end) return false
+        // Compare using timestamps to avoid timezone issues
+        const eventTime = eventDate.getTime()
+        
+        if (start && eventTime < start.getTime()) return false
+        if (end && eventTime > end.getTime()) return false
         return true
       })
     }
