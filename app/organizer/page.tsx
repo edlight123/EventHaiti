@@ -67,49 +67,49 @@ export default async function OrganizerDashboard() {
 
           {/* Stats Grid - Horizontal Scroll on Mobile */}
           <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory md:overflow-visible mb-6 md:mb-8">
-            <div className="min-w-[280px] md:min-w-0 snap-start bg-white rounded-xl shadow-soft border border-gray-100 p-4 md:p-5 hover:shadow-medium transition-shadow flex-shrink-0">
-              <div className="flex items-center justify-between mb-3">
+            <div className="min-w-[280px] md:min-w-0 snap-start bg-white rounded-xl shadow-soft border border-gray-100 p-3 md:p-4 hover:shadow-medium transition-shadow flex-shrink-0">
+              <div className="flex items-center justify-between mb-2">
                 <h3 className="text-[11px] md:text-xs font-semibold text-gray-600 uppercase tracking-wide">Total Events</h3>
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-50 rounded-xl flex items-center justify-center">
-                  <Calendar className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <Calendar className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
                 </div>
               </div>
-              <p className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{events.length}</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-900 mb-1.5">{events.length}</p>
               <div className="flex items-center gap-2">
                 <Badge variant="success" size="sm">{upcomingEvents} Upcoming</Badge>
               </div>
             </div>
 
-            <div className="min-w-[280px] md:min-w-0 snap-start bg-white rounded-xl shadow-soft border border-gray-100 p-4 md:p-5 hover:shadow-medium transition-shadow flex-shrink-0">
-              <div className="flex items-center justify-between mb-3">
+            <div className="min-w-[280px] md:min-w-0 snap-start bg-white rounded-xl shadow-soft border border-gray-100 p-3 md:p-4 hover:shadow-medium transition-shadow flex-shrink-0">
+              <div className="flex items-center justify-between mb-2">
                 <h3 className="text-[11px] md:text-xs font-semibold text-gray-600 uppercase tracking-wide">Tickets Sold</h3>
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-brand-50 rounded-xl flex items-center justify-center">
-                  <Users className="w-5 h-5 md:w-6 md:h-6 text-brand-600" />
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-brand-50 rounded-lg flex items-center justify-center">
+                  <Users className="w-4 h-4 md:w-5 md:h-5 text-brand-600" />
                 </div>
               </div>
-              <p className="text-3xl md:text-4xl font-bold text-brand-700 mb-2">{totalTicketsSold}</p>
+              <p className="text-2xl md:text-3xl font-bold text-brand-700 mb-1.5">{totalTicketsSold}</p>
               <p className="text-[13px] text-gray-600">Across all events</p>
             </div>
 
-            <div className="min-w-[280px] md:min-w-0 snap-start bg-white rounded-xl shadow-soft border border-gray-100 p-4 md:p-5 hover:shadow-medium transition-shadow flex-shrink-0">
-              <div className="flex items-center justify-between mb-3">
+            <div className="min-w-[280px] md:min-w-0 snap-start bg-white rounded-xl shadow-soft border border-gray-100 p-3 md:p-4 hover:shadow-medium transition-shadow flex-shrink-0">
+              <div className="flex items-center justify-between mb-2">
                 <h3 className="text-[11px] md:text-xs font-semibold text-gray-600 uppercase tracking-wide">Total Revenue</h3>
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-accent-50 rounded-xl flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-accent-600" />
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-accent-50 rounded-lg flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 md:w-5 md:h-5 text-accent-600" />
                 </div>
               </div>
-              <p className="text-3xl md:text-4xl font-bold text-accent-700 mb-2">${totalRevenue.toFixed(2)}</p>
+              <p className="text-2xl md:text-3xl font-bold text-accent-700 mb-1.5">${totalRevenue.toFixed(2)}</p>
               <p className="text-[13px] text-gray-600">Lifetime earnings</p>
             </div>
 
-            <div className="min-w-[280px] md:min-w-0 snap-start bg-white rounded-xl shadow-soft border border-gray-100 p-4 md:p-5 hover:shadow-medium transition-shadow flex-shrink-0">
-              <div className="flex items-center justify-between mb-3">
+            <div className="min-w-[280px] md:min-w-0 snap-start bg-white rounded-xl shadow-soft border border-gray-100 p-3 md:p-4 hover:shadow-medium transition-shadow flex-shrink-0">
+              <div className="flex items-center justify-between mb-2">
                 <h3 className="text-[11px] md:text-xs font-semibold text-gray-600 uppercase tracking-wide">Avg per Event</h3>
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-50 rounded-xl flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
                 </div>
               </div>
-              <p className="text-3xl md:text-4xl font-bold text-purple-700 mb-2">
+              <p className="text-2xl md:text-3xl font-bold text-purple-700 mb-1.5">
                 {events.length > 0 ? (totalTicketsSold / events.length).toFixed(1) : '0'}
               </p>
               <p className="text-[13px] text-gray-600">Tickets per event</p>
