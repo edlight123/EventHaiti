@@ -2,7 +2,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import Badge from './ui/Badge'
-import { TrendingUp } from 'lucide-react'
+import { TrendingUp, Heart, Share2 } from 'lucide-react'
+import { useState } from 'react'
 
 interface Event {
   id: string
@@ -39,9 +40,35 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
   const isNew = new Date(event.start_datetime).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000
   const selloutSoon = !isSoldOut && remainingTickets < 10
 
+  const [isLiked, setIsLiked] = useState(false)
+
+  const handleLike = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsLiked(!isLiked)
+  }
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: event.title,
+          text: `Check out ${event.title}`,
+          url: `/events/${event.id}`
+        })
+      } catch (err) {
+        // User cancelled or share failed
+      }
+    }
+  }
+
   return (
-    <Link href={`/events/${event.id}`} className="group">
-      <div className="bg-white rounded-xl shadow-soft hover:shadow-medium transition-all duration-300 overflow-hidden border border-gray-100 group-hover:border-brand-200">
+    <div className="group">
+      <div className="rounded-xl overflow-hidden transition-all duration-300">
+        
+        <Link href={`/events/${event.id}`} className="block">
         
         {/* Image - reduced height by 25% */}
         <div className="relative w-full aspect-[2/1] bg-gray-200">
@@ -74,15 +101,39 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
 
         {/* Content */}
         <div className="p-3">
-          {/* Category */}
-          <span className="px-1.5 py-0.5 text-[7px] sm:text-[9px] bg-gray-100 text-gray-600 rounded font-medium uppercase tracking-wide inline-block mb-1.5">
-            {event.category}
-          </span>
+          <div className="flex justify-between items-start gap-2 mb-1.5">
+            <div className="flex-1 min-w-0">
+              {/* Category */}
+              <span className="px-1.5 py-0.5 text-[7px] sm:text-[9px] bg-gray-100 text-gray-600 rounded font-medium uppercase tracking-wide inline-block mb-1.5">
+                {event.category}
+              </span>
 
-          {/* Title */}
-          <h3 className="font-extrabold text-gray-900 mb-1.5 text-sm sm:text-base group-hover:text-brand-700 transition-colors line-clamp-1">
-            {event.title}
-          </h3>
+              {/* Title */}
+              <h3 className="font-extrabold text-gray-900 text-sm sm:text-base group-hover:text-brand-700 transition-colors line-clamp-1">
+                {event.title}
+              </h3>
+            </div>
+
+            {/* Share & Like Buttons */}
+            <div className="flex gap-1 flex-shrink-0">
+              <button 
+                onClick={handleLike}
+                className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Like event"
+              >
+                <Heart 
+                  className={`w-4 h-4 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} 
+                />
+              </button>
+              <button 
+                onClick={handleShare}
+                className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Share event"
+              >
+                <Share2 className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+          </div>
 
           {/* Description - 2 lines */}
           <p className="text-[11px] sm:text-xs text-gray-600 mb-2 line-clamp-2">
@@ -109,7 +160,8 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
             )}
           </div>
         </div>
+        </Link>
       </div>
-    </Link>
+    </div>
   )
 }
