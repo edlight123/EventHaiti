@@ -118,7 +118,7 @@ export default async function DiscoverPage({
                   <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
                     ⭐ Featured This Weekend
                   </h2>
-                  <p className="text-gray-600 text-sm sm:text-base mt-1">Hand-picked events you won't want to miss</p>
+                  <p className="text-gray-600 text-sm sm:text-base mt-1">Hand-picked events you won&apos;t want to miss</p>
                 </div>
                 <FeaturedCarousel events={featuredEvents} />
               </div>
