@@ -88,13 +88,21 @@ export default async function DashboardPage() {
 
     // Fetch favorites
     try {
-      const { data: favorites } = await supabase
+      const { data: allFavorites } = await supabase
         .from('favorites')
-        .select('event:events (*)')
-        .eq('user_id', user.id)
+        .select('*')
       
-      favoriteEvents = favorites?.map((f: any) => f.event).filter(Boolean) || []
+      const userFavorites = allFavorites?.filter((f: any) => f.user_id === user.id) || []
+      
+      if (userFavorites.length > 0) {
+        const favoriteEventIds = userFavorites.map((f: any) => f.event_id)
+        const { data: allEvents } = await supabase.from('events').select('*')
+        favoriteEvents = allEvents?.filter((e: any) => favoriteEventIds.includes(e.id)) || []
+      } else {
+        favoriteEvents = []
+      }
     } catch (error) {
+      console.error('Error fetching favorites:', error)
       favoriteEvents = []
     }
   }
