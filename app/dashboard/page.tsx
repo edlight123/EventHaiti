@@ -4,11 +4,14 @@ import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import Image from 'next/image'
-import Badge from '@/components/ui/Badge'
 import { isAdmin } from '@/lib/admin'
-import { Calendar, Heart, Ticket, TrendingUp, Star, ArrowRight, Sparkles, Clock } from 'lucide-react'
+import { Calendar, Heart, Ticket, TrendingUp } from 'lucide-react'
 import { isDemoMode, DEMO_EVENTS, DEMO_TICKETS } from '@/lib/demo'
+import { NextEventHero } from '@/components/dashboard/NextEventHero'
+import { TicketsPreview } from '@/components/dashboard/TicketsPreview'
+import { FavoritesRow } from '@/components/dashboard/FavoritesRow'
+import { UpcomingListCompact } from '@/components/dashboard/UpcomingListCompact'
+import { Suspense } from 'react'
 
 export const revalidate = 0
 
@@ -20,17 +23,33 @@ export default async function DashboardPage() {
   }
 
   let upcomingEvents: any[] = []
-  let pastEvents: any[] = []
+  let allUpcomingEvents: any[] = []
   let favoriteEvents: any[] = []
+  let ticketPreviews: any[] = []
   let totalTickets = 0
+  let nextEvent: any = null
 
   const supabase = await createClient()
   const now = new Date()
 
   if (isDemoMode()) {
-    upcomingEvents = DEMO_EVENTS.filter(e => new Date(e.start_datetime) > now).slice(0, 3)
-    pastEvents = DEMO_EVENTS.filter(e => new Date(e.start_datetime) <= now).slice(0, 3)
+    allUpcomingEvents = DEMO_EVENTS.filter(e => new Date(e.start_datetime) > now)
+      .sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
+    
+    upcomingEvents = allUpcomingEvents.slice(0, 3)
+    nextEvent = allUpcomingEvents[0] || null
     totalTickets = DEMO_TICKETS.length
+    
+    ticketPreviews = allUpcomingEvents.slice(0, 3).map(event => ({
+      eventId: event.id,
+      eventTitle: event.title,
+      eventBanner: event.banner_image_url,
+      eventDate: event.start_datetime,
+      eventVenue: event.venue_name,
+      eventCity: event.city,
+      ticketCount: 1,
+      status: 'active' as const
+    }))
   } else {
     // Fetch user's tickets
     const { data: allTickets } = await supabase.from('tickets').select('*')
@@ -44,16 +63,28 @@ export default async function DashboardPage() {
     const { data: allEvents } = await supabase.from('events').select('*')
     const ticketedEvents = allEvents?.filter((e: any) => ticketEventIds.includes(e.id)) || []
 
-    // Separate upcoming and past
-    upcomingEvents = ticketedEvents
+    // Separate upcoming events
+    allUpcomingEvents = ticketedEvents
       .filter((e: any) => new Date(e.start_datetime) > now)
       .sort((a: any, b: any) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
-      .slice(0, 3)
     
-    pastEvents = ticketedEvents
-      .filter((e: any) => new Date(e.start_datetime) <= now)
-      .sort((a: any, b: any) => new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime())
-      .slice(0, 3)
+    upcomingEvents = allUpcomingEvents.slice(0, 3)
+    nextEvent = allUpcomingEvents[0] || null
+
+    // Create ticket previews
+    ticketPreviews = allUpcomingEvents.slice(0, 3).map(event => {
+      const eventTickets = userTickets.filter((t: any) => t.event_id === event.id)
+      return {
+        eventId: event.id,
+        eventTitle: event.title,
+        eventBanner: event.banner_image_url,
+        eventDate: event.start_datetime,
+        eventVenue: event.venue_name,
+        eventCity: event.city,
+        ticketCount: eventTickets.length,
+        status: 'active' as const
+      }
+    })
 
     // Fetch favorites
     try {
@@ -62,209 +93,132 @@ export default async function DashboardPage() {
         .select('event:events (*)')
         .eq('user_id', user.id)
       
-      favoriteEvents = favorites?.map((f: any) => f.event).filter(Boolean).slice(0, 3) || []
+      favoriteEvents = favorites?.map((f: any) => f.event).filter(Boolean) || []
     } catch (error) {
       favoriteEvents = []
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Welcome Header */}
-        <div className="mb-4 sm:mb-6 md:mb-8">
-          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 sm:mb-2 flex items-center gap-2 sm:gap-3">
-            Welcome back, {user.full_name?.split(' ')[0] || 'there'}! 👋
-            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-brand-600" />
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+            Welcome back, {user.full_name?.split(' ')[0] || 'there'}!
           </h1>
-          <p className="text-sm sm:text-base md:text-lg text-gray-600">Your event journey at a glance</p>
+          <p className="text-base sm:text-lg text-gray-600">Your event journey at a glance</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6 md:mb-8">
-          <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-4 sm:p-6 hover:shadow-medium transition-shadow">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <h3 className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">Upcoming Events</h3>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand-50 rounded-xl flex items-center justify-center">
-                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-brand-600" />
-              </div>
-            </div>
-            <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-brand-700 mb-1 sm:mb-2">{upcomingEvents.length}</p>
-            <p className="text-xs sm:text-sm text-gray-600">Events you&apos;re attending</p>
-          </div>
+        {/* Next Event Hero */}
+        {nextEvent && (
+          <Suspense fallback={<div className="h-80 bg-gray-200 rounded-3xl animate-pulse mb-8" />}>
+            <NextEventHero event={nextEvent} />
+          </Suspense>
+        )}
 
-          <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-4 sm:p-6 hover:shadow-medium transition-shadow">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <h3 className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">Total Tickets</h3>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-50 rounded-xl flex items-center justify-center">
-                <Ticket className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
+        {/* Stats Cards - Now Clickable */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
+          <Link
+            href="/tickets"
+            className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 hover:shadow-lg hover:border-brand-200 transition-all group"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Upcoming Events</h3>
+              <div className="w-12 h-12 bg-brand-50 rounded-xl flex items-center justify-center group-hover:bg-brand-100 transition-colors">
+                <Calendar className="w-6 h-6 text-brand-600" />
               </div>
             </div>
-            <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-purple-700 mb-1 sm:mb-2">{totalTickets}</p>
-            <p className="text-xs sm:text-sm text-gray-600">In your collection</p>
-          </div>
+            <p className="text-4xl font-bold text-brand-700 mb-2">{allUpcomingEvents.length}</p>
+            <p className="text-sm text-gray-600">
+              {allUpcomingEvents.length > 0 && nextEvent
+                ? `Next: ${new Date(nextEvent.start_datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                : 'No upcoming events'}
+            </p>
+          </Link>
 
-          <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-4 sm:p-6 hover:shadow-medium transition-shadow">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <h3 className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">Favorites</h3>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-50 rounded-xl flex items-center justify-center">
-                <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-pink-600" />
+          <Link
+            href="/tickets"
+            className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 hover:shadow-lg hover:border-purple-200 transition-all group"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Total Tickets</h3>
+              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                <Ticket className="w-6 h-6 text-purple-600" />
               </div>
             </div>
-            <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-pink-700 mb-1 sm:mb-2">{favoriteEvents.length}</p>
-            <p className="text-xs sm:text-sm text-gray-600">Events you saved</p>
-          </div>
+            <p className="text-4xl font-bold text-purple-700 mb-2">{totalTickets}</p>
+            <p className="text-sm text-gray-600">
+              {totalTickets > 0 ? `${totalTickets} active ${totalTickets === 1 ? 'ticket' : 'tickets'}` : 'No tickets yet'}
+            </p>
+          </Link>
+
+          <Link
+            href="/favorites"
+            className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 hover:shadow-lg hover:border-pink-200 transition-all group"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Favorites</h3>
+              <div className="w-12 h-12 bg-pink-50 rounded-xl flex items-center justify-center group-hover:bg-pink-100 transition-colors">
+                <Heart className="w-6 h-6 text-pink-600" />
+              </div>
+            </div>
+            <p className="text-4xl font-bold text-pink-700 mb-2">{favoriteEvents.length}</p>
+            <p className="text-sm text-gray-600">
+              {favoriteEvents.length > 0 ? `${favoriteEvents.length} saved ${favoriteEvents.length === 1 ? 'event' : 'events'}` : 'No favorites yet'}
+            </p>
+          </Link>
         </div>
 
-        {/* Quick Actions */}
-        <div className="mb-4 sm:mb-6 md:mb-8">
-          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-            <Link
-              href="/"
-              className="group bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl p-6 text-white hover:shadow-glow transition-all"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <TrendingUp className="w-8 h-8" />
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </div>
-              <h3 className="font-bold text-lg mb-1">Discover Events</h3>
-              <p className="text-brand-100 text-sm">Find your next adventure</p>
-            </Link>
-
-            <Link
-              href="/tickets"
-              className="group bg-white border-2 border-gray-200 rounded-2xl p-6 hover:border-brand-500 hover:shadow-medium transition-all"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <Ticket className="w-8 h-8 text-purple-600" />
-                <ArrowRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
-              </div>
-              <h3 className="font-bold text-lg mb-1 text-gray-900">My Tickets</h3>
-              <p className="text-gray-600 text-sm">View all your tickets</p>
-            </Link>
-
-            <Link
-              href="/favorites"
-              className="group bg-white border-2 border-gray-200 rounded-2xl p-6 hover:border-pink-500 hover:shadow-medium transition-all"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <Heart className="w-8 h-8 text-pink-600" />
-                <ArrowRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
-              </div>
-              <h3 className="font-bold text-lg mb-1 text-gray-900">My Favorites</h3>
-              <p className="text-gray-600 text-sm">Saved events</p>
+        {/* My Tickets Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-gray-900">My Tickets</h2>
+            <Link href="/tickets" className="text-brand-600 hover:text-brand-700 font-semibold flex items-center gap-1 text-sm">
+              View all
+              <TrendingUp className="w-4 h-4" />
             </Link>
           </div>
+          <Suspense fallback={<div className="space-y-4">{[1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-200 rounded-2xl animate-pulse" />)}</div>}>
+            <TicketsPreview tickets={ticketPreviews} />
+          </Suspense>
         </div>
 
-        {/* Upcoming Events */}
-        <div className="mb-4 sm:mb-6 md:mb-8">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-1.5 sm:gap-2">
-              <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-brand-600" />
-              Upcoming Events
-            </h2>
-            <Link href="/tickets" className="text-brand-600 hover:text-brand-700 font-semibold flex items-center gap-1">
-              View All
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+        {/* Favorites Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-gray-900">Saved Events</h2>
+            {favoriteEvents.length > 0 && (
+              <Link href="/favorites" className="text-pink-600 hover:text-pink-700 font-semibold flex items-center gap-1 text-sm">
+                View all
+                <TrendingUp className="w-4 h-4" />
+              </Link>
+            )}
           </div>
-          {upcomingEvents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {upcomingEvents.map(event => (
-                <Link
-                  key={event.id}
-                  href={`/events/${event.id}`}
-                  className="bg-white rounded-2xl shadow-soft border border-gray-100 overflow-hidden hover:shadow-medium transition-all group"
-                >
-                  {event.banner_image_url ? (
-                    <div className="relative h-40 bg-gray-200 overflow-hidden">
-                      {/* Use Next.js Image for optimized loading */}
-                      <Image
-                        src={event.banner_image_url}
-                        alt={event.title}
-                        fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        priority={false}
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-40 bg-gradient-to-br from-brand-100 to-accent-100 flex items-center justify-center">
-                      <span className="text-4xl">🎉</span>
-                    </div>
-                  )}
-                  <div className="p-4">
-                    <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{event.title}</h3>
-                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                      <Calendar className="w-4 h-4" />
-                      {new Date(event.start_datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </div>
-                    <Badge variant="primary" size="sm">Attending</Badge>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white rounded-2xl border-2 border-dashed border-gray-300 p-12 text-center">
-              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <h3 className="text-lg font-bold text-gray-900 mb-2">No upcoming events</h3>
-              <p className="text-gray-600 mb-4">Discover events happening near you</p>
-              <Link href="/" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-brand-600 to-accent-600 text-white rounded-xl font-bold hover:shadow-glow transition-all">
-                <TrendingUp className="w-5 h-5" />
-                Explore Events
+          <Suspense fallback={<div className="h-64 bg-gray-200 rounded-2xl animate-pulse" />}>
+            <FavoritesRow favorites={favoriteEvents} />
+          </Suspense>
+        </div>
+
+        {/* Upcoming Events Compact List */}
+        {!nextEvent && allUpcomingEvents.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">Upcoming Events</h2>
+              <Link href="/tickets" className="text-brand-600 hover:text-brand-700 font-semibold flex items-center gap-1 text-sm">
+                View all
+                <TrendingUp className="w-4 h-4" />
               </Link>
             </div>
-          )}
-        </div>
-
-        {/* Past Events */}
-        {pastEvents.length > 0 && (
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Star className="w-6 h-6 text-accent-600" />
-              Past Events
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {pastEvents.map(event => (
-                <Link
-                  key={event.id}
-                  href={`/events/${event.id}`}
-                  className="bg-white rounded-2xl shadow-soft border border-gray-100 overflow-hidden hover:shadow-medium transition-all group opacity-75 hover:opacity-100"
-                >
-                  {event.banner_image_url ? (
-                    <div className="relative h-40 bg-gray-200 overflow-hidden">
-                      <Image
-                        src={event.banner_image_url}
-                        alt={event.title}
-                        fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        className="object-cover group-hover:scale-105 transition-transform duration-300 grayscale group-hover:grayscale-0"
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-40 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                      <span className="text-4xl grayscale">🎉</span>
-                    </div>
-                  )}
-                  <div className="p-4">
-                    <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{event.title}</h3>
-                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                      <Calendar className="w-4 h-4" />
-                      {new Date(event.start_datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </div>
-                    <Badge variant="neutral" size="sm">Attended</Badge>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <Suspense fallback={<div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-24 bg-gray-200 rounded-xl animate-pulse" />)}</div>}>
+              <UpcomingListCompact events={allUpcomingEvents} />
+            </Suspense>
           </div>
         )}
       </div>
-      
+
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
   )
