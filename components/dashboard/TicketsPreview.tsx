@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
 import { Calendar, MapPin, QrCode, Download, ArrowRight, Ticket } from 'lucide-react'
@@ -16,6 +18,41 @@ interface TicketPreviewItem {
 
 interface TicketsPreviewProps {
   tickets: TicketPreviewItem[]
+}
+
+function generateReceipt(ticket: TicketPreviewItem) {
+  const receiptContent = `
+EventHaiti - Ticket Receipt
+${'='.repeat(50)}
+
+EVENT DETAILS
+${'-'.repeat(50)}
+Event Name: ${ticket.eventTitle}
+Date & Time: ${format(new Date(ticket.eventDate), 'MMMM d, yyyy • h:mm a')}
+Venue: ${ticket.eventVenue}
+Location: ${ticket.eventCity}
+
+TICKET INFORMATION
+${'-'.repeat(50)}
+Number of Tickets: ${ticket.ticketCount}
+Status: ${ticket.status === 'used' ? 'Used' : ticket.status === 'expired' ? 'Expired' : 'Active'}
+
+${'='.repeat(50)}
+Thank you for using EventHaiti!
+For support, visit eventhaiti.com
+
+Generated: ${format(new Date(), 'MMMM d, yyyy • h:mm a')}
+  `.trim()
+
+  const blob = new Blob([receiptContent], { type: 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `receipt-${ticket.eventTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.txt`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }
 
 export function TicketsPreview({ tickets }: TicketsPreviewProps) {
@@ -111,7 +148,10 @@ export function TicketsPreview({ tickets }: TicketsPreviewProps) {
                   <QrCode className="w-4 h-4" />
                   View QR
                 </Link>
-                <button className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm">
+                <button 
+                  onClick={() => generateReceipt(ticket)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
+                >
                   <Download className="w-4 h-4" />
                   Receipt
                 </button>
