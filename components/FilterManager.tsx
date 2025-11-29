@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import EventSearchFilters from './EventSearchFilters'
-import FilterPanel from './FilterPanel'
+import { FiltersModal } from './FiltersModal'
+import { FilterChipsRow } from './FilterChipsRow'
 import { EventFilters, DEFAULT_FILTERS } from '@/lib/filters/types'
-import { parseFiltersFromURL, serializeFilters, resetFilters } from '@/lib/filters/utils'
+import { parseFiltersFromURL, serializeFilters, resetFilters, countActiveFilters } from '@/lib/filters/utils'
 
 export default function FilterManager() {
   const router = useRouter()
@@ -16,24 +17,24 @@ export default function FilterManager() {
     parseFiltersFromURL(searchParams)
   )
   const [draftFilters, setDraftFilters] = useState<EventFilters>(appliedFilters)
-  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   
   const handleOpenFilters = () => {
     // Reset draft to current applied filters when opening
     setDraftFilters(appliedFilters)
-    setIsFilterPanelOpen(true)
+    setIsModalOpen(true)
   }
   
   const handleCloseFilters = () => {
     // Discard draft changes
     setDraftFilters(appliedFilters)
-    setIsFilterPanelOpen(false)
+    setIsModalOpen(false)
   }
   
   const handleApplyFilters = () => {
     // Apply draft filters
     setAppliedFilters(draftFilters)
-    setIsFilterPanelOpen(false)
+    setIsModalOpen(false)
     
     // Update URL
     const params = serializeFilters(draftFilters)
@@ -45,9 +46,52 @@ export default function FilterManager() {
     const reset = resetFilters()
     setDraftFilters(reset)
     setAppliedFilters(reset)
-    setIsFilterPanelOpen(false)
+    setIsModalOpen(false)
     router.push('/', { scroll: false })
   }
+  
+  const handleRemoveFilter = (key: keyof EventFilters, value?: string) => {
+    let updated = { ...appliedFilters }
+    
+    switch (key) {
+      case 'date':
+        updated.date = DEFAULT_FILTERS.date
+        updated.pickedDate = undefined
+        break
+      case 'city':
+        updated.city = DEFAULT_FILTERS.city
+        updated.commune = undefined
+        break
+      case 'commune':
+        updated.commune = undefined
+        break
+      case 'categories':
+        if (value) {
+          updated.categories = updated.categories.filter(c => c !== value)
+        }
+        break
+      case 'price':
+        updated.price = DEFAULT_FILTERS.price
+        break
+      case 'eventType':
+        updated.eventType = DEFAULT_FILTERS.eventType
+        break
+    }
+    
+    setAppliedFilters(updated)
+    setDraftFilters(updated)
+    
+    // Update URL
+    const params = serializeFilters(updated)
+    const newUrl = params.toString() ? `?${params.toString()}` : '/'
+    router.push(newUrl, { scroll: false })
+  }
+  
+  const handleClearAll = () => {
+    handleResetFilters()
+  }
+  
+  const hasActiveFilters = countActiveFilters(appliedFilters) > 0
   
   return (
     <>
@@ -56,14 +100,24 @@ export default function FilterManager() {
         onOpenFilters={handleOpenFilters}
       />
       
-      <FilterPanel
-        isOpen={isFilterPanelOpen}
-        onClose={handleCloseFilters}
+      {hasActiveFilters && (
+        <div className="mb-6">
+          <FilterChipsRow
+            filters={appliedFilters}
+            onRemoveFilter={handleRemoveFilter}
+            onClearAll={handleClearAll}
+          />
+        </div>
+      )}
+      
+      <FiltersModal
+        isOpen={isModalOpen}
         draftFilters={draftFilters}
         appliedFilters={appliedFilters}
-        onDraftChange={setDraftFilters}
+        onClose={handleCloseFilters}
         onApply={handleApplyFilters}
         onReset={handleResetFilters}
+        onDraftChange={setDraftFilters}
       />
     </>
   )
