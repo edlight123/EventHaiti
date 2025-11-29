@@ -162,14 +162,14 @@ export function TicketsPreview({ tickets }: TicketsPreviewProps) {
         >
           <div className="flex flex-col sm:flex-row">
             {/* Event Image */}
-            <div className="relative w-full sm:w-32 h-32 bg-gray-100 flex-shrink-0">
+            <div className="relative w-full sm:w-40 h-40 sm:h-auto bg-gray-100 flex-shrink-0">
               {ticket.eventBanner ? (
                 <Image
                   src={ticket.eventBanner}
                   alt={ticket.eventTitle}
                   fill
                   className="object-cover"
-                  sizes="128px"
+                  sizes="(max-width: 640px) 100vw, 160px"
                 />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-brand-100 to-accent-100 flex items-center justify-center">
