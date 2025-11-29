@@ -120,19 +120,19 @@ export default async function DashboardPage() {
         )}
 
         {/* Stats Cards - Now Clickable */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-8 mt-8">
           <Link
             href="/tickets"
-            className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 hover:shadow-lg hover:border-brand-200 transition-all group"
+            className="bg-white rounded-xl shadow-soft border border-gray-100 p-4 hover:shadow-lg hover:border-brand-200 transition-all group"
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Upcoming Events</h3>
-              <div className="w-12 h-12 bg-brand-50 rounded-xl flex items-center justify-center group-hover:bg-brand-100 transition-colors">
-                <Calendar className="w-6 h-6 text-brand-600" />
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Upcoming Events</h3>
+              <div className="w-10 h-10 bg-brand-50 rounded-lg flex items-center justify-center group-hover:bg-brand-100 transition-colors">
+                <Calendar className="w-5 h-5 text-brand-600" />
               </div>
             </div>
-            <p className="text-4xl font-bold text-brand-700 mb-2">{allUpcomingEvents.length}</p>
-            <p className="text-sm text-gray-600">
+            <p className="text-3xl font-bold text-brand-700 mb-1">{allUpcomingEvents.length}</p>
+            <p className="text-xs text-gray-600">
               {allUpcomingEvents.length > 0 && nextEvent
                 ? `Next: ${new Date(nextEvent.start_datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
                 : 'No upcoming events'}
@@ -141,32 +141,32 @@ export default async function DashboardPage() {
 
           <Link
             href="/tickets"
-            className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 hover:shadow-lg hover:border-purple-200 transition-all group"
+            className="bg-white rounded-xl shadow-soft border border-gray-100 p-4 hover:shadow-lg hover:border-purple-200 transition-all group"
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Total Tickets</h3>
-              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center group-hover:bg-purple-100 transition-colors">
-                <Ticket className="w-6 h-6 text-purple-600" />
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Total Tickets</h3>
+              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                <Ticket className="w-5 h-5 text-purple-600" />
               </div>
             </div>
-            <p className="text-4xl font-bold text-purple-700 mb-2">{totalTickets}</p>
-            <p className="text-sm text-gray-600">
+            <p className="text-3xl font-bold text-purple-700 mb-1">{totalTickets}</p>
+            <p className="text-xs text-gray-600">
               {totalTickets > 0 ? `${totalTickets} active ${totalTickets === 1 ? 'ticket' : 'tickets'}` : 'No tickets yet'}
             </p>
           </Link>
 
           <Link
             href="/favorites"
-            className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 hover:shadow-lg hover:border-pink-200 transition-all group"
+            className="bg-white rounded-xl shadow-soft border border-gray-100 p-4 hover:shadow-lg hover:border-pink-200 transition-all group"
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Favorites</h3>
-              <div className="w-12 h-12 bg-pink-50 rounded-xl flex items-center justify-center group-hover:bg-pink-100 transition-colors">
-                <Heart className="w-6 h-6 text-pink-600" />
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Favorites</h3>
+              <div className="w-10 h-10 bg-pink-50 rounded-lg flex items-center justify-center group-hover:bg-pink-100 transition-colors">
+                <Heart className="w-5 h-5 text-pink-600" />
               </div>
             </div>
-            <p className="text-4xl font-bold text-pink-700 mb-2">{favoriteEvents.length}</p>
-            <p className="text-sm text-gray-600">
+            <p className="text-3xl font-bold text-pink-700 mb-1">{favoriteEvents.length}</p>
+            <p className="text-xs text-gray-600">
               {favoriteEvents.length > 0 ? `${favoriteEvents.length} saved ${favoriteEvents.length === 1 ? 'event' : 'events'}` : 'No favorites yet'}
             </p>
           </Link>
