@@ -8,8 +8,6 @@ import SearchBar from '@/components/SearchBar'
 import CategoryGrid from '@/components/CategoryGrid'
 import { Suspense } from 'react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import DateFilters from '@/components/DateFilters'
-import EventSearchFilters from '@/components/EventSearchFilters'
 import FeaturedCarousel from '@/components/FeaturedCarousel'
 import PullToRefresh from '@/components/PullToRefresh'
 import { SkeletonEventCard } from '@/components/ui/Skeleton'
@@ -17,6 +15,9 @@ import { BRAND } from '@/config/brand'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import { isAdmin } from '@/lib/admin'
 import type { Database } from '@/types/database'
+import FilterManager from '@/components/FilterManager'
+import { parseFiltersFromURL } from '@/lib/filters/utils'
+import { applyFiltersAndSort } from '@/lib/filters/apply'
 
 type Event = Database['public']['Tables']['events']['Row']
 
@@ -25,21 +26,17 @@ export const revalidate = 0
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ 
-    q?: string
-    location?: string
-    category?: string
-    date?: string
-    city?: string
-    dateFrom?: string
-    dateTo?: string
-    minPrice?: string
-    maxPrice?: string
-    sort?: string
-  }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const user = await getCurrentUser()
   const params = await searchParams
+  
+  // Parse filters from URL
+  const urlParams = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) urlParams.set(key, String(value))
+  })
+  const filters = parseFiltersFromURL(urlParams)
   
   let events: Event[] = []
   
@@ -69,107 +66,9 @@ export default async function HomePage({
     events = result.data || []
   }
 
-  // Apply filters
-  if (params.q) {
-    const searchLower = params.q.toLowerCase()
-    events = events.filter(e => 
-      e.title.toLowerCase().includes(searchLower) || 
-      e.description.toLowerCase().includes(searchLower)
-    )
-  }
-
-  // City filter (from both old and new params)
-  const cityFilter = params.city || params.location
-  if (cityFilter) {
-    events = events.filter(e => e.city === cityFilter)
-  }
-
-  if (params.category) {
-    events = events.filter(e => e.category === params.category)
-  }
-
-  // Date range filter (new advanced filters)
-  if (params.dateFrom) {
-    const fromDate = new Date(params.dateFrom)
-    events = events.filter(e => new Date(e.start_datetime) >= fromDate)
-  }
+  // Apply filters and sorting using new filter system
+  events = applyFiltersAndSort(events, filters)
   
-  if (params.dateTo) {
-    const toDate = new Date(params.dateTo)
-    toDate.setHours(23, 59, 59, 999) // End of day
-    events = events.filter(e => new Date(e.start_datetime) <= toDate)
-  }
-
-  // Price range filter (new advanced filters)
-  if (params.minPrice) {
-    const minPrice = parseFloat(params.minPrice)
-    events = events.filter(e => (e.ticket_price || 0) >= minPrice)
-  }
-  
-  if (params.maxPrice) {
-    const maxPrice = parseFloat(params.maxPrice)
-    events = events.filter(e => (e.ticket_price || 0) <= maxPrice)
-  }
-
-  // Legacy date filter (for backward compatibility)
-  if (params.date) {
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    
-    events = events.filter(e => {
-      const eventDate = new Date(e.start_datetime)
-      
-      switch (params.date) {
-        case 'today':
-          return eventDate.toDateString() === today.toDateString()
-        case 'tomorrow':
-          const tomorrow = new Date(today)
-          tomorrow.setDate(tomorrow.getDate() + 1)
-          return eventDate.toDateString() === tomorrow.toDateString()
-        case 'weekend':
-          const dayOfWeek = eventDate.getDay()
-          const isThisWeekend = dayOfWeek === 0 || dayOfWeek === 6
-          const weekEnd = new Date(today)
-          weekEnd.setDate(today.getDate() + 7)
-          return isThisWeekend && eventDate <= weekEnd
-        case 'week':
-          const weekFromNow = new Date(today)
-          weekFromNow.setDate(today.getDate() + 7)
-          return eventDate <= weekFromNow
-        case 'month':
-          const monthFromNow = new Date(today)
-          monthFromNow.setMonth(today.getMonth() + 1)
-          return eventDate <= monthFromNow
-        default:
-          return true
-      }
-    })
-  }
-
-  // Apply sorting
-  if (params.sort) {
-    switch (params.sort) {
-      case 'date':
-        events.sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
-        break
-      case 'price-low':
-        events.sort((a, b) => (a.ticket_price || 0) - (b.ticket_price || 0))
-        break
-      case 'price-high':
-        events.sort((a, b) => (b.ticket_price || 0) - (a.ticket_price || 0))
-        break
-      case 'popular':
-        events.sort((a, b) => (b.tickets_sold || 0) - (a.tickets_sold || 0))
-        break
-      default:
-        // Default sort by date
-        events.sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
-    }
-  } else {
-    // Default sort by date if no sort specified
-    events.sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
-  }
-
   // Organize events into sections
   const now = new Date()
   
@@ -195,8 +94,12 @@ export default async function HomePage({
   thisWeekEnd.setDate(now.getDate() + 7)
   const upcomingThisWeek = events.filter(e => new Date(e.start_datetime) <= thisWeekEnd).slice(0, 6)
   
-  // Check if we're in search/filter mode
-  const isSearching = params.q || params.location || params.city || params.category || params.dateFrom || params.dateTo
+  // Check if we have any active filters
+  const hasActiveFilters = filters.date !== 'any' || 
+                          filters.city !== '' || 
+                          filters.categories.length > 0 || 
+                          filters.price !== 'any' || 
+                          filters.eventType !== 'all'
 
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
@@ -217,7 +120,7 @@ export default async function HomePage({
       )}
 
       {/* HERO: Featured Carousel OR Search Hero */}
-      {!isSearching && featuredEvents.length > 0 ? (
+      {!hasActiveFilters && featuredEvents.length > 0 ? (
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <FeaturedCarousel events={featuredEvents} />
         </div>
@@ -227,7 +130,7 @@ export default async function HomePage({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16 relative">
             <div className="text-center mb-6 sm:mb-8">
               <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4 drop-shadow-lg">
-                {isSearching ? 'Find Your Perfect Event' : BRAND.tagline || 'Discover Events in Haiti'}
+                {hasActiveFilters ? 'Find Your Perfect Event' : BRAND.tagline || 'Discover Events in Haiti'}
               </h1>
               <p className="text-sm sm:text-base md:text-lg lg:text-xl text-brand-50 max-w-2xl mx-auto drop-shadow-md">
                 Search concerts, parties, conferences, festivals, and more across Haiti
@@ -241,7 +144,7 @@ export default async function HomePage({
       {/* Search/Filter Bar (always visible below hero) */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-3 md:py-4">
-          <EventSearchFilters />
+          <FilterManager />
         </div>
       </div>
 
@@ -255,11 +158,11 @@ export default async function HomePage({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
         
           {/* SEARCH RESULTS VIEW */}
-          {isSearching ? (
+          {hasActiveFilters ? (
           <div className="space-y-4 sm:space-y-6 md:space-y-8">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Search Results</h2>
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Filtered Results</h2>
                 <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-1 sm:mt-2">{events.length} events found</p>
               </div>
             </div>
