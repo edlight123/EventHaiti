@@ -24,7 +24,7 @@ export function FilterChipsRow({ filters, onRemoveFilter, onClearAll }: FilterCh
       case 'this-week': dateLabel = 'This week'; break
       case 'this-weekend': dateLabel = 'This weekend'; break
       case 'pick-date': 
-        dateLabel = filters.pickedDate ? format(new Date(filters.pickedDate), 'MMM d, yyyy') : 'Pick a date'
+        dateLabel = filters.pickedDate ? format(new Date(filters.pickedDate + 'T00:00:00'), 'MMM d, yyyy') : 'Pick a date'
         break
     }
     if (dateLabel) {

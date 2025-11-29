@@ -64,7 +64,7 @@ export function DateChips({ currentDate }: DateChipsProps) {
             <FilterChip
               key={option.value}
               label={option.value === 'pick-date' && currentDate === 'pick-date' && searchParams.get('pickedDate')
-                ? new Date(searchParams.get('pickedDate')!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                ? new Date(searchParams.get('pickedDate')! + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                 : option.label
               }
               active={currentDate === option.value}
