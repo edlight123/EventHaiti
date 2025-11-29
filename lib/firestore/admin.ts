@@ -99,7 +99,7 @@ export async function getRecentEvents(limit: number = 8) {
       .limit(limit)
       .get()
 
-    return eventsSnapshot.docs.map(doc => {
+    return eventsSnapshot.docs.map((doc: any) => {
       const data = doc.data()
       return {
         id: doc.id,
@@ -130,7 +130,7 @@ export async function getPendingVerifications(limit: number = 3) {
       .limit(limit)
       .get()
 
-    return verificationsSnapshot.docs.map(doc => {
+    return verificationsSnapshot.docs.map((doc: any) => {
       const data = doc.data()
       return {
         id: doc.id,
