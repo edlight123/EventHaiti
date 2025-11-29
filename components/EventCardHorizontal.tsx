@@ -103,17 +103,40 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
 
         {/* Content */}
         <div className="p-3">
-          <div className="flex justify-between items-start gap-2 mb-1.5">
-            <div className="flex-1 min-w-0">
-              {/* Category */}
-              <span className="px-1.5 py-0.5 text-[7px] sm:text-[9px] bg-gray-100 text-gray-600 rounded font-medium uppercase tracking-wide inline-block mb-1.5">
-                {event.category}
-              </span>
+          {/* Category */}
+          <span className="px-1.5 py-0.5 text-[7px] sm:text-[9px] bg-gray-100 text-gray-600 rounded font-medium uppercase tracking-wide inline-block mb-1.5">
+            {event.category}
+          </span>
 
-              {/* Title */}
-              <h3 className="font-extrabold text-gray-900 text-sm sm:text-base group-hover:text-brand-700 transition-colors line-clamp-1">
-                {event.title}
-              </h3>
+          {/* Title */}
+          <h3 className="font-extrabold text-gray-900 mb-1.5 text-sm sm:text-base group-hover:text-brand-700 transition-colors line-clamp-1">
+            {event.title}
+          </h3>
+
+          {/* Description - 2 lines */}
+          <p className="text-[11px] sm:text-xs text-gray-600 mb-2 line-clamp-2">
+            {event.description}
+          </p>
+
+          {/* Date, Time & Venue - Single Line */}
+          <div className="flex items-center text-[10px] sm:text-xs text-gray-600 mb-2 overflow-hidden">
+            <span className="truncate">
+              {format(new Date(event.start_datetime), 'EEE, MMM d')} • {format(new Date(event.start_datetime), 'h a')} • {event.venue_name || event.city}
+            </span>
+          </div>
+
+          {/* Price with Share & Like Buttons */}
+          <div className="pt-2 border-t border-gray-100 flex justify-between items-center">
+            <div>
+              {isFree ? (
+                <span className="text-sm sm:text-base font-bold text-success-600">
+                  From $0
+                </span>
+              ) : (
+                <span className="text-sm sm:text-base font-bold text-gray-900">
+                  From ${event.ticket_price}
+                </span>
+              )}
             </div>
 
             {/* Share & Like Buttons */}
@@ -135,31 +158,6 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
                 <Share2 className="w-4 h-4 text-gray-400" />
               </button>
             </div>
-          </div>
-
-          {/* Description - 2 lines */}
-          <p className="text-[11px] sm:text-xs text-gray-600 mb-2 line-clamp-2">
-            {event.description}
-          </p>
-
-          {/* Date, Time & Venue - Single Line */}
-          <div className="flex items-center text-[10px] sm:text-xs text-gray-600 mb-2 overflow-hidden">
-            <span className="truncate">
-              {format(new Date(event.start_datetime), 'EEE, MMM d')} • {format(new Date(event.start_datetime), 'h a')} • {event.venue_name || event.city}
-            </span>
-          </div>
-
-          {/* Price */}
-          <div className="pt-2 border-t border-gray-100">
-            {isFree ? (
-              <span className="text-sm sm:text-base font-bold text-success-600">
-                From $0
-              </span>
-            ) : (
-              <span className="text-sm sm:text-base font-bold text-gray-900">
-                From ${event.ticket_price}
-              </span>
-            )}
           </div>
         </div>
         </Link>
