@@ -129,9 +129,9 @@ export default function EventCard({ event }: EventCardProps) {
 
         <div className="p-2.5 sm:p-3 md:p-5">
           <div className="flex items-start justify-between mb-1.5 sm:mb-2 md:mb-3 gap-2">
-            <Badge variant="neutral" size="sm">
+            <span className="px-1.5 py-0.5 text-[9px] sm:text-[10px] bg-gray-100 text-gray-600 rounded font-medium uppercase tracking-wide">
               {event.category}
-            </Badge>
+            </span>
             {event.users?.is_verified && (
               <div className="inline-flex items-center gap-0.5 sm:gap-1 text-blue-600 bg-blue-50 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg" title="Verified Organizer">
                 <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -169,18 +169,16 @@ export default function EventCard({ event }: EventCardProps) {
             </div>
           )}
 
-          <div className="space-y-1 sm:space-y-1.5 mb-2 sm:mb-3 md:mb-4">
-            <div className="flex items-center text-[11px] sm:text-[13px] md:text-sm text-gray-700">
-              <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-lg bg-accent-50 flex items-center justify-center mr-1.5 sm:mr-2 flex-shrink-0">
+          <div className="mb-2 sm:mb-3 md:mb-4">
+            <div className="flex items-center gap-1.5 text-[11px] sm:text-[13px] md:text-sm text-gray-700">
+              <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-lg bg-accent-50 flex items-center justify-center flex-shrink-0">
                 <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-3.5 md:h-3.5 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="font-medium truncate">{format(new Date(event.start_datetime), 'MMM d, yyyy • h:mm a')}</span>
-            </div>
-
-            <div className="flex items-center text-[11px] sm:text-[13px] md:text-sm text-gray-700">
-              <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-lg bg-accent-50 flex items-center justify-center mr-1.5 sm:mr-2 flex-shrink-0">
+              <span className="font-medium truncate">{format(new Date(event.start_datetime), 'MMM d, yyyy')}</span>
+              <span className="text-gray-400">•</span>
+              <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-lg bg-accent-50 flex items-center justify-center flex-shrink-0">
                 <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-3.5 md:h-3.5 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
