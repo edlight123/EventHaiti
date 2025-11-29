@@ -166,7 +166,7 @@ export async function globalSearch(query: string) {
       .get()
 
     const events = eventsSnapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .map((doc: any) => ({ id: doc.id, ...doc.data() }))
       .filter((event: any) => 
         event.title?.toLowerCase().includes(searchTerm)
       )
@@ -180,7 +180,7 @@ export async function globalSearch(query: string) {
       .get()
 
     const users = usersSnapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .map((doc: any) => ({ id: doc.id, ...doc.data() }))
       .filter((user: any) => 
         user.email?.toLowerCase().includes(searchTerm)
       )
