@@ -65,7 +65,7 @@ export default function FeaturedCarousel({
   const currentEvent = events[currentIndex];
 
   return (
-    <div className="relative w-full h-[400px] sm:h-[500px] md:h-[600px] rounded-2xl sm:rounded-3xl overflow-hidden group">
+    <div className="relative w-full h-[350px] sm:h-[450px] md:h-[550px] rounded-2xl sm:rounded-3xl overflow-hidden group">
       {/* Background Image with Gradient Overlay */}
       <div className="absolute inset-0">
         <Image
@@ -75,63 +75,59 @@ export default function FeaturedCarousel({
           className="object-cover transition-transform duration-700 group-hover:scale-105"
           priority
         />
-        {/* Multi-layer gradient for better text readability */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
+        {/* Refined gradient for better image visibility */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
       </div>
 
-      {/* Content - Moved to top */}
-      <div className="relative h-full flex flex-col justify-start pt-[10%] p-4 sm:p-8 md:p-10 lg:p-12">
-        <div className="max-w-3xl space-y-2 sm:space-y-3 md:space-y-4 animate-fade-in">
-          {/* Featured Badge */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <Badge variant="primary" size="lg" icon={<Sparkles className="w-4 h-4" />}>
-              Featured Event
+      {/* Content - Optimized positioning */}
+      <div className="relative h-full flex flex-col justify-center px-4 py-6 sm:px-8 sm:py-10 md:px-12 md:py-12">
+        <div className="max-w-2xl space-y-2.5 sm:space-y-3 md:space-y-4">
+          {/* Streamlined Badges */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="primary" size="md" icon={<Sparkles className="w-3 h-3" />}>
+              Featured
             </Badge>
-            {currentEvent.isVIP && (
-              <Badge variant="vip" size="lg">
-                VIP Access
-              </Badge>
-            )}
-            <Badge variant="neutral" size="md">
+            <Badge variant="neutral" size="sm">
               {currentEvent.category}
             </Badge>
           </div>
 
-          {/* Title */}
-          <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-tight">
+          {/* Title - Better scaling */}
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-white leading-tight">
             {currentEvent.title}
           </h1>
 
-          {/* Description */}
-          <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-200 line-clamp-2 max-w-2xl">
+          {/* Description - Hidden on small mobile */}
+          <p className="hidden sm:block text-sm md:text-base lg:text-lg text-gray-100 line-clamp-2 max-w-xl">
             {currentEvent.description}
           </p>
 
-          {/* Event Details */}
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 md:gap-6 text-white">
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-brand-400" />
-              <span className="text-xs sm:text-sm md:text-base lg:text-lg font-medium">
-                {format(currentEvent.date, 'EEEE, MMMM d, yyyy')}
+          {/* Event Details - Compact format */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-white/90 text-xs sm:text-sm">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-300" />
+              <span className="font-medium">
+                {format(currentEvent.date, 'MMM d, yyyy')}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-brand-400" />
-              <span className="text-xs sm:text-sm md:text-base lg:text-lg font-medium">{currentEvent.location}</span>
+            <span className="text-white/40">•</span>
+            <div className="flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-300" />
+              <span className="font-medium">{currentEvent.location}</span>
             </div>
           </div>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4 pt-2 sm:pt-3 md:pt-4">
+          {/* CTA Buttons - Refined */}
+          <div className="flex items-center gap-2 sm:gap-3 pt-1 sm:pt-2">
             <Link href={`/events/${currentEvent.id}`}>
-              <button className="px-4 py-2 sm:px-6 sm:py-3 md:px-8 md:py-4 bg-gradient-to-r from-brand-500 to-brand-600 text-white text-sm sm:text-base md:text-lg font-semibold rounded-xl sm:rounded-2xl shadow-glow hover:shadow-hard hover:from-brand-600 hover:to-brand-700 transition-all duration-300 hover:scale-105 active:scale-95">
+              <button className="px-5 py-2.5 sm:px-7 sm:py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white text-sm sm:text-base font-bold rounded-xl shadow-lg hover:shadow-xl hover:from-brand-600 hover:to-brand-700 transition-all duration-300 hover:scale-105 active:scale-95">
                 Get Tickets
               </button>
             </Link>
             <Link href={`/events/${currentEvent.id}`}>
-              <button className="px-4 py-2 sm:px-6 sm:py-3 md:px-8 md:py-4 bg-white/10 backdrop-blur-md text-white text-sm sm:text-base md:text-lg font-semibold rounded-xl sm:rounded-2xl border-2 border-white/20 hover:bg-white/20 transition-all duration-300">
-                Learn More
+              <button className="px-5 py-2.5 sm:px-7 sm:py-3 bg-white/15 backdrop-blur-sm text-white text-sm sm:text-base font-semibold rounded-xl border border-white/30 hover:bg-white/25 transition-all duration-300">
+                Details
               </button>
             </Link>
           </div>
