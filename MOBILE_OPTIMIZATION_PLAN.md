@@ -981,6 +981,7 @@ Planned Next:
 ### Impact
 - Visibility into push health enables early detection of delivery regressions.
 - Rate limiting reduces risk of notification fatigue, improving CTR retention.
+ - Key extraction fix (Nov 29 patch) requires users from earlier sessions to re-subscribe so `p256dh`/`auth` keys populate; plan to auto-detect empty-key docs and prompt re-enable in UI.
 - Personalized topics + user-level segmentation projected to increase notification CTR by 20–30% versus unsegmented broadcast.
 - Anticipated retention lift: +10–15% weekly active users when reminders & promotions are tuned.
 

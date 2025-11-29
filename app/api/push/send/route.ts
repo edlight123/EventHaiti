@@ -32,9 +32,9 @@ export async function POST(req: Request) {
   const snap = await adminDb.collection('pushSubscriptions').get()
   const subs: any[] = snap.docs
     .map((d: any) => ({ endpoint: d.id, keys: d.data().keys, topics: (d.data().topics || []) as string[] }))
-    .filter((s: any) => !topicsFilter || s.topics.some((t: string) => topicsFilter.includes(t)))
+    .filter((s: any) => (!topicsFilter || s.topics.some((t: string) => topicsFilter.includes(t))) && s.keys && s.keys.p256dh && s.keys.auth)
 
-  if (!subs.length) return NextResponse.json({ error: 'No matching subscriptions' }, { status: 404 })
+  if (!subs.length) return NextResponse.json({ error: 'No valid matching subscriptions (keys missing or no topic match)' }, { status: 404 })
 
   webpush.setVapidDetails('mailto:support@eventhaiti.com', process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY)
 

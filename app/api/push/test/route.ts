@@ -8,11 +8,13 @@ export const runtime = 'nodejs'
 export async function POST() {
   // Fetch all stored subscriptions
   const snap = await adminDb.collection('pushSubscriptions').get()
-  const subs: any[] = snap.docs.map((d: any) => ({ endpoint: d.id, keys: d.data().keys }))
+  const subs: any[] = snap.docs
+    .map((d: any) => ({ endpoint: d.id, keys: d.data().keys }))
+    .filter((s: any) => s.keys && s.keys.p256dh && s.keys.auth)
   if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
     return NextResponse.json({ error: 'VAPID keys not set' }, { status: 500 })
   }
-  if (!subs.length) return NextResponse.json({ error: 'No subscriptions' }, { status: 404 })
+  if (!subs.length) return NextResponse.json({ error: 'No valid subscriptions (keys missing)' }, { status: 404 })
   webpush.setVapidDetails('mailto:support@eventhaiti.com', process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY)
   const payload = JSON.stringify({ title: 'EventHaiti', body: 'Test notification', data: { url: '/tickets' } })
   type SendResult = { endpoint: string; ok: boolean; error?: string; statusCode?: number }

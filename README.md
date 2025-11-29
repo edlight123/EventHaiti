@@ -518,6 +518,16 @@ All send/test/user endpoints append a document to `pushDispatchLogs` with:
 
 Use this collection for future analytics (CTR, failure rates, topic adoption).
 
+### Common Issues / Troubleshooting
+| Symptom | Likely Cause | Fix |
+| --- | --- | --- |
+| Test notification returns 404 "No valid subscriptions" | Existing subscription stored without encryption keys | Disable then re-enable push (updates keys) |
+| Notifications not received after enabling | Browser permission still "default" or service worker not active | Refresh page; ensure HTTPS + granted permission |
+| Some endpoints pruned immediately | Stale or invalidated subscription | Re-subscribe; keys rotate automatically |
+| Rate limit error (429) on user send | Exceeded 20 targeted sends/hour for user | Wait for window reset or lower volume |
+
+If upgrading from earlier implementation (before key extraction fix), users must re-enable notifications to populate `keys.p256dh` and `keys.auth` for web-push encryption.
+
 ### User-Targeted Notifications (New)
 Endpoint: `POST /api/push/send-user`
 Body example:
