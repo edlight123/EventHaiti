@@ -14,38 +14,32 @@ const categories = [
 
 export default function CategoryGrid() {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
       {categories.map((category) => (
         <Link
           key={category.name}
           href={category.href}
           className="group"
         >
-          <div className="relative bg-white rounded-xl shadow-medium hover:shadow-hard transition-all duration-300 overflow-hidden border-2 border-gray-100 group-hover:border-brand-200 group-hover:scale-105 group-hover:-translate-y-1">
+          <div className="relative rounded-xl overflow-hidden transition-all duration-300 group-hover:scale-[1.02]">
             {/* Background Image */}
-            <div className="relative h-12 md:h-14 flex items-center justify-center overflow-hidden">
+            <div className="relative h-14 md:h-16 flex items-center justify-center overflow-hidden">
               <Image
                 src={category.image}
                 alt={category.name}
                 fill
-                className="object-cover"
+                className="object-cover transition-transform duration-500 group-hover:scale-110"
                 sizes="(max-width: 768px) 50vw, 25vw"
               />
               
-              {/* Dark overlay for text readability */}
-              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-colors"></div>
-              
-              {/* Glow Effect on Hover */}
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-brand-500/30 to-transparent"></div>
+              {/* Lighter overlay for better image visibility */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-black/20 group-hover:from-black/50 group-hover:via-black/20 group-hover:to-transparent transition-all duration-300"></div>
               
               {/* Category Text */}
-              <p className="font-bold text-white text-sm md:text-base text-center relative z-10 drop-shadow-lg px-2">
+              <p className="font-bold text-white text-xs sm:text-sm md:text-base text-center relative z-10 drop-shadow-lg px-2 leading-tight">
                 {category.name}
               </p>
             </div>
-
-            {/* Hover Glow Ring */}
-            <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none ring-2 ring-brand-400/50 ring-offset-2"></div>
           </div>
         </Link>
       ))}
