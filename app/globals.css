@@ -11,6 +11,17 @@ body {
   @apply bg-gray-50 text-gray-900;
 }
 
+/* Mobile typography normalization */
+@media (max-width: 640px) {
+  .mobile-typography h1 { @apply text-2xl leading-snug; }
+  .mobile-typography h2 { @apply text-xl leading-snug; }
+  .mobile-typography h3 { @apply text-lg leading-snug; }
+  .mobile-typography h4 { @apply text-base leading-snug; }
+  .mobile-typography p, .mobile-typography li { @apply text-sm; }
+  .mobile-typography .tight-stack > * + * { @apply mt-4; }
+  .mobile-typography .section-stack > * + * { @apply mt-6; }
+}
+
 /* Mobile bottom nav spacing */
 @media (max-width: 768px) {
   .pb-mobile-nav {
