@@ -88,7 +88,7 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
               )}
             </div>
 
-            <h3 className="font-extrabold text-gray-900 mb-1 line-clamp-1 text-sm sm:text-base group-hover:text-brand-700 transition-colors">
+            <h3 className="font-extrabold text-gray-900 mb-1 line-clamp-1 text-xs sm:text-sm group-hover:text-brand-700 transition-colors">
               {event.title}
             </h3>
 
@@ -104,13 +104,13 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
           {/* Bottom Section - Price */}
           <div className="flex items-center justify-between pt-1.5 sm:pt-2 border-t border-gray-100">
             {isFree ? (
-              <span className="text-xl sm:text-lg font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">
+              <span className="text-sm sm:text-base font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">
                 FREE
               </span>
             ) : (
               <div className="flex items-baseline">
-                <span className="text-xl sm:text-lg font-bold text-gray-900">{event.ticket_price}</span>
-                <span className="text-xs sm:text-xs text-gray-600 ml-1">{event.currency}</span>
+                <span className="text-sm sm:text-base font-bold text-gray-900">{event.ticket_price}</span>
+                <span className="text-[10px] sm:text-xs text-gray-600 ml-1">{event.currency}</span>
               </div>
             )}
             {!isSoldOut && (
