@@ -1,14 +1,15 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 const categories = [
-  { name: 'Konpa/Music', color: 'from-purple-500 to-pink-500', href: '/?category=Music' },
-  { name: 'Sports', color: 'from-green-500 to-teal-500', href: '/?category=Sports' },
-  { name: 'Food & Dining', color: 'from-orange-500 to-red-500', href: '/?category=Food & Drink' },
-  { name: 'Business/Conference', color: 'from-teal-500 to-cyan-500', href: '/?category=Business' },
-  { name: 'Arts & Culture', color: 'from-pink-500 to-rose-500', href: '/?category=Arts & Culture' },
-  { name: 'Nightlife/Parties', color: 'from-indigo-500 to-purple-500', href: '/?category=Party' },
-  { name: 'Religious', color: 'from-blue-500 to-indigo-500', href: '/?category=Religious' },
-  { name: 'Education', color: 'from-cyan-500 to-blue-500', href: '/?category=Education' },
+  { name: 'Konpa/Music', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop', href: '/?category=Music' },
+  { name: 'Sports', image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=400&h=300&fit=crop', href: '/?category=Sports' },
+  { name: 'Food & Dining', image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=300&fit=crop', href: '/?category=Food & Drink' },
+  { name: 'Business/Conference', image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop', href: '/?category=Business' },
+  { name: 'Arts & Culture', image: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400&h=300&fit=crop', href: '/?category=Arts & Culture' },
+  { name: 'Nightlife/Parties', image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=300&fit=crop', href: '/?category=Party' },
+  { name: 'Religious', image: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=400&h=300&fit=crop', href: '/?category=Religious' },
+  { name: 'Education', image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=300&fit=crop', href: '/?category=Education' },
 ]
 
 export default function CategoryGrid() {
@@ -21,16 +22,24 @@ export default function CategoryGrid() {
           className="group"
         >
           <div className="relative bg-white rounded-xl shadow-medium hover:shadow-hard transition-all duration-300 overflow-hidden border-2 border-gray-100 group-hover:border-brand-200 group-hover:scale-105 group-hover:-translate-y-1">
-            {/* Gradient Background */}
-            <div className={`relative h-20 md:h-24 bg-gradient-to-br ${category.color} flex items-center justify-center overflow-hidden p-3`}>
-              {/* Subtle Pattern Overlay */}
-              <div className="absolute inset-0 bg-white/10 group-hover:bg-white/20 transition-colors backdrop-blur-[1px]"></div>
+            {/* Background Image */}
+            <div className="relative h-12 md:h-14 flex items-center justify-center overflow-hidden">
+              <Image
+                src={category.image}
+                alt={category.name}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 50vw, 25vw"
+              />
+              
+              {/* Dark overlay for text readability */}
+              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-colors"></div>
               
               {/* Glow Effect on Hover */}
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-white/30 to-transparent"></div>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-brand-500/30 to-transparent"></div>
               
               {/* Category Text */}
-              <p className="font-bold text-white text-sm md:text-base text-center relative z-10 drop-shadow-lg">
+              <p className="font-bold text-white text-sm md:text-base text-center relative z-10 drop-shadow-lg px-2">
                 {category.name}
               </p>
             </div>
