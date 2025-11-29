@@ -2,7 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import Badge from './ui/Badge'
-import { Calendar, MapPin, TrendingUp, Star, Sparkles } from 'lucide-react'
+import { TrendingUp } from 'lucide-react'
 
 interface Event {
   id: string
@@ -10,6 +10,7 @@ interface Event {
   description: string
   category: string
   city: string
+  venue_name: string
   start_datetime: string
   ticket_price: number
   currency: string
@@ -88,14 +89,11 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
             {event.description}
           </p>
 
-          {/* Date, Time & Venue */}
-          <div className="flex items-center text-[10px] sm:text-xs text-gray-600 gap-1 mb-1">
-            <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-accent-600 flex-shrink-0" />
-            <span className="truncate">{format(new Date(event.start_datetime), 'MMM d, h:mm a')}</span>
-          </div>
-          <div className="flex items-center text-[10px] sm:text-xs text-gray-600 gap-1 mb-2">
-            <MapPin className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-accent-600 flex-shrink-0" />
-            <span className="truncate">{event.city}</span>
+          {/* Date, Time & Venue - Single Line */}
+          <div className="flex items-center text-[10px] sm:text-xs text-gray-600 mb-2 overflow-hidden">
+            <span className="truncate">
+              {format(new Date(event.start_datetime), 'EEE, MMM d')} • {format(new Date(event.start_datetime), 'h a')} • {event.venue_name || event.city}
+            </span>
           </div>
 
           {/* Price */}
