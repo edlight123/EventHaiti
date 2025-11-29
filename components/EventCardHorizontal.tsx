@@ -40,10 +40,10 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
 
   return (
     <Link href={`/events/${event.id}`} className="group">
-      <div className="bg-white rounded-xl shadow-soft hover:shadow-medium transition-all duration-300 overflow-hidden border border-gray-100 group-hover:border-brand-200 flex h-28 sm:h-32">
+      <div className="bg-white rounded-xl shadow-soft hover:shadow-medium transition-all duration-300 overflow-hidden border border-gray-100 group-hover:border-brand-200 flex h-24 sm:h-28">
         
         {/* Image - Left Side */}
-        <div className="relative w-24 sm:w-32 flex-shrink-0 bg-gray-200">
+        <div className="relative w-20 sm:w-28 flex-shrink-0 bg-gray-200">
           {event.banner_image_url ? (
             <Image
               src={event.banner_image_url}
@@ -76,9 +76,9 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
           {/* Top Section */}
           <div>
             <div className="flex items-start justify-between gap-2 mb-1">
-              <Badge variant="neutral" size="sm" className="flex-shrink-0">
+              <span className="px-1.5 py-0.5 text-[7px] sm:text-[9px] bg-gray-100 text-gray-600 rounded font-medium uppercase tracking-wide flex-shrink-0">
                 {event.category}
-              </Badge>
+              </span>
               {event.users?.is_verified && (
                 <div className="flex items-center gap-0.5 text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded text-xs flex-shrink-0">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -88,36 +88,33 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
               )}
             </div>
 
-            <h3 className="font-bold text-gray-900 mb-1 line-clamp-1 text-sm sm:text-base group-hover:text-brand-700 transition-colors">
+            <h3 className="font-extrabold text-gray-900 mb-1 line-clamp-1 text-sm sm:text-base group-hover:text-brand-700 transition-colors">
               {event.title}
             </h3>
 
-            <div className="space-y-0.5">
-              <div className="flex items-center text-[11px] sm:text-xs text-gray-600 gap-1">
-                <Calendar className="w-3 h-3 text-accent-600 flex-shrink-0" />
-                <span className="truncate">{format(new Date(event.start_datetime), 'MMM d, h:mm a')}</span>
-              </div>
-              <div className="flex items-center text-[11px] sm:text-xs text-gray-600 gap-1">
-                <MapPin className="w-3 h-3 text-accent-600 flex-shrink-0" />
-                <span className="truncate">{event.city}</span>
-              </div>
+            <div className="flex items-center text-[10px] sm:text-xs text-gray-600 gap-1">
+              <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-accent-600 flex-shrink-0" />
+              <span className="truncate">{format(new Date(event.start_datetime), 'MMM d')}</span>
+              <span className="text-gray-300 mx-0.5">•</span>
+              <MapPin className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-accent-600 flex-shrink-0" />
+              <span className="truncate">{event.city}</span>
             </div>
           </div>
 
           {/* Bottom Section - Price */}
           <div className="flex items-center justify-between pt-1.5 sm:pt-2 border-t border-gray-100">
             {isFree ? (
-              <span className="text-base sm:text-lg font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">
+              <span className="text-xl sm:text-lg font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">
                 FREE
               </span>
             ) : (
               <div className="flex items-baseline">
-                <span className="text-base sm:text-lg font-bold text-gray-900">{event.ticket_price}</span>
-                <span className="text-[10px] sm:text-xs text-gray-600 ml-1">{event.currency}</span>
+                <span className="text-xl sm:text-lg font-bold text-gray-900">{event.ticket_price}</span>
+                <span className="text-xs sm:text-xs text-gray-600 ml-1">{event.currency}</span>
               </div>
             )}
             {!isSoldOut && (
-              <span className={`text-[10px] sm:text-xs font-semibold ${selloutSoon ? 'text-warning-600' : 'text-gray-500'}`}>
+              <span className={`text-xs sm:text-xs font-semibold ${selloutSoon ? 'text-warning-600' : 'text-gray-500'}`}>
                 {remainingTickets} left
               </span>
             )}
