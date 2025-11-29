@@ -72,56 +72,56 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
         {/* Welcome Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+        <div className="mb-4 sm:mb-6 md:mb-8">
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 sm:mb-2 flex items-center gap-2 sm:gap-3">
             Welcome back, {user.full_name?.split(' ')[0] || 'there'}! 👋
-            <Sparkles className="w-8 h-8 text-brand-600" />
+            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-brand-600" />
           </h1>
-          <p className="text-lg text-gray-600">Your event journey at a glance</p>
+          <p className="text-sm sm:text-base md:text-lg text-gray-600">Your event journey at a glance</p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 hover:shadow-medium transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Upcoming Events</h3>
-              <div className="w-12 h-12 bg-brand-50 rounded-xl flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-brand-600" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6 md:mb-8">
+          <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-4 sm:p-6 hover:shadow-medium transition-shadow">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">Upcoming Events</h3>
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand-50 rounded-xl flex items-center justify-center">
+                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-brand-600" />
               </div>
             </div>
-            <p className="text-4xl font-bold text-brand-700 mb-2">{upcomingEvents.length}</p>
-            <p className="text-sm text-gray-600">Events you&apos;re attending</p>
+            <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-brand-700 mb-1 sm:mb-2">{upcomingEvents.length}</p>
+            <p className="text-xs sm:text-sm text-gray-600">Events you&apos;re attending</p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 hover:shadow-medium transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Total Tickets</h3>
-              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center">
-                <Ticket className="w-6 h-6 text-purple-600" />
+          <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-4 sm:p-6 hover:shadow-medium transition-shadow">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">Total Tickets</h3>
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-50 rounded-xl flex items-center justify-center">
+                <Ticket className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
               </div>
             </div>
-            <p className="text-4xl font-bold text-purple-700 mb-2">{totalTickets}</p>
-            <p className="text-sm text-gray-600">In your collection</p>
+            <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-purple-700 mb-1 sm:mb-2">{totalTickets}</p>
+            <p className="text-xs sm:text-sm text-gray-600">In your collection</p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 hover:shadow-medium transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Favorites</h3>
-              <div className="w-12 h-12 bg-pink-50 rounded-xl flex items-center justify-center">
-                <Heart className="w-6 h-6 text-pink-600" />
+          <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-4 sm:p-6 hover:shadow-medium transition-shadow">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">Favorites</h3>
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-50 rounded-xl flex items-center justify-center">
+                <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-pink-600" />
               </div>
             </div>
-            <p className="text-4xl font-bold text-pink-700 mb-2">{favoriteEvents.length}</p>
-            <p className="text-sm text-gray-600">Events you saved</p>
+            <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-pink-700 mb-1 sm:mb-2">{favoriteEvents.length}</p>
+            <p className="text-xs sm:text-sm text-gray-600">Events you saved</p>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="mb-4 sm:mb-6 md:mb-8">
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
             <Link
               href="/"
               className="group bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl p-6 text-white hover:shadow-glow transition-all"
@@ -161,10 +161,10 @@ export default async function DashboardPage() {
         </div>
 
         {/* Upcoming Events */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Clock className="w-6 h-6 text-brand-600" />
+        <div className="mb-4 sm:mb-6 md:mb-8">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-1.5 sm:gap-2">
+              <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-brand-600" />
               Upcoming Events
             </h2>
             <Link href="/tickets" className="text-brand-600 hover:text-brand-700 font-semibold flex items-center gap-1">

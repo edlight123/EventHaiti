@@ -40,10 +40,10 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
 
   return (
     <Link href={`/events/${event.id}`} className="group">
-      <div className="bg-white rounded-xl shadow-soft hover:shadow-medium transition-all duration-300 overflow-hidden border border-gray-100 group-hover:border-brand-200 flex h-32">
+      <div className="bg-white rounded-xl shadow-soft hover:shadow-medium transition-all duration-300 overflow-hidden border border-gray-100 group-hover:border-brand-200 flex h-28 sm:h-32">
         
         {/* Image - Left Side */}
-        <div className="relative w-32 flex-shrink-0 bg-gray-200">
+        <div className="relative w-24 sm:w-32 flex-shrink-0 bg-gray-200">
           {event.banner_image_url ? (
             <Image
               src={event.banner_image_url}
@@ -72,7 +72,7 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
         </div>
 
         {/* Content - Right Side */}
-        <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
+        <div className="flex-1 p-2 sm:p-3 flex flex-col justify-between min-w-0">
           {/* Top Section */}
           <div>
             <div className="flex items-start justify-between gap-2 mb-1">
@@ -88,16 +88,16 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
               )}
             </div>
 
-            <h3 className="font-bold text-gray-900 mb-1 line-clamp-1 text-base group-hover:text-brand-700 transition-colors">
+            <h3 className="font-bold text-gray-900 mb-1 line-clamp-1 text-sm sm:text-base group-hover:text-brand-700 transition-colors">
               {event.title}
             </h3>
 
-            <div className="space-y-1">
-              <div className="flex items-center text-xs text-gray-600 gap-1">
+            <div className="space-y-0.5">
+              <div className="flex items-center text-[11px] sm:text-xs text-gray-600 gap-1">
                 <Calendar className="w-3 h-3 text-accent-600 flex-shrink-0" />
                 <span className="truncate">{format(new Date(event.start_datetime), 'MMM d, h:mm a')}</span>
               </div>
-              <div className="flex items-center text-xs text-gray-600 gap-1">
+              <div className="flex items-center text-[11px] sm:text-xs text-gray-600 gap-1">
                 <MapPin className="w-3 h-3 text-accent-600 flex-shrink-0" />
                 <span className="truncate">{event.city}</span>
               </div>
@@ -105,19 +105,19 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
           </div>
 
           {/* Bottom Section - Price */}
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+          <div className="flex items-center justify-between pt-1.5 sm:pt-2 border-t border-gray-100">
             {isFree ? (
-              <span className="text-lg font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">
+              <span className="text-base sm:text-lg font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">
                 FREE
               </span>
             ) : (
               <div className="flex items-baseline">
-                <span className="text-lg font-bold text-gray-900">{event.ticket_price}</span>
-                <span className="text-xs text-gray-600 ml-1">{event.currency}</span>
+                <span className="text-base sm:text-lg font-bold text-gray-900">{event.ticket_price}</span>
+                <span className="text-[10px] sm:text-xs text-gray-600 ml-1">{event.currency}</span>
               </div>
             )}
             {!isSoldOut && (
-              <span className={`text-xs font-semibold ${selloutSoon ? 'text-warning-600' : 'text-gray-500'}`}>
+              <span className={`text-[10px] sm:text-xs font-semibold ${selloutSoon ? 'text-warning-600' : 'text-gray-500'}`}>
                 {remainingTickets} left
               </span>
             )}

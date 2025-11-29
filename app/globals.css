@@ -13,13 +13,17 @@ body {
 
 /* Mobile typography normalization */
 @media (max-width: 640px) {
-  .mobile-typography h1 { @apply text-2xl leading-snug; }
-  .mobile-typography h2 { @apply text-xl leading-snug; }
-  .mobile-typography h3 { @apply text-lg leading-snug; }
-  .mobile-typography h4 { @apply text-base leading-snug; }
-  .mobile-typography p, .mobile-typography li { @apply text-sm; }
-  .mobile-typography .tight-stack > * + * { @apply mt-4; }
-  .mobile-typography .section-stack > * + * { @apply mt-6; }
+  .mobile-typography h1 { @apply text-xl leading-tight; }
+  .mobile-typography h2 { @apply text-lg leading-tight; }
+  .mobile-typography h3 { @apply text-base leading-tight; }
+  .mobile-typography h4 { @apply text-sm leading-tight; }
+  .mobile-typography p, .mobile-typography li { @apply text-sm leading-normal; }
+  .mobile-typography .tight-stack > * + * { @apply mt-3; }
+  .mobile-typography .section-stack > * + * { @apply mt-4; }
+  /* Reduce padding and margins globally on mobile */
+  .mobile-typography .space-y-8 > * + * { @apply mt-4; }
+  .mobile-typography .space-y-6 > * + * { @apply mt-3; }
+  .mobile-typography .space-y-4 > * + * { @apply mt-2; }
 }
 
 /* Mobile bottom nav spacing */

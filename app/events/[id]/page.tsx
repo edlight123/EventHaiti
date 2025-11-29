@@ -274,17 +274,17 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
             </div>
 
             {/* Title - Refined sizing */}
-            <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white mb-3 md:mb-4 leading-tight">
+            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-white mb-2 sm:mb-3 md:mb-4 leading-tight">
               {event.title}
             </h1>
 
             {/* Organizer - Compact on mobile */}
-            <a href={`/profile/organizer/${event.organizer_id}`} className="flex items-center gap-2 md:gap-3 mb-4 md:mb-8 hover:opacity-80 transition-opacity">
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-brand-400 to-accent-400 rounded-full flex items-center justify-center text-white font-bold text-base md:text-lg">
+            <a href={`/profile/organizer/${event.organizer_id}`} className="flex items-center gap-2 md:gap-3 mb-3 sm:mb-4 md:mb-8 hover:opacity-80 transition-opacity">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gradient-to-br from-brand-400 to-accent-400 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base md:text-lg">
                 {(event.users?.full_name || 'E')[0].toUpperCase()}
               </div>
               <div>
-                <p className="text-white font-semibold text-sm md:text-base">
+                <p className="text-white font-semibold text-xs sm:text-sm md:text-base">
                   {event.users?.full_name || 'Event Organizer'}
                 </p>
                 {event.users?.is_verified && (
@@ -297,7 +297,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
             </a>
 
             {/* Key Info - Compact & refined */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3 md:gap-6">
               {/* Date & Time */}
               <div className="flex items-start gap-2.5 bg-white/10 backdrop-blur-md rounded-xl p-3 md:p-4 border border-white/20">
                 <div className="w-8 h-8 md:w-10 md:h-10 bg-accent-500 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -351,19 +351,19 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8 pb-32 md:pb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
           
           {/* Left Column - Event Details */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             
             {/* About Section - Refined typography */}
-            <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-4 md:p-6">
-              <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-brand-600" />
+            <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-3 sm:p-4 md:p-6">
+              <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-2 sm:mb-3 flex items-center gap-1.5 sm:gap-2">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-brand-600" />
                 About This Event
               </h2>
-              <p className="text-[15px] text-gray-700 whitespace-pre-wrap leading-relaxed">
+              <p className="text-sm sm:text-[15px] text-gray-700 whitespace-pre-wrap leading-relaxed">
                 {event.description}
               </p>
               

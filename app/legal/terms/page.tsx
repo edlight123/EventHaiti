@@ -17,11 +17,11 @@ export default async function TermsOfServicePage() {
           revalidatePath('/legal/terms')
         }}
       >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">Terms of Service</h1>
-          <p className="text-[13px] sm:text-base text-gray-600 mb-6 sm:mb-8">Last updated: November 23, 2025</p>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8 lg:py-12">
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-3 md:mb-4">Terms of Service</h1>
+          <p className="text-[11px] sm:text-[13px] md:text-base text-gray-600 mb-4 sm:mb-6 md:mb-8">Last updated: November 23, 2025</p>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8 prose prose-sm sm:prose prose-teal max-w-none">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 lg:p-8 prose prose-sm sm:prose prose-teal max-w-none">
           <h2>1. Acceptance of Terms</h2>
           <p>
             By accessing and using EventHaiti (&quot;the Platform&quot;), you accept and agree to be bound by the terms and provision of this agreement.

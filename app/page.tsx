@@ -224,12 +224,12 @@ export default async function HomePage({
       ) : (
         <div className="relative bg-gradient-to-br from-brand-600 via-brand-700 to-accent-600 overflow-hidden">
           <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-lg">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16 relative">
+            <div className="text-center mb-6 sm:mb-8">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4 drop-shadow-lg">
                 {isSearching ? 'Find Your Perfect Event' : BRAND.tagline || 'Discover Events in Haiti'}
               </h1>
-              <p className="text-base sm:text-lg md:text-xl text-brand-50 max-w-2xl mx-auto drop-shadow-md">
+              <p className="text-sm sm:text-base md:text-lg lg:text-xl text-brand-50 max-w-2xl mx-auto drop-shadow-md">
                 Search concerts, parties, conferences, festivals, and more across Haiti
               </p>
             </div>
@@ -240,7 +240,7 @@ export default async function HomePage({
 
       {/* Search/Filter Bar (always visible below hero) */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-3 md:py-4">
           <EventSearchFilters />
         </div>
       </div>
@@ -252,22 +252,22 @@ export default async function HomePage({
         const { revalidatePath } = await import('next/cache')
         revalidatePath('/')
       }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
         
           {/* SEARCH RESULTS VIEW */}
           {isSearching ? (
-          <div className="space-y-8">
+          <div className="space-y-4 sm:space-y-6 md:space-y-8">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Search Results</h2>
-                <p className="text-sm sm:text-base text-gray-600 mt-2">{events.length} events found</p>
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Search Results</h2>
+                <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-1 sm:mt-2">{events.length} events found</p>
               </div>
             </div>
 
             {events.length > 0 ? (
               <>
                 {/* Mobile: Horizontal Cards */}
-                <div className="md:hidden space-y-4">
+                <div className="md:hidden space-y-3">
                   {events.map((event) => (
                     <EventCardHorizontal key={event.id} event={event} />
                   ))}
@@ -296,15 +296,15 @@ export default async function HomePage({
           </div>
         ) : (
           /* DISCOVERY VIEW - Premium Sections */
-          <div className="space-y-16">
+          <div className="space-y-8 sm:space-y-12 md:space-y-16">
             
             {/* Browse by Category */}
             <section>
-              <div className="mb-8">
-                <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 via-brand-600 to-gray-900 bg-clip-text text-transparent mb-2">
+              <div className="mb-4 sm:mb-6 md:mb-8">
+                <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-brand-600 to-gray-900 bg-clip-text text-transparent mb-1 sm:mb-2">
                   Browse by Category
                 </h2>
-                <p className="text-gray-600 text-lg">Find events that match your interests</p>
+                <p className="text-gray-600 text-sm sm:text-base md:text-lg">Find events that match your interests</p>
               </div>
               <Suspense fallback={<div className="space-y-3"><div className="h-6 w-40 bg-gray-200 rounded animate-pulse" /><LoadingSkeleton rows={9} animated={false} /></div>}>
                 <CategoryGrid />
@@ -314,10 +314,10 @@ export default async function HomePage({
             {/* Trending Events */}
             {trendingEvents.length > 0 && (
               <section>
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <div>
-                    <h2 className="text-3xl font-bold text-gray-900">🔥 Trending Now</h2>
-                    <p className="text-gray-600 mt-1">Hot events everyone is talking about</p>
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">🔥 Trending Now</h2>
+                    <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-0.5 sm:mt-1">Hot events everyone is talking about</p>
                   </div>
                   <a href="/discover?sort=popular" className="text-brand-600 hover:text-brand-700 font-semibold">
                     View All →
@@ -343,10 +343,10 @@ export default async function HomePage({
             {/* Upcoming This Week */}
             {upcomingThisWeek.length > 0 && (
               <section>
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <div>
-                    <h2 className="text-3xl font-bold text-gray-900">📅 This Week</h2>
-                    <p className="text-gray-600 mt-1">Don&apos;t miss out on these upcoming events</p>
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">📅 This Week</h2>
+                    <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-0.5 sm:mt-1">Don&apos;t miss out on these upcoming events</p>
                   </div>
                   <a href="/discover?date=week" className="text-brand-600 hover:text-brand-700 font-semibold">
                     View All →
@@ -371,10 +371,10 @@ export default async function HomePage({
 
             {/* All Upcoming Events */}
             <section>
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
                 <div>
-                  <h2 className="text-3xl font-bold text-gray-900">All Upcoming Events</h2>
-                  <p className="text-gray-600 mt-1">{events.length} events happening soon</p>
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">All Upcoming Events</h2>
+                  <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-0.5 sm:mt-1">{events.length} events happening soon</p>
                 </div>
               </div>
               {events.length > 0 ? (

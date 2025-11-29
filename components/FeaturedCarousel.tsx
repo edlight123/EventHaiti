@@ -65,7 +65,7 @@ export default function FeaturedCarousel({
   const currentEvent = events[currentIndex];
 
   return (
-    <div className="relative w-full h-[600px] rounded-3xl overflow-hidden group">
+    <div className="relative w-full h-[400px] sm:h-[500px] md:h-[600px] rounded-2xl sm:rounded-3xl overflow-hidden group">
       {/* Background Image with Gradient Overlay */}
       <div className="absolute inset-0">
         <Image
@@ -81,10 +81,10 @@ export default function FeaturedCarousel({
       </div>
 
       {/* Content */}
-      <div className="relative h-full flex flex-col justify-end p-12 md:p-16">
-        <div className="max-w-3xl space-y-6 animate-fade-in">
+      <div className="relative h-full flex flex-col justify-end p-4 sm:p-8 md:p-12 lg:p-16">
+        <div className="max-w-3xl space-y-3 sm:space-y-4 md:space-y-6 animate-fade-in">
           {/* Featured Badge */}
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <Badge variant="primary" size="lg" icon={<Sparkles className="w-4 h-4" />}>
               Featured Event
             </Badge>
@@ -99,38 +99,38 @@ export default function FeaturedCarousel({
           </div>
 
           {/* Title */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-tight">
             {currentEvent.title}
           </h1>
 
           {/* Description */}
-          <p className="text-xl text-gray-200 line-clamp-2 max-w-2xl">
+          <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-200 line-clamp-2 max-w-2xl">
             {currentEvent.description}
           </p>
 
           {/* Event Details */}
-          <div className="flex flex-wrap items-center gap-6 text-white">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-brand-400" />
-              <span className="text-lg font-medium">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 md:gap-6 text-white">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-brand-400" />
+              <span className="text-xs sm:text-sm md:text-base lg:text-lg font-medium">
                 {format(currentEvent.date, 'EEEE, MMMM d, yyyy')}
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-brand-400" />
-              <span className="text-lg font-medium">{currentEvent.location}</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-brand-400" />
+              <span className="text-xs sm:text-sm md:text-base lg:text-lg font-medium">{currentEvent.location}</span>
             </div>
           </div>
 
           {/* CTA Buttons */}
-          <div className="flex flex-wrap items-center gap-4 pt-4">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4 pt-2 sm:pt-3 md:pt-4">
             <Link href={`/events/${currentEvent.id}`}>
-              <button className="px-8 py-4 bg-gradient-to-r from-brand-500 to-brand-600 text-white text-lg font-semibold rounded-2xl shadow-glow hover:shadow-hard hover:from-brand-600 hover:to-brand-700 transition-all duration-300 hover:scale-105 active:scale-95">
+              <button className="px-4 py-2 sm:px-6 sm:py-3 md:px-8 md:py-4 bg-gradient-to-r from-brand-500 to-brand-600 text-white text-sm sm:text-base md:text-lg font-semibold rounded-xl sm:rounded-2xl shadow-glow hover:shadow-hard hover:from-brand-600 hover:to-brand-700 transition-all duration-300 hover:scale-105 active:scale-95">
                 Get Tickets
               </button>
             </Link>
             <Link href={`/events/${currentEvent.id}`}>
-              <button className="px-8 py-4 bg-white/10 backdrop-blur-md text-white text-lg font-semibold rounded-2xl border-2 border-white/20 hover:bg-white/20 transition-all duration-300">
+              <button className="px-4 py-2 sm:px-6 sm:py-3 md:px-8 md:py-4 bg-white/10 backdrop-blur-md text-white text-sm sm:text-base md:text-lg font-semibold rounded-xl sm:rounded-2xl border-2 border-white/20 hover:bg-white/20 transition-all duration-300">
                 Learn More
               </button>
             </Link>

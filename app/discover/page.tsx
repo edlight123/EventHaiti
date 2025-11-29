@@ -25,16 +25,16 @@ export default async function DiscoverPage() {
       {/* Premium Hero with Search */}
       <div className="relative bg-gradient-to-br from-brand-600 via-brand-700 to-accent-600 overflow-hidden">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative">
-          <div className="text-center mb-10">
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <Sparkles className="w-12 h-12 text-accent-300 animate-pulse" />
-              <h1 className="text-5xl md:text-6xl font-bold text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16 relative">
+          <div className="text-center mb-6 sm:mb-8 md:mb-10">
+            <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+              <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12 text-accent-300 animate-pulse" />
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white">
                 Discover Events
               </h1>
-              <Sparkles className="w-12 h-12 text-accent-300 animate-pulse" />
+              <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12 text-accent-300 animate-pulse" />
             </div>
-            <p className="text-xl md:text-2xl text-brand-100 max-w-2xl mx-auto">
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-brand-100 max-w-2xl mx-auto">
               Explore trending events, find nearby experiences, and discover your next adventure
             </p>
           </div>
@@ -47,16 +47,16 @@ export default async function DiscoverPage() {
         const { revalidatePath } = await import('next/cache')
         revalidatePath('/discover')
       }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 md:py-12 space-y-8 sm:space-y-12 md:space-y-16">
         {/* Trending Events */}
         <section>
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-4 sm:mb-6 md:mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <TrendingUp className="w-8 h-8 text-accent-600" />
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-accent-600" />
                 Trending Now
               </h2>
-              <p className="text-gray-600 mt-2">Events everyone is talking about</p>
+              <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-1 sm:mt-2">Events everyone is talking about</p>
             </div>
             <Badge variant="trending" size="lg" icon={<TrendingUp className="w-4 h-4" />}>
               Hot Events
@@ -69,13 +69,13 @@ export default async function DiscoverPage() {
 
         {/* Nearby Events */}
         <section>
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-4 sm:mb-6 md:mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <MapPin className="w-8 h-8 text-brand-600" />
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
+                <MapPin className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-brand-600" />
                 Events Near You
               </h2>
-              <p className="text-gray-600 mt-2">Happening in Port-au-Prince</p>
+              <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-1 sm:mt-2">Happening in Port-au-Prince</p>
             </div>
             <Badge variant="primary" size="lg" icon={<MapPin className="w-4 h-4" />}>
               Nearby
