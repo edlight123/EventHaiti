@@ -163,3 +163,41 @@ export function getFeaturedEvents(events: Event[], limit: number = 6): Event[] {
     .sort((a, b) => (b.tickets_sold || 0) - (a.tickets_sold || 0))
     .slice(0, limit)
 }
+
+/**
+ * Sort events with default Discover rules:
+ * 1. Featured events (high ticket sales) first
+ * 2. Then by soonest event date
+ * 3. Then by newest created_at
+ */
+export function sortEventsDefault(events: Event[]): Event[] {
+  return events.sort((a, b) => {
+    // Featured first (>20 tickets sold or >50% sold)
+    const aFeatured = (a.tickets_sold || 0) >= 20 || 
+                      ((a.tickets_sold || 0) / a.total_tickets) >= 0.5
+    const bFeatured = (b.tickets_sold || 0) >= 20 || 
+                      ((b.tickets_sold || 0) / b.total_tickets) >= 0.5
+    
+    if (aFeatured && !bFeatured) return -1
+    if (!aFeatured && bFeatured) return 1
+    
+    // Then by soonest event date
+    const dateA = new Date(a.start_datetime).getTime()
+    const dateB = new Date(b.start_datetime).getTime()
+    if (dateA !== dateB) return dateA - dateB
+    
+    // Then by newest created
+    const createdA = new Date(a.created_at).getTime()
+    const createdB = new Date(b.created_at).getTime()
+    return createdB - createdA
+  })
+}
+
+/**
+ * Sort events strictly by date ascending
+ */
+export function sortEventsByDate(events: Event[]): Event[] {
+  return events.sort((a, b) => 
+    new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime()
+  )
+}
