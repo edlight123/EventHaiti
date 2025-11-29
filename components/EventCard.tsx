@@ -44,7 +44,7 @@ export default function EventCard({ event }: EventCardProps) {
         
         {/* Image Container with Gradient Overlay */}
         {event.banner_image_url ? (
-          <div className="h-28 sm:h-36 md:h-48 lg:h-52 bg-gray-200 overflow-hidden relative">
+          <div className="h-24 sm:h-36 md:h-48 lg:h-52 bg-gray-200 overflow-hidden relative">
             <Image
               src={event.banner_image_url}
               alt={event.title}
@@ -90,7 +90,7 @@ export default function EventCard({ event }: EventCardProps) {
             </div>
           </div>
         ) : (
-          <div className="h-28 sm:h-36 md:h-48 lg:h-52 bg-gradient-to-br from-brand-100 via-brand-50 to-accent-100 flex items-center justify-center relative group-hover:from-brand-200 group-hover:to-accent-200 transition-all duration-500">
+          <div className="h-24 sm:h-36 md:h-48 lg:h-52 bg-gradient-to-br from-brand-100 via-brand-50 to-accent-100 flex items-center justify-center relative group-hover:from-brand-200 group-hover:to-accent-200 transition-all duration-500">
             <span className="text-2xl sm:text-3xl md:text-5xl group-hover:scale-110 transition-transform duration-500">🎉</span>
             
             {/* Badges for placeholder images too */}
@@ -129,7 +129,7 @@ export default function EventCard({ event }: EventCardProps) {
 
         <div className="p-2 sm:p-3 md:p-4 lg:p-5">
           <div className="flex items-start justify-between mb-1 sm:mb-1.5 md:mb-2 gap-2">
-            <span className="px-1.5 py-0.5 text-[8px] sm:text-[9px] bg-gray-100 text-gray-600 rounded font-medium uppercase tracking-wide">
+            <span className="px-1.5 py-0.5 text-[7px] sm:text-[9px] bg-gray-100 text-gray-600 rounded font-medium uppercase tracking-wide">
               {event.category}
             </span>
             {event.users?.is_verified && (
@@ -141,7 +141,7 @@ export default function EventCard({ event }: EventCardProps) {
             )}
           </div>
 
-          <h3 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 mb-1.5 sm:mb-2 line-clamp-2 group-hover:text-brand-700 transition-colors duration-300 leading-tight">
+          <h3 className="text-base sm:text-base md:text-lg font-extrabold text-gray-900 mb-1.5 sm:mb-2 line-clamp-2 group-hover:text-brand-700 transition-colors duration-300 leading-tight">
             {event.title}
           </h3>
 
@@ -165,14 +165,13 @@ export default function EventCard({ event }: EventCardProps) {
           )}
 
           <div className="mb-2 sm:mb-2.5 md:mb-3">
-            <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base text-gray-700 font-medium">
-            <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base text-gray-700 font-medium">
-              <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-1 text-[11px] sm:text-sm md:text-base text-gray-700 font-medium">
+              <svg className="w-3 h-3 sm:w-4 sm:h-4 text-accent-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span className="truncate">{format(new Date(event.start_datetime), 'MMM d, yyyy')}</span>
               <span className="text-gray-300 mx-0.5">•</span>
-              <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3 h-3 sm:w-4 sm:h-4 text-accent-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
@@ -183,21 +182,20 @@ export default function EventCard({ event }: EventCardProps) {
           <div className="flex items-center justify-between pt-2 sm:pt-2.5 md:pt-3 border-t border-gray-100">
             <div>
               {isFree ? (
-                <p className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">FREE</p>
+                <p className="text-2xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">FREE</p>
               ) : (
-                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
-                  {event.ticket_price} <span className="text-xs sm:text-sm font-normal text-gray-600">{event.currency}</span>
+                <p className="text-2xl sm:text-2xl md:text-3xl font-bold text-gray-900">
+                  {event.ticket_price} <span className="text-sm sm:text-sm font-normal text-gray-600">{event.currency}</span>
                 </p>
               )}
             </div>
             {!isSoldOut && (
               <div className="text-right">
-                <p className={`text-xs sm:text-sm font-bold ${selloutSoon ? 'text-warning-600' : 'text-brand-700'}`}>
+                <p className={`text-sm sm:text-sm font-bold ${selloutSoon ? 'text-warning-600' : 'text-brand-700'}`}>
                   {remainingTickets} left
                 </p>
               </div>
             )}
-          </div>
           </div>
         </div>
       </div>
