@@ -33,8 +33,8 @@ export function formatEventDate(datetime: string): string {
  */
 export function getPriceLabel(price: number): string {
   if (price === 0) return 'Free'
-  if (price < 1000) return `${price} HTG`
-  return `From ${price} HTG`
+  if (price <= 500) return `≤${price}`
+  return `From ${price}`
 }
 
 /**

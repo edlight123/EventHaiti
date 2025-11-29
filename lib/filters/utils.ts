@@ -144,7 +144,7 @@ export function serializeFilters(filters: EventFilters): URLSearchParams {
   
   // Categories
   if (filters.categories.length > 0) {
-    params.set('categories', filters.categories.join(','))
+    filters.categories.forEach(cat => params.append('category', cat))
   }
   
   // Price
@@ -174,7 +174,7 @@ export function parseFiltersFromURL(searchParams: URLSearchParams): EventFilters
     pickedDate: searchParams.get('pickedDate') || undefined,
     city: searchParams.get('city') || '',
     commune: searchParams.get('commune') || undefined,
-    categories: searchParams.get('categories')?.split(',').filter(Boolean) || [],
+    categories: searchParams.getAll('category'),
     price: searchParams.get('price') || DEFAULT_FILTERS.price,
     eventType: searchParams.get('eventType') || DEFAULT_FILTERS.eventType,
     sortBy: searchParams.get('sort') || DEFAULT_FILTERS.sortBy,

@@ -85,7 +85,7 @@ export default async function DiscoverPage({
   const budgetEvents = filterEventsByPrice(filteredEvents, 500)
   const onlineEvents = filterOnlineEvents(filteredEvents)
   const nearYouEvents = filters.city 
-    ? filterEventsByLocation(filteredEvents, filters.city, filters.commune)
+    ? filterEventsByLocation(allEvents, filters.city, filters.commune)
     : []
 
   const hasActiveFilters = filters.date !== 'any' || 
