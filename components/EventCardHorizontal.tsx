@@ -43,8 +43,8 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
     <Link href={`/events/${event.id}`} className="group">
       <div className="bg-white rounded-xl shadow-soft hover:shadow-medium transition-all duration-300 overflow-hidden border border-gray-100 group-hover:border-brand-200">
         
-        {/* Image - 2/3 ratio */}
-        <div className="relative w-full aspect-[3/2] bg-gray-200">
+        {/* Image - reduced height by 25% */}
+        <div className="relative w-full aspect-[2/1] bg-gray-200">
           {event.banner_image_url ? (
             <Image
               src={event.banner_image_url}
