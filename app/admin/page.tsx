@@ -1,11 +1,21 @@
-import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
-import { isAdmin, getAdminEmails } from '@/lib/admin'
+import { getAdminEmails } from '@/lib/admin'
 import PullToRefresh from '@/components/PullToRefresh'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { revalidatePath } from 'next/cache'
+import { 
+  getPlatformCounts, 
+  get7DayMetrics, 
+  getRecentEvents, 
+  getPendingVerifications 
+} from '@/lib/firestore/admin'
+import { AdminCommandBar } from '@/components/admin/AdminCommandBar'
+import { KpiCard } from '@/components/admin/KpiCard'
+import { WorkQueueCard } from '@/components/admin/WorkQueueCard'
+import { RecentActivityTimeline } from '@/components/admin/RecentActivityTimeline'
+import { Users, Calendar, Ticket, DollarSign, ShieldCheck, AlertCircle } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -56,188 +66,159 @@ export default async function AdminDashboard() {
       )
     }
 
-  const supabase = await createClient()
+  // Fetch platform statistics using Firestore
+  const [platformCounts, metrics7d, recentEvents, pendingVerifications] = await Promise.all([
+    getPlatformCounts(),
+    get7DayMetrics(),
+    getRecentEvents(5),
+    getPendingVerifications(3)
+  ])
 
-  // Fetch platform statistics with error handling for each query
-  let totalUsers = 0
-  let totalEvents = 0
-  let totalTickets = 0
-  let revenue = 0
-  let pendingVerifications = 0
-  let recentEvents: any[] = []
-
-  try {
-    const usersResult = await supabase.from('users').select('id')
-    totalUsers = usersResult.data?.length || 0
-  } catch (e) {
-    console.error('Error fetching users:', e)
-  }
-
-  try {
-    const eventsResult = await supabase.from('events').select('id')
-    totalEvents = eventsResult.data?.length || 0
-  } catch (e) {
-    console.error('Error fetching events:', e)
-  }
-
-  try {
-    const ticketsResult = await supabase.from('tickets').select('id, price_paid, status')
-    totalTickets = ticketsResult.data?.length || 0
-    revenue = ticketsResult.data
-      ?.filter((t: any) => t.status === 'confirmed')
-      ?.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0) || 0
-  } catch (e) {
-    console.error('Error fetching tickets:', e)
-  }
-
-  try {
-    const verificationResult = await supabase
-      .from('verification_requests')
-      .select('id, status')
-    pendingVerifications = verificationResult.data?.filter((r: any) => r.status === 'pending').length || 0
-  } catch (e) {
-    console.error('Error fetching verifications:', e)
-  }
-
-  try {
-    const eventsResult = await supabase
-      .from('events')
-      .select('id, title, start_datetime, ticket_price, created_at')
-      .order('created_at', { ascending: false })
-      .limit(10)
-    recentEvents = eventsResult.data || []
-  } catch (e) {
-    console.error('Error fetching recent events:', e)
-  }
+  const { usersCount, eventsCount, ticketsCount, pendingVerifications: pendingCount } = platformCounts
+  const { gmv7d, tickets7d } = metrics7d
 
   return (
     <PullToRefresh onRefresh={refreshPage}>
       <div className="min-h-screen bg-gray-50 pb-mobile-nav">
         <Navbar user={user} isAdmin={true} />
+        
+        {/* Command Bar */}
+        <AdminCommandBar pendingVerifications={pendingCount} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-2">Platform overview and management</p>
+          <p className="text-gray-600 mt-1">Platform operations & analytics</p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="text-sm font-medium text-gray-600">Total Users</div>
-            <div className="text-3xl font-bold text-gray-900 mt-2">{totalUsers.toLocaleString()}</div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="text-sm font-medium text-gray-600">Total Events</div>
-            <div className="text-3xl font-bold text-gray-900 mt-2">{totalEvents.toLocaleString()}</div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="text-sm font-medium text-gray-600">Tickets Sold</div>
-            <div className="text-3xl font-bold text-gray-900 mt-2">{totalTickets.toLocaleString()}</div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="text-sm font-medium text-gray-600">Total Revenue</div>
-            <div className="text-3xl font-bold text-teal-600 mt-2">${revenue.toLocaleString()}</div>
-          </div>
-
-          <a
-            href="/admin/verify"
-            className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl shadow-sm border-2 border-yellow-400 p-6 hover:border-yellow-500 transition-all hover:shadow-md"
-          >
-            <div className="text-sm font-medium text-yellow-800">Pending Verifications</div>
-            <div className="text-3xl font-bold text-yellow-900 mt-2">{pendingVerifications}</div>
-            {pendingVerifications > 0 && (
-              <div className="text-xs text-yellow-700 mt-2 font-medium">→ Click to Review</div>
-            )}
-          </a>
-        </div>
-
-        {/* Recent Events */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Events</h2>
-          {recentEvents.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No events yet</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Event</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {recentEvents.map((event: any) => (
-                    <tr key={event.id}>
-                      <td className="px-4 py-3 text-sm text-gray-900">{event.title || 'Untitled'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {event.start_datetime ? new Date(event.start_datetime).toLocaleDateString() : 'N/A'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        ${(event.ticket_price || 0).toFixed(2)}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          event.start_datetime && new Date(event.start_datetime) > new Date()
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {event.start_datetime && new Date(event.start_datetime) > new Date() ? 'Upcoming' : 'Past'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Admin Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <a
-            href="/admin/verify"
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-teal-600 transition-colors group"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-semibold text-gray-900">Verify Organizers</h3>
-              {pendingVerifications > 0 && (
-                <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                  {pendingVerifications}
-                </span>
-              )}
-            </div>
-            <p className="text-gray-600 text-sm">Review identity verification requests</p>
-          </a>
-
-          <a
-            href="/admin/events"
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-teal-600 transition-colors"
-          >
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Manage Events</h3>
-            <p className="text-gray-600 text-sm">Review and moderate events</p>
-          </a>
-
-          <a
+        {/* KPI Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+          <KpiCard
+            title="Total Users"
+            value={usersCount}
+            icon={Users}
+            iconColor="text-blue-600"
+            iconBg="bg-blue-50"
             href="/admin/users"
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-teal-600 transition-colors"
-          >
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Manage Users</h3>
-            <p className="text-gray-600 text-sm">View and moderate user accounts</p>
-          </a>
+          />
+          
+          <KpiCard
+            title="Total Events"
+            value={eventsCount}
+            icon={Calendar}
+            iconColor="text-purple-600"
+            iconBg="bg-purple-50"
+            href="/admin/events"
+          />
+          
+          <KpiCard
+            title="Tickets (7d)"
+            value={tickets7d}
+            subtitle="Last 7 days"
+            icon={Ticket}
+            iconColor="text-teal-600"
+            iconBg="bg-teal-50"
+          />
+          
+          <KpiCard
+            title="GMV (7d)"
+            value={`$${gmv7d.toLocaleString()}`}
+            subtitle="Last 7 days"
+            icon={DollarSign}
+            iconColor="text-green-600"
+            iconBg="bg-green-50"
+          />
+          
+          <KpiCard
+            title="Pending Verifications"
+            value={pendingCount}
+            icon={ShieldCheck}
+            iconColor="text-yellow-800"
+            iconBg="bg-yellow-50"
+            href="/admin/verify"
+          />
+        </div>
 
-          <a
-            href="/admin/analytics"
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-teal-600 transition-colors"
-          >
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Analytics</h3>
-            <p className="text-gray-600 text-sm">Platform insights and reports</p>
-          </a>
+        {/* Work Queues Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Pending Verifications Queue */}
+          <WorkQueueCard
+            title="Pending Verifications"
+            count={pendingCount}
+            items={pendingVerifications.map((v: any) => ({
+              id: v.id,
+              title: v.businessName || 'Unknown Business',
+              subtitle: v.idType || 'ID verification',
+              timestamp: v.createdAt,
+              badge: {
+                label: 'Pending',
+                variant: 'warning' as const
+              }
+            }))}
+            icon={ShieldCheck}
+            iconColor="text-yellow-700"
+            iconBg="bg-yellow-50"
+            viewAllHref="/admin/verify"
+            emptyMessage="No pending verifications"
+          />
+
+          {/* Recent Events Queue */}
+          <WorkQueueCard
+            title="Recent Events"
+            count={eventsCount}
+            items={recentEvents.map((e: any) => ({
+              id: e.id,
+              title: e.title || 'Untitled Event',
+              subtitle: `${e.city || 'Location TBD'} • $${e.ticketPrice.toFixed(2)}`,
+              timestamp: e.createdAt,
+              badge: e.isPublished ? {
+                label: 'Published',
+                variant: 'success' as const
+              } : {
+                label: 'Draft',
+                variant: 'neutral' as const
+              }
+            }))}
+            icon={Calendar}
+            iconColor="text-purple-600"
+            iconBg="bg-purple-50"
+            viewAllHref="/admin/events"
+            emptyMessage="No events created yet"
+          />
+        </div>
+
+        {/* Additional Info Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Activity Timeline */}
+          <RecentActivityTimeline activities={[]} />
+
+          {/* Notes Card */}
+          <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-blue-900 mb-2">7-Day Metrics Implementation</h3>
+                <div className="text-sm text-blue-800 space-y-2">
+                  <p>
+                    Metrics are calculated from <code className="bg-blue-100 px-1 rounded">platform_stats_daily</code> rollups.
+                  </p>
+                  <p className="font-medium">Next steps:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>Implement Cloud Function to generate daily rollups</li>
+                    <li>Aggregate confirmed ticket sales to <code className="bg-blue-100 px-1 rounded">gmvConfirmed</code></li>
+                    <li>Count tickets to <code className="bg-blue-100 px-1 rounded">ticketsConfirmed</code></li>
+                    <li>Track refunds in <code className="bg-blue-100 px-1 rounded">refundsCount</code></li>
+                  </ul>
+                  <p className="text-xs mt-3 text-blue-700">
+                    Currently showing 0 if rollups don&apos;t exist. This is scalable and won&apos;t query all tickets.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       
