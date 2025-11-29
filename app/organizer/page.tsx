@@ -191,7 +191,7 @@ export default async function OrganizerDashboard() {
                     className="bg-white rounded-xl shadow-soft border border-gray-100 overflow-hidden hover:shadow-medium transition-all group"
                   >
                     {event.banner_image_url ? (
-                      <div className="h-40 md:h-48 bg-gray-200 overflow-hidden">
+                      <div className="relative h-40 md:h-48 bg-gray-200 overflow-hidden">
                         <Image
                           src={event.banner_image_url}
                           alt={event.title}
