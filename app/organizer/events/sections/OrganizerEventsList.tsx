@@ -15,7 +15,7 @@ export default async function OrganizerEventsList({ events }: { events: any[] })
           <div key={event.id} className="bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 group hover:-translate-y-2">
             {/* Event Banner/Thumbnail */}
             {event.banner_image_url ? (
-              <div className="h-48 bg-gray-200 overflow-hidden relative">
+              <div className="relative h-48 bg-gray-200 overflow-hidden">
                 <Image
                   src={event.banner_image_url}
                   alt={event.title}

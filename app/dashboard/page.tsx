@@ -181,7 +181,7 @@ export default async function DashboardPage() {
                   className="bg-white rounded-2xl shadow-soft border border-gray-100 overflow-hidden hover:shadow-medium transition-all group"
                 >
                   {event.banner_image_url ? (
-                    <div className="h-40 bg-gray-200 overflow-hidden">
+                    <div className="relative h-40 bg-gray-200 overflow-hidden">
                       {/* Use Next.js Image for optimized loading */}
                       <Image
                         src={event.banner_image_url}
@@ -236,7 +236,7 @@ export default async function DashboardPage() {
                   className="bg-white rounded-2xl shadow-soft border border-gray-100 overflow-hidden hover:shadow-medium transition-all group opacity-75 hover:opacity-100"
                 >
                   {event.banner_image_url ? (
-                    <div className="h-40 bg-gray-200 overflow-hidden">
+                    <div className="relative h-40 bg-gray-200 overflow-hidden">
                       <Image
                         src={event.banner_image_url}
                         alt={event.title}
