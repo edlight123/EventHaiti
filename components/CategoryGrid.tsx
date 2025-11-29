@@ -1,16 +1,14 @@
 import Link from 'next/link'
 
 const categories = [
-  { name: 'Konpa/Music', icon: '🎵', color: 'from-purple-500 to-pink-500', href: '/?category=Music' },
-  { name: 'Carnival/Festival', icon: '🎭', color: 'from-yellow-500 to-orange-500', href: '/?category=Festival' },
-  { name: 'Sports', icon: '⚽', color: 'from-green-500 to-teal-500', href: '/?category=Sports' },
-  { name: 'Food & Dining', icon: '🍽️', color: 'from-orange-500 to-red-500', href: '/?category=Food & Drink' },
-  { name: 'Business/Conference', icon: '💼', color: 'from-teal-500 to-cyan-500', href: '/?category=Business' },
-  { name: 'Arts & Culture', icon: '🎨', color: 'from-pink-500 to-rose-500', href: '/?category=Arts & Culture' },
-  { name: 'Community', icon: '❤️', color: 'from-rose-500 to-red-500', href: '/?category=Community' },
-  { name: 'Nightlife/Parties', icon: '🌙', color: 'from-indigo-500 to-purple-500', href: '/?category=Party' },
-  { name: 'Religious', icon: '⛪', color: 'from-blue-500 to-indigo-500', href: '/?category=Religious' },
-  { name: 'Education', icon: '📚', color: 'from-cyan-500 to-blue-500', href: '/?category=Education' },
+  { name: 'Konpa/Music', color: 'from-purple-500 to-pink-500', href: '/?category=Music' },
+  { name: 'Sports', color: 'from-green-500 to-teal-500', href: '/?category=Sports' },
+  { name: 'Food & Dining', color: 'from-orange-500 to-red-500', href: '/?category=Food & Drink' },
+  { name: 'Business/Conference', color: 'from-teal-500 to-cyan-500', href: '/?category=Business' },
+  { name: 'Arts & Culture', color: 'from-pink-500 to-rose-500', href: '/?category=Arts & Culture' },
+  { name: 'Nightlife/Parties', color: 'from-indigo-500 to-purple-500', href: '/?category=Party' },
+  { name: 'Religious', color: 'from-blue-500 to-indigo-500', href: '/?category=Religious' },
+  { name: 'Education', color: 'from-cyan-500 to-blue-500', href: '/?category=Education' },
 ]
 
 export default function CategoryGrid() {
@@ -23,23 +21,16 @@ export default function CategoryGrid() {
           className="group"
         >
           <div className="relative bg-white rounded-xl shadow-medium hover:shadow-hard transition-all duration-300 overflow-hidden border-2 border-gray-100 group-hover:border-brand-200 group-hover:scale-105 group-hover:-translate-y-1">
-            {/* Gradient Background with Glassmorphism */}
-            <div className={`relative h-12 md:h-14 bg-gradient-to-br ${category.color} flex items-center justify-center overflow-hidden`}>
+            {/* Gradient Background */}
+            <div className={`relative h-20 md:h-24 bg-gradient-to-br ${category.color} flex items-center justify-center overflow-hidden p-3`}>
               {/* Subtle Pattern Overlay */}
               <div className="absolute inset-0 bg-white/10 group-hover:bg-white/20 transition-colors backdrop-blur-[1px]"></div>
               
               {/* Glow Effect on Hover */}
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-white/30 to-transparent"></div>
               
-              {/* Icon */}
-              <span className="text-2xl md:text-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 relative z-10 filter drop-shadow-lg">
-                {category.icon}
-              </span>
-            </div>
-            
-            {/* Card Content */}
-            <div className="p-2 text-center bg-gradient-to-b from-white to-gray-50/50">
-              <p className="font-bold text-gray-900 text-xs md:text-sm group-hover:text-brand-600 transition-colors duration-300">
+              {/* Category Text */}
+              <p className="font-bold text-white text-sm md:text-base text-center relative z-10 drop-shadow-lg">
                 {category.name}
               </p>
             </div>
