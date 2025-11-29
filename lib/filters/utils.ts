@@ -50,9 +50,9 @@ export function getDateRange(filter: DateFilter, pickedDate?: string): { start?:
     case 'pick-date':
       if (!pickedDate) return {}
       // Parse the date string (YYYY-MM-DD format from input[type="date"])
-      const [year, month, day] = pickedDate.split('-').map(Number)
-      const picked = new Date(year, month - 1, day, 0, 0, 0, 0)
-      const endOfPicked = new Date(year, month - 1, day, 23, 59, 59, 999)
+      // Add 'T00:00:00' to force local timezone interpretation
+      const picked = new Date(pickedDate + 'T00:00:00')
+      const endOfPicked = new Date(pickedDate + 'T23:59:59.999')
       return { start: picked, end: endOfPicked }
     
     default:
