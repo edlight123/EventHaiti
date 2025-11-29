@@ -2,6 +2,30 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
 
+export async function GET() {
+  try {
+    const cookieStore = await cookies()
+    const session = cookieStore.get('session')
+
+    if (!session) {
+      return NextResponse.json({ user: null }, { status: 200 })
+    }
+
+    // Verify the session cookie
+    const decodedClaims = await adminAuth.verifySessionCookie(session.value, true)
+    
+    return NextResponse.json({ 
+      user: {
+        uid: decodedClaims.uid,
+        email: decodedClaims.email,
+      }
+    })
+  } catch (error) {
+    console.error('Session verification error:', error)
+    return NextResponse.json({ user: null }, { status: 200 })
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { idToken } = await request.json()
