@@ -63,9 +63,7 @@ export function getDateRange(filter: DateFilter, pickedDate?: string): { start?:
  * Get price range for a price filter
  */
 export function getPriceRange(priceFilter: string): { min?: number; max?: number } {
-  const config = PRICE_FILTERS.find(p => p.value === priceFilter)
-  
-  if (!config || priceFilter === 'any') {
+  if (priceFilter === 'any') {
     return {}
   }
   
@@ -73,10 +71,21 @@ export function getPriceRange(priceFilter: string): { min?: number; max?: number
     return { min: 0, max: 0 }
   }
   
-  return {
-    min: config.min,
-    max: config.max === Infinity ? undefined : config.max
+  const config = PRICE_FILTERS.find(p => p.value === priceFilter)
+  
+  if (!config) {
+    return {}
   }
+  
+  // Type guard to check if config has min/max properties
+  if ('min' in config && 'max' in config) {
+    return {
+      min: config.min,
+      max: config.max === Infinity ? undefined : config.max
+    }
+  }
+  
+  return {}
 }
 
 /**
