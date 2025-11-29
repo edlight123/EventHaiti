@@ -80,9 +80,9 @@ export default function FeaturedCarousel({
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
       </div>
 
-      {/* Content */}
-      <div className="relative h-full flex flex-col justify-end p-4 sm:p-8 md:p-12 lg:p-16">
-        <div className="max-w-3xl space-y-3 sm:space-y-4 md:space-y-6 animate-fade-in">
+      {/* Content - Moved to top */}
+      <div className="relative h-full flex flex-col justify-start p-4 sm:p-8 md:p-10 lg:p-12">
+        <div className="max-w-3xl space-y-2 sm:space-y-3 md:space-y-4 animate-fade-in">
           {/* Featured Badge */}
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <Badge variant="primary" size="lg" icon={<Sparkles className="w-4 h-4" />}>
