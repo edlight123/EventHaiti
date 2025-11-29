@@ -81,7 +81,7 @@ export default function FeaturedCarousel({
       </div>
 
       {/* Content - Moved to top */}
-      <div className="relative h-full flex flex-col justify-start p-4 sm:p-8 md:p-10 lg:p-12">
+      <div className="relative h-full flex flex-col justify-start pt-[10%] p-4 sm:p-8 md:p-10 lg:p-12">
         <div className="max-w-3xl space-y-2 sm:space-y-3 md:space-y-4 animate-fade-in">
           {/* Featured Badge */}
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
