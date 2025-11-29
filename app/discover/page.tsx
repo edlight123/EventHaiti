@@ -1,134 +1,197 @@
+import { Suspense } from 'react'
 import { getCurrentUser } from '@/lib/auth'
-import EventCard from '@/components/EventCard'
-import EventCardHorizontal from '@/components/EventCardHorizontal'
+import { createClient } from '@/lib/firebase-db/server'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import PullToRefresh from '@/components/PullToRefresh'
-import AdvancedSearch from '@/components/AdvancedSearch'
-import Badge from '@/components/ui/Badge'
 import { isAdmin } from '@/lib/admin'
-import { TrendingUp, MapPin, Sparkles, Calendar, Star } from 'lucide-react'
-import { Suspense } from 'react'
-import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import TrendingSection from './sections/TrendingSection'
-import NearbySection from './sections/NearbySection'
+import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
+import type { Database } from '@/types/database'
+import { parseFiltersFromURL } from '@/lib/filters/utils'
+import { applyFiltersAndSort } from '@/lib/filters/apply'
+import { DiscoverTopBar } from '@/components/discover/DiscoverTopBar'
+import { DateChips } from '@/components/discover/DateChips'
+import { CategoryChips } from '@/components/discover/CategoryChips'
+import { EventsSection } from '@/components/discover/EventsSection'
+import { EmptyState } from '@/components/discover/EmptyState'
+import { DiscoverSkeleton } from '@/components/discover/DiscoverSkeleton'
+import { FilterChipsRow } from '@/components/FilterChipsRow'
+import { FiltersModal } from '@/components/FiltersModal'
+import FilterManager from '@/components/FilterManager'
+import { 
+  getFeaturedEvents, 
+  getUpcomingEvents, 
+  filterFreeEvents, 
+  filterEventsByPrice, 
+  filterOnlineEvents,
+  filterEventsByLocation 
+} from '@/lib/discover/helpers'
 
-export default async function DiscoverPage() {
+type Event = Database['public']['Tables']['events']['Row']
+
+export const revalidate = 0
+
+export default async function DiscoverPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const user = await getCurrentUser()
+  const params = await searchParams
+  
+  // Parse filters from URL
+  const urlParams = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) {
+      if (Array.isArray(value)) {
+        value.forEach(v => urlParams.append(key, v))
+      } else {
+        urlParams.set(key, String(value))
+      }
+    }
+  })
+  const filters = parseFiltersFromURL(urlParams)
+  
+  let allEvents: Event[] = []
+  
+  if (isDemoMode()) {
+    allEvents = DEMO_EVENTS as Event[]
+  } else {
+    const supabase = await createClient()
+    const now = new Date().toISOString()
+    
+    const result = await supabase
+      .from('events')
+      .select('*, users!events_organizer_id_fkey(full_name, is_verified)')
+      .eq('is_published', true)
+      .gte('start_datetime', now)
+    
+    allEvents = result.data || []
+  }
 
-  // Sections now fetch data within Suspense async components
+  // Apply filters if any are active
+  const filteredEvents = applyFiltersAndSort(allEvents, filters)
+  
+  // Organize into sections
+  const featuredEvents = getFeaturedEvents(filteredEvents, 6)
+  const upcomingEvents = getUpcomingEvents(filteredEvents, 8)
+  const freeEvents = filterFreeEvents(filteredEvents)
+  const budgetEvents = filterEventsByPrice(filteredEvents, 500)
+  const onlineEvents = filterOnlineEvents(filteredEvents)
+  const nearYouEvents = filters.city 
+    ? filterEventsByLocation(filteredEvents, filters.city, filters.commune)
+    : []
+
+  const hasActiveFilters = filters.date !== 'any' || 
+                          filters.city !== '' || 
+                          filters.categories.length > 0 || 
+                          filters.price !== 'any' || 
+                          filters.eventType !== 'all'
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
-      
-      {/* Premium Hero with Search */}
-      <div className="relative bg-gradient-to-br from-brand-600 via-brand-700 to-accent-600 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16 relative">
-          <div className="text-center mb-6 sm:mb-8 md:mb-10">
-            <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-              <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12 text-accent-300 animate-pulse" />
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white">
-                Discover Events
-              </h1>
-              <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12 text-accent-300 animate-pulse" />
-            </div>
-            <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-brand-100 max-w-2xl mx-auto">
-              Explore trending events, find nearby experiences, and discover your next adventure
-            </p>
+
+      {/* Top Bar */}
+      <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200" />}>
+        <FilterManager />
+      </Suspense>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="space-y-8">
+          {/* Date Strip */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">When</h3>
+            <DateChips currentDate={filters.date} />
           </div>
-          <AdvancedSearch />
+
+          {/* Featured Section (only if no active filters and has featured) */}
+          {!hasActiveFilters && featuredEvents.length > 0 && (
+            <EventsSection
+              title="Featured This Weekend"
+              description="Hand-picked events you won't want to miss"
+              emoji="⭐"
+              events={featuredEvents}
+            />
+          )}
+
+          {/* Category Shortcuts */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Categories</h3>
+            <CategoryChips selectedCategories={filters.categories} />
+          </div>
+
+          {/* Show sections only if no active filters */}
+          {!hasActiveFilters ? (
+            <>
+              {/* Happening Soon */}
+              <EventsSection
+                title="Happening Soon"
+                description="Don't miss these upcoming events"
+                emoji="🔥"
+                events={upcomingEvents}
+                seeAllLink="/discover?date=this-week"
+              />
+
+              {/* Near You (only if location set) */}
+              {nearYouEvents.length > 0 && (
+                <EventsSection
+                  title="Near You"
+                  description={`Events in ${filters.city}${filters.commune ? ` • ${filters.commune}` : ''}`}
+                  emoji="📍"
+                  events={nearYouEvents}
+                  seeAllLink={`/discover?city=${filters.city}`}
+                />
+              )}
+
+              {/* Free & Budget Events */}
+              {budgetEvents.length > 0 && (
+                <EventsSection
+                  title="Free & Budget Friendly"
+                  description="Great events at ≤ 500 HTG"
+                  emoji="💰"
+                  events={budgetEvents}
+                  seeAllLink="/discover?price=%3C%3D500"
+                />
+              )}
+
+              {/* Online Events */}
+              {onlineEvents.length > 0 && (
+                <EventsSection
+                  title="Online Events"
+                  description="Join from anywhere"
+                  emoji="💻"
+                  events={onlineEvents}
+                  seeAllLink="/discover?eventType=online"
+                />
+              )}
+
+              {/* All Events Fallback */}
+              {upcomingEvents.length === 0 && 
+               nearYouEvents.length === 0 && 
+               budgetEvents.length === 0 && 
+               onlineEvents.length === 0 && (
+                <EmptyState hasFilters={false} />
+              )}
+            </>
+          ) : (
+            /* Filtered Results */
+            <>
+              {filteredEvents.length > 0 ? (
+                <EventsSection
+                  title="Filtered Results"
+                  description={`${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''} found`}
+                  events={filteredEvents}
+                />
+              ) : (
+                <EmptyState hasFilters={true} />
+              )}
+            </>
+          )}
         </div>
       </div>
 
-      <PullToRefresh onRefresh={async () => {
-        'use server'
-        const { revalidatePath } = await import('next/cache')
-        revalidatePath('/discover')
-      }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 md:py-12 space-y-8 sm:space-y-12 md:space-y-16">
-        {/* Trending Events */}
-        <section>
-          <div className="flex items-center justify-between mb-4 sm:mb-6 md:mb-8">
-            <div>
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
-                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-accent-600" />
-                Trending Now
-              </h2>
-              <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-1 sm:mt-2">Events everyone is talking about</p>
-            </div>
-            <Badge variant="trending" size="lg" icon={<TrendingUp className="w-4 h-4" />}>
-              Hot Events
-            </Badge>
-          </div>
-          <Suspense fallback={<LoadingSkeleton rows={6} animated={false} />}>
-            <TrendingSection />
-          </Suspense>
-        </section>
-
-        {/* Nearby Events */}
-        <section>
-          <div className="flex items-center justify-between mb-4 sm:mb-6 md:mb-8">
-            <div>
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
-                <MapPin className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-brand-600" />
-                Events Near You
-              </h2>
-              <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-1 sm:mt-2">Happening in Port-au-Prince</p>
-            </div>
-            <Badge variant="primary" size="lg" icon={<MapPin className="w-4 h-4" />}>
-              Nearby
-            </Badge>
-          </div>
-          <Suspense fallback={<LoadingSkeleton rows={6} animated={false} />}>
-            <NearbySection />
-          </Suspense>
-        </section>
-
-        {/* Categories Grid */}
-        <section>
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 flex items-center gap-3">
-            <Star className="w-8 h-8 text-accent-600" />
-            Browse by Category
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {['Music', 'Sports', 'Arts', 'Business', 'Food', 'Community', 'Education', 'Technology', 'Health', 'Other'].map((category: string) => (
-              <a
-                key={category}
-                href={`/?category=${category}`}
-                className="bg-white rounded-2xl border-2 border-gray-100 p-6 hover:border-brand-500 hover:shadow-medium transition-all duration-300 text-center group"
-              >
-                <div className="text-5xl mb-3 transform group-hover:scale-110 transition-transform duration-300">
-                  {getCategoryEmoji(category)}
-                </div>
-                <div className="font-bold text-gray-900 group-hover:text-brand-700 transition-colors">
-                  {category}
-                </div>
-              </a>
-            ))}
-          </div>
-        </section>
-        </div>
-      </PullToRefresh>
-      
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
   )
-}
-
-function getCategoryEmoji(category: string): string {
-  const emojis: Record<string, string> = {
-    'Music': '🎵',
-    'Sports': '⚽',
-    'Arts': '🎨',
-    'Business': '💼',
-    'Food': '🍴',
-    'Community': '👥',
-    'Education': '📚',
-    'Technology': '💻',
-    'Health': '🏥',
-    'Other': '🎯'
-  }
-  return emojis[category] || '🎉'
 }
