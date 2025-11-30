@@ -58,6 +58,13 @@ export default function VerifyOrganizerPage() {
         // Initialize if doesn't exist
         if (!verificationRequest) {
           verificationRequest = await initializeVerificationRequest(authUser.uid)
+        } else {
+          // Migrate old payout step to optional (temporary migration code)
+          if (verificationRequest.steps.payoutSetup?.required === true) {
+            verificationRequest.steps.payoutSetup.required = false
+            verificationRequest.steps.payoutSetup.missingFields = []
+            verificationRequest.steps.payoutSetup.description = 'Configure how you receive payments (can be set up later)'
+          }
         }
 
         setRequest(verificationRequest)
