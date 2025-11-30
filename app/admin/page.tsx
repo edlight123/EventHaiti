@@ -166,19 +166,33 @@ export default async function AdminDashboard() {
           <WorkQueueCard
             title="Recent Events"
             count={eventsCount}
-            items={recentEvents.map((e: any) => ({
-              id: e.id,
-              title: e.title || 'Untitled Event',
-              subtitle: `${e.venueName || e.city || 'Location TBD'} • $${(e.ticketPrice / 100).toFixed(2)}`,
-              timestamp: e.createdAt,
-              badge: e.isPublished ? {
-                label: 'Published',
-                variant: 'success' as const
-              } : {
-                label: 'Draft',
-                variant: 'neutral' as const
+            items={recentEvents.map((e: any) => {
+              // Build location string
+              const location = e.venueName 
+                ? `${e.venueName}, ${e.city}` 
+                : e.city 
+                ? e.city 
+                : 'Location TBD'
+              
+              // Format price (already in dollars, not cents)
+              const price = e.ticketPrice != null && e.ticketPrice > 0
+                ? `$${e.ticketPrice.toFixed(2)}`
+                : 'Free'
+              
+              return {
+                id: e.id,
+                title: e.title || 'Untitled Event',
+                subtitle: `${location} • ${price}`,
+                timestamp: e.createdAt,
+                badge: e.isPublished ? {
+                  label: 'Published',
+                  variant: 'success' as const
+                } : {
+                  label: 'Draft',
+                  variant: 'neutral' as const
+                }
               }
-            }))}
+            })}
             icon={Calendar}
             iconColor="text-purple-600"
             iconBg="bg-purple-50"
