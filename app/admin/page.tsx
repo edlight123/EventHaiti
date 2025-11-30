@@ -1,7 +1,6 @@
 import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
-import { getAdminEmails } from '@/lib/admin'
 import PullToRefresh from '@/components/PullToRefresh'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { revalidatePath } from 'next/cache'
@@ -19,8 +18,6 @@ import { Users, Calendar, Ticket, DollarSign, ShieldCheck, AlertCircle } from 'l
 
 export const revalidate = 0
 
-const ADMIN_EMAILS = getAdminEmails()
-
 export default async function AdminDashboard() {
   async function refreshPage() {
     'use server'
@@ -33,6 +30,8 @@ export default async function AdminDashboard() {
     if (!user) {
       redirect('/auth/login?redirect=/admin')
     }
+
+    const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e)
 
     if (!ADMIN_EMAILS.includes(user.email || '')) {
       return (
