@@ -1,5 +1,4 @@
 // Demo mode configuration and helpers
-export const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
 // Demo user credentials
 export const DEMO_USERS = {
@@ -173,7 +172,7 @@ export const DEMO_TICKETS = [
 
 // Helper to check if we're in demo mode
 export function isDemoMode(): boolean {
-  return DEMO_MODE
+  return process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 }
 
 // Helper to check if an email is a demo account
