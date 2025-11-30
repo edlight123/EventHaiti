@@ -170,7 +170,7 @@ export default async function AdminDashboard() {
             items={recentEvents.map((e: any) => ({
               id: e.id,
               title: e.title || 'Untitled Event',
-              subtitle: `${e.city || 'Location TBD'} • $${e.ticketPrice.toFixed(2)}`,
+              subtitle: `${e.venueName || e.city || 'Location TBD'} • $${(e.ticketPrice / 100).toFixed(2)}`,
               timestamp: e.createdAt,
               badge: e.isPublished ? {
                 label: 'Published',

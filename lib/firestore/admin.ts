@@ -118,10 +118,11 @@ export async function getRecentEvents(limit: number = 8) {
         id: doc.id,
         title: data.title,
         startDateTime: data.startDateTime?.toDate?.() || data.start_datetime?.toDate?.() || new Date(data.start_datetime || data.startDateTime),
-        ticketPrice: data.ticketPrice || data.ticket_price || 0,
+        ticketPrice: data.ticketPrice || data.ticket_price || data.price || 0,
         createdAt: data.createdAt?.toDate?.() || data.created_at?.toDate?.() || new Date(data.created_at || data.createdAt || Date.now()),
-        isPublished: data.isPublished ?? data.is_published ?? true,
-        city: data.city || '',
+        isPublished: data.isPublished ?? data.is_published ?? data.status === 'published',
+        city: data.city || data.commune || '',
+        venueName: data.venueName || data.venue_name || '',
         organizerId: data.organizerId || data.organizer_id
       }
     })
