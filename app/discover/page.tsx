@@ -1,4 +1,4 @@
-
+// Discover page - Browse and filter events
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/firebase-db/server'
 import Navbar from '@/components/Navbar'
