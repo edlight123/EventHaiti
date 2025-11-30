@@ -23,6 +23,7 @@ export function DoorModeTopBar({
   remainingCount,
 }: DoorModeTopBarProps) {
   const router = useRouter()
+  const totalTickets = checkedInCount + remainingCount
 
   return (
     <div className="sticky top-0 z-50 bg-gray-900 text-white border-b border-gray-700">
@@ -56,20 +57,20 @@ export function DoorModeTopBar({
           </select>
 
           {/* Live Counters */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-green-900/30 border border-green-700/50 rounded-lg">
               <UserCheck className="w-4 h-4 text-green-400" />
               <div className="text-right">
                 <div className="text-xs text-green-400 font-medium">Checked In</div>
-                <div className="text-lg font-bold text-green-300">{checkedInCount}</div>
+                <div className="text-lg font-bold text-green-300">{checkedInCount}/{totalTickets}</div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg">
-              <Users className="w-4 h-4 text-gray-400" />
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-900/30 border border-orange-700/50 rounded-lg">
+              <Users className="w-4 h-4 text-orange-400" />
               <div className="text-right">
-                <div className="text-xs text-gray-400 font-medium">Remaining</div>
-                <div className="text-lg font-bold text-gray-300">{remainingCount}</div>
+                <div className="text-xs text-orange-400 font-medium">Remaining</div>
+                <div className="text-lg font-bold text-orange-300">{remainingCount}</div>
               </div>
             </div>
           </div>
