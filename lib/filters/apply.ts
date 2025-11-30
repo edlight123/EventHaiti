@@ -26,6 +26,19 @@ export function filterEvents(events: Event[], filters: EventFilters): Event[] {
           // Normalize both dates to YYYY-MM-DD strings for comparison to avoid timezone issues
           const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`
           const filterDateStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`
+          
+          // Debug logging
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Date Filter Debug:', {
+              eventTitle: event.title,
+              eventStartDateTime: event.start_datetime,
+              eventDateStr,
+              filterDateStr,
+              pickedDate: filters.pickedDate,
+              match: eventDateStr === filterDateStr
+            })
+          }
+          
           return eventDateStr === filterDateStr
         }
         
