@@ -74,6 +74,16 @@ service cloud.firestore {
       allow update, delete: if isSignedIn() && resource.data.user_id == request.auth.uid;
     }
     
+    // Verification requests - organizers can read/write their own, admins can read all
+    match /verification_requests/{userId} {
+      allow read: if isOwner(userId) || 
+                    (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || 
+                      (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      allow delete: if isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
     // Default deny for everything else
     match /{document=**} {
       allow read, write: if false;

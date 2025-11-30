@@ -9,11 +9,17 @@ service firebase.storage {
       allow delete: if request.auth != null; // Only authenticated users can delete
     }
     
-    // Verification images - only accessible by user who uploaded
+    // Verification images - only accessible by user who uploaded or admins
     match /verification/{userId}/{allPaths=**} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && (
+        request.auth.uid == userId ||
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
       allow write: if request.auth != null && request.auth.uid == userId;
-      allow delete: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && (
+        request.auth.uid == userId ||
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
     }
     
     // User profile images

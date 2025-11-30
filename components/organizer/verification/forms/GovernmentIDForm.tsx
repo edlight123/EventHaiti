@@ -1,0 +1,171 @@
+/**
+ * GovernmentIDForm Component
+ * Upload form for government ID (front and back)
+ */
+
+'use client'
+
+import { useState } from 'react'
+import DocumentUploadCard from '../DocumentUploadCard'
+import { uploadVerificationDocument, updateVerificationFiles } from '@/lib/verification'
+
+interface Props {
+  userId: string
+  initialData: {
+    frontPath?: string
+    backPath?: string
+  }
+  onSave: () => Promise<void>
+  onCancel: () => void
+}
+
+export default function GovernmentIDForm({ userId, initialData, onSave, onCancel }: Props) {
+  const [frontPath, setFrontPath] = useState(initialData.frontPath)
+  const [backPath, setBackPath] = useState(initialData.backPath)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleFrontUpload = async (file: File) => {
+    try {
+      const path = await uploadVerificationDocument(userId, file, 'id_front')
+      setFrontPath(path)
+      
+      // Update Firestore immediately
+      await updateVerificationFiles(userId, {
+        governmentId: {
+          front: path,
+          back: backPath,
+          uploadedAt: new Date()
+        }
+      })
+    } catch (err: any) {
+      throw new Error(err.message || 'Failed to upload ID front')
+    }
+  }
+
+  const handleBackUpload = async (file: File) => {
+    try {
+      const path = await uploadVerificationDocument(userId, file, 'id_back')
+      setBackPath(path)
+      
+      // Update Firestore immediately
+      await updateVerificationFiles(userId, {
+        governmentId: {
+          front: frontPath,
+          back: path,
+          uploadedAt: new Date()
+        }
+      })
+    } catch (err: any) {
+      throw new Error(err.message || 'Failed to upload ID back')
+    }
+  }
+
+  const handleFrontRemove = async () => {
+    setFrontPath(undefined)
+    await updateVerificationFiles(userId, {
+      governmentId: {
+        front: undefined,
+        back: backPath
+      }
+    })
+  }
+
+  const handleBackRemove = async () => {
+    setBackPath(undefined)
+    await updateVerificationFiles(userId, {
+      governmentId: {
+        front: frontPath,
+        back: undefined
+      }
+    })
+  }
+
+  const handleContinue = async () => {
+    if (!frontPath || !backPath) {
+      setError('Please upload both front and back of your ID')
+      return
+    }
+
+    try {
+      setIsSaving(true)
+      await onSave()
+    } catch (err: any) {
+      setError(err.message || 'Failed to save')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white border border-gray-200 rounded-lg p-6 md:p-8">
+        <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
+          Government ID Upload
+        </h3>
+        <p className="text-sm md:text-base text-gray-600 mb-6">
+          Upload clear photos of both sides of your government-issued ID
+        </p>
+
+        {/* Tips */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <h4 className="font-semibold text-blue-900 text-sm mb-2">📸 Photo Tips:</h4>
+          <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+            <li>Ensure all text is clearly readable</li>
+            <li>Use good lighting (avoid glare)</li>
+            <li>Place ID on a contrasting background</li>
+            <li>Photo should not be blurry or cropped</li>
+          </ul>
+        </div>
+
+        {/* Upload Cards */}
+        <div className="space-y-4">
+          <DocumentUploadCard
+            title="ID Front"
+            description="Upload the front side of your national ID"
+            existingFileUrl={frontPath}
+            onUpload={handleFrontUpload}
+            onRemove={handleFrontRemove}
+            required
+          />
+
+          <DocumentUploadCard
+            title="ID Back"
+            description="Upload the back side of your national ID"
+            existingFileUrl={backPath}
+            onUpload={handleBackUpload}
+            onRemove={handleBackRemove}
+            required
+          />
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isSaving}
+          className="flex-1 px-6 py-3 text-gray-700 bg-white border-2 border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-all disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleContinue}
+          disabled={isSaving || !frontPath || !backPath}
+          className="flex-1 px-6 py-3 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSaving ? 'Saving...' : 'Save & Continue'}
+        </button>
+      </div>
+    </div>
+  )
+}

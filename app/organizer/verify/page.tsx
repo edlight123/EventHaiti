@@ -1,187 +1,305 @@
-import { createClient } from '@/lib/firebase-db/server'
-import { getCurrentUser } from '@/lib/auth'
-import { redirect } from 'next/navigation'
+/**
+ * Organizer Verification Page
+ * Premium step-by-step verification flow
+ */
+
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { onAuthStateChanged } from 'firebase/auth'
+import { auth } from '@/lib/firebase/client'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import VerificationFlow from './VerificationFlow'
+import VerificationStatusHero from '@/components/organizer/verification/VerificationStatusHero'
+import VerificationStepper from '@/components/organizer/verification/VerificationStepper'
+import ReviewSubmitPanel from '@/components/organizer/verification/ReviewSubmitPanel'
+import OrganizerInfoForm from '@/components/organizer/verification/forms/OrganizerInfoForm'
+import GovernmentIDForm from '@/components/organizer/verification/forms/GovernmentIDForm'
+import SelfieForm from '@/components/organizer/verification/forms/SelfieForm'
+import BusinessDetailsForm from '@/components/organizer/verification/forms/BusinessDetailsForm'
+import {
+  getVerificationRequest,
+  initializeVerificationRequest,
+  updateVerificationStep,
+  submitVerificationForReview,
+  calculateCompletionPercentage,
+  type VerificationRequest
+} from '@/lib/verification'
 
-export const revalidate = 0
+type ViewMode = 'overview' | 'organizerInfo' | 'governmentId' | 'selfie' | 'businessDetails' | 'review'
 
-export default async function VerifyOrganizerPage() {
-  const user = await getCurrentUser()
+export default function VerifyOrganizerPage() {
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [request, setRequest] = useState<VerificationRequest | null>(null)
+  const [viewMode, setViewMode] = useState<ViewMode>('overview')
+  const [error, setError] = useState('')
 
-  if (!user) {
-    redirect('/auth/signin')
-  }
+  // Load verification request
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (!authUser) {
+        router.push('/auth/login?redirect=/organizer/verify')
+        return
+      }
 
-  const supabase = await createClient()
-  const allUsers = await supabase.from('users').select('*')
-  const userData = allUsers.data?.find((u: any) => u.id === user.id)
+      setUser({
+        id: authUser.uid,
+        full_name: authUser.displayName || '',
+        email: authUser.email || '',
+        role: 'organizer' as const
+      })
 
-  console.log('Verify page - User data:', userData)
-  console.log('Is verified:', userData?.is_verified)
-
-  // Check for existing verification request - simplified query without ordering
-  const { data: existingRequests } = await supabase
-    .from('verification_requests')
-    .select('*')
-    .eq('user_id', user.id)
-
-  // Sort in memory instead of in query to avoid index requirement
-  const sortedRequests = existingRequests?.sort((a: any, b: any) => 
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  )
-  const existingRequest = sortedRequests?.[0]
-  
-  console.log('Existing verification request:', existingRequest)
-
-  // If already verified (check both is_verified field and verification_status), redirect to events
-  if (userData?.is_verified === true || userData?.verification_status === 'approved') {
-    redirect('/organizer/events')
-  }
-
-  // If verification is pending (check both request status and user verification_status), show pending status
-  if ((existingRequest && existingRequest.status === 'pending') || userData?.verification_status === 'pending') {
-    return (
-      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-        <Navbar user={user} />
+      try {
+        let verificationRequest = await getVerificationRequest(authUser.uid)
         
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-8">
-            <div className="text-center mb-6 md:mb-8">
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
-                <svg className="w-7 h-7 md:w-8 md:h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                Verification Pending
-              </h1>
-              <p className="text-[13px] md:text-base text-gray-600">
-                Your verification documents have been submitted and are under review.
-              </p>
-            </div>
+        // Initialize if doesn't exist
+        if (!verificationRequest) {
+          verificationRequest = await initializeVerificationRequest(authUser.uid)
+        }
 
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 md:p-6 mb-6 md:mb-8">
-              <h3 className="font-semibold text-[13px] md:text-base text-yellow-900 mb-2">What happens next?</h3>
-              <ul className="space-y-2 text-[13px] md:text-sm text-yellow-800">
-                <li className="flex items-start">
-                  <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Our team will review your documents within 24-48 hours</span>
-                </li>
-                <li className="flex items-start">
-                  <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  <span>You&apos;ll receive an email notification once your account is approved</span>
-                </li>
-                <li className="flex items-start">
-                  <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Once approved, you can start creating and publishing events</span>
-                </li>
-              </ul>
-            </div>
+        setRequest(verificationRequest)
 
-            <div className="bg-gray-50 rounded-lg p-4 md:p-6">
-              <h3 className="font-semibold text-[13px] md:text-base text-gray-900 mb-3">Verification Details</h3>
-              <dl className="space-y-2 text-[13px] md:text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-gray-600">Submitted:</dt>
-                  <dd className="text-gray-900 font-medium">
-                    {new Date(existingRequest.created_at).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-600">Status:</dt>
-                  <dd>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                      Pending Review
-                    </span>
-                  </dd>
-                </div>
-              </dl>
-            </div>
+        // Redirect if already approved
+        if (verificationRequest.status === 'approved') {
+          router.push('/organizer/events')
+          return
+        }
+      } catch (err: any) {
+        console.error('Error loading verification:', err)
+        setError(err.message || 'Failed to load verification data')
+      } finally {
+        setLoading(false)
+      }
+    })
 
-            <div className="mt-6 md:mt-8 text-center">
-              <a
-                href="/"
-                className="text-teal-600 hover:text-teal-700 text-[13px] md:text-base font-medium"
-              >
-                ← Back to Home
-              </a>
-            </div>
-          </div>
+    return () => unsubscribe()
+  }, [router])
+
+  // Reload verification data
+  const reloadRequest = async () => {
+    if (!user) return
+    
+    try {
+      const freshRequest = await getVerificationRequest(user.id)
+      if (freshRequest) {
+        setRequest(freshRequest)
+      }
+    } catch (err: any) {
+      console.error('Error reloading verification:', err)
+    }
+  }
+
+  // Handle step completion
+  const handleSaveOrganizerInfo = async (data: Record<string, any>) => {
+    if (!user || !request) return
+
+    await updateVerificationStep(user.id, 'organizerInfo', {
+      status: 'complete',
+      fields: data,
+      missingFields: []
+    })
+
+    await reloadRequest()
+    setViewMode('overview')
+  }
+
+  const handleSaveGovernmentID = async () => {
+    if (!user || !request) return
+
+    await updateVerificationStep(user.id, 'governmentId', {
+      status: 'complete',
+      fields: {},
+      missingFields: []
+    })
+
+    await reloadRequest()
+    setViewMode('overview')
+  }
+
+  const handleSaveSelfie = async () => {
+    if (!user || !request) return
+
+    await updateVerificationStep(user.id, 'selfie', {
+      status: 'complete',
+      fields: {},
+      missingFields: []
+    })
+
+    await reloadRequest()
+    setViewMode('overview')
+  }
+
+  const handleSaveBusinessDetails = async (data: Record<string, any>) => {
+    if (!user || !request) return
+
+    await updateVerificationStep(user.id, 'businessDetails', {
+      status: 'complete',
+      fields: data,
+      missingFields: []
+    })
+
+    await reloadRequest()
+    setViewMode('overview')
+  }
+
+  const handleSkipBusinessDetails = async () => {
+    if (!user || !request) return
+
+    await updateVerificationStep(user.id, 'businessDetails', {
+      status: 'complete',
+      fields: {},
+      missingFields: []
+    })
+
+    await reloadRequest()
+    setViewMode('overview')
+  }
+
+  const handleSubmit = async () => {
+    if (!user || !request) return
+
+    try {
+      await submitVerificationForReview(user.id)
+      await reloadRequest()
+      setViewMode('overview')
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit verification')
+    }
+  }
+
+  const handleEditStep = (stepId: keyof VerificationRequest['steps']) => {
+    const viewModes: Record<string, ViewMode> = {
+      organizerInfo: 'organizerInfo',
+      governmentId: 'governmentId',
+      selfie: 'selfie',
+      businessDetails: 'businessDetails',
+      payoutSetup: 'overview' // Links to /organizer/settings/payouts
+    }
+
+    setViewMode(viewModes[stepId] || 'overview')
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading verification...</p>
         </div>
-
-        <MobileNavWrapper user={user} />
       </div>
     )
   }
 
-  // If rejected, allow resubmission
-  const wasRejected = existingRequest && existingRequest.status === 'rejected'
+  if (error && !request) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white border border-red-200 rounded-lg p-6 max-w-md">
+          <h2 className="text-lg font-bold text-red-900 mb-2">Error Loading Verification</h2>
+          <p className="text-sm text-red-700 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!request || !user) {
+    return null
+  }
+
+  const completionPercentage = calculateCompletionPercentage(request)
+  const isReadOnly = ['pending_review', 'in_review'].includes(request.status)
 
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} />
-      
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-8">
-          {wasRejected && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 md:p-4 mb-6 md:mb-8">
-              <h3 className="font-semibold text-[13px] md:text-base text-red-900 mb-2">Previous Application Rejected</h3>
-              <p className="text-[13px] md:text-sm text-red-800 mb-2">{existingRequest.admin_notes || 'Please review your documents and resubmit.'}</p>
-            </div>
-          )}
-          
-          <div className="text-center mb-6 md:mb-8">
-            <div className="w-14 h-14 md:w-16 md:h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
-              <svg className="w-7 h-7 md:w-8 md:h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-              {wasRejected ? 'Resubmit Verification' : 'Verify Your Identity'}
-            </h1>
-            <p className="text-[13px] md:text-base text-gray-600">
-              To create events on EventHaiti, we need to verify your identity. This helps keep our community safe and trustworthy.
-            </p>
-          </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 md:mb-8">
-            <h3 className="font-semibold text-[13px] md:text-base text-blue-900 mb-2">You&apos;ll need:</h3>
-            <ul className="space-y-1 text-[13px] md:text-sm text-blue-800">
-              <li className="flex items-center">
-                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                Valid Haitian National ID Card
-              </li>
-              <li className="flex items-center">
-                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                Good lighting for clear photos
-              </li>
-              <li className="flex items-center">
-                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                Camera access for facial verification
-              </li>
-            </ul>
-          </div>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        {/* Status Hero */}
+        <VerificationStatusHero
+          status={request.status}
+          completionPercentage={completionPercentage}
+          reviewNotes={request.reviewNotes}
+          onContinue={() => setViewMode('overview')}
+        />
 
-          <VerificationFlow userId={user.id} />
-        </div>
+        {/* Main Content */}
+        {viewMode === 'overview' && (
+          <div className="space-y-6">
+            <VerificationStepper
+              request={request}
+              onEditStep={handleEditStep}
+              isReadOnly={isReadOnly}
+            />
+
+            {!isReadOnly && completionPercentage === 100 && (
+              <div className="text-center">
+                <button
+                  onClick={() => setViewMode('review')}
+                  className="px-8 py-4 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white rounded-lg font-bold text-lg shadow-lg hover:shadow-xl transition-all"
+                >
+                  Review & Submit →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {viewMode === 'organizerInfo' && (
+          <OrganizerInfoForm
+            initialData={request.steps.organizerInfo.fields}
+            onSave={handleSaveOrganizerInfo}
+            onCancel={() => setViewMode('overview')}
+          />
+        )}
+
+        {viewMode === 'governmentId' && (
+          <GovernmentIDForm
+            userId={user.id}
+            initialData={{
+              frontPath: request.files.governmentId?.front,
+              backPath: request.files.governmentId?.back
+            }}
+            onSave={handleSaveGovernmentID}
+            onCancel={() => setViewMode('overview')}
+          />
+        )}
+
+        {viewMode === 'selfie' && (
+          <SelfieForm
+            userId={user.id}
+            initialData={{
+              selfiePath: request.files.selfie?.path
+            }}
+            onSave={handleSaveSelfie}
+            onCancel={() => setViewMode('overview')}
+          />
+        )}
+
+        {viewMode === 'businessDetails' && (
+          <BusinessDetailsForm
+            initialData={request.steps.businessDetails.fields}
+            onSave={handleSaveBusinessDetails}
+            onCancel={() => setViewMode('overview')}
+            onSkip={handleSkipBusinessDetails}
+          />
+        )}
+
+        {viewMode === 'review' && (
+          <ReviewSubmitPanel
+            request={request}
+            onSubmit={handleSubmit}
+            onBack={() => setViewMode('overview')}
+            isReadOnly={isReadOnly}
+          />
+        )}
       </div>
 
       <MobileNavWrapper user={user} />
