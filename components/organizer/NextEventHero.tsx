@@ -160,7 +160,7 @@ export function NextEventHero({ event }: NextEventHeroProps) {
           </Link>
           
           <Link
-            href={`/organizer/scan?event=${event.id}`}
+            href={`/organizer/scan/${event.id}`}
             className="flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:border-purple-500 hover:text-purple-600 transition-colors text-sm"
           >
             <QrCode className="w-4 h-4" />

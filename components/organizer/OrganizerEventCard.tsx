@@ -114,7 +114,7 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
           </Link>
 
           <Link
-            href={`/organizer/scan?event=${event.id}`}
+            href={`/organizer/scan/${event.id}`}
             className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg hover:bg-orange-50 transition-colors group/btn"
             title="Check-in"
           >

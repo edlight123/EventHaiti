@@ -113,7 +113,7 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
               <p className="text-sm text-gray-600">Attendee Management</p>
             </div>
             <Link
-              href={`/organizer/events/${eventId}/check-in`}
+              href={`/organizer/scan/${eventId}`}
               className="flex-shrink-0 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

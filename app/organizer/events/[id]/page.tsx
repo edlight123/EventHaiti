@@ -120,7 +120,7 @@ export default async function OrganizerEventDetailPage({ params }: { params: Pro
             {/* Quick Actions - horizontal scroll on mobile */}
             <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
               <Link
-                href={`/organizer/events/${event.id}/check-in`}
+                href={`/organizer/scan/${event.id}`}
                 className="flex-shrink-0 px-3 md:px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium text-[13px] md:text-sm flex items-center gap-1.5 md:gap-2 whitespace-nowrap shadow-sm"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
