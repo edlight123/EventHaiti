@@ -1,0 +1,113 @@
+'use client'
+
+import { Ticket, Plus, Edit2 } from 'lucide-react'
+import Link from 'next/link'
+
+interface TicketTier {
+  id: string
+  name: string
+  price: number
+  quantity: number
+  sold: number
+  description?: string
+}
+
+interface TicketTiersCardProps {
+  eventId: string
+  tiers: TicketTier[]
+}
+
+export function TicketTiersCard({ eventId, tiers }: TicketTiersCardProps) {
+  const hasTiers = tiers && tiers.length > 0
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="p-2 bg-purple-50 rounded-lg">
+            <Ticket className="w-5 h-5 text-purple-600" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900">Ticket Tiers</h3>
+        </div>
+        <Link
+          href={`/organizer/events/${eventId}/edit#tickets`}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+        >
+          {hasTiers ? <Edit2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+          {hasTiers ? 'Edit' : 'Add Tiers'}
+        </Link>
+      </div>
+
+      {!hasTiers ? (
+        <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
+          <Ticket className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-sm text-gray-600 mb-3">No ticket tiers configured</p>
+          <Link
+            href={`/organizer/events/${eventId}/edit#tickets`}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Create Ticket Tiers
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {tiers.map((tier) => {
+            const soldPercentage = tier.quantity > 0 ? (tier.sold / tier.quantity) * 100 : 0
+            const isLowStock = soldPercentage > 80
+            const isSoldOut = tier.sold >= tier.quantity
+
+            return (
+              <div
+                key={tier.id}
+                className="border border-gray-200 rounded-lg p-4 hover:border-purple-200 transition-colors"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-semibold text-gray-900">{tier.name}</h4>
+                      {isSoldOut && (
+                        <span className="text-xs font-medium px-2 py-0.5 bg-red-100 text-red-700 rounded-full">
+                          Sold Out
+                        </span>
+                      )}
+                      {isLowStock && !isSoldOut && (
+                        <span className="text-xs font-medium px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                          Low Stock
+                        </span>
+                      )}
+                    </div>
+                    {tier.description && (
+                      <p className="text-xs text-gray-600 mb-2">{tier.description}</p>
+                    )}
+                  </div>
+                  <div className="text-right ml-4">
+                    <div className="text-lg font-bold text-gray-900">{tier.price} HTG</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="text-gray-600">
+                      <span className="font-semibold text-gray-900">{tier.sold}</span> / {tier.quantity} sold
+                    </span>
+                  </div>
+                  <span className="text-gray-600">{soldPercentage.toFixed(0)}%</span>
+                </div>
+
+                <div className="w-full bg-gray-100 rounded-full h-2 mt-2 overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      isSoldOut ? 'bg-red-500' : isLowStock ? 'bg-amber-500' : 'bg-purple-500'
+                    }`}
+                    style={{ width: `${Math.min(soldPercentage, 100)}%` }}
+                  />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}

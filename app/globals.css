@@ -38,6 +38,10 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 /* Hide scrollbar but keep functionality */
 .scrollbar-hide {
   -ms-overflow-style: none;
