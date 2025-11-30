@@ -9,6 +9,8 @@ import { ActionCenter } from '@/components/organizer/ActionCenter'
 import { SalesSnapshot } from '@/components/organizer/SalesSnapshot'
 import { OrganizerEventCard } from '@/components/organizer/OrganizerEventCard'
 import { PayoutsWidget } from '@/components/organizer/PayoutsWidget'
+import { adminDb } from '@/lib/firebase/admin'
+import Link from 'next/link'
 
 export const revalidate = 0
 
@@ -146,7 +148,15 @@ export default async function OrganizerDashboard() {
           {/* Events Grid */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl md:text-2xl font-bold text-gray-900">Your Events</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900">Your Events</h2>
+                <Link
+                  href="/organizer/events"
+                  className="text-sm text-teal-600 hover:text-teal-700 font-medium hover:underline"
+                >
+                  View all events →
+                </Link>
+              </div>
               <a
                 href="/organizer/events/new"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors text-sm"
@@ -157,11 +167,22 @@ export default async function OrganizerDashboard() {
 
             {currentStats.events.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {currentStats.events.map((event: any) => {
+                {await Promise.all(currentStats.events.map(async (event: any) => {
                   // Get ticket count for this event
                   const eventTickets = currentStats.tickets.filter((t: any) => t.event_id === event.id)
                   const ticketsSold = eventTickets.length
                   const revenue = eventTickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0)
+                  
+                  // Get total capacity from ticket_tiers
+                  const tiersSnapshot = await adminDb
+                    .collection('ticket_tiers')
+                    .where('event_id', '==', event.id)
+                    .get()
+                  
+                  const totalCapacity = tiersSnapshot.docs.reduce((sum: number, doc: any) => {
+                    const data = doc.data()
+                    return sum + (data.quantity || 0)
+                  }, 0)
                   
                   return (
                     <OrganizerEventCard
@@ -170,11 +191,11 @@ export default async function OrganizerDashboard() {
                         ...event,
                         ticketsSold,
                         revenue,
-                        capacity: event.max_attendees
+                        capacity: totalCapacity || event.max_attendees || 0
                       }}
                     />
                   )
-                })}
+                }))}
               </div>
             ) : (
               <div className="bg-white rounded-xl border-2 border-dashed border-gray-300 p-8 md:p-12 text-center">
