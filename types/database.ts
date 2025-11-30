@@ -4,6 +4,14 @@ export type TicketStatus = 'active' | 'used' | 'cancelled'
 
 export type ScanResult = 'valid' | 'already_used' | 'invalid'
 
+export type NotificationType = 
+  | 'ticket_purchased' 
+  | 'event_updated' 
+  | 'event_reminder_24h' 
+  | 'event_reminder_3h' 
+  | 'event_reminder_30min'
+  | 'event_cancelled'
+
 export interface Database {
   public: {
     Tables: {
@@ -16,6 +24,9 @@ export interface Database {
           role: UserRole
           is_verified: boolean
           verification_status: 'none' | 'pending' | 'approved' | 'rejected'
+          notify_ticket_purchase: boolean
+          notify_event_updates: boolean
+          notify_reminders: boolean
           created_at: string
           updated_at: string
         }
@@ -27,6 +38,9 @@ export interface Database {
           role?: UserRole
           is_verified?: boolean
           verification_status?: 'none' | 'pending' | 'approved' | 'rejected'
+          notify_ticket_purchase?: boolean
+          notify_event_updates?: boolean
+          notify_reminders?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -38,6 +52,9 @@ export interface Database {
           role?: UserRole
           is_verified?: boolean
           verification_status?: 'none' | 'pending' | 'approved' | 'rejected'
+          notify_ticket_purchase?: boolean
+          notify_event_updates?: boolean
+          notify_reminders?: boolean
           created_at?: string
           updated_at?: string
         }

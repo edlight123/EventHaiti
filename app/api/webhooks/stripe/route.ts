@@ -4,6 +4,7 @@ import { sendEmail, getTicketConfirmationEmail } from '@/lib/email'
 import { generateTicketQRCode } from '@/lib/qrcode'
 import { sendWhatsAppMessage, getTicketConfirmationWhatsApp } from '@/lib/whatsapp'
 import { trackPromoCodeUsage, calculateDiscount } from '@/lib/promo-codes'
+import { notifyTicketPurchase } from '@/lib/notifications/helpers'
 
 // Lazy load Stripe to avoid build-time initialization
 function getStripe() {
@@ -165,6 +166,19 @@ export async function POST(request: Request) {
               ticket.id
             ),
           })
+        }
+
+        // Send in-app notification for ticket purchase
+        try {
+          await notifyTicketPurchase(
+            session.client_reference_id,
+            session.metadata.eventId,
+            ticket.event.title,
+            quantity
+          )
+        } catch (error) {
+          console.error('Failed to send notification:', error)
+          // Don't fail the webhook if notification fails
         }
       }
     }

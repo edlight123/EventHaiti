@@ -4,6 +4,7 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { notifyEventUpdate } from '@/lib/notifications/helpers'
 
 const updateSchema = z.object({
   eventId: z.string().uuid(),
@@ -121,6 +122,32 @@ export async function POST(request: NextRequest) {
 
     let emailsSent = 0
     let smsSent = 0
+
+    // Send in-app notifications to all attendees
+    try {
+      const updateType = title.toLowerCase().includes('time') || title.toLowerCase().includes('date') 
+        ? 'time' 
+        : title.toLowerCase().includes('venue') || title.toLowerCase().includes('location')
+        ? 'venue'
+        : 'general'
+
+      for (const attendeeId of attendeeIds) {
+        try {
+          await notifyEventUpdate(
+            String(attendeeId),
+            eventId,
+            event.title,
+            updateType
+          )
+        } catch (notifError) {
+          console.error(`Failed to send notification to ${attendeeId}:`, notifError)
+          // Continue with others
+        }
+      }
+    } catch (error) {
+      console.error('In-app notification batch error:', error)
+      // Don't fail the update if notifications fail
+    }
 
     // Send email notifications
     if (sendEmail) {

@@ -8,6 +8,7 @@ import { BRAND } from '@/config/brand'
 import { useState, useEffect } from 'react'
 import { isDemoMode, isDemoEmail } from '@/lib/demo'
 import { demoLogout } from '@/app/auth/actions'
+import { NotificationBell } from './NotificationBell'
 
 interface NavbarProps {
   user?: {
@@ -116,6 +117,9 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
           <div className="flex items-center space-x-4">
             {user ? (
               <>
+                {/* Notification Bell */}
+                <NotificationBell userId={user.id} />
+                
                 <Link
                   href="/profile"
                   className="hidden sm:flex items-center gap-2 text-sm text-gray-700 hover:text-teal-700 transition-colors duration-200"

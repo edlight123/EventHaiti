@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
+import { notifyTicketPurchase } from '@/lib/notifications/helpers'
 
 export async function POST(request: Request) {
   try {
@@ -98,6 +99,19 @@ export async function POST(request: Request) {
       .eq('id', eventId)
       
     console.log('Update tickets_sold result:', updateResult)
+
+    // Send in-app notification for free ticket claim
+    try {
+      await notifyTicketPurchase(
+        user.id,
+        eventId,
+        event.title,
+        ticketQuantity
+      )
+    } catch (error) {
+      console.error('Failed to send notification:', error)
+      // Don't fail the claim if notification fails
+    }
 
     console.log('=== SUCCESS ===')
     return NextResponse.json({ 

@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
+import { PurchaseSuccessNotificationPrompt } from '@/components/PurchaseSuccessNotificationPrompt'
 import Link from 'next/link'
 import type { Database } from '@/types/database'
 
@@ -161,6 +162,11 @@ export default async function PurchaseSuccessPage({
             </li>
           </ul>
         </div>
+
+        {/* Notification Prompt - ONLY on purchase success, NOT on scan/check-in pages */}
+        {user && (
+          <PurchaseSuccessNotificationPrompt userId={user.id} />
+        )}
       </div>
       
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />

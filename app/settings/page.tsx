@@ -161,29 +161,18 @@ export default async function SettingsPage() {
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+              <Link 
+                href="/settings/notifications"
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+              >
                 <div>
-                  <p className="font-semibold text-gray-900">Email Notifications</p>
-                  <p className="text-sm text-gray-600">Receive updates about your events and tickets</p>
+                  <p className="font-semibold text-gray-900">Notification Preferences</p>
+                  <p className="text-sm text-gray-600">Choose which notifications you want to receive</p>
                 </div>
-                <div className="text-sm font-medium text-gray-500">Enabled</div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                <div>
-                  <p className="font-semibold text-gray-900">Event Reminders</p>
-                  <p className="text-sm text-gray-600">Get reminded about upcoming events</p>
-                </div>
-                <div className="text-sm font-medium text-gray-500">Enabled</div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                <div>
-                  <p className="font-semibold text-gray-900">Marketing Communications</p>
-                  <p className="text-sm text-gray-600">Receive news and promotions</p>
-                </div>
-                <div className="text-sm font-medium text-gray-500">Enabled</div>
-              </div>
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
             </div>
           </div>
 
