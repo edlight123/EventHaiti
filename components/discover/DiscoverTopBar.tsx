@@ -15,7 +15,7 @@ interface DiscoverTopBarProps {
 export function DiscoverTopBar({ filters, onOpenFilters }: DiscoverTopBarProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
   const [showCityDropdown, setShowCityDropdown] = useState(false)
   const [showSubareaDropdown, setShowSubareaDropdown] = useState(false)
 
@@ -26,10 +26,24 @@ export function DiscoverTopBar({ filters, onOpenFilters }: DiscoverTopBarProps) 
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
+    const params = new URLSearchParams(searchParams)
     if (searchQuery.trim()) {
-      const params = new URLSearchParams(searchParams)
       params.set('search', searchQuery.trim())
-      router.push(`?${params.toString()}`)
+    } else {
+      params.delete('search')
+    }
+    router.push(`/discover?${params.toString()}`, { scroll: false })
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setSearchQuery(value)
+    
+    // Clear search if empty
+    if (!value.trim()) {
+      const params = new URLSearchParams(searchParams)
+      params.delete('search')
+      router.push(`/discover?${params.toString()}`, { scroll: false })
     }
   }
 
@@ -68,7 +82,7 @@ export function DiscoverTopBar({ filters, onOpenFilters }: DiscoverTopBarProps) 
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={handleSearchChange}
                 placeholder="Search events, venues, artists…"
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-sm"
               />

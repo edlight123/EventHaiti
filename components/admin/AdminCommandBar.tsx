@@ -1,39 +1,176 @@
 'use client'
 
-import { useState } from 'react'
-import { Search, Bell, Calendar, Users, ShieldCheck } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Search, Bell, Calendar, Users, ShieldCheck, Loader2, MapPin, DollarSign, User } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 interface AdminCommandBarProps {
   pendingVerifications: number
 }
 
+interface SearchResult {
+  id: string
+  type: 'event' | 'user' | 'order'
+  title: string
+  subtitle?: string
+  href: string
+  metadata?: {
+    status?: string
+    price?: number
+    currency?: string
+    city?: string
+  }
+}
+
 export function AdminCommandBar({ pendingVerifications }: AdminCommandBarProps) {
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [showResults, setShowResults] = useState(false)
+
+  // Debounced search
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([])
+      setShowResults(false)
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true)
+      setShowResults(true)
+      
+      try {
+        const response = await fetch('/api/admin/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: searchQuery.trim() })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setSearchResults(data.results || [])
+        } else {
+          setSearchResults([])
+        }
+      } catch (error) {
+        console.error('Search error:', error)
+        setSearchResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  const handleResultClick = (href: string) => {
+    setSearchQuery('')
+    setShowResults(false)
+    router.push(href)
+  }
 
   return (
     <div className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex items-center gap-4">
           {/* Search */}
-          <div className="flex-1 max-w-2xl">
+          <div className="flex-1 max-w-2xl relative">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => searchQuery && setShowResults(true)}
+                onBlur={() => setTimeout(() => setShowResults(false), 200)}
                 placeholder="Search events, users, orders..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
               />
-              {searchQuery && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-96 overflow-y-auto">
-                  <div className="p-4 text-sm text-gray-500 text-center">
-                    Search functionality coming soon
-                  </div>
-                </div>
+              {isSearching && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 animate-spin" />
               )}
             </div>
+            
+            {/* Search Results Dropdown */}
+            {showResults && searchQuery && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-96 overflow-y-auto z-50">
+                {isSearching ? (
+                  <div className="p-8 text-center">
+                    <Loader2 className="w-6 h-6 text-teal-600 animate-spin mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">Searching...</p>
+                  </div>
+                ) : searchResults.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <Search className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No results found</p>
+                    <p className="text-xs text-gray-400 mt-1">Try a different search term</p>
+                  </div>
+                ) : (
+                  <div className="py-2">
+                    {searchResults.map((result) => (
+                      <button
+                        key={`${result.type}-${result.id}`}
+                        onClick={() => handleResultClick(result.href)}
+                        className="w-full px-4 py-3 hover:bg-gray-50 transition-colors flex items-start gap-3 text-left"
+                      >
+                        {/* Icon */}
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          result.type === 'event' ? 'bg-purple-100' :
+                          result.type === 'user' ? 'bg-blue-100' :
+                          'bg-green-100'
+                        }`}>
+                          {result.type === 'event' ? (
+                            <Calendar className={`w-4 h-4 ${
+                              result.type === 'event' ? 'text-purple-600' : ''
+                            }`} />
+                          ) : result.type === 'user' ? (
+                            <User className="w-4 h-4 text-blue-600" />
+                          ) : (
+                            <DollarSign className="w-4 h-4 text-green-600" />
+                          )}
+                        </div>
+                        
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-gray-900 truncate">{result.title}</p>
+                            {result.metadata?.status && (
+                              <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                                result.metadata.status === 'published' || result.metadata.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                                result.metadata.status === 'draft' || result.metadata.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {result.metadata.status}
+                              </span>
+                            )}
+                          </div>
+                          {result.subtitle && (
+                            <p className="text-sm text-gray-500 truncate">{result.subtitle}</p>
+                          )}
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-xs text-gray-400 capitalize">{result.type}</span>
+                            {result.metadata?.city && (
+                              <span className="flex items-center gap-1 text-xs text-gray-500">
+                                <MapPin className="w-3 h-3" />
+                                {result.metadata.city}
+                              </span>
+                            )}
+                            {result.metadata?.price !== undefined && (
+                              <span className="text-xs text-gray-500">
+                                {result.metadata.price === 0 ? 'Free' : `${result.metadata.price} ${result.metadata.currency || 'HTG'}`}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Quick Links */}

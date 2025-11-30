@@ -74,6 +74,19 @@ export default async function DiscoverPage({
   // Apply filters and sort
   let filteredEvents = applyFiltersAndSort(allEvents, filters)
   
+  // Apply search filter
+  const searchQuery = params.search as string | undefined
+  if (searchQuery && searchQuery.trim()) {
+    const query = searchQuery.toLowerCase().trim()
+    filteredEvents = filteredEvents.filter(event => 
+      event.title?.toLowerCase().includes(query) ||
+      event.description?.toLowerCase().includes(query) ||
+      event.venue_name?.toLowerCase().includes(query) ||
+      event.city?.toLowerCase().includes(query) ||
+      event.category?.toLowerCase().includes(query)
+    )
+  }
+  
   // Apply sorting rules
   if (filters.sortBy === 'date') {
     filteredEvents = sortEventsByDate(filteredEvents)
@@ -95,7 +108,8 @@ export default async function DiscoverPage({
                           filters.city !== '' || 
                           filters.categories.length > 0 || 
                           filters.price !== 'any' || 
-                          filters.eventType !== 'all'
+                          filters.eventType !== 'all' ||
+                          (searchQuery && searchQuery.trim() !== '')
 
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
