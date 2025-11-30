@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { MapPin, Tag, Globe, Info } from 'lucide-react'
 import { CITIES, CITY_CONFIG, CATEGORIES, getLocationTypeLabel, getSubdivisions } from '@/lib/filters/config'
 import type { UserProfile } from '@/lib/firestore/user-profile'
@@ -18,7 +18,9 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
   const [isUpdating, setIsUpdating] = useState(false)
 
   // Get current subdivisions based on selected city
-  const subdivisions = defaultCity ? getSubdivisions(defaultCity) : []
+  const subdivisions = useMemo(() => {
+    return defaultCity ? getSubdivisions(defaultCity) : []
+  }, [defaultCity])
   const subareaType = defaultCity ? CITY_CONFIG[defaultCity]?.type.toUpperCase() : 'COMMUNE'
   const subareaLabel = defaultCity ? getLocationTypeLabel(defaultCity) : 'Area'
 

@@ -1,0 +1,138 @@
+import { adminAuth, adminDb } from '@/lib/firebase/admin'
+import { redirect, notFound } from 'next/navigation'
+import { cookies } from 'next/headers'
+import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
+import Link from 'next/link'
+import { AttendeesManager } from './AttendeesManager'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+export default async function AttendeesPage({ params }: { params: Promise<{ id: string }> }) {
+  // Verify authentication
+  const cookieStore = await cookies()
+  const sessionCookie = cookieStore.get('session')?.value
+
+  if (!sessionCookie) {
+    redirect('/login')
+  }
+
+  let authUser
+  try {
+    const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
+    authUser = decodedClaims
+  } catch (error) {
+    console.error('Error verifying session:', error)
+    redirect('/login')
+  }
+
+  const { id: eventId } = await params
+
+  // Fetch event
+  const eventDoc = await adminDb.collection('events').doc(eventId).get()
+  
+  if (!eventDoc.exists) {
+    notFound()
+  }
+
+  const event = { id: eventDoc.id, ...eventDoc.data() }
+
+  // Verify organizer
+  if (event.organizer_id !== authUser.uid) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar user={{ id: authUser.uid, email: authUser.email || '', full_name: authUser.name || '', role: 'attendee' }} />
+        <div className="flex items-center justify-center py-16 px-4">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Unauthorized</h2>
+            <p className="text-sm text-gray-600">You don&apos;t have permission to manage this event&apos;s attendees.</p>
+          </div>
+        </div>
+        <MobileNavWrapper user={{ id: authUser.uid, email: authUser.email || '', role: 'attendee' }} />
+      </div>
+    )
+  }
+
+  // Fetch all tickets for this event
+  const ticketsSnapshot = await adminDb
+    .collection('tickets')
+    .where('event_id', '==', eventId)
+    .get()
+
+  const tickets = await Promise.all(
+    ticketsSnapshot.docs.map(async (doc: any) => {
+      const ticketData = doc.data()
+      
+      // Fetch attendee user data
+      let attendee = null
+      if (ticketData.attendee_id) {
+        const userDoc = await adminDb.collection('users').doc(ticketData.attendee_id).get()
+        if (userDoc.exists) {
+          attendee = { id: userDoc.id, ...userDoc.data() }
+        }
+      }
+
+      return {
+        id: doc.id,
+        ...ticketData,
+        attendee,
+        purchased_at: ticketData.purchased_at?.toDate?.()?.toISOString() || ticketData.purchased_at,
+        checked_in_at: ticketData.checked_in_at?.toDate?.()?.toISOString() || ticketData.checked_in_at,
+        created_at: ticketData.created_at?.toDate?.()?.toISOString() || ticketData.created_at,
+        updated_at: ticketData.updated_at?.toDate?.()?.toISOString() || ticketData.updated_at,
+      }
+    })
+  )
+
+  const navbarUser = {
+    id: authUser.uid,
+    email: authUser.email || '',
+    full_name: authUser.name || authUser.email || '',
+    role: 'organizer' as const,
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+      <Navbar user={navbarUser} />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+        {/* Header */}
+        <div className="mb-6">
+          <Link
+            href={`/organizer/events/${eventId}`}
+            className="text-orange-600 hover:text-orange-700 text-sm font-medium mb-2 inline-block"
+          >
+            ← Back to Event
+          </Link>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1 truncate">
+                {event.title}
+              </h1>
+              <p className="text-sm text-gray-600">Attendee Management</p>
+            </div>
+            <Link
+              href={`/organizer/events/${eventId}/check-in`}
+              className="flex-shrink-0 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+              </svg>
+              Check-In
+            </Link>
+          </div>
+        </div>
+
+        {/* Attendees Manager */}
+        <AttendeesManager
+          eventId={eventId}
+          eventTitle={event.title}
+          tickets={tickets}
+        />
+      </div>
+
+      <MobileNavWrapper user={navbarUser} />
+    </div>
+  )
+}

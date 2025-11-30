@@ -1,192 +1,82 @@
-import { createClient } from '@/lib/firebase-db/server'
-import { getCurrentUser } from '@/lib/auth'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
-import PullToRefresh from '@/components/PullToRefresh'
-import Link from 'next/link'
-import { notFound } from 'next/navigation'
-import CheckInScanner from './CheckInScanner'
+import { adminAuth, adminDb } from '@/lib/firebase/admin'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { CheckInInterface } from '@/components/check-in/CheckInInterface'
+import { checkInTicket } from './actions'
 
+export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-export default async function CheckInPage({
-  params,
-}: {
+interface PageProps {
   params: Promise<{ id: string }>
-}) {
-  const user = await getCurrentUser()
-  const { id } = await params
+}
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-        <Navbar user={null} />
-        <div className="flex items-center justify-center py-12 md:py-16 px-4">
-          <div className="text-center max-w-md">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">Please sign in</h2>
-            <p className="text-[13px] md:text-sm text-gray-600 mb-6">Sign in to manage event check-ins.</p>
-            <Link
-              href="/auth/login"
-              className="inline-flex items-center gap-2 px-5 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-semibold text-sm md:text-base transition-colors"
-            >
-              Sign In
-            </Link>
-          </div>
-        </div>
-        <MobileNavWrapper user={null} />
-      </div>
-    )
+export default async function CheckInPage({ params }: PageProps) {
+  const { id: eventId } = await params
+  
+  // Verify authentication
+  const cookieStore = await cookies()
+  const sessionCookie = cookieStore.get('session')?.value
+
+  if (!sessionCookie) {
+    redirect('/login')
   }
 
-  const supabase = await createClient()
-
-  // Fetch all events and find the one we need
-  const { data: allEvents } = await supabase
-    .from('events')
-    .select('*')
-
-  const event = allEvents?.find((e: any) => e.id === id)
-
-  if (!event) {
-    notFound()
+  let authUser
+  try {
+    const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
+    authUser = decodedClaims
+  } catch (error) {
+    console.error('Error verifying session:', error)
+    redirect('/login')
   }
 
-  if (event.organizer_id !== user.id) {
-    return (
-      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-        <Navbar user={user} />
-        <div className="flex items-center justify-center py-12 md:py-16 px-4">
-          <div className="text-center max-w-md">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">Unauthorized</h2>
-            <p className="text-[13px] md:text-sm text-gray-600">You don&apos;t have permission to manage check-ins for this event.</p>
-          </div>
-        </div>
-        <MobileNavWrapper user={user} />
-      </div>
-    )
+  // Fetch event details
+  const eventDoc = await adminDb.collection('events').doc(eventId).get()
+
+  if (!eventDoc.exists) {
+    redirect('/organizer/events')
   }
 
-  // Fetch all tickets and users
-  const { data: allTickets } = await supabase
-    .from('tickets')
-    .select('*')
+  const eventData = eventDoc.data()
 
-  const { data: allUsers } = await supabase
-    .from('users')
-    .select('*')
+  // Verify organizer access
+  if (eventData?.organizer_id !== authUser.uid) {
+    redirect('/organizer/events')
+  }
 
-  // Filter tickets for this event and combine with user data
-  const eventTickets = (allTickets || []).filter((t: any) => t.event_id === id)
-  const usersMap = new Map((allUsers || []).map((u: any) => [u.id, u]))
+  // Fetch all tickets for this event
+  const ticketsSnapshot = await adminDb
+    .collection('tickets')
+    .where('event_id', '==', eventId)
+    .get()
 
-  const tickets = eventTickets.map((ticket: any) => ({
-    ...ticket,
-    attendee: usersMap.get(ticket.attendee_id) || { full_name: 'Unknown', email: 'N/A' }
-  }))
-  const totalTickets = tickets.length
-  const checkedIn = tickets.filter((t: any) => t.checked_in_at).length
-  const pending = totalTickets - checkedIn
-  const invalidTickets = tickets.filter((t: any) => t.status !== 'valid').length
+  const tickets = ticketsSnapshot.docs.map((doc: any) => {
+    const data = doc.data()
+    return {
+      id: doc.id,
+      event_id: data.event_id,
+      user_id: data.user_id,
+      order_id: data.order_id,
+      ticket_type: data.ticket_type,
+      price: data.price,
+      status: data.status,
+      checked_in: data.checked_in || false,
+      checked_in_at: data.checked_in_at?.toDate().toISOString() || null,
+      entry_point: data.entry_point || null,
+      attendee_name: data.attendee_name || '',
+      attendee_email: data.attendee_email || '',
+      qr_code: data.qr_code || doc.id,
+      purchased_at: data.purchased_at?.toDate().toISOString() || null,
+    }
+  })
 
-  return (
-    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={user} />
+  const event = {
+    id: eventDoc.id,
+    title: eventData?.title || '',
+    start_datetime: eventData?.start_datetime?.toDate().toISOString() || '',
+    organizer_id: eventData?.organizer_id || '',
+  }
 
-      <PullToRefresh onRefresh={async () => {
-        'use server'
-        const { revalidatePath } = await import('next/cache')
-        revalidatePath(`/organizer/events/${id}/check-in`)
-      }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
-          <div className="mb-6 md:mb-8">
-            <Link
-              href={`/organizer/events/${id}`}
-              className="text-orange-600 hover:text-orange-700 text-[13px] md:text-sm font-medium mb-2 inline-block"
-            >
-              ← Back to Event Details
-            </Link>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 line-clamp-2">{event.title}</h1>
-            <p className="text-[13px] md:text-sm text-gray-600 mt-1">Check-In Management</p>
-          </div>
-
-          {/* Metrics - horizontal scroll on mobile */}
-            <div className="flex md:grid md:grid-cols-4 gap-3 md:gap-6 overflow-x-auto -mx-4 px-4 pb-2 snap-x snap-mandatory md:overflow-visible mb-6 md:mb-8">
-              <div className="min-w-[200px] md:min-w-0 snap-start bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6 flex-shrink-0">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-[11px] md:text-sm font-medium text-gray-600 uppercase tracking-wide">Total Tickets</h3>
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                </div>
-                <p className="text-2xl md:text-3xl font-bold text-gray-900">{totalTickets}</p>
-              </div>
-              <div className="min-w-[200px] md:min-w-0 snap-start bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6 flex-shrink-0">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-[11px] md:text-sm font-medium text-gray-600 uppercase tracking-wide">Checked In</h3>
-                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <p className="text-2xl md:text-3xl font-bold text-green-700">{checkedIn}</p>
-                <p className="text-[11px] md:text-sm text-gray-500 mt-1">{totalTickets > 0 ? ((checkedIn / totalTickets) * 100).toFixed(0) : 0}%</p>
-              </div>
-              <div className="min-w-[200px] md:min-w-0 snap-start bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6 flex-shrink-0">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-[11px] md:text-sm font-medium text-gray-600 uppercase tracking-wide">Pending</h3>
-                  <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <p className="text-2xl md:text-3xl font-bold text-orange-700">{pending}</p>
-              </div>
-              <div className="min-w-[200px] md:min-w-0 snap-start bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6 flex-shrink-0">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-[11px] md:text-sm font-medium text-gray-600 uppercase tracking-wide">Invalid</h3>
-                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <p className="text-2xl md:text-3xl font-bold text-red-700">{invalidTickets}</p>
-              </div>
-            </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
-            {/* QR Scanner */}
-            <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
-              <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4">Scan QR Code</h2>
-              <CheckInScanner eventId={id} />
-            </div>
-            {/* Recent Check-Ins */}
-            <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
-              <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4">Recent Check-Ins</h2>
-              <div className="space-y-2 md:space-y-3 max-h-80 md:max-h-96 overflow-y-auto">
-                {tickets
-                  .filter((t: any) => t.checked_in_at)
-                  .sort((a: any, b: any) => new Date(b.checked_in_at).getTime() - new Date(a.checked_in_at).getTime())
-                  .slice(0, 20)
-                  .map((ticket: any) => (
-                    <div key={ticket.id} className="flex items-center justify-between p-3 md:p-3.5 bg-gray-50 rounded-lg">
-                      <div className="min-w-0">
-                        <p className="font-medium text-[13px] md:text-sm text-gray-900 truncate">{ticket.attendee.full_name}</p>
-                        <p className="text-[11px] md:text-xs text-gray-600 truncate">{ticket.attendee.email}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] md:text-xs text-gray-500">
-                          {new Date(ticket.checked_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                {checkedIn === 0 && (
-                  <p className="text-center py-8 text-[13px] md:text-sm text-gray-500">No check-ins yet</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </PullToRefresh>
-
-      <MobileNavWrapper user={user} />
-    </div>
-  )
+  return <CheckInInterface event={event} tickets={tickets} onCheckIn={checkInTicket} />
 }

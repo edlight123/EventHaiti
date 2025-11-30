@@ -1,0 +1,218 @@
+'use client'
+
+import { formatDistanceToNow } from 'date-fns'
+import { DollarSign, Check, X, Clock, RefreshCw, Download } from 'lucide-react'
+import type { Payout } from '@/lib/firestore/payout'
+
+interface PayoutHistoryProps {
+  payouts: Payout[]
+  loading?: boolean
+}
+
+export function PayoutHistory({ payouts, loading }: PayoutHistoryProps) {
+  const formatCurrency = (amountInCents: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amountInCents / 100)
+  }
+
+  const getStatusBadge = (status: Payout['status']) => {
+    switch (status) {
+      case 'completed':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+            <Check className="w-3 h-3" />
+            Completed
+          </span>
+        )
+      case 'failed':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
+            <X className="w-3 h-3" />
+            Failed
+          </span>
+        )
+      case 'processing':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+            <Clock className="w-3 h-3" />
+            Processing
+          </span>
+        )
+      case 'pending':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">
+            <Clock className="w-3 h-3" />
+            Pending
+          </span>
+        )
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 md:p-8">
+        <h3 className="text-xl font-bold text-gray-900 mb-6">Payout History</h3>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="animate-pulse">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gray-200 rounded-xl" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-1/4" />
+                  <div className="h-3 bg-gray-200 rounded w-1/3" />
+                </div>
+                <div className="h-6 bg-gray-200 rounded w-20" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (!payouts || payouts.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 md:p-8">
+        <h3 className="text-xl font-bold text-gray-900 mb-6">Payout History</h3>
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <DollarSign className="w-8 h-8 text-gray-400" />
+          </div>
+          <h4 className="text-lg font-semibold text-gray-900 mb-2">No payouts yet</h4>
+          <p className="text-gray-600 max-w-md mx-auto">
+            Your payout history will appear here once you start receiving payments from your events.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 md:p-8">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-gray-900">Payout History</h3>
+        <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+          <Download className="w-4 h-4" />
+          Export
+        </button>
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b-2 border-gray-200">
+              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Date</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Amount</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Method</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
+              <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {payouts.map((payout) => (
+              <tr key={payout.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                <td className="py-4 px-4">
+                  <div className="text-sm font-medium text-gray-900">
+                    {new Date(payout.scheduledDate).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </div>
+                  {payout.completedAt && (
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {formatDistanceToNow(new Date(payout.completedAt), { addSuffix: true })}
+                    </div>
+                  )}
+                </td>
+                <td className="py-4 px-4">
+                  <span className="text-sm font-bold text-gray-900">
+                    {formatCurrency(payout.amount)}
+                  </span>
+                </td>
+                <td className="py-4 px-4">
+                  <span className="text-sm text-gray-700 capitalize">
+                    {payout.method.replace('_', ' ')}
+                  </span>
+                </td>
+                <td className="py-4 px-4">{getStatusBadge(payout.status)}</td>
+                <td className="py-4 px-4 text-right">
+                  {payout.status === 'failed' && (
+                    <button className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-teal-600 hover:bg-teal-50 rounded-lg transition-colors">
+                      <RefreshCw className="w-3 h-3" />
+                      Retry
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile List */}
+      <div className="md:hidden space-y-4">
+        {payouts.map((payout) => (
+          <div
+            key={payout.id}
+            className="p-4 border-2 border-gray-200 rounded-xl hover:border-gray-300 transition-colors"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <div className="text-sm font-medium text-gray-900 mb-1">
+                  {new Date(payout.scheduledDate).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </div>
+                {payout.completedAt && (
+                  <div className="text-xs text-gray-500">
+                    {formatDistanceToNow(new Date(payout.completedAt), { addSuffix: true })}
+                  </div>
+                )}
+              </div>
+              {getStatusBadge(payout.status)}
+            </div>
+
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-2xl font-bold text-gray-900">
+                {formatCurrency(payout.amount)}
+              </span>
+              <span className="text-sm text-gray-600 capitalize">
+                {payout.method.replace('_', ' ')}
+              </span>
+            </div>
+
+            {payout.status === 'failed' && payout.failureReason && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-3">
+                <p className="text-xs text-red-800">
+                  <strong>Reason:</strong> {payout.failureReason}
+                </p>
+              </div>
+            )}
+
+            {payout.status === 'failed' && (
+              <button className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-teal-600 hover:bg-teal-50 border-2 border-teal-600 rounded-lg transition-colors">
+                <RefreshCw className="w-4 h-4" />
+                Retry Payout
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Load More */}
+      {payouts.length >= 10 && (
+        <div className="mt-6 text-center">
+          <button className="px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition-colors">
+            Load More
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
