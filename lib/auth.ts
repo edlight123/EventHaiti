@@ -53,6 +53,10 @@ export async function getCurrentUser() {
 
   const userData = userDoc.data()
   
+  // Convert Firestore Timestamps to ISO strings to prevent serialization errors
+  const created_at = userData?.created_at?.toDate ? userData.created_at.toDate().toISOString() : (userData?.created_at || new Date().toISOString())
+  const updated_at = userData?.updated_at?.toDate ? userData.updated_at.toDate().toISOString() : (userData?.updated_at || new Date().toISOString())
+  
   return {
     id: userDoc.id,
     email: userData?.email || user.email || '',
@@ -61,8 +65,8 @@ export async function getCurrentUser() {
     phone_number: userData?.phone_number || null,
     is_verified: userData?.is_verified || false,
     verification_status: userData?.verification_status || 'none',
-    created_at: userData?.created_at || new Date().toISOString(),
-    updated_at: userData?.updated_at || new Date().toISOString()
+    created_at,
+    updated_at
   } as any
 }
 
