@@ -59,7 +59,7 @@ export async function getRecentAdminActivities(limit: number = 10) {
       .limit(limit)
       .get()
 
-    return snapshot.docs.map(doc => {
+    return snapshot.docs.map((doc: any) => {
       const data = doc.data()
       return {
         id: doc.id,
