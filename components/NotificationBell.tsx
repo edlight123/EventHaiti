@@ -17,28 +17,47 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   useEffect(() => {
     setMounted(true)
     
-    // Real-time listener for unread notifications
-    const notificationsRef = collection(db, 'users', userId, 'notifications')
-    const q = query(notificationsRef, where('isRead', '==', false))
+    if (!userId) return
     
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        setUnreadCount(snapshot.size)
-      },
-      (error) => {
-        // Handle permission errors gracefully - don't break the UI
-        if (error.code === 'permission-denied') {
-          console.warn('Notifications permission denied. Please configure Firestore security rules.')
-        } else {
-          console.error('Error listening to notifications:', error)
+    let unsubscribe: (() => void) | undefined
+    
+    try {
+      // Real-time listener for unread notifications
+      const notificationsRef = collection(db, 'users', userId, 'notifications')
+      const q = query(notificationsRef, where('isRead', '==', false))
+      
+      unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          setUnreadCount(snapshot.size)
+        },
+        (error) => {
+          // Handle errors gracefully - don't break the UI
+          if (error.code === 'permission-denied') {
+            console.warn('Notifications permission denied. Please configure Firestore security rules.')
+          } else if (error.code === 'unavailable') {
+            console.warn('Firestore temporarily unavailable. Notifications will retry automatically.')
+          } else {
+            console.error('Error listening to notifications:', error)
+          }
+          // Set count to 0 on error so the UI still works
+          setUnreadCount(0)
         }
-        // Set count to 0 on error so the UI still works
-        setUnreadCount(0)
-      }
-    )
+      )
+    } catch (error) {
+      console.error('Failed to initialize notifications listener:', error)
+      setUnreadCount(0)
+    }
 
-    return () => unsubscribe()
+    return () => {
+      if (unsubscribe) {
+        try {
+          unsubscribe()
+        } catch (error) {
+          console.error('Error unsubscribing from notifications:', error)
+        }
+      }
+    }
   }, [userId])
   
   // Prevent hydration mismatch by not showing count until mounted
