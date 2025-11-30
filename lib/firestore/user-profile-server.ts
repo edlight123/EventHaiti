@@ -38,3 +38,24 @@ export async function getUserProfileServer(uid: string): Promise<UserProfile | n
     return null
   }
 }
+
+/**
+ * Update user role in Firestore (server-side)
+ * Use this in Server Actions and API routes
+ */
+export async function updateUserRole(uid: string, role: 'attendee' | 'organizer'): Promise<{ success: boolean; error?: string }> {
+  try {
+    await adminDb.collection('users').doc(uid).update({
+      role,
+      updated_at: new Date()
+    })
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating user role:', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to update user role'
+    }
+  }
+}

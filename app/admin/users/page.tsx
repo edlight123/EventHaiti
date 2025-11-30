@@ -6,10 +6,23 @@ import MobileNavWrapper from '@/components/MobileNavWrapper'
 import PullToRefresh from '@/components/PullToRefresh'
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
+import { updateUserRole } from '@/lib/firestore/user-profile-server'
 
 export const revalidate = 0
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e)
+
+async function promoteToOrganizer(formData: FormData) {
+  'use server'
+  
+  const userId = formData.get('userId') as string
+  if (!userId) {
+    return
+  }
+
+  await updateUserRole(userId, 'organizer')
+  revalidatePath('/admin/users')
+}
 
 export default async function AdminUsersPage() {
   const user = await getCurrentUser()
@@ -79,41 +92,55 @@ export default async function AdminUsersPage() {
             <>
               {/* Mobile: stacked cards */}
               <div className="sm:hidden divide-y divide-gray-100">
-                {allUsers.map((u: any) => (
-                  <div key={u.id} className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-gray-900 truncate">{u.full_name || 'No name'}</div>
-                        <div className="text-[13px] text-gray-500 truncate">{u.email}</div>
+                {allUsers.map((u: any) => {
+                  const shouldBeOrganizer = u.is_verified && u.is_organizer && u.role !== 'organizer'
+                  return (
+                    <div key={u.id} className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-gray-900 truncate">{u.full_name || 'No name'}</div>
+                          <div className="text-[13px] text-gray-500 truncate">{u.email}</div>
+                        </div>
+                        <div>
+                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            u.role === 'organizer' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {u.role || 'attendee'}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          u.role === 'organizer' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {u.role || 'attendee'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <div>
-                        {u.role === 'organizer' ? (
-                          u.is_verified ? (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✓ Verified</span>
+                      <div className="mt-3 flex items-center justify-between">
+                        <div>
+                          {u.role === 'organizer' || u.is_organizer ? (
+                            u.is_verified ? (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✓ Verified</span>
+                            ) : (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                {u.verification_status === 'pending' ? 'Pending' : 'Not Verified'}
+                              </span>
+                            )
                           ) : (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                              {u.verification_status === 'pending' ? 'Pending' : 'Not Verified'}
-                            </span>
-                          )
-                        ) : (
-                          <span className="text-[13px] text-gray-400">N/A</span>
-                        )}
+                            <span className="text-[13px] text-gray-400">N/A</span>
+                          )}
+                        </div>
+                        <div className="text-[13px] text-gray-500">
+                          {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
+                        </div>
                       </div>
-                      <div className="text-[13px] text-gray-500">
-                        {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
-                      </div>
+                      {shouldBeOrganizer && (
+                        <form action={promoteToOrganizer} className="mt-3">
+                          <input type="hidden" name="userId" value={u.id} />
+                          <button
+                            type="submit"
+                            className="w-full px-3 py-1.5 text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                          >
+                            Promote to Organizer
+                          </button>
+                        </form>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
 
               {/* Desktop: table */}
@@ -125,42 +152,59 @@ export default async function AdminUsersPage() {
                       <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Role</th>
                       <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Verification</th>
                       <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Joined</th>
+                      <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {allUsers.map((u: any) => (
-                      <tr key={u.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium text-gray-900 truncate">{u.full_name || 'No name'}</div>
-                            <div className="text-[13px] text-gray-500 truncate">{u.email}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            u.role === 'organizer' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {u.role || 'attendee'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {u.role === 'organizer' ? (
-                            u.is_verified ? (
-                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✓ Verified</span>
+                    {allUsers.map((u: any) => {
+                      const shouldBeOrganizer = u.is_verified && u.is_organizer && u.role !== 'organizer'
+                      return (
+                        <tr key={u.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4">
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium text-gray-900 truncate">{u.full_name || 'No name'}</div>
+                              <div className="text-[13px] text-gray-500 truncate">{u.email}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              u.role === 'organizer' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {u.role || 'attendee'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            {u.role === 'organizer' || u.is_organizer ? (
+                              u.is_verified ? (
+                                <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✓ Verified</span>
+                              ) : (
+                                <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                  {u.verification_status === 'pending' ? 'Pending' : 'Not Verified'}
+                                </span>
+                              )
                             ) : (
-                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                {u.verification_status === 'pending' ? 'Pending' : 'Not Verified'}
-                              </span>
-                            )
-                          ) : (
-                            <span className="text-[13px] text-gray-400">N/A</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-[13px] text-gray-500 whitespace-nowrap">
-                          {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
-                        </td>
-                      </tr>
-                    ))}
+                              <span className="text-[13px] text-gray-400">N/A</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-[13px] text-gray-500 whitespace-nowrap">
+                            {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {shouldBeOrganizer && (
+                              <form action={promoteToOrganizer}>
+                                <input type="hidden" name="userId" value={u.id} />
+                                <button
+                                  type="submit"
+                                  className="px-3 py-1.5 text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                                >
+                                  Promote to Organizer
+                                </button>
+                              </form>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
