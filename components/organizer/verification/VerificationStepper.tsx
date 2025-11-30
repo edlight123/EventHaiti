@@ -13,7 +13,16 @@ interface Props {
 }
 
 export default function VerificationStepper({ request, onEditStep, isReadOnly = false }: Props) {
-  const steps = Object.entries(request.steps) as [keyof VerificationRequest['steps'], VerificationStep][]
+  // Fixed order of steps to prevent random ordering
+  const stepOrder: (keyof VerificationRequest['steps'])[] = [
+    'organizerInfo',
+    'governmentId', 
+    'selfie',
+    'businessDetails',
+    'payoutSetup'
+  ]
+  
+  const steps = stepOrder.map(stepId => [stepId, request.steps[stepId]] as [keyof VerificationRequest['steps'], VerificationStep])
 
   return (
     <div className="space-y-4">

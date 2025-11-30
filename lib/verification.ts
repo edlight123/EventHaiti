@@ -150,8 +150,7 @@ export async function initializeVerificationRequest(userId: string): Promise<Ver
         description: 'Configure how you receive payments (can be set up later)',
         status: 'incomplete',
         required: false,
-        fields: {},
-        missingFields: []
+        fields: {}
       }
     },
     files: {},
