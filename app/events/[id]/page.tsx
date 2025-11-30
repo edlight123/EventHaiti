@@ -140,6 +140,15 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         is_verified: false
       }
     }
+    
+    // Fetch ticket tiers to calculate accurate total capacity
+    const { data: tiersData } = await supabase
+      .from('ticket_tiers')
+      .select('quantity')
+      .eq('event_id', id)
+    
+    const totalFromTiers = tiersData?.reduce((sum: number, tier: any) => sum + (tier.quantity || 0), 0) || 0
+    event.total_tickets = totalFromTiers || event.total_tickets || 0
   }
 
   const remainingTickets = (event.total_tickets || 0) - (event.tickets_sold || 0)
