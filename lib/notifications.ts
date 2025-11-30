@@ -81,10 +81,20 @@ export async function markAllAsRead(userId: string): Promise<void> {
  * Get unread notification count for a user
  */
 export async function getUnreadCount(userId: string): Promise<number> {
-  const notificationsRef = collection(db, 'users', userId, 'notifications')
-  const q = query(notificationsRef, where('isRead', '==', false))
-  const snapshot = await getDocs(q)
-  return snapshot.size
+  try {
+    const notificationsRef = collection(db, 'users', userId, 'notifications')
+    const q = query(notificationsRef, where('isRead', '==', false))
+    const snapshot = await getDocs(q)
+    return snapshot.size
+  } catch (error: any) {
+    // Handle permission errors gracefully
+    if (error?.code === 'permission-denied') {
+      console.warn('Firestore permission denied for notifications. Please deploy firestore.rules.')
+      return 0
+    }
+    console.error('Error getting unread count:', error)
+    return 0
+  }
 }
 
 /**
@@ -94,27 +104,37 @@ export async function getUserNotifications(
   userId: string,
   limitCount: number = 50
 ): Promise<Notification[]> {
-  const notificationsRef = collection(db, 'users', userId, 'notifications')
-  const q = query(
-    notificationsRef,
-    orderBy('createdAt', 'desc'),
-    limit(limitCount)
-  )
-  
-  const snapshot = await getDocs(q)
-  
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    userId,
-    type: doc.data().type,
-    title: doc.data().title,
-    message: doc.data().message,
-    eventId: doc.data().eventId || undefined,
-    ticketId: doc.data().ticketId || undefined,
-    isRead: doc.data().isRead,
-    createdAt: doc.data().createdAt.toDate(),
-    readAt: doc.data().readAt?.toDate() || undefined
-  }))
+  try {
+    const notificationsRef = collection(db, 'users', userId, 'notifications')
+    const q = query(
+      notificationsRef,
+      orderBy('createdAt', 'desc'),
+      limit(limitCount)
+    )
+    
+    const snapshot = await getDocs(q)
+    
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      userId,
+      type: doc.data().type,
+      title: doc.data().title,
+      message: doc.data().message,
+      eventId: doc.data().eventId || undefined,
+      ticketId: doc.data().ticketId || undefined,
+      isRead: doc.data().isRead,
+      createdAt: doc.data().createdAt.toDate(),
+      readAt: doc.data().readAt?.toDate() || undefined
+    }))
+  } catch (error: any) {
+    // Handle permission errors gracefully
+    if (error?.code === 'permission-denied') {
+      console.warn('Firestore permission denied for notifications. Please deploy firestore.rules.')
+      return []
+    }
+    console.error('Error getting user notifications:', error)
+    return []
+  }
 }
 
 /**
