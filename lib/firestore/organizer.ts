@@ -13,23 +13,32 @@ export async function getOrganizerEvents(organizerId: string) {
 
     return eventsSnapshot.docs.map((doc: any) => {
       const data = doc.data()
+      // Convert Firestore Timestamps to ISO strings for serialization
+      const startDateTime = data.start_datetime?.toDate?.() 
+        ? data.start_datetime.toDate().toISOString() 
+        : (typeof data.start_datetime === 'string' ? data.start_datetime : new Date(data.start_datetime).toISOString())
+      const endDateTime = data.end_datetime?.toDate?.() 
+        ? data.end_datetime.toDate().toISOString() 
+        : (typeof data.end_datetime === 'string' ? data.end_datetime : new Date(data.end_datetime).toISOString())
+      
       return {
         id: doc.id,
         title: data.title,
         description: data.description,
-        startDateTime: data.start_datetime?.toDate?.() || new Date(data.start_datetime),
-        endDateTime: data.end_datetime?.toDate?.() || new Date(data.end_datetime),
-        venueName: data.venue_name || '',
-        venueAddress: data.venue_address || '',
+        start_datetime: startDateTime,
+        end_datetime: endDateTime,
+        venue_name: data.venue_name || '',
+        venue_address: data.venue_address || '',
         city: data.city || data.commune || '',
+        commune: data.commune || data.city || '',
         price: data.price || 0,
-        maxAttendees: data.max_attendees || 0,
-        bannerImage: data.banner_image || data.banner_image_url || '',
+        max_attendees: data.max_attendees || 0,
+        banner_image_url: data.banner_image || data.banner_image_url || '',
         category: data.category || '',
         status: data.status || 'draft',
-        isPublished: data.is_published ?? data.status === 'published',
-        createdAt: data.created_at?.toDate?.() || new Date(data.created_at || Date.now()),
-        organizerId: data.organizer_id
+        is_published: data.is_published ?? data.status === 'published',
+        created_at: data.created_at?.toDate?.() ? data.created_at.toDate().toISOString() : new Date().toISOString(),
+        organizer_id: data.organizer_id
       }
     })
   } catch (error) {
@@ -69,14 +78,20 @@ export async function getOrganizerTickets(organizerId: string) {
     batches.forEach(snapshot => {
       snapshot.docs.forEach((doc: any) => {
         const data = doc.data()
+        const purchasedAt = data.purchased_at?.toDate?.() 
+          ? data.purchased_at.toDate().toISOString() 
+          : (data.created_at?.toDate?.() 
+              ? data.created_at.toDate().toISOString() 
+              : new Date().toISOString())
+        
         allTickets.push({
           id: doc.id,
-          eventId: data.event_id,
-          userId: data.user_id,
-          pricePaid: data.price_paid || 0,
+          event_id: data.event_id,
+          user_id: data.user_id,
+          price_paid: data.price_paid || 0,
           status: data.status || 'active',
-          purchasedAt: data.purchased_at?.toDate?.() || data.created_at?.toDate?.() || new Date(),
-          checkedIn: data.checked_in || false
+          purchased_at: purchasedAt,
+          checked_in: data.checked_in || false
         })
       })
     })
@@ -104,23 +119,23 @@ export async function getOrganizerStats(organizerId: string, range: '7d' | '30d'
                       new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
     // Filter tickets by date range
-    const filteredTickets = tickets.filter((t: any) => t.purchasedAt >= cutoffDate)
+    const filteredTickets = tickets.filter((t: any) => new Date(t.purchased_at) >= cutoffDate)
 
     // Calculate stats
     const totalEvents = events.length
-    const upcomingEvents = events.filter((e: any) => e.startDateTime > now).length
-    const draftEvents = events.filter((e: any) => !e.isPublished).length
+    const upcomingEvents = events.filter((e: any) => new Date(e.start_datetime) > now).length
+    const draftEvents = events.filter((e: any) => !e.is_published).length
     const ticketsSold = filteredTickets.length
-    const revenue = filteredTickets.reduce((sum: number, t: any) => sum + (t.pricePaid || 0), 0)
+    const revenue = filteredTickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0)
     const avgTicketsPerEvent = totalEvents > 0 ? ticketsSold / totalEvents : 0
 
     // Find events with 0 sales starting within 7 days
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-    const eventsWithTickets = new Set(tickets.map((t: any) => t.eventId))
+    const eventsWithTickets = new Set(tickets.map((t: any) => t.event_id))
     const upcomingSoonWithNoSales = events.filter((e: any) =>
-      e.isPublished &&
-      e.startDateTime > now && 
-      e.startDateTime <= sevenDaysFromNow &&
+      e.is_published &&
+      new Date(e.start_datetime) > now && 
+      new Date(e.start_datetime) <= sevenDaysFromNow &&
       !eventsWithTickets.has(e.id)
     )
 
@@ -160,8 +175,8 @@ export async function getNextEvent(organizerId: string) {
     const now = new Date()
     
     const upcomingEvents = events
-      .filter((e: any) => e.startDateTime > now)
-      .sort((a: any, b: any) => a.startDateTime.getTime() - b.startDateTime.getTime())
+      .filter((e: any) => new Date(e.start_datetime) > now)
+      .sort((a: any, b: any) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
 
     if (upcomingEvents.length === 0) {
       return null
@@ -179,22 +194,22 @@ export async function getNextEvent(organizerId: string) {
       const data = doc.data()
       return {
         id: doc.id,
-        pricePaid: data.price_paid || 0,
+        price_paid: data.price_paid || 0,
         status: data.status || 'active',
-        checkedIn: data.checked_in || false
+        checked_in: data.checked_in || false
       }
     })
 
     const ticketsSold = tickets.length
-    const revenue = tickets.reduce((sum: number, t: any) => sum + (t.pricePaid || 0), 0)
-    const checkedInCount = tickets.filter((t: any) => t.checkedIn).length
+    const revenue = tickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0)
+    const checkedInCount = tickets.filter((t: any) => t.checked_in).length
 
     return {
       ...nextEvent,
       ticketsSold,
       revenue,
       checkedInCount,
-      capacity: nextEvent.maxAttendees
+      capacity: nextEvent.max_attendees
     }
   } catch (error) {
     console.error('Error fetching next event:', error)
@@ -223,34 +238,49 @@ export async function getEventWithStats(eventId: string) {
 
     const tickets = ticketsSnapshot.docs.map((doc: any) => {
       const data = doc.data()
+      const purchasedAt = data.purchased_at?.toDate?.() 
+        ? data.purchased_at.toDate().toISOString() 
+        : (data.created_at?.toDate?.() 
+            ? data.created_at.toDate().toISOString() 
+            : new Date().toISOString())
+      
       return {
         id: doc.id,
-        pricePaid: data.price_paid || 0,
+        price_paid: data.price_paid || 0,
         status: data.status || 'active',
-        checkedIn: data.checked_in || false,
-        purchasedAt: data.purchased_at?.toDate?.() || data.created_at?.toDate?.() || new Date()
+        checked_in: data.checked_in || false,
+        purchased_at: purchasedAt
       }
     })
 
     const ticketsSold = tickets.length
-    const revenue = tickets.reduce((sum: number, t: any) => sum + (t.pricePaid || 0), 0)
-    const checkedInCount = tickets.filter((t: any) => t.checkedIn).length
+    const revenue = tickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0)
+    const checkedInCount = tickets.filter((t: any) => t.checked_in).length
+
+    // Convert Firestore Timestamps to ISO strings
+    const startDateTime = data.start_datetime?.toDate?.() 
+      ? data.start_datetime.toDate().toISOString() 
+      : (typeof data.start_datetime === 'string' ? data.start_datetime : new Date(data.start_datetime).toISOString())
+    const endDateTime = data.end_datetime?.toDate?.() 
+      ? data.end_datetime.toDate().toISOString() 
+      : (typeof data.end_datetime === 'string' ? data.end_datetime : new Date(data.end_datetime).toISOString())
 
     return {
       id: eventDoc.id,
       title: data.title,
       description: data.description,
-      startDateTime: data.start_datetime?.toDate?.() || new Date(data.start_datetime),
-      endDateTime: data.end_datetime?.toDate?.() || new Date(data.end_datetime),
-      venueName: data.venue_name || '',
-      venueAddress: data.venue_address || '',
+      start_datetime: startDateTime,
+      end_datetime: endDateTime,
+      venue_name: data.venue_name || '',
+      venue_address: data.venue_address || '',
       city: data.city || data.commune || '',
+      commune: data.commune || data.city || '',
       price: data.price || 0,
-      maxAttendees: data.max_attendees || 0,
-      bannerImage: data.banner_image || data.banner_image_url || '',
+      max_attendees: data.max_attendees || 0,
+      banner_image_url: data.banner_image || data.banner_image_url || '',
       category: data.category || '',
       status: data.status || 'draft',
-      isPublished: data.is_published ?? data.status === 'published',
+      is_published: data.is_published ?? data.status === 'published',
       ticketsSold,
       revenue,
       checkedInCount,

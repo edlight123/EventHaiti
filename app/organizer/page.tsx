@@ -167,9 +167,9 @@ export default async function OrganizerDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {currentStats.events.map((event: any) => {
                   // Get ticket count for this event
-                  const eventTickets = currentStats.tickets.filter((t: any) => t.eventId === event.id)
+                  const eventTickets = currentStats.tickets.filter((t: any) => t.event_id === event.id)
                   const ticketsSold = eventTickets.length
-                  const revenue = eventTickets.reduce((sum: number, t: any) => sum + (t.pricePaid || 0), 0)
+                  const revenue = eventTickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0)
                   
                   return (
                     <OrganizerEventCard
@@ -178,7 +178,7 @@ export default async function OrganizerDashboard() {
                         ...event,
                         ticketsSold,
                         revenue,
-                        capacity: event.maxAttendees
+                        capacity: event.max_attendees
                       }}
                     />
                   )
