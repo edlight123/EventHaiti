@@ -9,10 +9,10 @@ import { revalidatePath } from 'next/cache'
 
 export const revalidate = 0
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e)
-
 export default async function AdminEventsPage() {
   const user = await getCurrentUser()
+
+  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e)
 
   if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
     redirect('/')

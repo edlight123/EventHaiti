@@ -11,10 +11,10 @@ import { revalidatePath } from 'next/cache'
 
 export const revalidate = 0
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@eventhaiti.com').split(',')
-
 export default async function AdminVerifyPage() {
   const user = await getCurrentUser()
+
+  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@eventhaiti.com').split(',')
 
   if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
     redirect('/')
