@@ -40,6 +40,12 @@ export default async function AdminUsersPage() {
     .order('created_at', { ascending: false })
 
   const allUsers = users || []
+  
+  // Pre-compute admin status for each user to avoid issues with module-level constants
+  const usersWithAdminFlag = allUsers.map((u: any) => ({
+    ...u,
+    isAdminUser: ADMIN_EMAILS.includes(u.email || '')
+  }))
 
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
@@ -67,24 +73,24 @@ export default async function AdminUsersPage() {
         <div className="flex overflow-x-auto gap-3 sm:gap-6 mb-6 sm:mb-8 pb-2 snap-x snap-mandatory md:grid md:grid-cols-3 scrollbar-hide">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 min-w-[180px] snap-start flex-shrink-0">
             <div className="text-[11px] sm:text-sm font-medium text-gray-600 uppercase tracking-wide">Total Users</div>
-            <div className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">{allUsers.length}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">{usersWithAdminFlag.length}</div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 min-w-[180px] snap-start flex-shrink-0">
             <div className="text-[11px] sm:text-sm font-medium text-gray-600 uppercase tracking-wide">Organizers</div>
             <div className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">
-              {allUsers.filter((u: any) => u.role === 'organizer').length}
+              {usersWithAdminFlag.filter((u: any) => u.role === 'organizer').length}
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 min-w-[180px] snap-start flex-shrink-0">
             <div className="text-[11px] sm:text-sm font-medium text-gray-600 uppercase tracking-wide">Verified Organizers</div>
             <div className="text-2xl sm:text-3xl font-bold text-teal-600 mt-1 sm:mt-2">
-              {allUsers.filter((u: any) => u.is_verified).length}
+              {usersWithAdminFlag.filter((u: any) => u.is_verified).length}
             </div>
           </div>
         </div>
 
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          {allUsers.length === 0 ? (
+          {usersWithAdminFlag.length === 0 ? (
             <div className="p-8 sm:p-12 text-center">
               <p className="text-[13px] sm:text-base text-gray-500">No users found</p>
             </div>
@@ -92,16 +98,15 @@ export default async function AdminUsersPage() {
             <>
               {/* Mobile: stacked cards */}
               <div className="sm:hidden divide-y divide-gray-100">
-                {allUsers.map((u: any) => {
-                  const isAdmin = ADMIN_EMAILS.includes(u.email || '')
-                  const shouldBeOrganizer = (u.is_verified && u.is_organizer && u.role !== 'organizer') || (u.is_verified && isAdmin && u.role !== 'organizer')
+                {usersWithAdminFlag.map((u: any) => {
+                  const shouldBeOrganizer = (u.is_verified && u.is_organizer && u.role !== 'organizer') || (u.is_verified && u.isAdminUser && u.role !== 'organizer')
                   return (
                     <div key={u.id} className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="min-w-0">
                           <div className="text-sm font-medium text-gray-900 truncate">{u.full_name || 'No name'}</div>
                           <div className="text-[13px] text-gray-500 truncate">{u.email}</div>
-                          {isAdmin && (
+                          {u.isAdminUser && (
                             <div className="text-[11px] text-orange-600 font-semibold mt-0.5">ADMIN</div>
                           )}
                         </div>
@@ -115,7 +120,7 @@ export default async function AdminUsersPage() {
                       </div>
                       <div className="mt-3 flex items-center justify-between">
                         <div>
-                          {u.role === 'organizer' || u.is_organizer || isAdmin ? (
+                          {u.role === 'organizer' || u.is_organizer || u.isAdminUser ? (
                             u.is_verified ? (
                               <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✓ Verified</span>
                             ) : (
@@ -160,16 +165,15 @@ export default async function AdminUsersPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {allUsers.map((u: any) => {
-                      const isAdmin = ADMIN_EMAILS.includes(u.email || '')
-                      const shouldBeOrganizer = (u.is_verified && u.is_organizer && u.role !== 'organizer') || (u.is_verified && isAdmin && u.role !== 'organizer')
+                    {usersWithAdminFlag.map((u: any) => {
+                      const shouldBeOrganizer = (u.is_verified && u.is_organizer && u.role !== 'organizer') || (u.is_verified && u.isAdminUser && u.role !== 'organizer')
                       return (
                         <tr key={u.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4">
                             <div className="min-w-0">
                               <div className="text-sm font-medium text-gray-900 truncate">{u.full_name || 'No name'}</div>
                               <div className="text-[13px] text-gray-500 truncate">{u.email}</div>
-                              {isAdmin && (
+                              {u.isAdminUser && (
                                 <div className="text-[11px] text-orange-600 font-semibold mt-0.5">ADMIN</div>
                               )}
                             </div>
@@ -182,7 +186,7 @@ export default async function AdminUsersPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            {u.role === 'organizer' || u.is_organizer || isAdmin ? (
+                            {u.role === 'organizer' || u.is_organizer || u.isAdminUser ? (
                               u.is_verified ? (
                                 <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✓ Verified</span>
                               ) : (
