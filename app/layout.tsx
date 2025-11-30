@@ -4,7 +4,6 @@ import './globals.css'
 import { BRAND } from '@/config/brand'
 import { ToastProvider } from '@/components/ui/Toast'
 import PWAInstallPrompt from '@/components/pwa/PWAInstallPrompt'
-import EnableNotificationsButton from '@/components/pwa/EnableNotificationsButton'
 
 // Force rebuild 2024-01-XX - Fix Suspense errors cascading from discover page
 const inter = Inter({ subsets: ['latin'] })
@@ -25,6 +24,9 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: 'default',
     title: BRAND.name,
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
   },
 }
 
@@ -48,7 +50,6 @@ export default function RootLayout({
           {children}
         </ToastProvider>
         <PWAInstallPrompt />
-        <EnableNotificationsButton />
       </body>
     </html>
   )
