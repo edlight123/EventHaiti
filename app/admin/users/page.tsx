@@ -93,13 +93,17 @@ export default async function AdminUsersPage() {
               {/* Mobile: stacked cards */}
               <div className="sm:hidden divide-y divide-gray-100">
                 {allUsers.map((u: any) => {
-                  const shouldBeOrganizer = u.is_verified && u.is_organizer && u.role !== 'organizer'
+                  const isAdmin = ADMIN_EMAILS.includes(u.email || '')
+                  const shouldBeOrganizer = (u.is_verified && u.is_organizer && u.role !== 'organizer') || (u.is_verified && isAdmin && u.role !== 'organizer')
                   return (
                     <div key={u.id} className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="min-w-0">
                           <div className="text-sm font-medium text-gray-900 truncate">{u.full_name || 'No name'}</div>
                           <div className="text-[13px] text-gray-500 truncate">{u.email}</div>
+                          {isAdmin && (
+                            <div className="text-[11px] text-orange-600 font-semibold mt-0.5">ADMIN</div>
+                          )}
                         </div>
                         <div>
                           <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -111,7 +115,7 @@ export default async function AdminUsersPage() {
                       </div>
                       <div className="mt-3 flex items-center justify-between">
                         <div>
-                          {u.role === 'organizer' || u.is_organizer ? (
+                          {u.role === 'organizer' || u.is_organizer || isAdmin ? (
                             u.is_verified ? (
                               <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✓ Verified</span>
                             ) : (
@@ -157,13 +161,17 @@ export default async function AdminUsersPage() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {allUsers.map((u: any) => {
-                      const shouldBeOrganizer = u.is_verified && u.is_organizer && u.role !== 'organizer'
+                      const isAdmin = ADMIN_EMAILS.includes(u.email || '')
+                      const shouldBeOrganizer = (u.is_verified && u.is_organizer && u.role !== 'organizer') || (u.is_verified && isAdmin && u.role !== 'organizer')
                       return (
                         <tr key={u.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4">
                             <div className="min-w-0">
                               <div className="text-sm font-medium text-gray-900 truncate">{u.full_name || 'No name'}</div>
                               <div className="text-[13px] text-gray-500 truncate">{u.email}</div>
+                              {isAdmin && (
+                                <div className="text-[11px] text-orange-600 font-semibold mt-0.5">ADMIN</div>
+                              )}
                             </div>
                           </td>
                           <td className="px-6 py-4">
@@ -174,7 +182,7 @@ export default async function AdminUsersPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            {u.role === 'organizer' || u.is_organizer ? (
+                            {u.role === 'organizer' || u.is_organizer || isAdmin ? (
                               u.is_verified ? (
                                 <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✓ Verified</span>
                               ) : (
