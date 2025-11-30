@@ -48,7 +48,7 @@ export async function getOrganizerEvents(organizerId: string) {
         max_attendees: data.max_attendees || 0,
         banner_image_url: data.banner_image || data.banner_image_url || '',
         category: data.category || '',
-        status: data.status || 'draft',
+        status: data.is_published ? 'published' : 'draft',
         is_published: data.is_published ?? data.status === 'published',
         created_at: createdAt,
         updated_at: updatedAt,
