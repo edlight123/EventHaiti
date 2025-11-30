@@ -1,9 +1,8 @@
 // Event Discovery Page
-// Removed Suspense wrapper to fix React errors #425 and #422
-// Client components with useSearchParams cannot be inside Suspense boundaries
-// Force dynamic rendering to prevent static generation issues
+// Fix React errors #425 and #422 by wrapping client components with useSearchParams in Suspense
 export const dynamic = 'force-dynamic'
 
+import { Suspense } from 'react'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/firebase-db/server'
 import Navbar from '@/components/Navbar'
@@ -103,7 +102,9 @@ export default async function DiscoverPage({
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
       {/* Top Bar with Filter Manager (includes ActiveFiltersRow) */}
-      <DiscoverFilterManager />
+      <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200" />}>
+        <DiscoverFilterManager />
+      </Suspense>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
@@ -112,7 +113,9 @@ export default async function DiscoverPage({
             {/* Date Strip */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">When</h3>
-              <DateChips currentDate={filters.date} />
+              <Suspense fallback={<div className="h-10 bg-gray-100 animate-pulse rounded-lg" />}>
+                <DateChips currentDate={filters.date} />
+              </Suspense>
             </div>
 
             {/* Featured Carousel (only if no active filters and has featured) */}
@@ -131,7 +134,9 @@ export default async function DiscoverPage({
             {/* Category Shortcuts */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Categories</h3>
-              <CategoryChips selectedCategories={filters.categories} />
+              <Suspense fallback={<div className="h-10 bg-gray-100 animate-pulse rounded-lg" />}>
+                <CategoryChips selectedCategories={filters.categories} />
+              </Suspense>
             </div>
 
             {/* Show sections only if no active filters */}
