@@ -40,10 +40,11 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
     redirect('/organizer/scan')
   }
 
-  // Fetch all tickets for this event
+  // Fetch all confirmed tickets for this event
   const ticketsSnapshot = await adminDb
     .collection('tickets')
     .where('event_id', '==', eventId)
+    .where('status', '==', 'confirmed')
     .get()
 
   const tickets = await Promise.all(
