@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/firebase-db/server'
 import Navbar from '@/components/Navbar'
@@ -12,7 +12,6 @@ import { DateChips } from '@/components/discover/DateChips'
 import { CategoryChips } from '@/components/discover/CategoryChips'
 import { EventsSection } from '@/components/discover/EventsSection'
 import { EmptyState } from '@/components/discover/EmptyState'
-import { DiscoverSkeleton } from '@/components/discover/DiscoverSkeleton'
 import { FeaturedCarousel } from '@/components/discover/FeaturedCarousel'
 import { DiscoverFilterManager } from '@/components/DiscoverFilterManager'
 import { 
@@ -103,7 +102,7 @@ export default async function DiscoverPage({
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <Suspense fallback={<DiscoverSkeleton />}>
+        
           <div className="space-y-8">
             {/* Date Strip */}
             <div className="space-y-3">
@@ -198,7 +197,7 @@ export default async function DiscoverPage({
               </>
             )}
           </div>
-        </Suspense>
+        
       </div>
 
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
