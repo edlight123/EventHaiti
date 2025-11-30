@@ -60,17 +60,25 @@ export function DateChips({ currentDate }: DateChipsProps) {
     <>
       <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
         <div className="flex gap-2 min-w-max">
-          {DATE_OPTIONS.map(option => (
-            <FilterChip
-              key={option.value}
-              label={option.value === 'pick-date' && currentDate === 'pick-date' && searchParams.get('pickedDate')
-                ? new Date(searchParams.get('pickedDate')! + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                : option.label
-              }
-              active={currentDate === option.value}
-              onClick={() => handleDateChange(option.value)}
-            />
-          ))}
+          {DATE_OPTIONS.map(option => {
+            // Format picked date label safely
+            let label = option.label
+            if (option.value === 'pick-date' && currentDate === 'pick-date' && searchParams.get('pickedDate')) {
+              const pickedDate = searchParams.get('pickedDate')!
+              const [year, month, day] = pickedDate.split('-')
+              const date = new Date(Number(year), Number(month) - 1, Number(day))
+              label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            }
+            
+            return (
+              <FilterChip
+                key={option.value}
+                label={label}
+                active={currentDate === option.value}
+                onClick={() => handleDateChange(option.value)}
+              />
+            )
+          })}
         </div>
       </div>
 

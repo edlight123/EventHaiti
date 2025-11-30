@@ -14,6 +14,19 @@ type Event = any // Will match Database['public']['Tables']['events']['Row']
 export function filterEvents(events: Event[], filters: EventFilters): Event[] {
   let filtered = [...events]
   
+  // Debug: Log all events being filtered
+  if (process.env.NODE_ENV === 'development') {
+    console.log('=== FILTER DEBUG ===')
+    console.log('Total events to filter:', events.length)
+    console.log('Filter settings:', filters)
+    if (events.length > 0) {
+      console.log('Sample event dates:', events.slice(0, 5).map(e => ({
+        title: e.title,
+        start_datetime: e.start_datetime
+      })))
+    }
+  }
+  
   // Date filter
   if (filters.date !== 'any') {
     const { start, end } = getDateRange(filters.date, filters.pickedDate)
