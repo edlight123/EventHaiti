@@ -14,7 +14,7 @@ import { AdminCommandBar } from '@/components/admin/AdminCommandBar'
 import { KpiCard } from '@/components/admin/KpiCard'
 import { WorkQueueCard } from '@/components/admin/WorkQueueCard'
 import { RecentActivityTimeline } from '@/components/admin/RecentActivityTimeline'
-import { Users, Calendar, Ticket, DollarSign, ShieldCheck, AlertCircle } from 'lucide-react'
+import { Users, Calendar, Ticket, DollarSign, ShieldCheck, AlertCircle, RefreshCcw } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -74,7 +74,7 @@ export default async function AdminDashboard() {
   ])
 
   const { usersCount, eventsCount, ticketsCount, pendingVerifications: pendingCount } = platformCounts
-  const { gmv7d, tickets7d } = metrics7d
+  const { gmv7d, tickets7d, refunds7d, refundsAmount7d } = metrics7d
 
   return (
     <PullToRefresh onRefresh={refreshPage}>
@@ -92,7 +92,7 @@ export default async function AdminDashboard() {
         </div>
 
         {/* KPI Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
           <KpiCard
             title="Total Users"
             value={usersCount}
@@ -122,11 +122,20 @@ export default async function AdminDashboard() {
           
           <KpiCard
             title="GMV (7d)"
-            value={`$${gmv7d.toLocaleString()}`}
+            value={`${gmv7d.toLocaleString()} HTG`}
             subtitle="Last 7 days"
             icon={DollarSign}
             iconColor="text-green-600"
             iconBg="bg-green-50"
+          />
+          
+          <KpiCard
+            title="Refunds (7d)"
+            value={refunds7d}
+            subtitle={`${refundsAmount7d.toLocaleString()} HTG`}
+            icon={RefreshCcw}
+            iconColor="text-orange-600"
+            iconBg="bg-orange-50"
           />
           
           <KpiCard
@@ -214,20 +223,23 @@ export default async function AdminDashboard() {
                 <AlertCircle className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <h3 className="font-bold text-blue-900 mb-2">7-Day Metrics Implementation</h3>
+                <h3 className="font-bold text-blue-900 mb-2">📊 Daily Statistics System</h3>
                 <div className="text-sm text-blue-800 space-y-2">
                   <p>
-                    Metrics are calculated from <code className="bg-blue-100 px-1 rounded">platform_stats_daily</code> rollups.
+                    Metrics are calculated from <code className="bg-blue-100 px-1 rounded">platform_stats_daily</code> rollups for optimal performance.
                   </p>
-                  <p className="font-medium">Next steps:</p>
+                  <p className="font-medium">✅ Automated daily at 1:00 AM UTC:</p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
-                    <li>Implement Cloud Function to generate daily rollups</li>
-                    <li>Aggregate confirmed ticket sales to <code className="bg-blue-100 px-1 rounded">gmvConfirmed</code></li>
-                    <li>Count tickets to <code className="bg-blue-100 px-1 rounded">ticketsConfirmed</code></li>
-                    <li>Track refunds in <code className="bg-blue-100 px-1 rounded">refundsCount</code></li>
+                    <li>GMV from confirmed ticket sales</li>
+                    <li>Total tickets sold</li>
+                    <li>Refunds count and amount</li>
                   </ul>
+                  <p className="font-medium mt-3">To backfill historical data:</p>
+                  <code className="block bg-blue-100 px-2 py-1 rounded text-xs mt-1">
+                    npm run backfill-stats
+                  </code>
                   <p className="text-xs mt-3 text-blue-700">
-                    Currently showing 0 if rollups don&apos;t exist. This is scalable and won&apos;t query all tickets.
+                    📖 See <code>docs/DAILY_STATS_SYSTEM.md</code> for full documentation
                   </p>
                 </div>
               </div>

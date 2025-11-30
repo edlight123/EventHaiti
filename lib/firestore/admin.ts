@@ -48,9 +48,14 @@ export async function getPlatformCounts() {
 
 /**
  * Get 7-day metrics from daily rollups
- * Returns GMV and tickets sold for the last 7 days
+ * Returns GMV, tickets sold, and refunds for the last 7 days
  */
-export async function get7DayMetrics(): Promise<{ gmv7d: number; tickets7d: number }> {
+export async function get7DayMetrics(): Promise<{ 
+  gmv7d: number
+  tickets7d: number
+  refunds7d: number
+  refundsAmount7d: number
+}> {
   try {
     const today = new Date()
     const dates: string[] = []
@@ -72,20 +77,24 @@ export async function get7DayMetrics(): Promise<{ gmv7d: number; tickets7d: numb
     
     let gmv7d = 0
     let tickets7d = 0
+    let refunds7d = 0
+    let refundsAmount7d = 0
     
     statsDocs.forEach(doc => {
       if (doc.exists) {
         const data = doc.data()
         gmv7d += data?.gmvConfirmed || 0
         tickets7d += data?.ticketsConfirmed || 0
+        refunds7d += data?.refundsCount || 0
+        refundsAmount7d += data?.refundsAmount || 0
       }
     })
 
-    return { gmv7d, tickets7d }
+    return { gmv7d, tickets7d, refunds7d, refundsAmount7d }
   } catch (error) {
     console.error('Error fetching 7-day metrics:', error)
     // If rollups don't exist yet, return 0
-    return { gmv7d: 0, tickets7d: 0 }
+    return { gmv7d: 0, tickets7d: 0, refunds7d: 0, refundsAmount7d: 0 }
   }
 }
 

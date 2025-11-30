@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "backfill-stats": "node scripts/backfill-daily-stats.js",
+    "backfill-stats:30": "node scripts/backfill-daily-stats.js 30"
   },
   "dependencies": {
     "@stripe/stripe-js": "^8.5.2",
