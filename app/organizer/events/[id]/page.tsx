@@ -104,13 +104,10 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
     .filter((t: any) => t.status !== 'cancelled')
     .reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0)
   const checkedIn = tickets.filter((t: any) => t.checked_in_at).length
-  
-  // Calculate total capacity from ticket tiers
-  const totalCapacity = tiers.reduce((sum: number, tier: any) => sum + (tier.quantity || 0), 0)
 
   const stats = {
     ticketsSold,
-    capacity: totalCapacity || event.max_attendees || 0,
+    capacity: eventData.total_tickets || 0,
     revenue,
     checkedIn,
   }

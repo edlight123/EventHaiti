@@ -167,22 +167,11 @@ export default async function OrganizerDashboard() {
 
             {currentStats.events.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {await Promise.all(currentStats.events.map(async (event: any) => {
+                {currentStats.events.map((event: any) => {
                   // Get ticket count for this event
                   const eventTickets = currentStats.tickets.filter((t: any) => t.event_id === event.id)
                   const ticketsSold = eventTickets.length
                   const revenue = eventTickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0)
-                  
-                  // Get total capacity from ticket_tiers
-                  const tiersSnapshot = await adminDb
-                    .collection('ticket_tiers')
-                    .where('event_id', '==', event.id)
-                    .get()
-                  
-                  const totalCapacity = tiersSnapshot.docs.reduce((sum: number, doc: any) => {
-                    const data = doc.data()
-                    return sum + (data.quantity || 0)
-                  }, 0)
                   
                   return (
                     <OrganizerEventCard
@@ -191,11 +180,11 @@ export default async function OrganizerDashboard() {
                         ...event,
                         ticketsSold,
                         revenue,
-                        capacity: totalCapacity || event.max_attendees || 0
+                        total_tickets: event.total_tickets || 0
                       }}
                     />
                   )
-                }))}
+                })}
               </div>
             ) : (
               <div className="bg-white rounded-xl border-2 border-dashed border-gray-300 p-8 md:p-12 text-center">
