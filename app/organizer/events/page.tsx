@@ -73,7 +73,10 @@ export default async function OrganizerEventsPage() {
         .from('events')
         .select('*')
       
-      console.log('Query result:', JSON.stringify(result, null, 2))
+      console.log('=== EVENTS QUERY DEBUG ===')
+      console.log('User ID:', user.id)
+      console.log('User email:', user.email)
+      console.log('Query result count:', result.data?.length || 0)
       
       if (result.error) {
         console.error('Error fetching events:', result.error)
@@ -81,12 +84,29 @@ export default async function OrganizerEventsPage() {
       
       // Filter for this organizer's events
       const allEvents = result.data || []
+      
+      // Debug: Show all unique organizer IDs
+      const organizerIds = new Set(allEvents.map((e: any) => e.organizer_id))
+      console.log('All organizer IDs in database:', Array.from(organizerIds))
+      console.log('Looking for organizer_id:', user.id)
+      
       events = allEvents.filter((e: any) => e.organizer_id === user.id)
+      
+      console.log('Events matching user.id:', events.length)
+      
+      // If no events found, check if any events match by comparing IDs differently
+      if (events.length === 0 && allEvents.length > 0) {
+        console.log('No events found for user.id, checking sample event:')
+        console.log('Sample event organizer_id:', allEvents[0]?.organizer_id)
+        console.log('Sample event organizer_id type:', typeof allEvents[0]?.organizer_id)
+        console.log('User ID type:', typeof user.id)
+        console.log('Are they equal?', allEvents[0]?.organizer_id === user.id)
+      }
       
       // Sort by start_datetime descending
       events.sort((a: any, b: any) => new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime())
       
-      console.log('Events array length:', events.length)
+      console.log('Final events array length:', events.length)
       if (events.length > 0) {
         console.log('First event:', events[0])
       }
