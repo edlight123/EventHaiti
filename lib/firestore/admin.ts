@@ -119,6 +119,7 @@ export async function getRecentEvents(limit: number = 8) {
         title: data.title,
         startDateTime: data.startDateTime?.toDate?.() || data.start_datetime?.toDate?.() || new Date(data.start_datetime || data.startDateTime),
         ticketPrice: data.ticketPrice || data.ticket_price || data.price || 0,
+        currency: data.currency || 'HTG',
         createdAt: data.createdAt?.toDate?.() || data.created_at?.toDate?.() || new Date(data.created_at || data.createdAt || Date.now()),
         isPublished: data.isPublished ?? data.is_published ?? data.status === 'published',
         city: data.city || data.commune || '',

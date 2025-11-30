@@ -82,7 +82,7 @@ export default async function AdminEventsPage() {
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <div className="text-[13px] text-gray-700">${(event.ticket_price || 0).toFixed(2)}</div>
+                      <div className="text-[13px] text-gray-700">{(event.ticket_price || 0).toFixed(2)} {event.currency || 'HTG'}</div>
                       <a
                         href={`/events/${event.id}`}
                         target="_blank"
@@ -123,7 +123,7 @@ export default async function AdminEventsPage() {
                         <td className="px-6 py-4 text-[13px] text-gray-500 whitespace-nowrap">
                           {event.start_datetime ? new Date(event.start_datetime).toLocaleDateString() : 'N/A'}
                         </td>
-                        <td className="px-6 py-4 text-[13px] text-gray-900 whitespace-nowrap">${(event.ticket_price || 0).toFixed(2)}</td>
+                        <td className="px-6 py-4 text-[13px] text-gray-900 whitespace-nowrap">{(event.ticket_price || 0).toFixed(2)} {event.currency || 'HTG'}</td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             event.start_datetime && new Date(event.start_datetime) > new Date()

@@ -167,16 +167,16 @@ export default async function AdminDashboard() {
             title="Recent Events"
             count={eventsCount}
             items={recentEvents.map((e: any) => {
-              // Build location string
-              const location = e.venueName 
-                ? `${e.venueName}, ${e.city}` 
-                : e.city 
-                ? e.city 
-                : 'Location TBD'
+              // Build location string - show city and venue if available
+              const locationParts = []
+              if (e.venueName) locationParts.push(e.venueName)
+              if (e.city) locationParts.push(e.city)
+              const location = locationParts.length > 0 ? locationParts.join(', ') : 'Location TBD'
               
-              // Format price (already in dollars, not cents)
+              // Format price with correct currency
+              const currency = e.currency || 'HTG'
               const price = e.ticketPrice != null && e.ticketPrice > 0
-                ? `$${e.ticketPrice.toFixed(2)}`
+                ? `${e.ticketPrice.toFixed(2)} ${currency}`
                 : 'Free'
               
               return {
