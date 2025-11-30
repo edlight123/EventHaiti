@@ -20,9 +20,17 @@ export function filterEvents(events: Event[], filters: EventFilters): Event[] {
     if (start || end) {
       filtered = filtered.filter(event => {
         const eventDate = new Date(event.start_datetime)
-        // Compare using timestamps to avoid timezone issues
-        const eventTime = eventDate.getTime()
         
+        // For single day filters (like pick-date), compare just the date parts
+        if (start && end && filters.date === 'pick-date') {
+          // Normalize both dates to YYYY-MM-DD strings for comparison to avoid timezone issues
+          const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`
+          const filterDateStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`
+          return eventDateStr === filterDateStr
+        }
+        
+        // For other filters, use time-based comparison
+        const eventTime = eventDate.getTime()
         if (start && eventTime < start.getTime()) return false
         if (end && eventTime > end.getTime()) return false
         return true
