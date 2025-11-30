@@ -1,0 +1,147 @@
+'use client'
+
+import { Calendar, FileText, History, XCircle } from 'lucide-react'
+
+export type EventTabType = 'upcoming' | 'drafts' | 'past' | 'cancelled'
+
+interface Tab {
+  id: EventTabType
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  color: string
+}
+
+const tabs: Tab[] = [
+  {
+    id: 'upcoming',
+    label: 'Upcoming',
+    icon: Calendar,
+    color: 'teal'
+  },
+  {
+    id: 'drafts',
+    label: 'Drafts',
+    icon: FileText,
+    color: 'gray'
+  },
+  {
+    id: 'past',
+    label: 'Past',
+    icon: History,
+    color: 'blue'
+  },
+  {
+    id: 'cancelled',
+    label: 'Cancelled',
+    icon: XCircle,
+    color: 'red'
+  }
+]
+
+interface OrganizerEventsTabsProps {
+  activeTab: EventTabType
+  onTabChange: (tab: EventTabType) => void
+  counts: {
+    upcoming: number
+    drafts: number
+    past: number
+    cancelled: number
+  }
+}
+
+export default function OrganizerEventsTabs({
+  activeTab,
+  onTabChange,
+  counts
+}: OrganizerEventsTabsProps) {
+  const getTabStyles = (tab: Tab, isActive: boolean) => {
+    const baseStyles = 'flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-all duration-200 relative'
+    
+    if (isActive) {
+      switch (tab.color) {
+        case 'teal':
+          return `${baseStyles} bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow-md`
+        case 'gray':
+          return `${baseStyles} bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-md`
+        case 'blue':
+          return `${baseStyles} bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md`
+        case 'red':
+          return `${baseStyles} bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md`
+        default:
+          return `${baseStyles} bg-gray-800 text-white shadow-md`
+      }
+    }
+    
+    return `${baseStyles} text-gray-600 hover:bg-gray-100 hover:text-gray-900`
+  }
+
+  const getCountBadgeStyles = (tab: Tab, isActive: boolean) => {
+    const baseStyles = 'ml-2 px-2 py-0.5 text-xs font-bold rounded-full'
+    
+    if (isActive) {
+      return `${baseStyles} bg-white/20 text-white`
+    }
+    
+    switch (tab.color) {
+      case 'teal':
+        return `${baseStyles} bg-teal-100 text-teal-700`
+      case 'gray':
+        return `${baseStyles} bg-gray-100 text-gray-700`
+      case 'blue':
+        return `${baseStyles} bg-blue-100 text-blue-700`
+      case 'red':
+        return `${baseStyles} bg-red-100 text-red-700`
+      default:
+        return `${baseStyles} bg-gray-100 text-gray-700`
+    }
+  }
+
+  return (
+    <div className="bg-white border-b border-gray-200">
+      <div className="px-4 py-3">
+        {/* Desktop Tabs */}
+        <div className="hidden md:flex items-center gap-2">
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.id
+            const count = counts[tab.id]
+
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onTabChange(tab.id)}
+                className={getTabStyles(tab, isActive)}
+              >
+                <Icon className="w-5 h-5" />
+                <span>{tab.label}</span>
+                {count > 0 && (
+                  <span className={getCountBadgeStyles(tab, isActive)}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Mobile Dropdown */}
+        <div className="md:hidden">
+          <select
+            value={activeTab}
+            onChange={(e) => onTabChange(e.target.value as EventTabType)}
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+          >
+            {tabs.map((tab) => {
+              const count = counts[tab.id]
+              return (
+                <option key={tab.id} value={tab.id}>
+                  {tab.label} {count > 0 ? `(${count})` : ''}
+                </option>
+              )
+            })}
+          </select>
+        </div>
+      </div>
+    </div>
+  )
+}

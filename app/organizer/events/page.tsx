@@ -1,258 +1,357 @@
-import { createClient } from '@/lib/firebase-db/server'
-import { requireAuth } from '@/lib/auth'
+'use client'
+
+import { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import { onAuthStateChanged } from 'firebase/auth'
 import Navbar from '@/components/Navbar'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { format } from 'date-fns'
-import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import { isAdmin } from '@/lib/admin'
-import Image from 'next/image'
-import { Suspense } from 'react'
-import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import OrganizerEventsList from './sections/OrganizerEventsList'
+import OrganizerEventsTopBar from '@/components/organizer/events-manager/OrganizerEventsTopBar'
+import OrganizerEventsTabs, { type EventTabType } from '@/components/organizer/events-manager/OrganizerEventsTabs'
+import OrganizerEventsFiltersModal, { type EventFilters } from '@/components/organizer/events-manager/OrganizerEventsFiltersModal'
+import OrganizerEventCard from '@/components/organizer/events-manager/OrganizerEventCard'
+import CalendarView from '@/components/organizer/events-manager/CalendarView'
+import EventCardSkeleton from '@/components/organizer/events-manager/EventCardSkeleton'
+import EventsEmptyState from '@/components/organizer/events-manager/EventsEmptyState'
+import { collection, query, where, getDocs } from 'firebase/firestore'
+import { auth, db } from '@/lib/firebase/client'
+import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
+import Link from 'next/link'
 
-export const revalidate = 0
+export default function OrganizerEventsPage() {
+  const router = useRouter()
+  const [firebaseUser, setFirebaseUser] = useState<any>(null)
+  const [navbarUser, setNavbarUser] = useState<any>(null)
+  const [authLoading, setAuthLoading] = useState(true)
+  
+  // State
+  const [events, setEvents] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeTab, setActiveTab] = useState<EventTabType>('upcoming')
+  const [view, setView] = useState<'list' | 'calendar'>('list')
+  const [showFiltersModal, setShowFiltersModal] = useState(false)
+  const [calendarMonth, setCalendarMonth] = useState(new Date())
+  const [filters, setFilters] = useState<EventFilters>({
+    dateRange: null,
+    cities: [],
+    categories: [],
+    hasSales: null,
+    sortBy: 'date',
+    sortOrder: 'desc'
+  })
 
-export default async function OrganizerEventsPage() {
-  const { user, error } = await requireAuth()
+  
+  // Fetch events
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (!authUser) {
+        router.push('/auth/login?redirect=/organizer/events')
+        return
+      }
 
-  if (error || !user) {
-    redirect('/auth/login')
-  }
+      setFirebaseUser(authUser)
+      setNavbarUser({
+        id: authUser.uid,
+        full_name: authUser.displayName || '',
+        email: authUser.email || '',
+        role: 'organizer' as const
+      })
+      setAuthLoading(false)
 
-  let events: any[] = []
-  let userData: any = null
-
-  if (isDemoMode()) {
-    // Use demo events
-    events = DEMO_EVENTS
-  } else {
-    // Fetch real events from database
-    try {
-      const supabase = await createClient()
-      
-      console.log('=== FETCHING EVENTS ===')
-      console.log('User ID:', user.id)
-      console.log('Supabase client created:', !!supabase)
-      
-      // Fetch user data to check verification status
-      const allUsers = await supabase.from('users').select('*')
-      userData = allUsers.data?.find((u: any) => u.id === user.id)
-      
-      console.log('User data:', userData)
-      console.log('Is verified:', userData?.is_verified)
-      console.log('Verification status:', userData?.verification_status)
-      
-      // Check for pending verification request - simplified query without ordering
-      // If is_verified is undefined or false, check for verification requests
-      if (userData && userData.is_verified !== true && userData.verification_status !== 'approved') {
-        const { data: verificationRequests } = await supabase
-          .from('verification_requests')
-          .select('*')
-          .eq('user_id', user.id)
+      // Fetch events
+      try {
+        setLoading(true)
         
-        // Sort in memory instead of in query to avoid index requirement
-        const sortedRequests = verificationRequests?.sort((a: any, b: any) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        )
-        const verificationRequest = sortedRequests?.[0]
-        
-        console.log('Verification request:', verificationRequest)
-        
-        // Update userData with verification status from request if exists
-        if (verificationRequest) {
-          userData.verification_status = verificationRequest.status
-          console.log('Updated verification status to:', verificationRequest.status)
+        if (isDemoMode()) {
+          setEvents(DEMO_EVENTS)
+        } else {
+          const eventsRef = collection(db, 'events')
+          const q = query(
+            eventsRef,
+            where('organizer_id', '==', authUser.uid)
+          )
+          
+          const snapshot = await getDocs(q)
+          const fetchedEvents = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          
+          setEvents(fetchedEvents)
         }
+      } catch (error) {
+        console.error('Error fetching events:', error)
+        setEvents([])
+      } finally {
+        setLoading(false)
       }
+    })
+
+    return () => unsubscribe()
+  }, [router])
+
+  // Filter and categorize events
+  const categorizedEvents = useMemo(() => {
+    const now = new Date()
+    
+    // First, filter by search query
+    let filtered = events.filter((event) => {
+      if (!searchQuery) return true
       
-      const result = await supabase
-        .from('events')
-        .select('*')
-      
-      console.log('=== EVENTS QUERY DEBUG ===')
-      console.log('User ID:', user.id)
-      console.log('User email:', user.email)
-      console.log('Query result count:', result.data?.length || 0)
-      
-      if (result.error) {
-        console.error('Error fetching events:', result.error)
-      }
-      
-      // Filter for this organizer's events
-      const allEvents = result.data || []
-      
-      // Debug: Show all unique organizer IDs
-      const organizerIds = new Set(allEvents.map((e: any) => e.organizer_id))
-      console.log('All organizer IDs in database:', Array.from(organizerIds))
-      console.log('Looking for organizer_id:', user.id)
-      
-      events = allEvents.filter((e: any) => e.organizer_id === user.id)
-      
-      console.log('Events matching user.id:', events.length)
-      
-      // If no events found, check if any events match by comparing IDs differently
-      if (events.length === 0 && allEvents.length > 0) {
-        console.log('No events found for user.id, checking sample event:')
-        console.log('Sample event organizer_id:', allEvents[0]?.organizer_id)
-        console.log('Sample event organizer_id type:', typeof allEvents[0]?.organizer_id)
-        console.log('User ID type:', typeof user.id)
-        console.log('Are they equal?', allEvents[0]?.organizer_id === user.id)
-      }
-      
-      // Sort by start_datetime descending
-      events.sort((a: any, b: any) => new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime())
-      
-      console.log('Final events array length:', events.length)
-      if (events.length > 0) {
-        console.log('First event:', events[0])
-      }
-    } catch (error) {
-      console.error('Exception fetching events:', error)
-      events = []
+      const searchLower = searchQuery.toLowerCase()
+      return (
+        event.title?.toLowerCase().includes(searchLower) ||
+        event.city?.toLowerCase().includes(searchLower) ||
+        event.category?.toLowerCase().includes(searchLower) ||
+        event.location_name?.toLowerCase().includes(searchLower)
+      )
+    })
+
+    // Apply filters
+    if (filters.dateRange?.start || filters.dateRange?.end) {
+      filtered = filtered.filter((event) => {
+        const eventDate = new Date(event.start_datetime)
+        if (filters.dateRange?.start && eventDate < new Date(filters.dateRange.start)) {
+          return false
+        }
+        if (filters.dateRange?.end && eventDate > new Date(filters.dateRange.end)) {
+          return false
+        }
+        return true
+      })
     }
+
+    if (filters.cities.length > 0) {
+      filtered = filtered.filter((event) => filters.cities.includes(event.city))
+    }
+
+    if (filters.categories.length > 0) {
+      filtered = filtered.filter((event) => filters.categories.includes(event.category))
+    }
+
+    if (filters.hasSales === true) {
+      filtered = filtered.filter((event) => (event.tickets_sold || 0) > 0)
+    } else if (filters.hasSales === false) {
+      filtered = filtered.filter((event) => (event.tickets_sold || 0) === 0)
+    }
+
+    // Categorize by tab
+    const upcoming = filtered.filter(
+      (event) => event.is_published && new Date(event.start_datetime) >= now
+    )
+    const drafts = filtered.filter((event) => !event.is_published)
+    const past = filtered.filter(
+      (event) => event.is_published && new Date(event.start_datetime) < now && !event.is_cancelled
+    )
+    const cancelled = filtered.filter((event) => event.is_cancelled)
+
+    // Apply sorting
+    const sortFn = (a: any, b: any) => {
+      let comparison = 0
+      
+      switch (filters.sortBy) {
+        case 'date':
+          comparison = new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime()
+          break
+        case 'sales':
+          comparison = (a.tickets_sold || 0) - (b.tickets_sold || 0)
+          break
+        case 'created':
+          comparison = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+          break
+        case 'alphabetical':
+          comparison = (a.title || '').localeCompare(b.title || '')
+          break
+      }
+      
+      return filters.sortOrder === 'asc' ? comparison : -comparison
+    }
+
+    upcoming.sort(sortFn)
+    drafts.sort(sortFn)
+    past.sort(sortFn)
+    cancelled.sort(sortFn)
+
+    return { upcoming, drafts, past, cancelled }
+  }, [events, searchQuery, filters])
+
+  // Get current tab events
+  const currentEvents = categorizedEvents[activeTab]
+
+  // Tab counts
+  const tabCounts = {
+    upcoming: categorizedEvents.upcoming.length,
+    drafts: categorizedEvents.drafts.length,
+    past: categorizedEvents.past.length,
+    cancelled: categorizedEvents.cancelled.length
   }
+
+  // Available cities and categories for filters
+  const availableCities = useMemo(() => {
+    const cities = new Set(events.map((e) => e.city).filter(Boolean))
+    return Array.from(cities).sort()
+  }, [events])
+
+  const availableCategories = useMemo(() => {
+    const categories = new Set(events.map((e) => e.category).filter(Boolean))
+    return Array.from(categories).sort()
+  }, [events])
+
+  // Count active filters
+  const activeFiltersCount =
+    (filters.dateRange ? 1 : 0) +
+    filters.cities.length +
+    filters.categories.length +
+    (filters.hasSales !== null ? 1 : 0)
+
+  // Handle filter clear
+  const handleClearFilters = () => {
+    setFilters({
+      dateRange: null,
+      cities: [],
+      categories: [],
+      hasSales: null,
+      sortBy: 'date',
+      sortOrder: 'desc'
+    })
+    setSearchQuery('')
+  }
+
+  // Show loading state during auth or initial fetch
+  if (authLoading || (loading && events.length === 0)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-mobile-nav">
+        <Navbar user={navbarUser} />
+        <OrganizerEventsTopBar
+          searchQuery=""
+          onSearchChange={() => {}}
+          view={view}
+          onViewChange={setView}
+          onOpenFilters={() => {}}
+          activeFiltersCount={0}
+        />
+        <OrganizerEventsTabs
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          counts={{ upcoming: 0, drafts: 0, past: 0, cancelled: 0 }}
+        />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <EventCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+        <MobileNavWrapper user={navbarUser} />
+      </div>
+    )
+  }
+
+  // Redirect if not logged in
+  if (!firebaseUser) {
+    return null
+  }
+
+  const hasSearchOrFilters = Boolean(searchQuery || activeFiltersCount > 0)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-mobile-nav">
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+      <Navbar user={navbarUser} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Verification Status Banner */}
-        {!isDemoMode() && userData && !userData.is_verified && (
-          <div className={`mb-6 rounded-lg p-4 border ${
-            userData.verification_status === 'pending'
-              ? 'bg-blue-50 border-blue-200'
-              : userData.verification_status === 'rejected'
-              ? 'bg-red-50 border-red-200'
-              : 'bg-yellow-50 border-yellow-200'
-          }`}>
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                {userData.verification_status === 'pending' ? (
-                  <svg className="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                ) : userData.verification_status === 'rejected' ? (
-                  <svg className="h-5 w-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                ) : (
-                  <svg className="h-5 w-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                )}
-              </div>
-              <div className="ml-3 flex-1">
-                <h3 className={`text-sm font-medium ${
-                  userData.verification_status === 'pending'
-                    ? 'text-blue-800'
-                    : userData.verification_status === 'rejected'
-                    ? 'text-red-800'
-                    : 'text-yellow-800'
-                }`}>
-                  {userData.verification_status === 'pending'
-                    ? 'Verification Pending'
-                    : userData.verification_status === 'rejected'
-                    ? 'Verification Rejected'
-                    : 'Account Not Verified'}
-                </h3>
-                <div className={`mt-2 text-sm ${
-                  userData.verification_status === 'pending'
-                    ? 'text-blue-700'
-                    : userData.verification_status === 'rejected'
-                    ? 'text-red-700'
-                    : 'text-yellow-700'
-                }`}>
-                  <p>
-                    {userData.verification_status === 'pending'
-                      ? 'Your verification is being reviewed. This usually takes 24-48 hours. You cannot create events until verified.'
-                      : userData.verification_status === 'rejected'
-                      ? 'Your verification was not approved. Please submit a new verification request with clearer photos.'
-                      : 'You need to verify your identity before you can create events.'}
-                  </p>
-                </div>
-                {userData.verification_status !== 'pending' && (
-                  <div className="mt-4">
-                    <Link
-                      href="/organizer/verify"
-                      className={`inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md ${
-                        userData.verification_status === 'rejected'
-                          ? 'text-red-700 bg-red-100 hover:bg-red-200'
-                          : 'text-yellow-700 bg-yellow-100 hover:bg-yellow-200'
-                      }`}
-                    >
-                      {userData.verification_status === 'rejected' ? 'Resubmit Verification' : 'Start Verification'}
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+      {/* Top Bar */}
+      <OrganizerEventsTopBar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        view={view}
+        onViewChange={setView}
+        onOpenFilters={() => setShowFiltersModal(true)}
+        activeFiltersCount={activeFiltersCount}
+      />
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-          <h1 className="text-3xl font-bold text-gray-900">My Events</h1>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/organizer/analytics"
-              className="inline-flex items-center px-4 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-700"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              Analytics
-            </Link>
-            <Link
-              href="/organizer/promo-codes"
-              className="inline-flex items-center px-4 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-              </svg>
-              Promo Codes
-            </Link>
-            <Link
-              href="/organizer/scan"
-              className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-              </svg>
-              Scan Tickets
-            </Link>
-            <Link
-              href="/organizer/events/new"
-              className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-medium"
-            >
-              + Create Event
-            </Link>
-          </div>
+      {/* Tabs */}
+      <OrganizerEventsTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        counts={tabCounts}
+      />
+
+      {/* Quick Links Bar (below tabs) */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3">
+        <div className="max-w-7xl mx-auto flex flex-wrap gap-3">
+          <Link
+            href="/organizer/analytics"
+            className="inline-flex items-center px-3 py-1.5 rounded-lg bg-purple-100 text-purple-700 text-sm font-medium hover:bg-purple-200 transition-colors"
+          >
+            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Analytics
+          </Link>
+          <Link
+            href="/organizer/promo-codes"
+            className="inline-flex items-center px-3 py-1.5 rounded-lg bg-green-100 text-green-700 text-sm font-medium hover:bg-green-200 transition-colors"
+          >
+            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+            Promo Codes
+          </Link>
+          <Link
+            href="/organizer/scan"
+            className="inline-flex items-center px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 text-sm font-medium hover:bg-blue-200 transition-colors"
+          >
+            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+            </svg>
+            Scan Tickets
+          </Link>
         </div>
+      </div>
 
-        {events && events.length > 0 ? (
-          <Suspense fallback={<LoadingSkeleton rows={6} animated={false} />}>
-            <OrganizerEventsList events={events} />
-          </Suspense>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <EventCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : currentEvents.length === 0 ? (
+          <EventsEmptyState
+            tab={activeTab}
+            hasFilters={hasSearchOrFilters}
+            onClearFilters={handleClearFilters}
+          />
+        ) : view === 'calendar' ? (
+          <CalendarView
+            events={currentEvents}
+            currentMonth={calendarMonth}
+            onMonthChange={setCalendarMonth}
+          />
         ) : (
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-16 text-center">
-            <div className="text-7xl mb-6">📅</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">No events yet</h3>
-            <p className="text-gray-600 mb-8 text-lg">
-              Create your first event to start selling tickets.
-            </p>
-            <Link
-              href="/organizer/events/new"
-              className="inline-block px-8 py-3 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              + Create Event
-            </Link>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {currentEvents.map((event) => (
+              <OrganizerEventCard
+                key={event.id}
+                event={event}
+                showNeedsAttention={activeTab === 'upcoming' || activeTab === 'drafts'}
+              />
+            ))}
           </div>
         )}
       </div>
-      
-      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
+
+      {/* Filters Modal */}
+      <OrganizerEventsFiltersModal
+        isOpen={showFiltersModal}
+        onClose={() => setShowFiltersModal(false)}
+        filters={filters}
+        onApplyFilters={setFilters}
+        availableCities={availableCities}
+        availableCategories={availableCategories}
+      />
+
+      <MobileNavWrapper user={navbarUser} />
     </div>
   )
 }
