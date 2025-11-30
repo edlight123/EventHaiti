@@ -1,6 +1,9 @@
 // Event Discovery Page
 // Removed Suspense wrapper to fix React errors #425 and #422
 // Client components with useSearchParams cannot be inside Suspense boundaries
+// Force dynamic rendering to prevent static generation issues
+export const dynamic = 'force-dynamic'
+
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/firebase-db/server'
 import Navbar from '@/components/Navbar'
