@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { Bell } from 'lucide-react'
 import Link from 'next/link'
-import { getUnreadCount } from '@/lib/notifications'
 import { collection, onSnapshot, query, where } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
 
@@ -13,21 +12,47 @@ interface NotificationBellProps {
 
 export function NotificationBell({ userId }: NotificationBellProps) {
   const [unreadCount, setUnreadCount] = useState(0)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // Initial fetch
-    getUnreadCount(userId).then(setUnreadCount)
-
-    // Real-time listener
+    setMounted(true)
+    
+    // Real-time listener for unread notifications
     const notificationsRef = collection(db, 'users', userId, 'notifications')
     const q = query(notificationsRef, where('isRead', '==', false))
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setUnreadCount(snapshot.size)
-    })
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        setUnreadCount(snapshot.size)
+      },
+      (error) => {
+        // Handle permission errors gracefully - don't break the UI
+        if (error.code === 'permission-denied') {
+          console.warn('Notifications permission denied. Please configure Firestore security rules.')
+        } else {
+          console.error('Error listening to notifications:', error)
+        }
+        // Set count to 0 on error so the UI still works
+        setUnreadCount(0)
+      }
+    )
 
     return () => unsubscribe()
   }, [userId])
+  
+  // Prevent hydration mismatch by not showing count until mounted
+  if (!mounted) {
+    return (
+      <Link
+        href="/notifications"
+        className="relative p-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+        title="Notifications"
+      >
+        <Bell className="w-5 h-5" />
+      </Link>
+    )
+  }
 
   return (
     <Link

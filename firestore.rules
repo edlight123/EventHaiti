@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user owns the resource
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    // Users collection - users can read/write their own data
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId);
+      
+      // Notifications subcollection - users can only access their own notifications
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId);
+      }
+      
+      // FCM Tokens subcollection - users can only access their own tokens
+      match /fcmTokens/{tokenId} {
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId);
+      }
+    }
+    
+    // Events collection - public read, authenticated write for organizers
+    match /events/{eventId} {
+      allow read: if true; // Public events are readable by everyone
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource.data.organizer_id == request.auth.uid;
+      
+      // Event updates subcollection
+      match /updates/{updateId} {
+        allow read: if true; // Anyone can read event updates
+        allow write: if isSignedIn() && get(/databases/$(database)/documents/events/$(eventId)).data.organizer_id == request.auth.uid;
+      }
+    }
+    
+    // Tickets collection - users can only access their own tickets
+    match /tickets/{ticketId} {
+      allow read: if isSignedIn() && (
+        resource.data.attendee_id == request.auth.uid ||
+        get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid
+      );
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        resource.data.attendee_id == request.auth.uid ||
+        get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid
+      );
+    }
+    
+    // Promo codes - organizers can manage their event's promo codes
+    match /promo_codes/{promoCodeId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid;
+    }
+    
+    // Favorites - users can only access their own favorites
+    match /favorites/{favoriteId} {
+      allow read, write: if isSignedIn() && resource.data.user_id == request.auth.uid;
+    }
+    
+    // Reviews - authenticated users can create, authors can update/delete
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource.data.user_id == request.auth.uid;
+    }
+    
+    // Default deny for everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
