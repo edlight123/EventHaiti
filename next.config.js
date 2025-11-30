@@ -12,10 +12,6 @@ const nextConfig = {
       },
     ],
   },
-  // Force clean build - cache busting
-  generateBuildId: async () => {
-    return `build-${Date.now()}`
-  },
 }
 
 module.exports = nextConfig
