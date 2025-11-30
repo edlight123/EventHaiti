@@ -31,7 +31,7 @@ export function DoorModeInterface({
 
   // Calculate stats
   const stats = useMemo(() => {
-    const checkedInCount = tickets.filter((t) => t.checked_in === true).length
+    const checkedInCount = tickets.filter((t) => t.checked_in_at).length
     const remainingCount = tickets.length - checkedInCount
     return { checkedInCount, remainingCount }
   }, [tickets])
@@ -43,7 +43,7 @@ export function DoorModeInterface({
       attendeeName: ticket.attendee?.full_name || ticket.attendee?.email || 'Guest',
       attendeeEmail: ticket.attendee?.email || '',
       ticketType: ticket.ticket_type || 'General Admission',
-      checkedIn: ticket.checked_in === true,
+      checkedIn: !!ticket.checked_in_at,
     }))
   }, [tickets])
 
