@@ -1,9 +1,6 @@
 import { requireAuth } from '@/lib/auth'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
-import PullToRefresh from '@/components/PullToRefresh'
 import { redirect } from 'next/navigation'
-import EventForm from '../EventForm'
+import EventFormPremium from '../EventFormPremium'
 import { createClient } from '@/lib/firebase-db/server'
 import Link from 'next/link'
 
@@ -50,10 +47,8 @@ export default async function NewEventPage() {
   // If not verified (check both is_verified and verification_status), redirect to verification page
   if (userData?.is_verified !== true && userData?.verification_status !== 'approved') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-yellow-50 pb-mobile-nav">
-        <Navbar user={user} />
-
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-yellow-50 pb-mobile-nav flex items-center justify-center px-4">
+        <div className="max-w-3xl w-full py-8 md:py-16">
           <div className="bg-white rounded-xl md:rounded-3xl shadow-medium border border-yellow-200 p-6 md:p-10">
             <div className="text-center">
               <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-soft">
@@ -190,43 +185,9 @@ export default async function NewEventPage() {
             </div>
           </div>
         </div>
-        <MobileNavWrapper user={user} />
       </div>
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-brand-50 pb-mobile-nav">
-      <Navbar user={user} />
-
-      <PullToRefresh onRefresh={async () => {
-        'use server'
-        const { revalidatePath } = await import('next/cache')
-        revalidatePath('/organizer/events/new')
-      }}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-          {/* Header Section */}
-          <div className="mb-6 md:mb-8">
-            <div className="flex items-center gap-3 mb-2 md:mb-3">
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-brand-500 to-accent-500 rounded-lg md:rounded-xl flex items-center justify-center shadow-glow">
-                <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-brand-700 to-accent-700 bg-clip-text text-transparent">
-                  Create New Event
-                </h1>
-                <p className="text-[13px] md:text-base text-gray-600 mt-1">Share your amazing event with the world</p>
-              </div>
-            </div>
-          </div>
-
-          <EventForm userId={user.id} />
-        </div>
-      </PullToRefresh>
-
-      <MobileNavWrapper user={user} />
-    </div>
-  )
+  return <EventFormPremium userId={user.id} />
 }
