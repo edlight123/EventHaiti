@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     let gmvConfirmed = 0
     let ticketsConfirmed = 0
 
-    ticketsSnapshot.forEach(doc => {
+    ticketsSnapshot.forEach((doc: any) => {
       const data = doc.data()
       const pricePaid = data.price_paid || data.pricePaid || 0
       gmvConfirmed += pricePaid
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
     const refundsCount = refundsSnapshot.size
     let refundsAmount = 0
 
-    refundsSnapshot.forEach(doc => {
+    refundsSnapshot.forEach((doc: any) => {
       const data = doc.data()
       const pricePaid = data.price_paid || data.pricePaid || 0
       refundsAmount += pricePaid
