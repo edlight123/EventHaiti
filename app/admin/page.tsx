@@ -167,9 +167,10 @@ export default async function AdminDashboard() {
             title="Recent Events"
             count={eventsCount}
             items={recentEvents.map((e: any) => {
-              // Build location string - show city and venue if available
+              // Build location string - show city, commune, and venue if available
               const locationParts = []
               if (e.venueName) locationParts.push(e.venueName)
+              if (e.commune) locationParts.push(e.commune)
               if (e.city) locationParts.push(e.city)
               const location = locationParts.length > 0 ? locationParts.join(', ') : 'Location TBD'
               
