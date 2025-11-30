@@ -10,8 +10,6 @@ import { updateUserRole } from '@/lib/firestore/user-profile-server'
 
 export const revalidate = 0
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e)
-
 async function promoteToOrganizer(formData: FormData) {
   'use server'
   
@@ -26,6 +24,8 @@ async function promoteToOrganizer(formData: FormData) {
 
 export default async function AdminUsersPage() {
   const user = await getCurrentUser()
+  
+  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e)
 
   if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
     redirect('/')
