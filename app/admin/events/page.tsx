@@ -70,7 +70,9 @@ export default async function AdminEventsPage() {
                     <div className="flex items-start justify-between">
                       <div className="min-w-0">
                         <div className="text-sm font-medium text-gray-900 line-clamp-2">{event.title}</div>
-                        <div className="text-[13px] text-gray-500 line-clamp-1">{event.venue_name || event.city}</div>
+                        <div className="text-[13px] text-gray-500 line-clamp-1">
+                          {[event.venue_name, event.city].filter(Boolean).join(', ') || 'Location TBD'}
+                        </div>
                         <div className="text-[13px] text-gray-500 line-clamp-1">{event.organizer?.full_name || 'Unknown'}</div>
                       </div>
                       <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -114,7 +116,9 @@ export default async function AdminEventsPage() {
                       <tr key={event.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
                           <div className="text-sm font-medium text-gray-900 line-clamp-1">{event.title}</div>
-                          <div className="text-[13px] text-gray-500 line-clamp-1">{event.venue_name || event.city}</div>
+                          <div className="text-[13px] text-gray-500 line-clamp-1">
+                            {[event.venue_name, event.city].filter(Boolean).join(', ') || 'Location TBD'}
+                          </div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm text-gray-900">{event.organizer?.full_name || 'Unknown'}</div>
