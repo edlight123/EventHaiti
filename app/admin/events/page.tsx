@@ -6,8 +6,19 @@ import MobileNavWrapper from '@/components/MobileNavWrapper'
 import PullToRefresh from '@/components/PullToRefresh'
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
+import { EventActionsClient } from '@/components/admin/EventActionsClient'
 
 export const revalidate = 0
+
+async function toggleEventPublishStatus(eventId: string, currentStatus: boolean) {
+  'use server'
+  const supabase = await createClient()
+  await supabase
+    .from('events')
+    .update({ is_published: !currentStatus })
+    .eq('id', eventId)
+  revalidatePath('/admin/events')
+}
 
 export default async function AdminEventsPage() {
   const user = await getCurrentUser()
@@ -75,24 +86,40 @@ export default async function AdminEventsPage() {
                         </div>
                         <div className="text-[13px] text-gray-500 line-clamp-1">{event.organizer?.full_name || 'Unknown'}</div>
                       </div>
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        event.start_datetime && new Date(event.start_datetime) > new Date()
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {event.start_datetime && new Date(event.start_datetime) > new Date() ? 'Upcoming' : 'Past'}
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          event.is_published
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {event.is_published ? 'Published' : 'Draft'}
+                        </span>
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          event.start_datetime && new Date(event.start_datetime) > new Date()
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {event.start_datetime && new Date(event.start_datetime) > new Date() ? 'Upcoming' : 'Past'}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="text-[13px] text-gray-700">{(event.ticket_price || 0).toFixed(2)} {event.currency || 'HTG'}</div>
-                      <a
-                        href={`/events/${event.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-teal-600 hover:text-teal-900 text-sm font-medium"
-                      >
-                        View
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={`/events/${event.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-teal-600 hover:text-teal-900 text-sm font-medium"
+                        >
+                          View
+                        </a>
+                        <EventActionsClient 
+                          eventId={event.id}
+                          isPublished={event.is_published}
+                          togglePublishStatus={toggleEventPublishStatus}
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -107,6 +134,7 @@ export default async function AdminEventsPage() {
                       <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Organizer</th>
                       <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Date</th>
                       <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                      <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Published</th>
                       <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Status</th>
                       <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
@@ -130,22 +158,38 @@ export default async function AdminEventsPage() {
                         <td className="px-6 py-4 text-[13px] text-gray-900 whitespace-nowrap">{(event.ticket_price || 0).toFixed(2)} {event.currency || 'HTG'}</td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            event.start_datetime && new Date(event.start_datetime) > new Date()
+                            event.is_published
                               ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {event.is_published ? 'Published' : 'Draft'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            event.start_datetime && new Date(event.start_datetime) > new Date()
+                              ? 'bg-blue-100 text-blue-800'
                               : 'bg-gray-100 text-gray-800'
                           }`}>
                             {event.start_datetime && new Date(event.start_datetime) > new Date() ? 'Upcoming' : 'Past'}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-[13px] sm:text-sm font-medium">
-                          <a
-                            href={`/events/${event.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-teal-600 hover:text-teal-900"
-                          >
-                            View
-                          </a>
+                          <div className="flex items-center gap-3">
+                            <a
+                              href={`/events/${event.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-teal-600 hover:text-teal-900"
+                            >
+                              View
+                            </a>
+                            <EventActionsClient 
+                              eventId={event.id}
+                              isPublished={event.is_published}
+                              togglePublishStatus={toggleEventPublishStatus}
+                            />
+                          </div>
                         </td>
                       </tr>
                     ))}
