@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Force new build ID to invalidate Vercel cache
+  generateBuildId: async () => {
+    return `build-${Date.now()}`
+  },
   images: {
     remotePatterns: [
       {
