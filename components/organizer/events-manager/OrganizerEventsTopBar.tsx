@@ -36,7 +36,7 @@ export default function OrganizerEventsTopBar({
 
   return (
     <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
-      <div className="px-4 py-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Desktop Layout */}
         <div className="hidden md:flex items-center justify-between gap-4">
           {/* Search Bar */}
