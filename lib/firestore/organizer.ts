@@ -8,10 +8,9 @@ export async function getOrganizerEvents(organizerId: string) {
     const eventsSnapshot = await adminDb
       .collection('events')
       .where('organizer_id', '==', organizerId)
-      .orderBy('created_at', 'desc')
       .get()
 
-    return eventsSnapshot.docs.map((doc: any) => {
+    const events = eventsSnapshot.docs.map((doc: any) => {
       const data = doc.data()
       // Convert Firestore Timestamps to ISO strings for serialization
       const startDateTime = data.start_datetime?.toDate?.() 
@@ -41,6 +40,15 @@ export async function getOrganizerEvents(organizerId: string) {
         organizer_id: data.organizer_id
       }
     })
+    
+    // Sort by created_at in memory (descending - newest first)
+    events.sort((a: any, b: any) => {
+      const dateA = new Date(a.created_at).getTime()
+      const dateB = new Date(b.created_at).getTime()
+      return dateB - dateA
+    })
+    
+    return events
   } catch (error) {
     console.error('Error fetching organizer events:', error)
     return []
