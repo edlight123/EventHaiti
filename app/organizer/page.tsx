@@ -1,10 +1,8 @@
 import { requireAuth } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import PullToRefresh from '@/components/PullToRefresh'
 import { getOrganizerStats, getNextEvent } from '@/lib/firestore/organizer'
 import { NextEventHero } from '@/components/organizer/NextEventHero'
 import { ActionCenter } from '@/components/organizer/ActionCenter'
@@ -19,11 +17,6 @@ export default async function OrganizerDashboard() {
 
   if (error || !user) {
     redirect('/auth/login')
-  }
-
-  async function refreshPage() {
-    'use server'
-    revalidatePath('/organizer')
   }
 
   // Fetch organizer data
@@ -118,9 +111,8 @@ export default async function OrganizerDashboard() {
   }
 
   return (
-    <PullToRefresh onRefresh={refreshPage}>
-      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-        <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
           {/* Next Event Hero - Mobile First */}
@@ -206,6 +198,5 @@ export default async function OrganizerDashboard() {
 
         <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
       </div>
-    </PullToRefresh>
   )
 }

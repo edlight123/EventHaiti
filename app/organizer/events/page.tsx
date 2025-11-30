@@ -5,9 +5,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
-import PullToRefresh from '@/components/PullToRefresh'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import { revalidatePath } from 'next/cache'
 import { isAdmin } from '@/lib/admin'
 import Image from 'next/image'
 import { Suspense } from 'react'
@@ -116,15 +114,9 @@ export default async function OrganizerEventsPage() {
     }
   }
 
-  async function refreshPage() {
-    'use server'
-    revalidatePath('/organizer/events')
-  }
-
   return (
-    <PullToRefresh onRefresh={refreshPage}>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-mobile-nav">
-        <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-mobile-nav">
+      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Verification Status Banner */}
@@ -262,6 +254,5 @@ export default async function OrganizerEventsPage() {
       
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
-    </PullToRefresh>
   )
 }
