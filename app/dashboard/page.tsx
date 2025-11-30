@@ -88,16 +88,20 @@ export default async function DashboardPage() {
 
     // Fetch favorites
     try {
-      const { data: allFavorites } = await supabase
-        .from('favorites')
-        .select('*')
+      const { data: favorites } = await supabase
+        .from('event_favorites')
+        .select('event_id')
+        .eq('user_id', user.id)
       
-      const userFavorites = allFavorites?.filter((f: any) => f.user_id === user.id) || []
-      
-      if (userFavorites.length > 0) {
-        const favoriteEventIds = userFavorites.map((f: any) => f.event_id)
-        const { data: allEvents } = await supabase.from('events').select('*')
-        favoriteEvents = allEvents?.filter((e: any) => favoriteEventIds.includes(e.id)) || []
+      if (favorites && favorites.length > 0) {
+        const favoriteEventIds = favorites.map((f: any) => f.event_id)
+        const { data: events } = await supabase
+          .from('events')
+          .select('*')
+          .in('id', favoriteEventIds)
+          .eq('is_published', true)
+        
+        favoriteEvents = events || []
       } else {
         favoriteEvents = []
       }
