@@ -51,7 +51,7 @@ export default function VerificationStatusHero({
       iconBgColor: 'bg-amber-100',
       iconColor: 'text-amber-600',
       title: 'Complete Your Verification',
-      description: `You&apos;re ${completionPercentage}% complete. Finish all required steps to submit for review.`,
+      description: `You're ${completionPercentage}% complete. Finish all required steps to submit for review.`,
       ctaText: 'Continue',
       ctaColor: 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700'
     },

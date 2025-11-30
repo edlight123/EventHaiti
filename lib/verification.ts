@@ -147,11 +147,11 @@ export async function initializeVerificationRequest(userId: string): Promise<Ver
       payoutSetup: {
         id: 'payoutSetup',
         title: 'Payout Setup',
-        description: 'Configure how you receive payments',
+        description: 'Configure how you receive payments (can be set up later)',
         status: 'incomplete',
-        required: true,
+        required: false,
         fields: {},
-        missingFields: ['payout_method']
+        missingFields: []
       }
     },
     files: {},
