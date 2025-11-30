@@ -1,0 +1,107 @@
+'use client'
+
+import { useState, useCallback, useRef } from 'react'
+import { parseTicketId } from './parseTicketId'
+import type { CheckInResult } from './checkInTicket'
+
+type ScanState = 'SCANNING' | 'PROCESSING' | 'RESULT'
+
+interface UseScanControllerOptions {
+  onScan: (ticketId: string) => Promise<CheckInResult>
+  cooldownMs?: number
+  duplicateWindowMs?: number
+}
+
+export function useScanController(options: UseScanControllerOptions) {
+  const { onScan, cooldownMs = 1200, duplicateWindowMs = 3000 } = options
+
+  const [state, setState] = useState<ScanState>('SCANNING')
+  const [result, setResult] = useState<CheckInResult | null>(null)
+  
+  const lastScanRef = useRef<{
+    ticketId: string | null
+    timestamp: number
+  }>({ ticketId: null, timestamp: 0 })
+
+  const processingRef = useRef(false)
+
+  const handleScan = useCallback(async (scanResult: string) => {
+    // Ignore if currently processing
+    if (processingRef.current || state !== 'SCANNING') {
+      console.log('Scan ignored: already processing or not in SCANNING state')
+      return
+    }
+
+    // Parse ticket ID
+    const ticketId = parseTicketId(scanResult)
+    if (!ticketId) {
+      console.log('Invalid scan result:', scanResult)
+      return
+    }
+
+    const now = Date.now()
+
+    // Check for duplicate scan within window
+    if (
+      lastScanRef.current.ticketId === ticketId &&
+      now - lastScanRef.current.timestamp < duplicateWindowMs
+    ) {
+      console.log('Duplicate scan ignored:', ticketId)
+      return
+    }
+
+    // Update last scan
+    lastScanRef.current = {
+      ticketId,
+      timestamp: now,
+    }
+
+    // Lock processing
+    processingRef.current = true
+    setState('PROCESSING')
+
+    try {
+      // Perform check-in
+      const checkInResult = await onScan(ticketId)
+      
+      // Show result
+      setResult(checkInResult)
+      setState('RESULT')
+
+      // Auto-return to scanning after cooldown
+      setTimeout(() => {
+        setState('SCANNING')
+        setResult(null)
+        processingRef.current = false
+      }, cooldownMs)
+    } catch (error) {
+      console.error('Scan error:', error)
+      
+      // Return to scanning on error
+      setState('SCANNING')
+      setResult(null)
+      processingRef.current = false
+    }
+  }, [state, onScan, cooldownMs, duplicateWindowMs])
+
+  const manualCheckIn = useCallback(async (ticketId: string) => {
+    // Use same logic as handleScan
+    await handleScan(ticketId)
+  }, [handleScan])
+
+  const reset = useCallback(() => {
+    setState('SCANNING')
+    setResult(null)
+    processingRef.current = false
+  }, [])
+
+  return {
+    state,
+    result,
+    handleScan,
+    manualCheckIn,
+    reset,
+    isProcessing: state === 'PROCESSING',
+    isShowingResult: state === 'RESULT',
+  }
+}

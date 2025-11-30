@@ -1,0 +1,86 @@
+import { adminAuth, adminDb } from '@/lib/firebase/admin'
+import { redirect, notFound } from 'next/navigation'
+import { cookies } from 'next/headers'
+import { DoorModeInterface } from '@/components/scan/DoorModeInterface'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+export default async function DoorModeScanPage({ params }: { params: Promise<{ eventId: string }> }) {
+  // Verify authentication
+  const cookieStore = await cookies()
+  const sessionCookie = cookieStore.get('session')?.value
+
+  if (!sessionCookie) {
+    redirect('/auth/login')
+  }
+
+  let authUser
+  try {
+    const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
+    authUser = decodedClaims
+  } catch (error) {
+    console.error('Error verifying session:', error)
+    redirect('/auth/login')
+  }
+
+  const { eventId } = await params
+
+  // Fetch event
+  const eventDoc = await adminDb.collection('events').doc(eventId).get()
+  
+  if (!eventDoc.exists) {
+    notFound()
+  }
+
+  const event = { id: eventDoc.id, ...eventDoc.data() }
+
+  // Verify organizer
+  if (event.organizer_id !== authUser.uid) {
+    redirect('/organizer/scan')
+  }
+
+  // Fetch all tickets for this event
+  const ticketsSnapshot = await adminDb
+    .collection('tickets')
+    .where('event_id', '==', eventId)
+    .get()
+
+  const tickets = await Promise.all(
+    ticketsSnapshot.docs.map(async (doc: any) => {
+      const ticketData = doc.data()
+      
+      // Fetch attendee user data
+      let attendee = null
+      if (ticketData.attendee_id) {
+        const userDoc = await adminDb.collection('users').doc(ticketData.attendee_id).get()
+        if (userDoc.exists) {
+          attendee = { id: userDoc.id, ...userDoc.data() }
+        }
+      }
+
+      return {
+        id: doc.id,
+        ...ticketData,
+        attendee,
+        purchased_at: ticketData.purchased_at?.toDate?.()?.toISOString() || ticketData.purchased_at,
+        checked_in_at: ticketData.checked_in_at?.toDate?.()?.toISOString() || ticketData.checked_in_at,
+        created_at: ticketData.created_at?.toDate?.()?.toISOString() || ticketData.created_at,
+        updated_at: ticketData.updated_at?.toDate?.()?.toISOString() || ticketData.updated_at,
+      }
+    })
+  )
+
+  // Get entry points from event or use defaults
+  const entryPoints = event.entry_points || ['Main Entrance', 'VIP Entrance', 'Gate A', 'Gate B']
+
+  return (
+    <DoorModeInterface
+      eventId={eventId}
+      eventTitle={event.title}
+      scannedBy={authUser.uid}
+      tickets={tickets}
+      defaultEntryPoints={entryPoints}
+    />
+  )
+}
