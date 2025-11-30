@@ -19,9 +19,10 @@ export async function getCollectionCount(collectionName: string, whereClause?: {
     
     const aggregateQuery = query.count()
     const snapshot = await aggregateQuery.get()
-    return snapshot.data().count
+    return snapshot.data().count || 0
   } catch (error) {
     console.error(`Error getting count for ${collectionName}:`, error)
+    // If collection doesn't exist or error occurs, return 0
     return 0
   }
 }
@@ -93,11 +94,23 @@ export async function get7DayMetrics(): Promise<{ gmv7d: number; tickets7d: numb
  */
 export async function getRecentEvents(limit: number = 8) {
   try {
-    const eventsSnapshot = await adminDb
-      .collection('events')
-      .orderBy('createdAt', 'desc')
-      .limit(limit)
-      .get()
+    // Try createdAt first (camelCase), fall back to created_at (snake_case)
+    let eventsSnapshot
+    try {
+      eventsSnapshot = await adminDb
+        .collection('events')
+        .orderBy('createdAt', 'desc')
+        .limit(limit)
+        .get()
+    } catch (error) {
+      // If createdAt doesn't exist, try created_at
+      console.log('Trying created_at field instead of createdAt')
+      eventsSnapshot = await adminDb
+        .collection('events')
+        .orderBy('created_at', 'desc')
+        .limit(limit)
+        .get()
+    }
 
     return eventsSnapshot.docs.map((doc: any) => {
       const data = doc.data()
@@ -106,7 +119,7 @@ export async function getRecentEvents(limit: number = 8) {
         title: data.title,
         startDateTime: data.startDateTime?.toDate?.() || data.start_datetime?.toDate?.() || new Date(data.start_datetime || data.startDateTime),
         ticketPrice: data.ticketPrice || data.ticket_price || 0,
-        createdAt: data.createdAt?.toDate?.() || new Date(data.created_at || data.createdAt),
+        createdAt: data.createdAt?.toDate?.() || data.created_at?.toDate?.() || new Date(data.created_at || data.createdAt || Date.now()),
         isPublished: data.isPublished ?? data.is_published ?? true,
         city: data.city || '',
         organizerId: data.organizerId || data.organizer_id
@@ -123,12 +136,24 @@ export async function getRecentEvents(limit: number = 8) {
  */
 export async function getPendingVerifications(limit: number = 3) {
   try {
-    const verificationsSnapshot = await adminDb
-      .collection('verification_requests')
-      .where('status', '==', 'pending')
-      .orderBy('createdAt', 'desc')
-      .limit(limit)
-      .get()
+    // Try createdAt first, fall back to created_at
+    let verificationsSnapshot
+    try {
+      verificationsSnapshot = await adminDb
+        .collection('verification_requests')
+        .where('status', '==', 'pending')
+        .orderBy('createdAt', 'desc')
+        .limit(limit)
+        .get()
+    } catch (error) {
+      console.log('Trying created_at field instead of createdAt for verifications')
+      verificationsSnapshot = await adminDb
+        .collection('verification_requests')
+        .where('status', '==', 'pending')
+        .orderBy('created_at', 'desc')
+        .limit(limit)
+        .get()
+    }
 
     return verificationsSnapshot.docs.map((doc: any) => {
       const data = doc.data()
@@ -137,7 +162,7 @@ export async function getPendingVerifications(limit: number = 3) {
         userId: data.userId || data.user_id,
         businessName: data.businessName || data.business_name,
         status: data.status,
-        createdAt: data.createdAt?.toDate?.() || new Date(data.created_at || data.createdAt),
+        createdAt: data.createdAt?.toDate?.() || data.created_at?.toDate?.() || new Date(data.created_at || data.createdAt || Date.now()),
         idType: data.idType || data.id_type
       }
     })
