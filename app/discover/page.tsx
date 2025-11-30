@@ -1,4 +1,6 @@
-// Discover page - Browse and filter events
+// Event Discovery Page
+// Removed Suspense wrapper to fix React errors #425 and #422
+// Client components with useSearchParams cannot be inside Suspense boundaries
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/firebase-db/server'
 import Navbar from '@/components/Navbar'
