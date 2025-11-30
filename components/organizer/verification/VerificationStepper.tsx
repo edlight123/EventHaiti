@@ -99,9 +99,93 @@ function StepCard({ stepId, step, stepNumber, onEdit, isReadOnly }: StepCardProp
 
   // Special handling for payout setup step (links to external page)
   const isPayoutStep = stepId === 'payoutSetup'
+  
+  // Determine if card should be clickable
+  const isClickable = !isReadOnly && (isPayoutStep || step.status !== 'complete')
+
+  // Handle card click
+  const handleCardClick = () => {
+    if (!isReadOnly) {
+      onEdit()
+    }
+  }
+
+  // For payout step, wrap in Link
+  if (isPayoutStep && !isReadOnly) {
+    return (
+      <Link
+        href="/organizer/settings/payouts"
+        className={`${config.bgColor} border ${config.borderColor} rounded-lg p-4 transition-all hover:shadow-md cursor-pointer block`}
+      >
+        <div className="flex items-start gap-4">
+          {/* Step icon */}
+          <div className={`${config.iconBgColor} rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-0.5`}>
+            {config.icon}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-4 mb-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-gray-900 text-sm md:text-base mb-1">
+                  {step.title}
+                  {step.required && (
+                    <span className="text-red-500 ml-1" aria-label="Required">
+                      *
+                    </span>
+                  )}
+                </h3>
+                <p className="text-xs md:text-sm text-gray-600">
+                  {step.description}
+                </p>
+              </div>
+
+              {/* Status badge */}
+              <span className={`${config.badgeColor} px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0`}>
+                {config.badgeText}
+              </span>
+            </div>
+
+            {/* Missing fields / Error message */}
+            {step.status !== 'complete' && step.missingFields && step.missingFields.length > 0 && (
+              <div className="mt-2 mb-3">
+                <p className="text-xs text-gray-600 mb-1">Missing:</p>
+                <ul className="list-disc list-inside text-xs text-gray-700 space-y-0.5">
+                  {step.missingFields.map((field) => (
+                    <li key={field}>
+                      {formatFieldName(field)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {step.errorMessage && (
+              <div className="mt-2 mb-3 text-xs text-red-600">
+                {step.errorMessage}
+              </div>
+            )}
+
+            {/* Action indicator */}
+            <div className="mt-3">
+              <span className="inline-flex items-center gap-2 text-sm font-medium text-teal-600">
+                <span>Configure Payout Settings</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </span>
+            </div>
+          </div>
+        </div>
+      </Link>
+    )
+  }
 
   return (
-    <div className={`${config.bgColor} border ${config.borderColor} rounded-lg p-4 transition-all hover:shadow-md`}>
+    <div 
+      onClick={isClickable ? handleCardClick : undefined}
+      className={`${config.bgColor} border ${config.borderColor} rounded-lg p-4 transition-all hover:shadow-md ${isClickable ? 'cursor-pointer' : ''}`}
+    >
       <div className="flex items-start gap-4">
         {/* Step icon */}
         <div className={`${config.iconBgColor} rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-0.5`}>
@@ -151,30 +235,15 @@ function StepCard({ stepId, step, stepNumber, onEdit, isReadOnly }: StepCardProp
             </div>
           )}
 
-          {/* Action button */}
+          {/* Action indicator */}
           {!isReadOnly && (
             <div className="mt-3">
-              {isPayoutStep ? (
-                <Link
-                  href="/organizer/settings/payouts"
-                  className="inline-flex items-center gap-2 text-sm font-medium text-teal-600 hover:text-teal-700 transition-colors"
-                >
-                  <span>Configure Payout Settings</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                </Link>
-              ) : (
-                <button
-                  onClick={onEdit}
-                  className="inline-flex items-center gap-2 text-sm font-medium text-teal-600 hover:text-teal-700 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  <span>{step.status === 'complete' ? 'Edit' : 'Complete'}</span>
-                </button>
-              )}
+              <span className="inline-flex items-center gap-2 text-sm font-medium text-teal-600">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span>{step.status === 'complete' ? 'Edit' : 'Complete'}</span>
+              </span>
             </div>
           )}
 
