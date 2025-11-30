@@ -14,6 +14,13 @@ export function PWAInstallPrompt() {
   const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
+    // Check if user has already dismissed the prompt
+    const hasBeenDismissed = localStorage.getItem('pwa-prompt-dismissed')
+    if (hasBeenDismissed) {
+      setDismissed(true)
+      return
+    }
+
     // Register service worker if available
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistration().then(reg => {
@@ -58,6 +65,8 @@ export function PWAInstallPrompt() {
     setShowChromePrompt(false)
     setShowIosPrompt(false)
     setDismissed(true)
+    // Remember dismissal in localStorage so it doesn't show again
+    localStorage.setItem('pwa-prompt-dismissed', 'true')
   }
 
   if (dismissed) return null
