@@ -35,10 +35,10 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     const data = userDoc.data()
     return {
       uid: userDoc.id,
-      displayName: data.display_name || data.displayName || '',
+      displayName: data.full_name || data.display_name || data.displayName || '',
       email: data.email || '',
       photoURL: data.photo_url || data.photoURL || '',
-      phone: data.phone || '',
+      phone: data.phone_number || data.phone || '',
       defaultCity: data.default_city || data.defaultCity || '',
       subareaType: data.subarea_type || data.subareaType || 'COMMUNE',
       defaultSubarea: data.default_subarea || data.defaultSubarea || '',
@@ -100,8 +100,15 @@ export async function updateUserProfile(uid: string, updates: Partial<UserProfil
       updated_at: serverTimestamp()
     }
 
-    if (updates.displayName !== undefined) updateData.display_name = updates.displayName
-    if (updates.phone !== undefined) updateData.phone = updates.phone
+    // Use full_name to match server-side convention
+    if (updates.displayName !== undefined) {
+      updateData.full_name = updates.displayName
+      updateData.display_name = updates.displayName // Keep both for compatibility
+    }
+    if (updates.phone !== undefined) {
+      updateData.phone_number = updates.phone
+      updateData.phone = updates.phone // Keep both for compatibility
+    }
     if (updates.photoURL !== undefined) updateData.photo_url = updates.photoURL
     if (updates.defaultCity !== undefined) updateData.default_city = updates.defaultCity
     if (updates.subareaType !== undefined) updateData.subarea_type = updates.subareaType
