@@ -12,13 +12,27 @@ export async function getOrganizerEvents(organizerId: string) {
 
     const events = eventsSnapshot.docs.map((doc: any) => {
       const data = doc.data()
-      // Convert Firestore Timestamps to ISO strings for serialization
-      const startDateTime = data.start_datetime?.toDate?.() 
-        ? data.start_datetime.toDate().toISOString() 
-        : (typeof data.start_datetime === 'string' ? data.start_datetime : new Date(data.start_datetime).toISOString())
-      const endDateTime = data.end_datetime?.toDate?.() 
-        ? data.end_datetime.toDate().toISOString() 
-        : (typeof data.end_datetime === 'string' ? data.end_datetime : new Date(data.end_datetime).toISOString())
+      
+      // Helper function to convert any value that might be a Firestore Timestamp
+      const convertTimestamp = (value: any, fallback: string = new Date().toISOString()): string => {
+        if (!value) return fallback
+        if (value.toDate && typeof value.toDate === 'function') {
+          return value.toDate().toISOString()
+        }
+        if (typeof value === 'string') return value
+        if (value instanceof Date) return value.toISOString()
+        try {
+          return new Date(value).toISOString()
+        } catch {
+          return fallback
+        }
+      }
+      
+      // Convert all potential Firestore Timestamps to ISO strings
+      const startDateTime = convertTimestamp(data.start_datetime)
+      const endDateTime = convertTimestamp(data.end_datetime)
+      const createdAt = convertTimestamp(data.created_at)
+      const updatedAt = convertTimestamp(data.updated_at)
       
       return {
         id: doc.id,
@@ -36,7 +50,8 @@ export async function getOrganizerEvents(organizerId: string) {
         category: data.category || '',
         status: data.status || 'draft',
         is_published: data.is_published ?? data.status === 'published',
-        created_at: data.created_at?.toDate?.() ? data.created_at.toDate().toISOString() : new Date().toISOString(),
+        created_at: createdAt,
+        updated_at: updatedAt,
         organizer_id: data.organizer_id
       }
     })
@@ -82,15 +97,25 @@ export async function getOrganizerTickets(organizerId: string) {
       batches.push(ticketsSnapshot)
     }
 
+    // Helper function to convert any value that might be a Firestore Timestamp
+    const convertTimestamp = (value: any, fallback: string = new Date().toISOString()): string => {
+      if (!value) return fallback
+      if (value.toDate && typeof value.toDate === 'function') {
+        return value.toDate().toISOString()
+      }
+      if (typeof value === 'string') return value
+      if (value instanceof Date) return value.toISOString()
+      try {
+        return new Date(value).toISOString()
+      } catch {
+        return fallback
+      }
+    }
+
     const allTickets: any[] = []
     batches.forEach(snapshot => {
       snapshot.docs.forEach((doc: any) => {
         const data = doc.data()
-        const purchasedAt = data.purchased_at?.toDate?.() 
-          ? data.purchased_at.toDate().toISOString() 
-          : (data.created_at?.toDate?.() 
-              ? data.created_at.toDate().toISOString() 
-              : new Date().toISOString())
         
         allTickets.push({
           id: doc.id,
@@ -98,7 +123,9 @@ export async function getOrganizerTickets(organizerId: string) {
           user_id: data.user_id,
           price_paid: data.price_paid || 0,
           status: data.status || 'active',
-          purchased_at: purchasedAt,
+          purchased_at: convertTimestamp(data.purchased_at, convertTimestamp(data.created_at)),
+          created_at: convertTimestamp(data.created_at),
+          updated_at: convertTimestamp(data.updated_at),
           checked_in: data.checked_in || false
         })
       })
@@ -238,6 +265,21 @@ export async function getEventWithStats(eventId: string) {
 
     const data = eventDoc.data()!
     
+    // Helper function to convert any value that might be a Firestore Timestamp
+    const convertTimestamp = (value: any, fallback: string = new Date().toISOString()): string => {
+      if (!value) return fallback
+      if (value.toDate && typeof value.toDate === 'function') {
+        return value.toDate().toISOString()
+      }
+      if (typeof value === 'string') return value
+      if (value instanceof Date) return value.toISOString()
+      try {
+        return new Date(value).toISOString()
+      } catch {
+        return fallback
+      }
+    }
+    
     // Get tickets for this event
     const ticketsSnapshot = await adminDb
       .collection('tickets')
@@ -246,18 +288,15 @@ export async function getEventWithStats(eventId: string) {
 
     const tickets = ticketsSnapshot.docs.map((doc: any) => {
       const data = doc.data()
-      const purchasedAt = data.purchased_at?.toDate?.() 
-        ? data.purchased_at.toDate().toISOString() 
-        : (data.created_at?.toDate?.() 
-            ? data.created_at.toDate().toISOString() 
-            : new Date().toISOString())
       
       return {
         id: doc.id,
         price_paid: data.price_paid || 0,
         status: data.status || 'active',
         checked_in: data.checked_in || false,
-        purchased_at: purchasedAt
+        purchased_at: convertTimestamp(data.purchased_at, convertTimestamp(data.created_at)),
+        created_at: convertTimestamp(data.created_at),
+        updated_at: convertTimestamp(data.updated_at)
       }
     })
 
@@ -266,12 +305,10 @@ export async function getEventWithStats(eventId: string) {
     const checkedInCount = tickets.filter((t: any) => t.checked_in).length
 
     // Convert Firestore Timestamps to ISO strings
-    const startDateTime = data.start_datetime?.toDate?.() 
-      ? data.start_datetime.toDate().toISOString() 
-      : (typeof data.start_datetime === 'string' ? data.start_datetime : new Date(data.start_datetime).toISOString())
-    const endDateTime = data.end_datetime?.toDate?.() 
-      ? data.end_datetime.toDate().toISOString() 
-      : (typeof data.end_datetime === 'string' ? data.end_datetime : new Date(data.end_datetime).toISOString())
+    const startDateTime = convertTimestamp(data.start_datetime)
+    const endDateTime = convertTimestamp(data.end_datetime)
+    const createdAt = convertTimestamp(data.created_at)
+    const updatedAt = convertTimestamp(data.updated_at)
 
     return {
       id: eventDoc.id,
@@ -289,6 +326,8 @@ export async function getEventWithStats(eventId: string) {
       category: data.category || '',
       status: data.status || 'draft',
       is_published: data.is_published ?? data.status === 'published',
+      created_at: createdAt,
+      updated_at: updatedAt,
       ticketsSold,
       revenue,
       checkedInCount,
