@@ -10,6 +10,7 @@ import {
   getRecentEvents, 
   getPendingVerifications 
 } from '@/lib/firestore/admin'
+import { getRecentAdminActivities } from '@/lib/admin/audit-log'
 import { AdminCommandBar } from '@/components/admin/AdminCommandBar'
 import { KpiCard } from '@/components/admin/KpiCard'
 import { WorkQueueCard } from '@/components/admin/WorkQueueCard'
@@ -66,11 +67,12 @@ export default async function AdminDashboard() {
     }
 
   // Fetch platform statistics using Firestore
-  const [platformCounts, metrics7d, recentEvents, pendingVerifications] = await Promise.all([
+  const [platformCounts, metrics7d, recentEvents, pendingVerifications, recentActivities] = await Promise.all([
     getPlatformCounts(),
     get7DayMetrics(),
     getRecentEvents(5),
-    getPendingVerifications(3)
+    getPendingVerifications(3),
+    getRecentAdminActivities(10)
   ])
 
   const { usersCount, eventsCount, ticketsCount, pendingVerifications: pendingCount } = platformCounts
@@ -214,7 +216,7 @@ export default async function AdminDashboard() {
         {/* Additional Info Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Activity Timeline */}
-          <RecentActivityTimeline activities={[]} />
+          <RecentActivityTimeline activities={recentActivities} />
 
           {/* Notes Card */}
           <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">

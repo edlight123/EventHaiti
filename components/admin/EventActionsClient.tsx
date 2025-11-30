@@ -5,12 +5,14 @@ import { EyeOff, Eye } from 'lucide-react'
 
 interface EventActionsClientProps {
   eventId: string
+  eventTitle: string
   isPublished: boolean
-  togglePublishStatus: (eventId: string, currentStatus: boolean) => Promise<void>
+  togglePublishStatus: (eventId: string, currentStatus: boolean, eventTitle: string) => Promise<void>
 }
 
 export function EventActionsClient({ 
-  eventId, 
+  eventId,
+  eventTitle, 
   isPublished, 
   togglePublishStatus 
 }: EventActionsClientProps) {
@@ -18,7 +20,7 @@ export function EventActionsClient({
 
   const handleToggle = () => {
     startTransition(async () => {
-      await togglePublishStatus(eventId, isPublished)
+      await togglePublishStatus(eventId, isPublished, eventTitle)
     })
   }
 

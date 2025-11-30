@@ -7,16 +7,31 @@ import PullToRefresh from '@/components/PullToRefresh'
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import { EventActionsClient } from '@/components/admin/EventActionsClient'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 export const revalidate = 0
 
-async function toggleEventPublishStatus(eventId: string, currentStatus: boolean) {
+async function toggleEventPublishStatus(eventId: string, currentStatus: boolean, eventTitle: string) {
   'use server'
+  const user = await getCurrentUser()
+  if (!user) return
+  
   const supabase = await createClient()
   await supabase
     .from('events')
     .update({ is_published: !currentStatus })
     .eq('id', eventId)
+  
+  // Log audit trail
+  await logAdminAction({
+    action: currentStatus ? 'event.unpublish' : 'event.publish',
+    adminId: user.id,
+    adminEmail: user.email || '',
+    resourceId: eventId,
+    resourceType: 'event',
+    details: { eventTitle }
+  })
+  
   revalidatePath('/admin/events')
 }
 
@@ -116,6 +131,7 @@ export default async function AdminEventsPage() {
                         </a>
                         <EventActionsClient 
                           eventId={event.id}
+                          eventTitle={event.title}
                           isPublished={event.is_published}
                           togglePublishStatus={toggleEventPublishStatus}
                         />
@@ -186,6 +202,7 @@ export default async function AdminEventsPage() {
                             </a>
                             <EventActionsClient 
                               eventId={event.id}
+                              eventTitle={event.title}
                               isPublished={event.is_published}
                               togglePublishStatus={toggleEventPublishStatus}
                             />
