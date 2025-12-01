@@ -54,6 +54,37 @@ export default function EventFormPremium({ userId, event }: EventFormProps) {
   const completion = getEventCompletion(formData, ticketTiers)
   const blockingIssues = getPublishBlockingIssues(formData, ticketTiers)
 
+  // Load ticket tiers for existing event
+  useEffect(() => {
+    const loadTicketTiers = async () => {
+      if (!event?.id || isDemoMode()) return
+      
+      try {
+        const { data: tiersData, error } = await supabase
+          .from('ticket_tiers')
+          .select('*')
+          .eq('event_id', event.id)
+          .order('price', { ascending: true })
+        
+        if (error) throw error
+        
+        if (tiersData && tiersData.length > 0) {
+          const formattedTiers: TicketTier[] = tiersData.map((tier: any) => ({
+            name: tier.name || '',
+            price: tier.price?.toString() || '',
+            quantity: tier.total_quantity?.toString() || '',
+            description: tier.description || ''
+          }))
+          setTicketTiers(formattedTiers)
+        }
+      } catch (err) {
+        console.error('Error loading ticket tiers:', err)
+      }
+    }
+    
+    loadTicketTiers()
+  }, [event?.id])
+
   // Track unsaved changes
   useEffect(() => {
     if (!event) {
@@ -133,6 +164,31 @@ export default function EventFormPremium({ userId, event }: EventFormProps) {
 
         if (updateError) throw updateError
         
+        // Save ticket tiers if any exist
+        if (ticketTiers.length > 0) {
+          // Delete existing tiers first
+          await supabase
+            .from('ticket_tiers')
+            .delete()
+            .eq('event_id', event.id)
+          
+          // Insert new tiers
+          const tiersToInsert = ticketTiers.map((tier) => ({
+            event_id: event.id,
+            name: tier.name,
+            price: parseFloat(tier.price?.toString() || '0'),
+            total_quantity: parseInt(tier.quantity?.toString() || '0'),
+            sold_quantity: 0,
+            description: tier.description || null
+          }))
+          
+          const { error: tiersError } = await supabase
+            .from('ticket_tiers')
+            .insert(tiersToInsert)
+          
+          if (tiersError) throw tiersError
+        }
+        
         if (!silent) {
           showToast({
             type: 'success',
@@ -151,6 +207,24 @@ export default function EventFormPremium({ userId, event }: EventFormProps) {
           .single()
 
         if (insertError) throw insertError
+        
+        // Save ticket tiers if any exist
+        if (ticketTiers.length > 0 && data) {
+          const tiersToInsert = ticketTiers.map((tier) => ({
+            event_id: data.id,
+            name: tier.name,
+            price: parseFloat(tier.price?.toString() || '0'),
+            total_quantity: parseInt(tier.quantity?.toString() || '0'),
+            sold_quantity: 0,
+            description: tier.description || null
+          }))
+          
+          const { error: tiersError } = await supabase
+            .from('ticket_tiers')
+            .insert(tiersToInsert)
+          
+          if (tiersError) console.error('Error saving tiers:', tiersError)
+        }
         
         if (!silent) {
           showToast({
