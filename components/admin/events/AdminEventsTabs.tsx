@@ -15,7 +15,7 @@ interface AdminEventsTabsProps {
 export function AdminEventsTabs({ activeTab, onTabChange, tabs }: AdminEventsTabsProps) {
   return (
     <div className="border-b border-gray-200 bg-white">
-      <div className="px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <nav className="-mb-px flex gap-6 overflow-x-auto" aria-label="Tabs">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id

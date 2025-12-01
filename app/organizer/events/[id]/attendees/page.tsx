@@ -30,7 +30,13 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
   const { id: eventId } = await params
 
   // Fetch event
-  const eventDoc = await adminDb.collection('events').doc(eventId).get()
+  let eventDoc
+  try {
+    eventDoc = await adminDb.collection('events').doc(eventId).get()
+  } catch (error) {
+    console.error('Error fetching event:', error)
+    notFound()
+  }
   
   if (!eventDoc.exists) {
     notFound()
@@ -55,10 +61,16 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
   }
 
   // Fetch all tickets for this event
-  const ticketsSnapshot = await adminDb
-    .collection('tickets')
-    .where('event_id', '==', eventId)
-    .get()
+  let ticketsSnapshot
+  try {
+    ticketsSnapshot = await adminDb
+      .collection('tickets')
+      .where('event_id', '==', eventId)
+      .get()
+  } catch (error) {
+    console.error('Error fetching tickets:', error)
+    ticketsSnapshot = { docs: [] } as any
+  }
 
   const tickets = await Promise.all(
     ticketsSnapshot.docs.map(async (doc: any) => {

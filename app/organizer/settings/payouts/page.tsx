@@ -8,6 +8,9 @@ import { PayoutMethodCard } from '@/components/payout/PayoutMethodCard'
 import { FeesAndRulesCard } from '@/components/payout/FeesAndRulesCard'
 import { VerificationChecklist } from '@/components/payout/VerificationChecklist'
 import { PayoutHistory } from '@/components/payout/PayoutHistory'
+import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -47,20 +50,34 @@ export default async function PayoutsSettingsPage() {
     // This will trigger revalidation since revalidate = 0
   }
 
+  const navbarUser = {
+    id: authUser.uid,
+    email: authUser.email || '',
+    full_name: authUser.name || authUser.email || '',
+    role: 'organizer' as const,
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+      <Navbar user={navbarUser} />
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">Payout Settings</h1>
-          <p className="text-gray-600 mt-2">
+          <div className="mb-4">
+            <Link href="/organizer/settings" className="text-orange-600 hover:text-orange-700 text-sm font-medium">
+              ← Back to Settings
+            </Link>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Payout Settings</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-2">
             Manage how you receive payments from your events
           </p>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="space-y-8">
           {/* Status Hero */}
           <PayoutStatusHero status={status} />
@@ -95,6 +112,8 @@ export default async function PayoutsSettingsPage() {
           </div>
         </div>
       </div>
+      
+      <MobileNavWrapper user={navbarUser} />
     </div>
   )
 }
