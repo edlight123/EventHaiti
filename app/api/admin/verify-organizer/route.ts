@@ -27,9 +27,13 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
+    // Update user verification status
     const { error } = await supabase
       .from('users')
-      .update({ is_verified: isVerified })
+      .update({ 
+        is_verified: isVerified,
+        verification_status: isVerified ? 'approved' : 'none'
+      })
       .eq('id', organizerId)
 
     if (error) {
@@ -38,6 +42,25 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to update verification' },
         { status: 500 }
       )
+    }
+
+    // Also update or create verification request if exists
+    const { data: existingRequest } = await supabase
+      .from('verification_requests')
+      .select('*')
+      .eq('id', organizerId)
+      .single()
+
+    if (existingRequest) {
+      await supabase
+        .from('verification_requests')
+        .update({
+          status: isVerified ? 'approved' : 'rejected',
+          reviewed_by: user.id,
+          reviewed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', organizerId)
     }
 
     return NextResponse.json({
