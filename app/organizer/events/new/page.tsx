@@ -20,20 +20,14 @@ export default async function NewEventPage() {
   console.log('Is verified:', userData?.is_verified)
   console.log('Verification status:', userData?.verification_status)
 
-  // Check for pending verification request - simplified query without ordering
+  // Check verification_requests collection where document ID is the userId
   let verificationStatus = userData?.verification_status
-  // If is_verified is undefined or false, check for verification requests
   if (userData && userData.is_verified !== true && userData.verification_status !== 'approved') {
-    const { data: verificationRequests } = await supabase
+    const { data: verificationRequest } = await supabase
       .from('verification_requests')
       .select('*')
-      .eq('user_id', user.id)
-    
-    // Sort in memory instead of in query to avoid index requirement
-    const sortedRequests = verificationRequests?.sort((a: any, b: any) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    )
-    const verificationRequest = sortedRequests?.[0]
+      .eq('userId', user.id)
+      .single()
     
     console.log('Verification request:', verificationRequest)
     
@@ -44,8 +38,9 @@ export default async function NewEventPage() {
     }
   }
 
-  // If not verified (check both is_verified and verification_status), redirect to verification page
-  if (userData?.is_verified !== true && userData?.verification_status !== 'approved') {
+  // If not verified and not pending/in_review, redirect to verification page
+  const isPendingOrInReview = verificationStatus === 'pending_review' || verificationStatus === 'in_review'
+  if (userData?.is_verified !== true && userData?.verification_status !== 'approved' && !isPendingOrInReview) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-yellow-50 pb-mobile-nav flex items-center justify-center px-4">
         <div className="max-w-3xl w-full py-8 md:py-16">
@@ -58,10 +53,10 @@ export default async function NewEventPage() {
               </div>
               
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 md:mb-3">
-                {verificationStatus === 'pending' ? '⏳ Verification Pending' : '🔒 Verification Required'}
+                {isPendingOrInReview ? '⏳ Verification Pending' : '🔒 Verification Required'}
               </h1>
               
-              {verificationStatus === 'pending' ? (
+              {isPendingOrInReview ? (
                 <>
                   <p className="text-base md:text-lg text-gray-600 mb-6 md:mb-8 max-w-xl mx-auto">
                     Your verification request is being reviewed by our team. This usually takes 24-48 hours.
@@ -91,7 +86,7 @@ export default async function NewEventPage() {
                     Back to Dashboard
                   </Link>
                 </>
-              ) : verificationStatus === 'rejected' ? (
+              ) : verificationStatus === 'rejected' || verificationStatus === 'changes_requested' ? (
                 <>
                   <p className="text-base md:text-lg text-gray-600 mb-6 md:mb-8 max-w-xl mx-auto">
                     Unfortunately, your verification request was not approved. Please try again with clearer photos of your ID.
