@@ -73,7 +73,18 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
       }
     }
 
-    // Get verification documents to check actual status
+    // Check if user has already completed organizer verification (from /organizer/verify)
+    const organizerVerificationDoc = await adminDb
+      .collection('verification_requests')
+      .doc(organizerId)
+      .get()
+
+    const hasOrganizerVerification = organizerVerificationDoc.exists && 
+      (organizerVerificationDoc.data()?.status === 'approved' || 
+       organizerVerificationDoc.data()?.status === 'in_review' ||
+       organizerVerificationDoc.data()?.status === 'pending')
+
+    // Get payout-specific verification documents
     const verificationDocs = await adminDb
       .collection('organizers')
       .doc(organizerId)
@@ -81,7 +92,8 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
       .get()
 
     const verificationStatus: PayoutConfig['verificationStatus'] = {
-      identity: 'pending',
+      // If they've completed organizer verification, mark identity as verified
+      identity: hasOrganizerVerification ? 'verified' : 'pending',
       bank: 'pending',
       phone: 'pending',
     }
