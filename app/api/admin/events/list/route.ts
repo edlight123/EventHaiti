@@ -45,11 +45,22 @@ export async function POST(request: NextRequest) {
     })
     const organizerIds = Array.from(organizerIdsSet)
 
-    // Fetch organizers
-    const organizersSnapshot = await adminDb
-      .collection('users')
-      .where('__name__', 'in', organizerIds.length > 0 ? organizerIds : ['_'])
-      .get()
+    // Fetch organizers (only if we have IDs)
+    let organizersSnapshot
+    if (organizerIds.length > 0) {
+      // Firestore 'in' operator supports max 10 values, so batch if needed
+      const batches = []
+      for (let i = 0; i < organizerIds.length; i += 10) {
+        const batch = organizerIds.slice(i, i + 10)
+        batches.push(
+          adminDb.collection('users').where('__name__', 'in', batch).get()
+        )
+      }
+      const results = await Promise.all(batches)
+      organizersSnapshot = { docs: results.flatMap(r => r.docs) }
+    } else {
+      organizersSnapshot = { docs: [] }
+    }
 
     const organizersMap = new Map()
     organizersSnapshot.docs.forEach((doc: any) => {

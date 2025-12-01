@@ -68,16 +68,8 @@ export default async function OrganizerDashboard() {
     })
   }
 
-  if (!hasPayoutSetup && statsLifetime.revenue > 0) {
-    alerts.push({
-      id: 'payout',
-      type: 'payout',
-      title: 'Payouts Not Setup',
-      description: 'Configure your payout method to receive earnings',
-      ctaText: 'Setup Payouts',
-      ctaHref: '/organizer/settings/payouts'
-    })
-  }
+  // Note: Payout setup is shown in PayoutsWidget, not in ActionCenter
+  // to avoid showing both "All caught up" and payout message
 
   if (!isVerified) {
     alerts.push({

@@ -31,11 +31,20 @@ export async function getCollectionCount(collectionName: string, whereClause?: {
  * Get platform stats counts
  */
 export async function getPlatformCounts() {
-  const [usersCount, eventsCount, ticketsCount, pendingVerifications] = await Promise.all([
+  // Get pending verifications manually since we need OR logic
+  const verificationsSnapshot = await adminDb
+    .collection('verification_requests')
+    .get()
+  
+  const pendingVerifications = verificationsSnapshot.docs.filter((doc: any) => {
+    const status = doc.data().status
+    return status === 'pending_review' || status === 'in_review'
+  }).length
+
+  const [usersCount, eventsCount, ticketsCount] = await Promise.all([
     getCollectionCount('users'),
     getCollectionCount('events'),
-    getCollectionCount('tickets'),
-    getCollectionCount('verification_requests', { field: 'status', op: '==', value: 'pending' })
+    getCollectionCount('tickets')
   ])
 
   return {
@@ -148,30 +157,28 @@ export async function getRecentEvents(limit: number = 8) {
  */
 export async function getPendingVerifications(limit: number = 3) {
   try {
-    // Try createdAt first, fall back to created_at
-    let verificationsSnapshot
-    try {
-      verificationsSnapshot = await adminDb
-        .collection('verification_requests')
-        .where('status', '==', 'pending')
-        .orderBy('createdAt', 'desc')
-        .limit(limit)
-        .get()
-    } catch (error) {
-      console.log('Trying created_at field instead of createdAt for verifications')
-      verificationsSnapshot = await adminDb
-        .collection('verification_requests')
-        .where('status', '==', 'pending')
-        .orderBy('created_at', 'desc')
-        .limit(limit)
-        .get()
-    }
+    // Get all verification requests and filter in memory since Firestore doesn't support OR in where
+    const verificationsSnapshot = await adminDb
+      .collection('verification_requests')
+      .get()
 
-    return verificationsSnapshot.docs.map((doc: any) => {
+    const pendingDocs = verificationsSnapshot.docs
+      .filter((doc: any) => {
+        const status = doc.data().status
+        return status === 'pending_review' || status === 'in_review'
+      })
+      .sort((a: any, b: any) => {
+        const aDate = a.data().created_at?.toDate?.() || a.data().createdAt?.toDate?.() || new Date(0)
+        const bDate = b.data().created_at?.toDate?.() || b.data().createdAt?.toDate?.() || new Date(0)
+        return bDate.getTime() - aDate.getTime()
+      })
+      .slice(0, limit)
+
+    return pendingDocs.map((doc: any) => {
       const data = doc.data()
       return {
         id: doc.id,
-        userId: data.userId || data.user_id,
+        userId: data.userId || data.user_id || doc.id,
         businessName: data.businessName || data.business_name,
         status: data.status,
         createdAt: data.createdAt?.toDate?.() || data.created_at?.toDate?.() || new Date(data.created_at || data.createdAt || Date.now()),
