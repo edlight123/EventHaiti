@@ -21,9 +21,7 @@ export function PayoutStatusHero({ status, reason }: PayoutStatusHeroProps) {
           border: 'border-orange-200',
           title: 'Payouts Not Set Up',
           description: 'Complete your payout setup to start receiving your earnings. This only takes a few minutes.',
-          ctaText: 'Start Setup',
-          ctaHref: '#setup',
-          ctaColor: 'bg-orange-600 hover:bg-orange-700'
+          showCta: false
         }
       case 'pending_verification':
         return {
@@ -34,6 +32,7 @@ export function PayoutStatusHero({ status, reason }: PayoutStatusHeroProps) {
           border: 'border-blue-200',
           title: 'Verification In Progress',
           description: reason || 'We\'re reviewing your payout information. This usually takes 1-2 business days.',
+          showCta: true,
           ctaText: 'View Status',
           ctaHref: '#verification',
           ctaColor: 'bg-blue-600 hover:bg-blue-700'
@@ -47,6 +46,7 @@ export function PayoutStatusHero({ status, reason }: PayoutStatusHeroProps) {
           border: 'border-green-200',
           title: 'Payouts Active',
           description: 'Your payout account is active and ready to receive payments.',
+          showCta: true,
           ctaText: 'Manage Settings',
           ctaHref: '#method',
           ctaColor: 'bg-green-600 hover:bg-green-700'
@@ -60,6 +60,7 @@ export function PayoutStatusHero({ status, reason }: PayoutStatusHeroProps) {
           border: 'border-red-200',
           title: 'Payouts On Hold',
           description: reason || 'There\'s an issue with your payout account. Please contact support to resolve this.',
+          showCta: true,
           ctaText: 'Contact Support',
           ctaHref: 'mailto:support@eventhaiti.com',
           ctaColor: 'bg-red-600 hover:bg-red-700'
@@ -79,12 +80,14 @@ export function PayoutStatusHero({ status, reason }: PayoutStatusHeroProps) {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">{config.title}</h2>
           <p className="text-gray-700 leading-relaxed">{config.description}</p>
         </div>
-        <a
-          href={config.ctaHref}
-          className={`${config.ctaColor} text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all whitespace-nowrap`}
-        >
-          {config.ctaText}
-        </a>
+        {config.showCta && (
+          <a
+            href={config.ctaHref}
+            className={`${config.ctaColor} text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all whitespace-nowrap`}
+          >
+            {config.ctaText}
+          </a>
+        )}
       </div>
     </div>
   )

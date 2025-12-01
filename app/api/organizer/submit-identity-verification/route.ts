@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     await configRef.set(
       {
         verificationStatus: {
-          identity: 'pending',
+          identity: 'verified',
         },
         updatedAt: new Date().toISOString(),
       },

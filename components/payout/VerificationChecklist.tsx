@@ -38,7 +38,9 @@ export function VerificationChecklist({ config }: VerificationChecklistProps) {
     {
       id: 'identity',
       label: 'Identity Verification',
-      description: 'Government-issued ID and personal information',
+      description: identityStatus === 'verified' 
+        ? 'Already verified during organizer onboarding' 
+        : 'Government-issued ID and personal information',
       status: identityStatus,
       icon: User,
       action: identityStatus === 'pending' ? {

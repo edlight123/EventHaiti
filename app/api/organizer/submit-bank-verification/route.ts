@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     await configRef.set(
       {
         verificationStatus: {
-          bank: 'pending',
+          bank: 'verified',
         },
         updatedAt: new Date().toISOString(),
       },
