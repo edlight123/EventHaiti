@@ -123,7 +123,7 @@ export default async function AdminBankVerificationsPage() {
     id: authUser.uid,
     email: authUser.email || '',
     full_name: authUser.name || authUser.email || '',
-    role: 'admin' as const,
+    role: 'organizer' as const, // Using organizer role for navbar compatibility
   }
 
   return (
