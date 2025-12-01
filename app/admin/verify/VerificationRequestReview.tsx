@@ -83,8 +83,14 @@ export default function VerificationRequestReview({ request, user }: Props) {
             </h3>
             <p className="text-[13px] sm:text-sm text-gray-600 truncate">{user?.email}</p>
             <p className="text-[11px] sm:text-xs text-gray-500 mt-1">
-              Submitted {new Date(request.created_at).toLocaleDateString()} at{' '}
-              {new Date(request.created_at).toLocaleTimeString()}
+              {request.created_at ? (
+                <>
+                  Submitted {new Date(request.created_at).toLocaleDateString()} at{' '}
+                  {new Date(request.created_at).toLocaleTimeString()}
+                </>
+              ) : (
+                'Submission date not available'
+              )}
             </p>
           </div>
           <span className="px-2 sm:px-3 py-1 bg-yellow-100 text-yellow-800 text-[10px] sm:text-xs font-semibold rounded-full whitespace-nowrap">
@@ -95,60 +101,69 @@ export default function VerificationRequestReview({ request, user }: Props) {
         {/* Verification Images */}
         <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
           {/* ID Front */}
-          <div>
-            <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">ID Card - Front</p>
-            <div
-              onClick={() => setSelectedImage(request.id_front_url)}
-              className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
-            >
-              <Image
-                src={request.id_front_url}
-                alt="ID Front"
-                fill
-                sizes="(max-width: 640px) 33vw, 33vw"
-                className="object-cover"
-              />
-              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-10 transition-opacity">
-                <svg className="w-8 h-8 text-white opacity-0 hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                </svg>
+          {request.id_front_url && (
+            <div>
+              <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">ID Card - Front</p>
+              <div
+                onClick={() => setSelectedImage(request.id_front_url)}
+                className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
+              >
+                <Image
+                  src={request.id_front_url}
+                  alt="ID Front"
+                  fill
+                  sizes="(max-width: 640px) 33vw, 33vw"
+                  className="object-cover"
+                  unoptimized
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-10 transition-opacity">
+                  <svg className="w-8 h-8 text-white opacity-0 hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                  </svg>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* ID Back */}
-          <div>
-            <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">ID Card - Back</p>
-            <div
-              onClick={() => setSelectedImage(request.id_back_url)}
-              className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
-            >
-              <Image
-                src={request.id_back_url}
-                alt="ID Back"
-                fill
-                sizes="(max-width: 640px) 33vw, 33vw"
-                className="object-cover"
-              />
+          {request.id_back_url && (
+            <div>
+              <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">ID Card - Back</p>
+              <div
+                onClick={() => setSelectedImage(request.id_back_url)}
+                className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
+              >
+                <Image
+                  src={request.id_back_url}
+                  alt="ID Back"
+                  fill
+                  sizes="(max-width: 640px) 33vw, 33vw"
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Face Photo */}
-          <div>
-            <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Face Photo</p>
-            <div
-              onClick={() => setSelectedImage(request.face_photo_url)}
-              className="relative aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
-            >
-              <Image
-                src={request.face_photo_url}
-                alt="Face"
-                fill
-                sizes="(max-width: 640px) 33vw, 33vw"
-                className="object-cover"
-              />
+          {request.face_photo_url && (
+            <div>
+              <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Face Photo</p>
+              <div
+                onClick={() => setSelectedImage(request.face_photo_url)}
+                className="relative aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
+              >
+                <Image
+                  src={request.face_photo_url}
+                  alt="Face"
+                  fill
+                  sizes="(max-width: 640px) 33vw, 33vw"
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Action Buttons */}
@@ -193,6 +208,7 @@ export default function VerificationRequestReview({ request, user }: Props) {
                 className="object-contain rounded-lg"
                 sizes="90vw"
                 onClick={(e) => e.stopPropagation()}
+                unoptimized
               />
             </div>
           </div>

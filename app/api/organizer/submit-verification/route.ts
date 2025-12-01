@@ -35,14 +35,16 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
 
     // Create verification request with Firebase Storage URLs
+    // Use userId as document ID for consistency with Firestore structure
     const { data: verificationRequest, error: requestError } = await supabase
       .from('verification_requests')
-      .insert({
-        user_id: userId,
+      .upsert({
+        id: userId,
+        userId: userId,
         id_front_url: idFrontUrl,
         id_back_url: idBackUrl,
         face_photo_url: facePhotoUrl,
-        status: 'pending',
+        status: 'pending_review',
       })
       .select()
       .single()
@@ -55,10 +57,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update user verification status to pending
+    // Update user verification status to pending_review
     const { error: updateError } = await supabase
       .from('users')
-      .update({ verification_status: 'pending' })
+      .update({ verification_status: 'pending_review' })
       .eq('id', userId)
 
     if (updateError) {
