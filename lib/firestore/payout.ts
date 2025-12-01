@@ -74,38 +74,42 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
     }
 
     // Check if user has already completed organizer verification (from /organizer/verify)
-    // The verification_requests collection structure changed - check both old and new formats
+    // Check verification_requests collection for existing verification
     const organizerVerificationDoc = await adminDb
       .collection('verification_requests')
       .doc(organizerId)
       .get()
-
-    console.log('🔍 Checking verification for organizer:', organizerId)
-    console.log('📄 Verification doc exists:', organizerVerificationDoc.exists)
     
     let hasOrganizerVerification = false
     
     if (organizerVerificationDoc.exists) {
       const verificationData = organizerVerificationDoc.data()
-      console.log('📊 Verification data:', verificationData)
       
-      // Check new format (with nested steps and status field)
-      const newFormatStatus = verificationData?.status
-      // Check old format (just status on the doc)
-      const hasApprovedStatus = newFormatStatus === 'approved' || 
-                                newFormatStatus === 'in_review' ||
-                                newFormatStatus === 'pending'
+      // Check multiple verification indicators:
+      // 1. Status field (new format): approved, in_review, or pending
+      const hasApprovedStatus = verificationData?.status === 'approved' || 
+                                verificationData?.status === 'in_review' ||
+                                verificationData?.status === 'pending'
       
-      // Also check if governmentId step is complete (alternative check)
-      const hasGovernmentId = verificationData?.steps?.governmentId?.status === 'complete' ||
-                             verificationData?.files?.governmentId?.front ||
-                             verificationData?.id_front_url  // Old schema field
+      // 2. Government ID uploaded (new format with nested steps)
+      const hasGovernmentIdFiles = verificationData?.files?.governmentId?.front ||
+                                    verificationData?.files?.governmentId?.back
       
-      hasOrganizerVerification = hasApprovedStatus || hasGovernmentId
+      // 3. Government ID step marked complete
+      const hasCompleteStep = verificationData?.steps?.governmentId?.status === 'complete'
       
-      console.log('📋 New format status:', newFormatStatus)
-      console.log('📎 Has government ID:', hasGovernmentId)
-      console.log('✅ Final decision - has verification:', hasOrganizerVerification)
+      // 4. Old schema format - direct URL fields
+      const hasOldFormatUrls = verificationData?.id_front_url || verificationData?.id_back_url
+      
+      // User is verified if ANY of these conditions are true
+      hasOrganizerVerification = hasApprovedStatus || hasGovernmentIdFiles || hasCompleteStep || hasOldFormatUrls
+    }
+    
+    // Also check the users collection verification_status field
+    if (!hasOrganizerVerification) {
+      const userDoc = await adminDb.collection('users').doc(organizerId).get()
+      const userVerificationStatus = userDoc.data()?.verification_status
+      hasOrganizerVerification = userVerificationStatus === 'approved'
     }
 
     // Get payout-specific verification documents
