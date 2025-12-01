@@ -60,9 +60,9 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
       id: doc.id,
       name: data.name,
       price: data.price || 0,
-      quantity: data.quantity || 0,
+      quantity: data.total_quantity || 0,
       description: data.description,
-      sold: tickets.filter((t: any) => t.tier_id === doc.id).length
+      sold: data.sold_quantity || 0
     }
   })
 
