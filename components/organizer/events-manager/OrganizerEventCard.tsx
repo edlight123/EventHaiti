@@ -157,7 +157,7 @@ export default function OrganizerEventCard({
               </svg>
             </div>
             <span className="font-medium text-xs line-clamp-1">
-              {event.city}{event.commune ? `, ${event.commune}` : ''}
+              {event.location_name || event.commune || event.city}
             </span>
           </div>
         </div>

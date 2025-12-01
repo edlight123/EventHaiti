@@ -98,7 +98,7 @@ export default function OrganizerEventsTabs({
 
   return (
     <div className="bg-white border-b border-gray-200">
-      <div className="px-4 py-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         {/* Desktop Tabs */}
         <div className="hidden md:flex items-center gap-2">
           {tabs.map((tab) => {
