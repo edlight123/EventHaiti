@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
@@ -15,25 +15,47 @@ export default function VerificationRequestReview({ request, user }: Props) {
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [rejectionReason, setRejectionReason] = useState('')
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [imageUrls, setImageUrls] = useState<{
+    idFrontUrl: string | null
+    idBackUrl: string | null
+    facePhotoUrl: string | null
+  }>({ idFrontUrl: null, idBackUrl: null, facePhotoUrl: null })
+  const [loadingImages, setLoadingImages] = useState(true)
 
-  // Normalize data format (handle both old and new formats)
-  const getImageUrl = (path: string) => {
+  // Get signed URL for admin access
+  const getSignedUrl = async (path: string) => {
     if (!path) return null
-    // If it's already a full URL, return it
-    if (path.startsWith('http')) return path
-    // Otherwise, construct Firebase Storage URL with proper encoding
-    // Split by / and encode each segment
-    const segments = path.split('/').map(segment => encodeURIComponent(segment))
-    const encodedPath = segments.join('%2F')
-    return `https://firebasestorage.googleapis.com/v0/b/event-haiti.firebasestorage.app/o/${encodedPath}?alt=media`
+    try {
+      const response = await fetch(`/api/admin/verification-image?path=${encodeURIComponent(path)}`)
+      if (!response.ok) throw new Error('Failed to get signed URL')
+      const data = await response.json()
+      return data.url
+    } catch (error) {
+      console.error('Error getting signed URL:', error)
+      return null
+    }
   }
 
-  const idFrontUrl = request.id_front_url || getImageUrl(request.files?.governmentId?.front)
-  const idBackUrl = request.id_back_url || getImageUrl(request.files?.governmentId?.back)
-  const facePhotoUrl = request.face_photo_url || getImageUrl(request.files?.selfie?.path)
+  // Load image URLs
+  useEffect(() => {
+    async function loadImageUrls() {
+      setLoadingImages(true)
+      const idFrontPath = request.files?.governmentId?.front
+      const idBackPath = request.files?.governmentId?.back
+      const selfiePath = request.files?.selfie?.path
 
-  console.log('Verification images:', { idFrontUrl, idBackUrl, facePhotoUrl })
-  console.log('Request files:', request.files)
+      const [idFrontUrl, idBackUrl, facePhotoUrl] = await Promise.all([
+        idFrontPath ? getSignedUrl(idFrontPath) : null,
+        idBackPath ? getSignedUrl(idBackPath) : null,
+        selfiePath ? getSignedUrl(selfiePath) : null,
+      ])
+
+      setImageUrls({ idFrontUrl, idBackUrl, facePhotoUrl })
+      setLoadingImages(false)
+    }
+
+    loadImageUrls()
+  }, [request.id])
 
   // Normalize date
   const submittedDate = request.submittedAt?._seconds 
@@ -128,69 +150,78 @@ export default function VerificationRequestReview({ request, user }: Props) {
 
         {/* Verification Images */}
         <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
-          {/* ID Front */}
-          {idFrontUrl && (
-            <div>
-              <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">ID Card - Front</p>
-              <div
-                onClick={() => setSelectedImage(idFrontUrl)}
-                className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
-              >
-                <Image
-                  src={idFrontUrl}
-                  alt="ID Front"
-                  fill
-                  sizes="(max-width: 640px) 33vw, 33vw"
-                  className="object-cover"
-                  unoptimized
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-10 transition-opacity">
-                  <svg className="w-8 h-8 text-white opacity-0 hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                  </svg>
+          {loadingImages ? (
+            <div className="col-span-3 text-center py-8">
+              <div className="inline-block w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-gray-600 mt-2">Loading images...</p>
+            </div>
+          ) : (
+            <>
+              {/* ID Front */}
+              {imageUrls.idFrontUrl && (
+                <div>
+                  <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">ID Card - Front</p>
+                  <div
+                    onClick={() => setSelectedImage(imageUrls.idFrontUrl)}
+                    className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
+                  >
+                    <Image
+                      src={imageUrls.idFrontUrl}
+                      alt="ID Front"
+                      fill
+                      sizes="(max-width: 640px) 33vw, 33vw"
+                      className="object-cover"
+                      unoptimized
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-10 transition-opacity">
+                      <svg className="w-8 h-8 text-white opacity-0 hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* ID Back */}
-          {idBackUrl && (
-            <div>
-              <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">ID Card - Back</p>
-              <div
-                onClick={() => setSelectedImage(idBackUrl)}
-                className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
-              >
-                <Image
-                  src={idBackUrl}
-                  alt="ID Back"
-                  fill
-                  sizes="(max-width: 640px) 33vw, 33vw"
-                  className="object-cover"
-                  unoptimized
-                />
-              </div>
-            </div>
-          )}
+              {/* ID Back */}
+              {imageUrls.idBackUrl && (
+                <div>
+                  <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">ID Card - Back</p>
+                  <div
+                    onClick={() => setSelectedImage(imageUrls.idBackUrl)}
+                    className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
+                  >
+                    <Image
+                      src={imageUrls.idBackUrl}
+                      alt="ID Back"
+                      fill
+                      sizes="(max-width: 640px) 33vw, 33vw"
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                </div>
+              )}
 
-          {/* Face Photo */}
-          {facePhotoUrl && (
-            <div>
-              <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Selfie Photo</p>
-              <div
-                onClick={() => setSelectedImage(facePhotoUrl)}
-                className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
-              >
-                <Image
-                  src={facePhotoUrl}
-                  alt="Face Photo"
-                  fill
-                  sizes="(max-width: 640px) 33vw, 33vw"
-                  className="object-cover"
-                  unoptimized
-                />
-              </div>
-            </div>
+              {/* Face Photo */}
+              {imageUrls.facePhotoUrl && (
+                <div>
+                  <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Selfie Photo</p>
+                  <div
+                    onClick={() => setSelectedImage(imageUrls.facePhotoUrl)}
+                    className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
+                  >
+                    <Image
+                      src={imageUrls.facePhotoUrl}
+                      alt="Face Photo"
+                      fill
+                      sizes="(max-width: 640px) 33vw, 33vw"
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
