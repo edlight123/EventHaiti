@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { getDocumentDownloadURL } from '@/lib/verification'
 
 interface Props {
   request: any
@@ -22,40 +23,30 @@ export default function VerificationRequestReview({ request, user }: Props) {
   }>({ idFrontUrl: null, idBackUrl: null, facePhotoUrl: null })
   const [loadingImages, setLoadingImages] = useState(true)
 
-  // Get signed URL for admin access
-  const getSignedUrl = async (path: string) => {
-    if (!path) return null
-    try {
-      const response = await fetch(`/api/admin/verification-image?path=${encodeURIComponent(path)}`)
-      if (!response.ok) throw new Error('Failed to get signed URL')
-      const data = await response.json()
-      return data.url
-    } catch (error) {
-      console.error('Error getting signed URL:', error)
-      return null
-    }
-  }
-
-  // Load image URLs
+  // Load image URLs using client-side Firebase SDK
   useEffect(() => {
     async function loadImageUrls() {
-      setLoadingImages(true)
-      const idFrontPath = request.files?.governmentId?.front
-      const idBackPath = request.files?.governmentId?.back
-      const selfiePath = request.files?.selfie?.path
+      try {
+        const idFrontPath = request.files?.governmentId?.front
+        const idBackPath = request.files?.governmentId?.back
+        const selfiePath = request.files?.selfie?.path
 
-      const [idFrontUrl, idBackUrl, facePhotoUrl] = await Promise.all([
-        idFrontPath ? getSignedUrl(idFrontPath) : null,
-        idBackPath ? getSignedUrl(idBackPath) : null,
-        selfiePath ? getSignedUrl(selfiePath) : null,
-      ])
+        const [idFrontUrl, idBackUrl, facePhotoUrl] = await Promise.all([
+          idFrontPath ? getDocumentDownloadURL(idFrontPath).catch(() => null) : null,
+          idBackPath ? getDocumentDownloadURL(idBackPath).catch(() => null) : null,
+          selfiePath ? getDocumentDownloadURL(selfiePath).catch(() => null) : null,
+        ])
 
-      setImageUrls({ idFrontUrl, idBackUrl, facePhotoUrl })
-      setLoadingImages(false)
+        setImageUrls({ idFrontUrl, idBackUrl, facePhotoUrl })
+      } catch (error) {
+        console.error('Error loading images:', error)
+      } finally {
+        setLoadingImages(false)
+      }
     }
 
     loadImageUrls()
-  }, [request.id])
+  }, [request.id, request.files])
 
   // Normalize date
   const submittedDate = request.submittedAt?._seconds 
