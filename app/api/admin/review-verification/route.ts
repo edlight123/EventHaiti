@@ -31,34 +31,28 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
 
     // Get verification request
-    const allRequests = await supabase.from('verification_requests').select('*')
-    const verificationRequest = allRequests.data?.find((r: any) => r.id === requestId)
+    const verificationRef = adminDb.collection('verification_requests').doc(requestId)
+    const verificationDoc = await verificationRef.get()
 
-    if (!verificationRequest) {
+    if (!verificationDoc.exists) {
       return NextResponse.json(
         { error: 'Verification request not found' },
         { status: 404 }
       )
     }
 
-    // Update verification request
-    const { error: updateRequestError } = await supabase
-      .from('verification_requests')
-      .update({
-        status,
-        reviewed_by: user.id,
-        reviewed_at: new Date().toISOString(),
-        rejection_reason: status === 'rejected' ? rejectionReason : null,
-      })
-      .eq('id', requestId)
+    const verificationRequest = verificationDoc.data()
 
-    if (updateRequestError) {
-      console.error('Error updating verification request:', updateRequestError)
-      return NextResponse.json(
-        { error: 'Failed to update verification request' },
-        { status: 500 }
-      )
-    }
+    // Update verification request using Firebase Admin SDK
+    await verificationRef.update({
+      status,
+      reviewed_by: user.id,
+      reviewed_at: new Date(),
+      updated_at: new Date(),
+      rejection_reason: status === 'rejected' ? rejectionReason : null,
+    })
+
+    console.log(`Updated verification request ${requestId} to status: ${status}`)
 
     // Update user verification status
     // Handle both old format (user_id) and new format (userId or document ID)
