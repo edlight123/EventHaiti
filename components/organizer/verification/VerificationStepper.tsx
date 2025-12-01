@@ -9,10 +9,11 @@ import Link from 'next/link'
 interface Props {
   request: VerificationRequest
   onEditStep: (stepId: keyof VerificationRequest['steps']) => void
+  onSkipPayoutSetup?: () => void
   isReadOnly?: boolean
 }
 
-export default function VerificationStepper({ request, onEditStep, isReadOnly = false }: Props) {
+export default function VerificationStepper({ request, onEditStep, onSkipPayoutSetup, isReadOnly = false }: Props) {
   // Fixed order of steps to prevent random ordering
   const stepOrder: (keyof VerificationRequest['steps'])[] = [
     'organizerInfo',
@@ -38,6 +39,7 @@ export default function VerificationStepper({ request, onEditStep, isReadOnly = 
             step={step}
             stepNumber={index + 1}
             onEdit={() => onEditStep(stepId)}
+            onSkip={stepId === 'payoutSetup' ? onSkipPayoutSetup : undefined}
             isReadOnly={isReadOnly}
           />
         ))}
@@ -51,10 +53,11 @@ interface StepCardProps {
   step: VerificationStep
   stepNumber: number
   onEdit: () => void
+  onSkip?: () => void
   isReadOnly: boolean
 }
 
-function StepCard({ stepId, step, stepNumber, onEdit, isReadOnly }: StepCardProps) {
+function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: StepCardProps) {
   // Status styling
   const statusConfig = {
     complete: {
@@ -175,6 +178,22 @@ function StepCard({ stepId, step, stepNumber, onEdit, isReadOnly }: StepCardProp
                 </svg>
               </span>
             </div>
+
+            {/* Skip button for incomplete optional payout step */}
+            {!step.required && step.status !== 'complete' && onSkip && (
+              <div className="mt-2">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onSkip()
+                  }}
+                  className="text-xs text-gray-600 hover:text-gray-700 underline"
+                >
+                  Skip for now (can set up later)
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </Link>
