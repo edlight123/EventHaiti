@@ -11,13 +11,15 @@ interface Props {
   completionPercentage: number
   reviewNotes?: string
   onContinue?: () => void
+  onRestart?: () => void
 }
 
 export default function VerificationStatusHero({
   status,
   completionPercentage,
   reviewNotes,
-  onContinue
+  onContinue,
+  onRestart
 }: Props) {
   // Status configuration
   const statusConfig: Record<VerificationStatus, {
@@ -32,6 +34,7 @@ export default function VerificationStatusHero({
     ctaColor: string
     readonly?: boolean
     ctaHref?: string
+    actionType?: 'continue' | 'restart' | 'link'
   }> = {
     not_started: {
       icon: '📝',
@@ -111,7 +114,8 @@ export default function VerificationStatusHero({
       title: 'Verification Declined',
       description: 'Your verification was not approved. Please review the feedback and resubmit.',
       ctaText: 'Start New Application',
-      ctaColor: 'bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700'
+      ctaColor: 'bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700',
+      actionType: 'restart'
     }
   }
 
@@ -179,7 +183,7 @@ export default function VerificationStatusHero({
               </Link>
             ) : (
               <button
-                onClick={config.readonly ? undefined : onContinue}
+                onClick={config.actionType === 'restart' ? onRestart : (config.readonly ? undefined : onContinue)}
                 disabled={config.readonly}
                 className={`${config.ctaColor} ${
                   config.readonly ? 'opacity-50 cursor-not-allowed' : ''

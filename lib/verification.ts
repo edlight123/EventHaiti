@@ -331,3 +331,34 @@ export function canSubmitForReview(request: VerificationRequest): boolean {
   const requiredSteps = Object.values(request.steps).filter(step => step.required)
   return requiredSteps.every(step => step.status === 'complete')
 }
+
+// Helper: Restart rejected verification (allows resubmission)
+export async function restartVerification(userId: string): Promise<void> {
+  try {
+    const docRef = doc(db, 'verification_requests', userId)
+    const docSnap = await getDoc(docRef)
+    
+    if (!docSnap.exists()) {
+      throw new Error('Verification request not found')
+    }
+    
+    const currentData = docSnap.data() as VerificationRequest
+    
+    // Only allow restart if rejected
+    if (currentData.status !== 'rejected') {
+      throw new Error('Can only restart rejected verifications')
+    }
+    
+    // Reset to in_progress and clear review notes
+    await updateDoc(docRef, {
+      status: 'in_progress',
+      reviewNotes: null,
+      reasonCodes: null,
+      reviewedAt: null,
+      updatedAt: serverTimestamp()
+    })
+  } catch (error) {
+    console.error('Error restarting verification:', error)
+    throw error
+  }
+}

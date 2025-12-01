@@ -3,6 +3,7 @@ import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { Resend } from 'resend'
 import { adminDb } from '@/lib/firebase/admin'
+import { createNotification } from '@/lib/notifications'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@eventhaiti.com').split(',')
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
       reviewed_at: new Date(),
       updated_at: new Date(),
       rejection_reason: status === 'rejected' ? rejectionReason : null,
+      reviewNotes: status === 'rejected' ? rejectionReason : null,
     })
 
     console.log(`Updated verification request ${requestId} to status: ${status}`)
@@ -96,6 +98,29 @@ export async function POST(request: NextRequest) {
 
     // Get user details for email (we already have it from above)
     const organizer = userToUpdate
+
+    // Create in-app notification
+    try {
+      if (status === 'approved') {
+        await createNotification(
+          userId,
+          'verification',
+          '✅ Verification Approved!',
+          'Congratulations! Your EventHaiti account has been verified. You can now create and publish events.'
+        )
+      } else {
+        await createNotification(
+          userId,
+          'verification',
+          'Verification Update',
+          rejectionReason 
+            ? `Your verification was not approved. Reason: ${rejectionReason}. You can resubmit your application from the verification page.`
+            : 'Your verification was not approved. You can resubmit your application from the verification page.'
+        )
+      }
+    } catch (notificationError) {
+      console.error('Error creating in-app notification:', notificationError)
+    }
 
     // Send notification email to organizer
     if (organizer?.email && resend) {

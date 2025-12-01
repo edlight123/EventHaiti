@@ -23,6 +23,7 @@ import {
   initializeVerificationRequest,
   updateVerificationStep,
   submitVerificationForReview,
+  restartVerification,
   calculateCompletionPercentage,
   type VerificationRequest
 } from '@/lib/verification'
@@ -189,6 +190,18 @@ export default function VerifyOrganizerPage() {
     }
   }
 
+  const handleRestart = async () => {
+    if (!user || !request) return
+
+    try {
+      await restartVerification(user.id)
+      await reloadRequest()
+      setViewMode('overview')
+    } catch (err: any) {
+      setError(err.message || 'Failed to restart verification')
+    }
+  }
+
   const handleEditStep = (stepId: keyof VerificationRequest['steps']) => {
     const viewModes: Record<string, ViewMode> = {
       organizerInfo: 'organizerInfo',
@@ -247,6 +260,7 @@ export default function VerifyOrganizerPage() {
           completionPercentage={completionPercentage}
           reviewNotes={request.reviewNotes}
           onContinue={() => setViewMode('overview')}
+          onRestart={handleRestart}
         />
 
         {/* Main Content */}
