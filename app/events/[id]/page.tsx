@@ -605,7 +605,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                   {isSoldOut ? (
                     <WaitlistButton eventId={event.id} userId={user?.id || null} />
                   ) : user ? (
-                    <BuyTicketButton eventId={event.id} userId={user.id} isFree={isFree} ticketPrice={event.ticket_price || 0} />
+                    <BuyTicketButton eventId={event.id} userId={user.id} isFree={isFree} ticketPrice={event.ticket_price || 0} eventTitle={event.title} currency={event.currency} />
                   ) : (
                     <a
                       href="/auth/login"
@@ -701,7 +701,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           isSoldOut ? (
             <WaitlistButton eventId={event.id} userId={user?.id || null} />
           ) : user ? (
-            <BuyTicketButton eventId={event.id} userId={user.id} isFree={isFree} ticketPrice={event.ticket_price || 0} />
+            <BuyTicketButton eventId={event.id} userId={user.id} isFree={isFree} ticketPrice={event.ticket_price || 0} eventTitle={event.title} currency={event.currency} />
           ) : (
             <a
               href="/auth/login"

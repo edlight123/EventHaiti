@@ -182,6 +182,70 @@ export async function POST(request: Request) {
         }
       }
     }
+    
+    // Handle payment_intent.succeeded for embedded payments
+    if (event.type === 'payment_intent.succeeded') {
+      const paymentIntent = event.data.object
+      
+      // Create tickets in database
+      const supabase = await createClient()
+      const quantity = parseInt(paymentIntent.metadata.quantity || '1', 10)
+      const pricePerTicket = paymentIntent.amount / 100 / quantity
+      
+      // Create tickets
+      const createdTickets = []
+      for (let i = 0; i < quantity; i++) {
+        const qrCodeData = `ticket-${paymentIntent.metadata.eventId}-${paymentIntent.metadata.userId}-${Date.now()}-${i}`
+        const ticketData = {
+          event_id: paymentIntent.metadata.eventId,
+          attendee_id: paymentIntent.metadata.userId,
+          price_paid: pricePerTicket,
+          payment_method: 'stripe',
+          payment_id: paymentIntent.id,
+          status: 'valid',
+          qr_code_data: qrCodeData,
+          purchased_at: new Date().toISOString(),
+          tier_id: paymentIntent.metadata.tierId || null,
+          tier_name: paymentIntent.metadata.tierName || 'General Admission',
+        }
+        
+        const insertResult = await supabase
+          .from('tickets')
+          .insert([ticketData])
+          .select()
+        
+        if (insertResult.error) {
+          console.error('Failed to create ticket:', insertResult.error)
+          continue
+        }
+        
+        const createdTicket = insertResult.data?.[0]
+        if (createdTicket) {
+          createdTickets.push(createdTicket)
+          console.log('Created ticket from PaymentIntent:', createdTicket.id)
+        }
+      }
+
+      // Send notifications (similar to checkout.session.completed)
+      if (createdTickets.length > 0) {
+        const eventQuery = await supabase.from('events').select('*')
+        const eventDetails = eventQuery.data?.find((e: any) => e.id === paymentIntent.metadata.eventId)
+        
+        const attendeeQuery = await supabase.from('users').select('*')
+        const attendee = attendeeQuery.data?.find((u: any) => u.id === paymentIntent.metadata.userId)
+        
+        try {
+          await notifyTicketPurchase(
+            paymentIntent.metadata.userId,
+            paymentIntent.metadata.eventId,
+            eventDetails?.title || 'Event',
+            quantity
+          )
+        } catch (error) {
+          console.error('Failed to send notification:', error)
+        }
+      }
+    }
 
     return NextResponse.json({ received: true })
   } catch (error: any) {

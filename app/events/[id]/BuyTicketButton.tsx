@@ -7,19 +7,25 @@ import { isDemoMode } from '@/lib/demo'
 import TieredTicketSelector from '@/components/TieredTicketSelector'
 import BottomSheet from '@/components/ui/BottomSheet'
 import { useToast } from '@/components/ui/Toast'
+import dynamic from 'next/dynamic'
+
+const EmbeddedStripePayment = dynamic(() => import('./EmbeddedStripePayment'), { ssr: false })
 
 interface BuyTicketButtonProps {
   eventId: string
   userId: string
   isFree: boolean
   ticketPrice: number
+  eventTitle?: string
+  currency?: string
 }
 
-export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }: BuyTicketButtonProps) {
+export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, eventTitle = 'Event', currency = 'HTG' }: BuyTicketButtonProps) {
   const router = useRouter()
   const { showToast } = useToast()
   const [showModal, setShowModal] = useState(false)
   const [showTieredModal, setShowTieredModal] = useState(false)
+  const [showEmbeddedPayment, setShowEmbeddedPayment] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'moncash'>('stripe')
@@ -106,35 +112,10 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
       }
 
       if (method === 'stripe') {
-        // Create Stripe checkout session
-        const response = await fetch('/api/create-checkout-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            eventId, 
-            quantity,
-            tierId: selectedTierId,
-            tierPrice: selectedTierPrice,
-            promoCode,
-          }),
-        })
-
-        const data = await response.json()
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to create checkout session')
-        }
-
-        // Redirect to Stripe checkout
-        if (data.url) {
-          showToast({
-            type: 'info',
-            title: 'Redirecting to payment...',
-            message: 'You will be redirected to complete your purchase',
-            duration: 3000
-          })
-          window.location.href = data.url
-        }
+        // Use embedded payment instead of redirect
+        setShowModal(false)
+        setShowEmbeddedPayment(true)
+        setLoading(false)
       } else {
         // Create MonCash payment
         const response = await fetch('/api/moncash/initiate', {
@@ -370,6 +351,28 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
             </button>
           </div>
         </BottomSheet>
+      )}
+
+      {/* Embedded Stripe Payment */}
+      {showEmbeddedPayment && (
+        <EmbeddedStripePayment
+          eventId={eventId}
+          eventTitle={eventTitle}
+          userId={userId}
+          quantity={quantity}
+          totalAmount={(selectedTierPrice || ticketPrice) * quantity}
+          currency={currency}
+          tierId={selectedTierId || undefined}
+          promoCodeId={promoCode}
+          onClose={() => {
+            setShowEmbeddedPayment(false)
+            // Reset state
+            setQuantity(1)
+            setSelectedTierId(null)
+            setSelectedTierPrice(0)
+            setPromoCode(undefined)
+          }}
+        />
       )}
     </>
   )

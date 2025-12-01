@@ -14,7 +14,8 @@
     "backfill-stats:30": "node scripts/backfill-daily-stats.js 30"
   },
   "dependencies": {
-    "@stripe/stripe-js": "^8.5.2",
+    "@stripe/react-stripe-js": "^5.4.1",
+    "@stripe/stripe-js": "^8.5.3",
     "@types/qrcode": "^1.5.6",
     "date-fns": "^3.3.1",
     "dotenv": "^17.2.3",
