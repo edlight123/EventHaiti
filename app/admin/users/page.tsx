@@ -121,11 +121,11 @@ export default async function AdminUsersPage() {
                       <div className="mt-3 flex items-center justify-between">
                         <div>
                           {u.role === 'organizer' || u.is_organizer || u.isAdminUser ? (
-                            u.is_verified || u.verification_status === 'approved' ? (
+                            u.verification_status === 'approved' ? (
                               <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✓ Verified</span>
                             ) : (
                               <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                {u.verification_status === 'pending_review' || u.verification_status === 'pending' ? 'Pending' : 'Not Verified'}
+                                {u.verification_status === 'pending' ? 'Pending' : 'Not Verified'}
                               </span>
                             )
                           ) : (
@@ -187,11 +187,11 @@ export default async function AdminUsersPage() {
                           </td>
                           <td className="px-6 py-4">
                             {u.role === 'organizer' || u.is_organizer || u.isAdminUser ? (
-                              u.is_verified || u.verification_status === 'approved' ? (
+                              u.verification_status === 'approved' ? (
                                 <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✓ Verified</span>
                               ) : (
                                 <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                  {u.verification_status === 'pending_review' || u.verification_status === 'pending' ? 'Pending' : 'Not Verified'}
+                                  {u.verification_status === 'pending' ? 'Pending' : 'Not Verified'}
                                 </span>
                               )
                             ) : (

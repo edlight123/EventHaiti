@@ -27,19 +27,33 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Update user verification status
-    const { error } = await supabase
+    // Get current user data
+    const { data: userData } = await supabase
       .from('users')
-      .update({ 
-        is_verified: isVerified,
-        verification_status: isVerified ? 'approved' : 'none'
-      })
+      .select('*')
       .eq('id', organizerId)
+      .single()
 
-    if (error) {
-      console.error('Error updating verification:', error)
+    if (!userData) {
       return NextResponse.json(
-        { error: 'Failed to update verification' },
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    // Update user verification status using Firebase Admin SDK for reliability
+    try {
+      const { adminDb } = await import('@/lib/firebase/admin')
+      await adminDb.collection('users').doc(organizerId).set({
+        ...userData,
+        is_verified: isVerified,
+        verification_status: isVerified ? 'approved' : 'none',
+        updated_at: new Date().toISOString()
+      }, { merge: true })
+    } catch (error) {
+      console.error('Error updating user via Admin SDK:', error)
+      return NextResponse.json(
+        { error: 'Failed to update user verification' },
         { status: 500 }
       )
     }
@@ -52,15 +66,18 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (existingRequest) {
-      await supabase
-        .from('verification_requests')
-        .update({
+      try {
+        const { adminDb } = await import('@/lib/firebase/admin')
+        await adminDb.collection('verification_requests').doc(organizerId).set({
+          ...existingRequest,
           status: isVerified ? 'approved' : 'rejected',
           reviewed_by: user.id,
-          reviewed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', organizerId)
+          reviewed_at: new Date(),
+          updated_at: new Date()
+        }, { merge: true })
+      } catch (error) {
+        console.error('Error updating verification request:', error)
+      }
     }
 
     return NextResponse.json({

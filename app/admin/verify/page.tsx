@@ -8,6 +8,7 @@ import PullToRefresh from '@/components/PullToRefresh'
 import VerifyOrganizerForm from './VerifyOrganizerForm'
 import VerificationRequestReview from './VerificationRequestReview'
 import { revalidatePath } from 'next/cache'
+import { adminDb } from '@/lib/firebase/admin'
 
 export const revalidate = 0
 
@@ -22,11 +23,21 @@ export default async function AdminVerifyPage() {
 
   const supabase = await createClient()
   
-  // Fetch all verification requests
-  const allRequests = await supabase
-    .from('verification_requests')
-    .select('*')
-  const verificationRequests = allRequests.data || []
+  // Fetch all verification requests using Firebase Admin SDK to bypass security rules
+  let verificationRequests: any[] = []
+  try {
+    const snapshot = await adminDb.collection('verification_requests').get()
+    verificationRequests = snapshot.docs.map((doc: any) => ({
+      id: doc.id,
+      ...doc.data(),
+      // Convert Firestore Timestamps to ISO strings
+      created_at: doc.data().created_at?.toDate?.()?.toISOString() || doc.data().created_at,
+      updated_at: doc.data().updated_at?.toDate?.()?.toISOString() || doc.data().updated_at,
+      reviewed_at: doc.data().reviewed_at?.toDate?.()?.toISOString() || doc.data().reviewed_at,
+    }))
+  } catch (error) {
+    console.error('Error fetching verification requests:', error)
+  }
 
   // Fetch all users to match with verification requests
   const allUsers = await supabase.from('users').select('*')
@@ -44,8 +55,15 @@ export default async function AdminVerifyPage() {
     }
   })
 
-  // Filter organizers for quick verification toggle
-  const organizers = users.filter((u: any) => u.role === 'organizer')
+  // Filter organizers for quick verification toggle (include verification_status field)
+  const organizers = users.filter((u: any) => u.role === 'organizer').map((u: any) => ({
+    id: u.id,
+    full_name: u.full_name,
+    email: u.email,
+    is_verified: u.is_verified,
+    verification_status: u.verification_status || 'none',
+    created_at: u.created_at
+  }))
 
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
@@ -75,14 +93,14 @@ export default async function AdminVerifyPage() {
           </p>
 
           {verificationRequests.filter((r: any) => 
-            r.status === 'pending_review' || r.status === 'in_review'
+            r.status === 'pending' || r.status === 'pending_review' || r.status === 'in_review'
           ).length === 0 ? (
             <p className="text-[13px] sm:text-base text-gray-500 text-center py-6 sm:py-8">No pending verification requests</p>
           ) : (
             <div className="space-y-4 sm:space-y-6">
               {requestsWithUsers
                 .filter((r: any) => 
-                  r.status === 'pending_review' || r.status === 'in_review'
+                  r.status === 'pending' || r.status === 'pending_review' || r.status === 'in_review'
                 )
                 .map((request: any) => {
                   return (
