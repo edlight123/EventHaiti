@@ -16,6 +16,28 @@ export default function VerificationRequestReview({ request, user }: Props) {
   const [rejectionReason, setRejectionReason] = useState('')
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
+  // Normalize data format (handle both old and new formats)
+  const getImageUrl = (path: string) => {
+    if (!path) return null
+    // If it's already a full URL, return it
+    if (path.startsWith('http')) return path
+    // Otherwise, construct Firebase Storage URL
+    return `https://firebasestorage.googleapis.com/v0/b/event-haiti.firebasestorage.app/o/${encodeURIComponent(path)}?alt=media`
+  }
+
+  const idFrontUrl = request.id_front_url || getImageUrl(request.files?.governmentId?.front)
+  const idBackUrl = request.id_back_url || getImageUrl(request.files?.governmentId?.back)
+  const facePhotoUrl = request.face_photo_url || getImageUrl(request.files?.selfie?.path)
+
+  // Normalize date
+  const submittedDate = request.submittedAt?._seconds 
+    ? new Date(request.submittedAt._seconds * 1000)
+    : request.createdAt?._seconds
+    ? new Date(request.createdAt._seconds * 1000)
+    : request.created_at 
+    ? new Date(request.created_at)
+    : null
+
   const handleApprove = async () => {
     if (!confirm('Are you sure you want to approve this verification?')) return
 
@@ -83,10 +105,10 @@ export default function VerificationRequestReview({ request, user }: Props) {
             </h3>
             <p className="text-[13px] sm:text-sm text-gray-600 truncate">{user?.email}</p>
             <p className="text-[11px] sm:text-xs text-gray-500 mt-1">
-              {request.created_at ? (
+              {submittedDate ? (
                 <>
-                  Submitted {new Date(request.created_at).toLocaleDateString()} at{' '}
-                  {new Date(request.created_at).toLocaleTimeString()}
+                  Submitted {submittedDate.toLocaleDateString()} at{' '}
+                  {submittedDate.toLocaleTimeString()}
                 </>
               ) : (
                 'Submission date not available'
@@ -101,15 +123,15 @@ export default function VerificationRequestReview({ request, user }: Props) {
         {/* Verification Images */}
         <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
           {/* ID Front */}
-          {request.id_front_url && (
+          {idFrontUrl && (
             <div>
               <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">ID Card - Front</p>
               <div
-                onClick={() => setSelectedImage(request.id_front_url)}
+                onClick={() => setSelectedImage(idFrontUrl)}
                 className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
               >
                 <Image
-                  src={request.id_front_url}
+                  src={idFrontUrl}
                   alt="ID Front"
                   fill
                   sizes="(max-width: 640px) 33vw, 33vw"
@@ -126,15 +148,15 @@ export default function VerificationRequestReview({ request, user }: Props) {
           )}
 
           {/* ID Back */}
-          {request.id_back_url && (
+          {idBackUrl && (
             <div>
               <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">ID Card - Back</p>
               <div
-                onClick={() => setSelectedImage(request.id_back_url)}
+                onClick={() => setSelectedImage(idBackUrl)}
                 className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
               >
                 <Image
-                  src={request.id_back_url}
+                  src={idBackUrl}
                   alt="ID Back"
                   fill
                   sizes="(max-width: 640px) 33vw, 33vw"
@@ -146,16 +168,16 @@ export default function VerificationRequestReview({ request, user }: Props) {
           )}
 
           {/* Face Photo */}
-          {request.face_photo_url && (
+          {facePhotoUrl && (
             <div>
-              <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Face Photo</p>
+              <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Selfie Photo</p>
               <div
-                onClick={() => setSelectedImage(request.face_photo_url)}
-                className="relative aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
+                onClick={() => setSelectedImage(facePhotoUrl)}
+                className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
               >
                 <Image
-                  src={request.face_photo_url}
-                  alt="Face"
+                  src={facePhotoUrl}
+                  alt="Face Photo"
                   fill
                   sizes="(max-width: 640px) 33vw, 33vw"
                   className="object-cover"

@@ -33,11 +33,13 @@ export default async function AdminVerifyPage() {
   const users = allUsers.data || []
 
   // Manually join user data with verification requests
-  // Note: userId field in verification_requests is the document ID
+  // Note: Handle both old format (user_id field) and new format (userId field/document ID)
   const requestsWithUsers = verificationRequests.map((request: any) => {
-    const requestUser = users.find((u: any) => u.id === request.userId)
+    const userId = request.userId || request.user_id || request.id
+    const requestUser = users.find((u: any) => u.id === userId)
     return {
       ...request,
+      userId, // Normalize to always have userId
       user: requestUser
     }
   })
