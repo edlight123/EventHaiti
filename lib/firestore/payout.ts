@@ -79,10 +79,21 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
       .doc(organizerId)
       .get()
 
+    console.log('🔍 Checking verification for organizer:', organizerId)
+    console.log('📄 Verification doc exists:', organizerVerificationDoc.exists)
+    
+    if (organizerVerificationDoc.exists) {
+      const verificationData = organizerVerificationDoc.data()
+      console.log('📊 Verification status:', verificationData?.status)
+      console.log('📋 Verification steps:', verificationData?.steps)
+    }
+
     const hasOrganizerVerification = organizerVerificationDoc.exists && 
       (organizerVerificationDoc.data()?.status === 'approved' || 
        organizerVerificationDoc.data()?.status === 'in_review' ||
        organizerVerificationDoc.data()?.status === 'pending')
+
+    console.log('✅ Has organizer verification:', hasOrganizerVerification)
 
     // Get payout-specific verification documents
     const verificationDocs = await adminDb
