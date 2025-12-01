@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       .get()
 
     const verificationDocs: any = {}
-    verificationDocsSnapshot.docs.forEach((doc) => {
+    verificationDocsSnapshot.docs.forEach((doc: any) => {
       verificationDocs[doc.id] = doc.data()
     })
 
