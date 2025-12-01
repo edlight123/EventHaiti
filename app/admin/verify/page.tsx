@@ -27,14 +27,34 @@ export default async function AdminVerifyPage() {
   let verificationRequests: any[] = []
   try {
     const snapshot = await adminDb.collection('verification_requests').get()
-    verificationRequests = snapshot.docs.map((doc: any) => ({
-      id: doc.id,
-      ...doc.data(),
-      // Convert Firestore Timestamps to ISO strings
-      created_at: doc.data().created_at?.toDate?.()?.toISOString() || doc.data().created_at,
-      updated_at: doc.data().updated_at?.toDate?.()?.toISOString() || doc.data().updated_at,
-      reviewed_at: doc.data().reviewed_at?.toDate?.()?.toISOString() || doc.data().reviewed_at,
-    }))
+    verificationRequests = snapshot.docs.map((doc: any) => {
+      const data = doc.data()
+      
+      // Helper to convert Firestore Timestamps to ISO strings
+      const convertTimestamp = (val: any) => {
+        if (val?.toDate) return val.toDate().toISOString()
+        if (val instanceof Date) return val.toISOString()
+        return val
+      }
+      
+      // Serialize all fields to plain objects
+      return {
+        id: doc.id,
+        userId: data.userId || null,
+        user_id: data.user_id || null,
+        status: data.status || 'pending',
+        id_front_url: data.id_front_url || null,
+        id_back_url: data.id_back_url || null,
+        face_photo_url: data.face_photo_url || null,
+        reviewed_by: data.reviewed_by || null,
+        rejection_reason: data.rejection_reason || null,
+        reviewNotes: data.reviewNotes || null,
+        created_at: convertTimestamp(data.created_at),
+        updated_at: convertTimestamp(data.updated_at),
+        reviewed_at: convertTimestamp(data.reviewed_at),
+        submittedAt: convertTimestamp(data.submittedAt),
+      }
+    })
   } catch (error) {
     console.error('Error fetching verification requests:', error)
   }
