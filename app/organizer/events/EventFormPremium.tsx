@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import { db } from '@/lib/firebase/client'
+import { collection, query, where, getDocs, doc, deleteDoc, setDoc } from 'firebase/firestore'
 import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 import { isDemoMode } from '@/lib/demo'
 import { useToast } from '@/components/ui/Toast'
@@ -60,21 +62,20 @@ export default function EventFormPremium({ userId, event }: EventFormProps) {
       if (!event?.id || isDemoMode()) return
       
       try {
-        const { data: tiersData, error } = await supabase
-          .from('ticket_tiers')
-          .select('*')
-          .eq('event_id', event.id)
-          .order('price', { ascending: true })
+        const tiersRef = collection(db, 'ticket_tiers')
+        const q = query(tiersRef, where('event_id', '==', event.id))
+        const querySnapshot = await getDocs(q)
         
-        if (error) throw error
-        
-        if (tiersData && tiersData.length > 0) {
-          const formattedTiers: TicketTier[] = tiersData.map((tier: any) => ({
-            name: tier.name || '',
-            price: tier.price?.toString() || '',
-            quantity: tier.total_quantity?.toString() || '',
-            description: tier.description || ''
-          }))
+        if (!querySnapshot.empty) {
+          const formattedTiers: TicketTier[] = querySnapshot.docs.map((doc) => {
+            const tier = doc.data()
+            return {
+              name: tier.name || '',
+              price: tier.price?.toString() || '',
+              quantity: tier.total_quantity?.toString() || '',
+              description: tier.description || ''
+            }
+          })
           setTicketTiers(formattedTiers)
         }
       } catch (err) {
