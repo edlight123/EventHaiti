@@ -45,23 +45,23 @@ export default function StickyMobileCTA({
       className={`md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.1)] z-50 transition-transform duration-300 ${
         isVisible ? 'translate-y-0' : 'translate-y-full'
       }`}
-      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
+      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}
     >
-      <div className="px-4 pt-3 pb-0">
-        <div className="flex items-center gap-3">
+      <div className="px-4 pt-2 pb-0">
+        <div className="flex items-center gap-2.5">
           {/* Price & Availability Info */}
           <div className="flex flex-col min-w-0 flex-shrink-0">
             {isFree ? (
-              <p className="text-lg font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent leading-tight">
+              <p className="text-base font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent leading-tight">
                 FREE
               </p>
             ) : (
               <div className="flex items-baseline leading-tight">
-                <span className="text-xl font-bold text-gray-900">{ticketPrice}</span>
-                <span className="text-xs text-gray-600 ml-1">{currency}</span>
+                <span className="text-lg font-bold text-gray-900">{ticketPrice}</span>
+                <span className="text-[10px] text-gray-600 ml-1">{currency}</span>
               </div>
             )}
-            <p className="text-[11px] text-gray-600 leading-tight">
+            <p className="text-[10px] text-gray-600 leading-tight mt-0.5">
               {isSoldOut ? 'Sold Out' : `${remainingTickets} left`}
             </p>
           </div>
