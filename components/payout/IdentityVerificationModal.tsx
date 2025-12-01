@@ -24,16 +24,37 @@ export function IdentityVerificationModal({ onClose, onComplete }: IdentityVerif
   }
 
   const handleSubmit = async () => {
-    if (!frontImage || (idType === 'national_id' && !backImage)) {
+    if (!frontImage || (idType !== 'passport' && !backImage)) {
       alert('Please upload all required documents')
       return
     }
 
     setUploading(true)
-    // Simulate upload
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    setUploading(false)
-    setStep('submitted')
+    
+    try {
+      const formData = new FormData()
+      formData.append('idType', idType)
+      formData.append('frontImage', frontImage)
+      if (backImage) {
+        formData.append('backImage', backImage)
+      }
+
+      const response = await fetch('/api/organizer/submit-identity-verification', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'Failed to submit verification')
+      }
+
+      setStep('submitted')
+    } catch (error: any) {
+      alert(error.message || 'Failed to submit verification. Please try again.')
+      setUploading(false)
+    }
   }
 
   return (

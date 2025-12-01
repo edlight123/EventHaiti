@@ -73,12 +73,40 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
       }
     }
 
+    // Get verification documents to check actual status
+    const verificationDocs = await adminDb
+      .collection('organizers')
+      .doc(organizerId)
+      .collection('verificationDocuments')
+      .get()
+
+    const verificationStatus: PayoutConfig['verificationStatus'] = {
+      identity: 'pending',
+      bank: 'pending',
+      phone: 'pending',
+    }
+
+    verificationDocs.docs.forEach((doc: any) => {
+      const docData = doc.data()
+      const type = doc.id as 'identity' | 'bank' | 'phone'
+      if (type in verificationStatus) {
+        verificationStatus[type] = docData.status || 'pending'
+      }
+    })
+
+    // Merge with data from config (in case it was set there)
+    const finalVerificationStatus = {
+      identity: data.verificationStatus?.identity || verificationStatus.identity,
+      bank: data.verificationStatus?.bank || verificationStatus.bank,
+      phone: data.verificationStatus?.phone || verificationStatus.phone,
+    }
+
     return {
       status: data.status || 'not_setup',
       method: data.method,
       bankDetails: data.bankDetails,
       mobileMoneyDetails: data.mobileMoneyDetails,
-      verificationStatus: data.verificationStatus,
+      verificationStatus: finalVerificationStatus,
       createdAt: convertTimestamp(data.createdAt),
       updatedAt: convertTimestamp(data.updatedAt)
     }

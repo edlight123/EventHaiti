@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { Check, Clock, AlertCircle, User, CreditCard, Smartphone } from 'lucide-react'
 import type { PayoutConfig } from '@/lib/firestore/payout'
 import { IdentityVerificationModal } from './IdentityVerificationModal'
+import { BankVerificationModal } from './BankVerificationModal'
+import { PhoneVerificationModal } from './PhoneVerificationModal'
 
 interface VerificationChecklistProps {
   config: PayoutConfig | null
@@ -25,6 +27,8 @@ interface VerificationItem {
 
 export function VerificationChecklist({ config }: VerificationChecklistProps) {
   const [showIdentityModal, setShowIdentityModal] = useState(false)
+  const [showBankModal, setShowBankModal] = useState(false)
+  const [showPhoneModal, setShowPhoneModal] = useState(false)
   
   const identityStatus = config?.verificationStatus?.identity || 'pending'
   const bankStatus = config?.verificationStatus?.bank || 'pending'
@@ -50,7 +54,7 @@ export function VerificationChecklist({ config }: VerificationChecklistProps) {
       icon: CreditCard,
       action: config?.method === 'bank_transfer' && bankStatus === 'pending' ? {
         label: 'Verify Account',
-        onClick: () => console.log('Open bank verification'),
+        onClick: () => setShowBankModal(true),
       } : undefined,
     },
     {
@@ -61,7 +65,7 @@ export function VerificationChecklist({ config }: VerificationChecklistProps) {
       icon: Smartphone,
       action: config?.method === 'mobile_money' && phoneStatus === 'pending' ? {
         label: 'Verify Phone',
-        onClick: () => console.log('Open phone verification'),
+        onClick: () => setShowPhoneModal(true),
       } : undefined,
     },
   ]
@@ -217,6 +221,24 @@ export function VerificationChecklist({ config }: VerificationChecklistProps) {
           onClose={() => setShowIdentityModal(false)}
           onComplete={() => {
             // Optionally refresh data
+            window.location.reload()
+          }}
+        />
+      )}
+
+      {showBankModal && (
+        <BankVerificationModal
+          onClose={() => setShowBankModal(false)}
+          onComplete={() => {
+            window.location.reload()
+          }}
+        />
+      )}
+
+      {showPhoneModal && (
+        <PhoneVerificationModal
+          onClose={() => setShowPhoneModal(false)}
+          onComplete={() => {
             window.location.reload()
           }}
         />
