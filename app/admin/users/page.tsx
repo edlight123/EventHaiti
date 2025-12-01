@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
@@ -7,6 +6,7 @@ import PullToRefresh from '@/components/PullToRefresh'
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import { updateUserRole } from '@/lib/firestore/user-profile-server'
+import { getAdminUsers, getUserCounts } from '@/lib/data/users'
 
 export const revalidate = 0
 
@@ -31,15 +31,13 @@ export default async function AdminUsersPage() {
     redirect('/')
   }
 
-  const supabase = await createClient()
+  // Fetch users and counts in parallel using optimized data layer
+  const [usersResult, counts] = await Promise.all([
+    getAdminUsers({}, 200), // Get first 200 users with pagination support
+    getUserCounts(),
+  ])
 
-  // Fetch all users
-  const { data: users } = await supabase
-    .from('users')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  const allUsers = users || []
+  const allUsers = usersResult.data
   
   // Pre-compute admin status for each user to avoid issues with module-level constants
   const usersWithAdminFlag = allUsers.map((u: any) => ({
@@ -73,18 +71,18 @@ export default async function AdminUsersPage() {
         <div className="flex overflow-x-auto gap-3 sm:gap-6 mb-6 sm:mb-8 pb-2 snap-x snap-mandatory md:grid md:grid-cols-3 scrollbar-hide">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 min-w-[180px] snap-start flex-shrink-0">
             <div className="text-[11px] sm:text-sm font-medium text-gray-600 uppercase tracking-wide">Total Users</div>
-            <div className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">{usersWithAdminFlag.length}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">{counts.total}</div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 min-w-[180px] snap-start flex-shrink-0">
             <div className="text-[11px] sm:text-sm font-medium text-gray-600 uppercase tracking-wide">Organizers</div>
             <div className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">
-              {usersWithAdminFlag.filter((u: any) => u.role === 'organizer').length}
+              {counts.organizers}
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 min-w-[180px] snap-start flex-shrink-0">
             <div className="text-[11px] sm:text-sm font-medium text-gray-600 uppercase tracking-wide">Verified Organizers</div>
             <div className="text-2xl sm:text-3xl font-bold text-teal-600 mt-1 sm:mt-2">
-              {usersWithAdminFlag.filter((u: any) => u.is_verified).length}
+              {counts.verified}
             </div>
           </div>
         </div>

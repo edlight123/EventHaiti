@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import EventCard from '@/components/EventCard'
 import EventCardHorizontal from '@/components/EventCardHorizontal'
@@ -10,7 +9,6 @@ import { Suspense } from 'react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import FeaturedCarousel from '@/components/FeaturedCarousel'
 import PullToRefresh from '@/components/PullToRefresh'
-import { SkeletonEventCard } from '@/components/ui/Skeleton'
 import { BRAND } from '@/config/brand'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import { isAdmin } from '@/lib/admin'
@@ -18,10 +16,12 @@ import type { Database } from '@/types/database'
 import FilterManager from '@/components/FilterManager'
 import { parseFiltersFromURL } from '@/lib/filters/utils'
 import { applyFiltersAndSort } from '@/lib/filters/apply'
+import { getDiscoverEvents } from '@/lib/data/events'
 
 type Event = Database['public']['Tables']['events']['Row']
 
-export const revalidate = 0
+// Revalidate every 2 minutes for public home page
+export const revalidate = 120
 
 export default async function HomePage({
   searchParams,
@@ -38,32 +38,14 @@ export default async function HomePage({
   })
   const filters = parseFiltersFromURL(urlParams)
   
-  let events: Event[] = []
+  let events: any[] = []
   
   if (isDemoMode()) {
     // Use demo events in demo mode
-    events = DEMO_EVENTS as Event[]
+    events = DEMO_EVENTS as any[]
   } else {
-    // Fetch real events from database
-    const supabase = await createClient()
-    
-    const now = new Date().toISOString()
-    console.log('Home page - fetching events after:', now)
-    
-    let query = supabase
-      .from('events')
-      .select('*, users!events_organizer_id_fkey(full_name, is_verified)')
-      .eq('is_published', true)
-      .gte('start_datetime', now)
-    
-    const result = await query
-    console.log('Home page - query result:', result)
-    console.log('Home page - events found:', result.data?.length || 0)
-    if (result.data && result.data.length > 0) {
-      console.log('First event:', result.data[0])
-    }
-    
-    events = result.data || []
+    // Fetch events using optimized data layer with caching (30s revalidation)
+    events = await getDiscoverEvents(filters, 100)
   }
 
   // Apply filters and sorting using new filter system

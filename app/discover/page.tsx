@@ -1,15 +1,13 @@
 // Event Discovery Page
-// Fix React errors #425 and #422 by wrapping client components with useSearchParams in Suspense
+// Optimized with data layer caching and efficient queries
 export const dynamic = 'force-dynamic'
 
 import { Suspense } from 'react'
 import { getCurrentUser } from '@/lib/auth'
-import { createClient } from '@/lib/firebase-db/server'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { isAdmin } from '@/lib/admin'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
-import type { Database } from '@/types/database'
 import { parseFiltersFromURL } from '@/lib/filters/utils'
 import { applyFiltersAndSort } from '@/lib/filters/apply'
 import { DateChips } from '@/components/discover/DateChips'
@@ -28,10 +26,10 @@ import {
   sortEventsDefault,
   sortEventsByDate
 } from '@/lib/discover/helpers'
+import { getDiscoverEvents } from '@/lib/data/events'
 
-type Event = Database['public']['Tables']['events']['Row']
-
-export const revalidate = 0
+// Revalidate every 30 seconds for discover page (frequently updated)
+export const revalidate = 30
 
 export default async function DiscoverPage({
   searchParams,
@@ -54,21 +52,13 @@ export default async function DiscoverPage({
   })
   const filters = parseFiltersFromURL(urlParams)
   
-  let allEvents: Event[] = []
+  let allEvents: any[] = []
   
   if (isDemoMode()) {
-    allEvents = DEMO_EVENTS as Event[]
+    allEvents = DEMO_EVENTS
   } else {
-    const supabase = await createClient()
-    const now = new Date().toISOString()
-    
-    const result = await supabase
-      .from('events')
-      .select('*, users!events_organizer_id_fkey(full_name, is_verified)')
-      .eq('is_published', true)
-      .gte('start_datetime', now)
-    
-    allEvents = result.data || []
+    // Use optimized data layer with 30s caching
+    allEvents = await getDiscoverEvents(filters, 200)
   }
 
   // Apply filters and sort

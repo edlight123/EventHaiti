@@ -12,9 +12,10 @@ import OrganizerEventCard from '@/components/organizer/events-manager/OrganizerE
 import CalendarView from '@/components/organizer/events-manager/CalendarView'
 import EventCardSkeleton from '@/components/organizer/events-manager/EventCardSkeleton'
 import EventsEmptyState from '@/components/organizer/events-manager/EventsEmptyState'
-import { collection, query, where, getDocs } from 'firebase/firestore'
-import { auth, db } from '@/lib/firebase/client'
+import { auth } from '@/lib/firebase/client'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
+import { getOrganizerEventsClient } from '@/lib/data/events.client'
+import { debounce } from '@/lib/data/utils'
 import Link from 'next/link'
 
 export default function OrganizerEventsPage() {
@@ -40,6 +41,13 @@ export default function OrganizerEventsPage() {
     sortOrder: 'desc'
   })
 
+  // Debounced search handler
+  const debouncedSearch = useMemo(
+    () => debounce((value: string) => {
+      setSearchQuery(value)
+    }, 300),
+    []
+  )
   
   // Fetch events
   useEffect(() => {
@@ -58,26 +66,16 @@ export default function OrganizerEventsPage() {
       })
       setAuthLoading(false)
 
-      // Fetch events
+      // Fetch events using optimized data layer
       try {
         setLoading(true)
         
         if (isDemoMode()) {
           setEvents(DEMO_EVENTS)
         } else {
-          const eventsRef = collection(db, 'events')
-          const q = query(
-            eventsRef,
-            where('organizer_id', '==', authUser.uid)
-          )
-          
-          const snapshot = await getDocs(q)
-          const fetchedEvents = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data()
-          }))
-          
-          setEvents(fetchedEvents)
+          // Fetch all events for this organizer (uses indexed query)
+          const result = await getOrganizerEventsClient(authUser.uid, 200)
+          setEvents(result.data)
         }
       } catch (error) {
         console.error('Error fetching events:', error)
@@ -261,7 +259,7 @@ export default function OrganizerEventsPage() {
       {/* Top Bar */}
       <OrganizerEventsTopBar
         searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
+        onSearchChange={debouncedSearch}
         view={view}
         onViewChange={setView}
         onOpenFilters={() => setShowFiltersModal(true)}
