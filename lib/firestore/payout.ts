@@ -74,6 +74,7 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
     }
 
     // Check if user has already completed organizer verification (from /organizer/verify)
+    // The verification_requests collection structure changed - check both old and new formats
     const organizerVerificationDoc = await adminDb
       .collection('verification_requests')
       .doc(organizerId)
@@ -82,18 +83,30 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
     console.log('🔍 Checking verification for organizer:', organizerId)
     console.log('📄 Verification doc exists:', organizerVerificationDoc.exists)
     
+    let hasOrganizerVerification = false
+    
     if (organizerVerificationDoc.exists) {
       const verificationData = organizerVerificationDoc.data()
-      console.log('📊 Verification status:', verificationData?.status)
-      console.log('📋 Verification steps:', verificationData?.steps)
+      console.log('📊 Verification data:', verificationData)
+      
+      // Check new format (with nested steps and status field)
+      const newFormatStatus = verificationData?.status
+      // Check old format (just status on the doc)
+      const hasApprovedStatus = newFormatStatus === 'approved' || 
+                                newFormatStatus === 'in_review' ||
+                                newFormatStatus === 'pending'
+      
+      // Also check if governmentId step is complete (alternative check)
+      const hasGovernmentId = verificationData?.steps?.governmentId?.status === 'complete' ||
+                             verificationData?.files?.governmentId?.front ||
+                             verificationData?.id_front_url  // Old schema field
+      
+      hasOrganizerVerification = hasApprovedStatus || hasGovernmentId
+      
+      console.log('📋 New format status:', newFormatStatus)
+      console.log('📎 Has government ID:', hasGovernmentId)
+      console.log('✅ Final decision - has verification:', hasOrganizerVerification)
     }
-
-    const hasOrganizerVerification = organizerVerificationDoc.exists && 
-      (organizerVerificationDoc.data()?.status === 'approved' || 
-       organizerVerificationDoc.data()?.status === 'in_review' ||
-       organizerVerificationDoc.data()?.status === 'pending')
-
-    console.log('✅ Has organizer verification:', hasOrganizerVerification)
 
     // Get payout-specific verification documents
     const verificationDocs = await adminDb
