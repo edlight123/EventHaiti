@@ -107,7 +107,7 @@ export const getDiscoverEvents = unstable_cache(
   ): Promise<Event[]> => {
     try {
       let queryRef = adminDb.collection('events')
-        .where('status', '==', 'published')
+        .where('is_published', '==', true)
         .orderBy('start_datetime', 'asc')
 
       // Apply filters
