@@ -34,6 +34,7 @@ export default function VerifyOrganizerPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [restarting, setRestarting] = useState(false)
   const [request, setRequest] = useState<VerificationRequest | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('overview')
   const [error, setError] = useState('')
@@ -194,11 +195,15 @@ export default function VerifyOrganizerPage() {
     if (!user || !request) return
 
     try {
+      setRestarting(true)
+      setError('')
       await restartVerification(user.id)
       await reloadRequest()
       setViewMode('overview')
     } catch (err: any) {
       setError(err.message || 'Failed to restart verification')
+    } finally {
+      setRestarting(false)
     }
   }
 
@@ -214,12 +219,14 @@ export default function VerifyOrganizerPage() {
     setViewMode(viewModes[stepId] || 'overview')
   }
 
-  if (loading) {
+  if (loading || restarting) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading verification...</p>
+          <p className="text-gray-600">
+            {restarting ? 'Resetting verification...' : 'Loading verification...'}
+          </p>
         </div>
       </div>
     )
@@ -261,6 +268,7 @@ export default function VerifyOrganizerPage() {
           reviewNotes={request.reviewNotes}
           onContinue={() => setViewMode('overview')}
           onRestart={handleRestart}
+          isRestarting={restarting}
         />
 
         {/* Main Content */}

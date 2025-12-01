@@ -349,12 +349,85 @@ export async function restartVerification(userId: string): Promise<void> {
       throw new Error('Can only restart rejected verifications')
     }
     
-    // Reset to in_progress and clear review notes
+    // Delete old uploaded files to start fresh
+    const filesToDelete: string[] = []
+    
+    if (currentData.files.governmentId?.front) {
+      filesToDelete.push(currentData.files.governmentId.front)
+    }
+    if (currentData.files.governmentId?.back) {
+      filesToDelete.push(currentData.files.governmentId.back)
+    }
+    if (currentData.files.selfie?.path) {
+      filesToDelete.push(currentData.files.selfie.path)
+    }
+    if (currentData.files.businessDocs?.registration) {
+      filesToDelete.push(currentData.files.businessDocs.registration)
+    }
+    if (currentData.files.businessDocs?.taxId) {
+      filesToDelete.push(currentData.files.businessDocs.taxId)
+    }
+    
+    // Delete files in parallel (ignore errors for files that don't exist)
+    await Promise.allSettled(
+      filesToDelete.map(path => deleteVerificationDocument(path))
+    )
+    
+    // Reset all steps to incomplete and clear all data
+    const resetSteps = {
+      organizerInfo: {
+        id: 'organizerInfo',
+        title: 'Organizer Information',
+        description: 'Basic information about you and your organization',
+        status: 'incomplete' as StepStatus,
+        required: true,
+        fields: {},
+        missingFields: ['full_name', 'phone', 'organization_name']
+      },
+      governmentId: {
+        id: 'governmentId',
+        title: 'Government ID Upload',
+        description: 'Upload a valid government-issued ID (front and back)',
+        status: 'incomplete' as StepStatus,
+        required: true,
+        fields: {},
+        missingFields: ['id_front', 'id_back']
+      },
+      selfie: {
+        id: 'selfie',
+        title: 'Identity Verification',
+        description: 'Take a selfie holding your ID for verification',
+        status: 'incomplete' as StepStatus,
+        required: true,
+        fields: {}
+      },
+      businessDetails: {
+        id: 'businessDetails',
+        title: 'Business Details',
+        description: 'Optional business registration and tax information',
+        status: 'incomplete' as StepStatus,
+        required: false,
+        fields: {}
+      },
+      payoutSetup: {
+        id: 'payoutSetup',
+        title: 'Payout Setup',
+        description: 'Configure how you receive payments (can be set up later)',
+        status: 'incomplete' as StepStatus,
+        required: false,
+        fields: {}
+      }
+    }
+    
+    // Reset to in_progress with clean state
     await updateDoc(docRef, {
       status: 'in_progress',
+      steps: resetSteps,
+      files: {},
       reviewNotes: null,
       reasonCodes: null,
       reviewedAt: null,
+      submittedAt: null,
       updatedAt: serverTimestamp()
     })
   } catch (error) {

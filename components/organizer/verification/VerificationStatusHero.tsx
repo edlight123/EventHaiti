@@ -12,6 +12,7 @@ interface Props {
   reviewNotes?: string
   onContinue?: () => void
   onRestart?: () => void
+  isRestarting?: boolean
 }
 
 export default function VerificationStatusHero({
@@ -19,7 +20,8 @@ export default function VerificationStatusHero({
   completionPercentage,
   reviewNotes,
   onContinue,
-  onRestart
+  onRestart,
+  isRestarting = false
 }: Props) {
   // Status configuration
   const statusConfig: Record<VerificationStatus, {
@@ -45,7 +47,8 @@ export default function VerificationStatusHero({
       title: 'Start Verification',
       description: 'Complete your verification to start creating events on EventHaiti',
       ctaText: 'Begin Verification',
-      ctaColor: 'bg-gradient-to-r from-blue-600 to-teal-600 hover:from-blue-700 hover:to-teal-700'
+      ctaColor: 'bg-gradient-to-r from-blue-600 to-teal-600 hover:from-blue-700 hover:to-teal-700',
+      actionType: 'continue'
     },
     in_progress: {
       icon: '⏳',
@@ -56,7 +59,8 @@ export default function VerificationStatusHero({
       title: 'Complete Your Verification',
       description: `You're ${completionPercentage}% complete. Finish all required steps to submit for review.`,
       ctaText: 'Continue',
-      ctaColor: 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700'
+      ctaColor: 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700',
+      actionType: 'continue'
     },
     pending_review: {
       icon: '⏰',
@@ -68,7 +72,8 @@ export default function VerificationStatusHero({
       description: 'Your verification is pending review. Our team will review within 24-48 hours.',
       ctaText: 'View Submission',
       ctaColor: 'bg-gray-600 hover:bg-gray-700',
-      readonly: true
+      readonly: true,
+      actionType: 'continue'
     },
     in_review: {
       icon: '👀',
@@ -80,7 +85,8 @@ export default function VerificationStatusHero({
       description: 'Our team is currently reviewing your verification documents.',
       ctaText: 'View Status',
       ctaColor: 'bg-gray-600 hover:bg-gray-700',
-      readonly: true
+      readonly: true,
+      actionType: 'continue'
     },
     approved: {
       icon: '✅',
@@ -92,7 +98,8 @@ export default function VerificationStatusHero({
       description: 'Your account has been verified. You can now create and publish events.',
       ctaText: 'Create Event',
       ctaColor: 'bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700',
-      ctaHref: '/organizer/events/new'
+      ctaHref: '/organizer/events/new',
+      actionType: 'link'
     },
     changes_requested: {
       icon: '⚠️',
@@ -103,7 +110,8 @@ export default function VerificationStatusHero({
       title: 'Changes Requested',
       description: 'We need some additional information. Please review the notes below and update your submission.',
       ctaText: 'Review & Update',
-      ctaColor: 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700'
+      ctaColor: 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700',
+      actionType: 'continue'
     },
     rejected: {
       icon: '❌',
@@ -112,8 +120,8 @@ export default function VerificationStatusHero({
       iconBgColor: 'bg-red-100',
       iconColor: 'text-red-600',
       title: 'Verification Declined',
-      description: 'Your verification was not approved. Please review the feedback and resubmit.',
-      ctaText: 'Start New Application',
+      description: 'Your verification was not approved. Click below to start a fresh application with all fields cleared.',
+      ctaText: 'Start Fresh Application',
       ctaColor: 'bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700',
       actionType: 'restart'
     }
@@ -184,11 +192,14 @@ export default function VerificationStatusHero({
             ) : (
               <button
                 onClick={config.actionType === 'restart' ? onRestart : (config.readonly ? undefined : onContinue)}
-                disabled={config.readonly}
+                disabled={config.readonly || isRestarting}
                 className={`${config.ctaColor} ${
-                  config.readonly ? 'opacity-50 cursor-not-allowed' : ''
-                } text-white px-6 py-3 rounded-lg font-semibold text-sm md:text-base transition-all shadow-md hover:shadow-lg`}
+                  config.readonly || isRestarting ? 'opacity-50 cursor-not-allowed' : ''
+                } text-white px-6 py-3 rounded-lg font-semibold text-sm md:text-base transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2`}
               >
+                {isRestarting && config.actionType === 'restart' && (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                )}
                 {config.ctaText}
               </button>
             )}
