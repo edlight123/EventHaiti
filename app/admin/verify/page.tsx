@@ -93,14 +93,14 @@ export default async function AdminVerifyPage() {
           </p>
 
           {verificationRequests.filter((r: any) => 
-            r.status === 'pending' || r.status === 'pending_review' || r.status === 'in_review'
+            r.status === 'pending' || r.status === 'in_review'
           ).length === 0 ? (
             <p className="text-[13px] sm:text-base text-gray-500 text-center py-6 sm:py-8">No pending verification requests</p>
           ) : (
             <div className="space-y-4 sm:space-y-6">
               {requestsWithUsers
                 .filter((r: any) => 
-                  r.status === 'pending' || r.status === 'pending_review' || r.status === 'in_review'
+                  r.status === 'pending' || r.status === 'in_review'
                 )
                 .map((request: any) => {
                   return (

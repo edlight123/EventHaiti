@@ -23,7 +23,7 @@ import {
 export type VerificationStatus = 
   | 'not_started' 
   | 'in_progress' 
-  | 'pending_review' 
+  | 'pending' 
   | 'in_review' 
   | 'approved' 
   | 'changes_requested' 
@@ -296,7 +296,7 @@ export async function submitVerificationForReview(userId: string): Promise<void>
     }
     
     await updateDoc(docRef, {
-      status: 'pending_review',
+      status: 'pending',
       submittedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     })

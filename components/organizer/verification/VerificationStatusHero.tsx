@@ -62,7 +62,7 @@ export default function VerificationStatusHero({
       ctaColor: 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700',
       actionType: 'continue'
     },
-    pending_review: {
+    pending: {
       icon: '⏰',
       bgColor: 'bg-yellow-50',
       borderColor: 'border-yellow-200',
@@ -204,7 +204,7 @@ export default function VerificationStatusHero({
               </button>
             )}
 
-            {status === 'pending_review' || status === 'in_review' ? (
+            {status === 'pending' || status === 'in_review' ? (
               <Link
                 href="/organizer/events"
                 className="text-gray-700 hover:text-gray-900 px-6 py-3 rounded-lg font-medium text-sm md:text-base text-center border-2 border-gray-300 hover:border-gray-400 transition-all"
@@ -217,7 +217,7 @@ export default function VerificationStatusHero({
       </div>
 
       {/* Timeline for pending/review status */}
-      {(status === 'pending_review' || status === 'in_review') && (
+      {(status === 'pending' || status === 'in_review') && (
         <div className="mt-6 pt-6 border-t border-gray-200">
           <h3 className="text-sm font-semibold text-gray-900 mb-4">What happens next?</h3>
           <div className="space-y-3">

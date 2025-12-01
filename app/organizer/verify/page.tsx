@@ -254,7 +254,7 @@ export default function VerifyOrganizerPage() {
   }
 
   const completionPercentage = calculateCompletionPercentage(request)
-  const isReadOnly = ['pending_review', 'in_review'].includes(request.status)
+  const isReadOnly = ['pending', 'in_review'].includes(request.status)
 
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">

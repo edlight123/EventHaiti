@@ -38,7 +38,7 @@ export async function getPlatformCounts() {
   
   const pendingVerifications = verificationsSnapshot.docs.filter((doc: any) => {
     const status = doc.data().status
-    return status === 'pending_review' || status === 'in_review'
+    return status === 'pending' || status === 'in_review'
   }).length
 
   const [usersCount, eventsCount, ticketsCount] = await Promise.all([
@@ -165,7 +165,7 @@ export async function getPendingVerifications(limit: number = 3) {
     const pendingDocs = verificationsSnapshot.docs
       .filter((doc: any) => {
         const status = doc.data().status
-        return status === 'pending_review' || status === 'in_review'
+        return status === 'pending' || status === 'in_review'
       })
       .sort((a: any, b: any) => {
         const aDate = a.data().created_at?.toDate?.() || a.data().createdAt?.toDate?.() || new Date(0)

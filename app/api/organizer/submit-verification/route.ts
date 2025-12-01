@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
         id_front_url: idFrontUrl,
         id_back_url: idBackUrl,
         face_photo_url: facePhotoUrl,
-        status: 'pending_review',
+        status: 'pending',
       })
       .select()
       .single()
@@ -57,10 +57,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update user verification status to pending_review
+    // Update user verification status to pending
     const { error: updateError } = await supabase
       .from('users')
-      .update({ verification_status: 'pending_review' })
+      .update({ verification_status: 'pending' })
       .eq('id', userId)
 
     if (updateError) {
