@@ -20,6 +20,11 @@ import PullToRefresh from '@/components/PullToRefresh'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { revalidatePath } from 'next/cache'
 import ShareButton from './ShareButton'
+import ShareButtonInline from './ShareButtonInline'
+import MobileHero from './MobileHero'
+import MobileKeyFacts from './MobileKeyFacts'
+import MobileAccordions from './MobileAccordions'
+import StickyMobileCTA from './StickyMobileCTA'
 
 export const revalidate = 0
 
@@ -230,11 +235,25 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
   return (
     <PullToRefresh onRefresh={refreshPage}>
-      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+      <div className="min-h-screen bg-gray-50 pb-mobile-nav md:pb-8">
         <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
-      {/* PREMIUM HERO SECTION - Compact on Mobile */}
-      <div className="relative bg-gray-900 max-h-[40vh] md:max-h-none overflow-hidden">
+        {/* MOBILE HERO - Full width with 16:9 aspect ratio */}
+        <MobileHero
+          title={event.title}
+          category={event.category}
+          bannerUrl={event.banner_image_url}
+          organizerName={event.users?.full_name || 'Event Organizer'}
+          organizerId={event.organizer_id}
+          isVerified={event.users?.is_verified || false}
+          isVIP={isVIP}
+          isTrending={isTrending}
+          isSoldOut={isSoldOut}
+          selloutSoon={selloutSoon}
+        />
+
+      {/* DESKTOP HERO - Premium section */}
+      <div className="hidden md:block relative bg-gray-900 overflow-hidden">
         {/* Background Image with Overlay */}
         {event.banner_image_url ? (
           <div className="absolute inset-0">
@@ -359,15 +378,52 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
+      {/* MOBILE KEY FACTS - 2x2 Grid */}
+      <MobileKeyFacts
+        startDate={event.start_datetime}
+        venueName={event.venue_name}
+        city={event.city}
+        address={event.address}
+        commune={event.commune}
+        isFree={isFree}
+        ticketPrice={event.ticket_price}
+        currency={event.currency}
+        remainingTickets={remainingTickets}
+        isSoldOut={isSoldOut}
+      />
+
       {/* MAIN CONTENT */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8 pb-32 md:pb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
           
           {/* Left Column - Event Details */}
-          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+          <div className="lg:col-span-2 space-y-4">
+
+            {/* MOBILE ACCORDIONS */}
+            <MobileAccordions
+              description={event.description}
+              tags={event.tags}
+              venueName={event.venue_name}
+              address={event.address}
+              commune={event.commune}
+              city={event.city}
+              startDatetime={event.start_datetime}
+              endDatetime={event.end_datetime}
+              organizerName={event.users?.full_name || 'Event Organizer'}
+              organizerId={event.organizer_id}
+              isVerified={event.users?.is_verified || false}
+              shareButton={
+                <ShareButtonInline
+                  eventId={event.id}
+                  eventTitle={event.title}
+                  eventDate={format(new Date(event.start_datetime), 'MMM d, yyyy')}
+                  eventVenue={`${event.venue_name}, ${event.city}`}
+                />
+              }
+            />
             
-            {/* About Section - Refined typography */}
-            <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-3 sm:p-4 md:p-6">
+            {/* DESKTOP SECTIONS - Hidden on mobile */}
+            <div className="hidden md:block bg-white rounded-2xl shadow-soft border border-gray-100 p-3 sm:p-4 md:p-6">
               <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-2 sm:mb-3 flex items-center gap-1.5 sm:gap-2">
                 <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-brand-600" />
                 About This Event
@@ -391,8 +447,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               )}
             </div>
 
-            {/* Venue Details - Refined */}
-            <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-4 md:p-6">
+            {/* Venue Details - Desktop only */}
+            <div className="hidden md:block bg-white rounded-2xl shadow-soft border border-gray-100 p-4 md:p-6">
               <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-brand-600" />
                 Venue Information
@@ -435,8 +491,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               </div>
             </div>
 
-            {/* Date & Time Details - Refined */}
-            <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-4 md:p-6">
+            {/* Date & Time Details - Desktop only */}
+            <div className="hidden md:block bg-white rounded-2xl shadow-soft border border-gray-100 p-4 md:p-6">
               <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
                 <Clock className="w-5 h-5 text-brand-600" />
                 Date & Time
@@ -634,40 +690,28 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         )}
       </div>
 
-      {/* STICKY MOBILE CTA - Refined & compact */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 shadow-hard z-40 safe-area-inset-bottom">
-        <div className="flex items-center gap-3">
-          <div className="min-w-0 flex-shrink-0">
-            {isFree ? (
-              <p className="text-lg font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">
-                FREE
-              </p>
-            ) : (
-              <div className="flex items-baseline">
-                <span className="text-xl font-bold text-gray-900">{event.ticket_price}</span>
-                <span className="text-xs text-gray-600 ml-1">{event.currency}</span>
-              </div>
-            )}
-            <p className="text-[11px] text-gray-600">
-              {isSoldOut ? 'Sold Out' : `${remainingTickets} left`}
-            </p>
-          </div>
-          <div className="flex-1 min-w-0">
-            {isSoldOut ? (
-              <WaitlistButton eventId={event.id} userId={user?.id || null} />
-            ) : user ? (
-              <BuyTicketButton eventId={event.id} userId={user.id} isFree={isFree} ticketPrice={event.ticket_price || 0} />
-            ) : (
-              <a
-                href="/auth/login"
-                className="block w-full bg-gradient-to-r from-brand-500 to-brand-600 text-white text-center font-semibold py-3 px-5 rounded-xl transition-all shadow-medium text-[15px]"
-              >
-                Sign in to Buy
-              </a>
-            )}
-          </div>
-        </div>
-      </div>
+      {/* STICKY MOBILE CTA - Auto-hide on scroll with safe area */}
+      <StickyMobileCTA
+        isFree={isFree}
+        ticketPrice={event.ticket_price}
+        currency={event.currency}
+        remainingTickets={remainingTickets}
+        isSoldOut={isSoldOut}
+        ctaButton={
+          isSoldOut ? (
+            <WaitlistButton eventId={event.id} userId={user?.id || null} />
+          ) : user ? (
+            <BuyTicketButton eventId={event.id} userId={user.id} isFree={isFree} ticketPrice={event.ticket_price || 0} />
+          ) : (
+            <a
+              href="/auth/login"
+              className="block w-full bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-center font-semibold rounded-xl transition-all shadow-medium min-h-[44px] flex items-center justify-center"
+            >
+              Sign in to Get Tickets
+            </a>
+          )
+        }
+      />
       
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>

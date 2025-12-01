@@ -1,0 +1,114 @@
+'use client'
+
+import Image from 'next/image'
+import Badge from '@/components/ui/Badge'
+import { Shield, Star, TrendingUp } from 'lucide-react'
+
+interface MobileHeroProps {
+  title: string
+  category: string
+  bannerUrl?: string
+  organizerName: string
+  organizerId: string
+  isVerified: boolean
+  isVIP: boolean
+  isTrending: boolean
+  isSoldOut: boolean
+  selloutSoon: boolean
+}
+
+export default function MobileHero({
+  title,
+  category,
+  bannerUrl,
+  organizerName,
+  organizerId,
+  isVerified,
+  isVIP,
+  isTrending,
+  isSoldOut,
+  selloutSoon
+}: MobileHeroProps) {
+  return (
+    <div className="md:hidden -mx-4">
+      {/* Hero Image - 16:9 aspect ratio */}
+      <div className="relative w-full aspect-video bg-gray-900">
+        {bannerUrl ? (
+          <>
+            <Image
+              src={bannerUrl}
+              alt={title}
+              fill
+              sizes="100vw"
+              className="object-cover"
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+          </>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-800 via-brand-700 to-accent-600 flex items-center justify-center">
+            <span className="text-6xl opacity-30">🎉</span>
+          </div>
+        )}
+
+        {/* Badges Overlay - Top Right */}
+        <div className="absolute top-3 right-3 flex flex-col gap-2">
+          {isSoldOut && (
+            <Badge variant="error" size="sm">
+              SOLD OUT
+            </Badge>
+          )}
+          {!isSoldOut && selloutSoon && (
+            <Badge variant="warning" size="sm">
+              Almost Sold Out
+            </Badge>
+          )}
+          {isVIP && (
+            <Badge variant="vip" size="sm" icon={<Star className="w-3 h-3" />}>
+              VIP
+            </Badge>
+          )}
+          {isTrending && (
+            <Badge variant="trending" size="sm" icon={<TrendingUp className="w-3 h-3" />}>
+              Trending
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Title & Organizer - Below image */}
+      <div className="px-4 py-4 bg-white">
+        {/* Category Badge */}
+        <Badge variant="neutral" size="sm" className="mb-3">
+          {category}
+        </Badge>
+
+        {/* Title */}
+        <h1 className="text-2xl font-bold text-gray-900 mb-3 leading-tight break-words">
+          {title}
+        </h1>
+
+        {/* Organizer */}
+        <a
+          href={`/profile/organizer/${organizerId}`}
+          className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
+        >
+          <div className="w-10 h-10 bg-gradient-to-br from-brand-400 to-accent-400 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+            {organizerName[0].toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-gray-900 truncate">
+              {organizerName}
+            </p>
+            {isVerified && (
+              <div className="flex items-center gap-1 text-blue-600 text-xs">
+                <Shield className="w-3 h-3" />
+                <span className="font-medium">Verified</span>
+              </div>
+            )}
+          </div>
+        </a>
+      </div>
+    </div>
+  )
+}

@@ -220,7 +220,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
           <button
             onClick={handleClaimFreeTicket}
             disabled={loading}
-            className="block w-full bg-teal-700 hover:bg-teal-800 text-white text-center font-semibold py-4 px-6 rounded-lg transition-colors disabled:opacity-50"
+            className="block w-full bg-teal-700 hover:bg-teal-800 text-white text-center font-semibold py-4 px-6 rounded-lg transition-colors disabled:opacity-50 min-h-[44px]"
           >
             {loading ? 'Processing...' : `Claim ${quantity} Free Ticket${quantity !== 1 ? 's' : ''}`}
           </button>
@@ -230,7 +230,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice }
           <button
             onClick={() => setShowTieredModal(true)}
             disabled={loading}
-            className="block w-full bg-teal-700 hover:bg-teal-800 text-white text-center font-semibold py-4 px-6 rounded-lg transition-colors disabled:opacity-50"
+            className="block w-full bg-teal-700 hover:bg-teal-800 text-white text-center font-semibold py-4 px-6 rounded-lg transition-colors disabled:opacity-50 min-h-[44px]"
           >
             {loading ? 'Processing...' : 'Buy Ticket'}
           </button>
