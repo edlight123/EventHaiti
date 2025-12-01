@@ -61,19 +61,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Update user verification status
-    // First, get all users to find the one we need to update
+    // Handle both old format (user_id) and new format (userId or document ID)
+    const userId = verificationRequest.userId || verificationRequest.user_id || requestId
     const allUsers = await supabase.from('users').select('*')
-    const userToUpdate = allUsers.data?.find((u: any) => u.id === verificationRequest.user_id)
+    const userToUpdate = allUsers.data?.find((u: any) => u.id === userId)
 
     if (!userToUpdate) {
-      console.error('User not found:', verificationRequest.user_id)
+      console.error('User not found:', userId)
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       )
     }
 
-    console.log('Updating user:', verificationRequest.user_id)
+    console.log('Updating user:', userId)
     console.log('Current user data:', userToUpdate)
     console.log('New verification status:', status)
 
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     try {
       // Use Firebase Admin SDK directly to ensure the update works
-      await adminDb.collection('users').doc(verificationRequest.user_id).set(updatePayload, { merge: true })
+      await adminDb.collection('users').doc(userId).set(updatePayload, { merge: true })
       console.log('User updated successfully via Admin SDK')
     } catch (adminError) {
       console.error('Error updating user via Admin SDK:', adminError)
