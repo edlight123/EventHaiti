@@ -46,7 +46,7 @@ export async function getOrganizerEvents(organizerId: string) {
         commune: data.commune || data.city || '',
         price: data.price || 0,
         max_attendees: data.max_attendees || 0,
-        totalTickets: data.totalTickets || 0,
+        total_tickets: data.total_tickets || 0,
         banner_image_url: data.banner_image || data.banner_image_url || '',
         category: data.category || '',
         status: data.is_published ? 'published' : 'draft',
@@ -245,7 +245,7 @@ export async function getNextEvent(organizerId: string) {
       ticketsSold,
       revenue,
       checkedInCount,
-      capacity: nextEvent.totalTickets || nextEvent.max_attendees || 0
+      capacity: nextEvent.total_tickets || nextEvent.max_attendees || 0
     }
   } catch (error) {
     console.error('Error fetching next event:', error)

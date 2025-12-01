@@ -107,7 +107,7 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
 
   const stats = {
     ticketsSold,
-    capacity: eventData.totalTickets || 0,
+    capacity: eventData.total_tickets || 0,
     revenue,
     checkedIn,
   }
