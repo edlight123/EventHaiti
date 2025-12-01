@@ -30,14 +30,17 @@ export default function GovernmentIDForm({ userId, initialData, onSave, onCancel
       const path = await uploadVerificationDocument(userId, file, 'id_front')
       setFrontPath(path)
       
-      // Update Firestore immediately
-      await updateVerificationFiles(userId, {
+      // Update Firestore immediately - only include defined values
+      const updateData: any = {
         governmentId: {
           front: path,
-          back: backPath,
           uploadedAt: new Date()
         }
-      })
+      }
+      if (backPath) {
+        updateData.governmentId.back = backPath
+      }
+      await updateVerificationFiles(userId, updateData)
     } catch (err: any) {
       throw new Error(err.message || 'Failed to upload ID front')
     }
@@ -48,14 +51,17 @@ export default function GovernmentIDForm({ userId, initialData, onSave, onCancel
       const path = await uploadVerificationDocument(userId, file, 'id_back')
       setBackPath(path)
       
-      // Update Firestore immediately
-      await updateVerificationFiles(userId, {
+      // Update Firestore immediately - only include defined values
+      const updateData: any = {
         governmentId: {
-          front: frontPath,
           back: path,
           uploadedAt: new Date()
         }
-      })
+      }
+      if (frontPath) {
+        updateData.governmentId.front = frontPath
+      }
+      await updateVerificationFiles(userId, updateData)
     } catch (err: any) {
       throw new Error(err.message || 'Failed to upload ID back')
     }
@@ -63,22 +69,26 @@ export default function GovernmentIDForm({ userId, initialData, onSave, onCancel
 
   const handleFrontRemove = async () => {
     setFrontPath(undefined)
-    await updateVerificationFiles(userId, {
-      governmentId: {
-        front: undefined,
-        back: backPath
-      }
-    })
+    // Don't update Firestore with undefined - let it keep existing data
+    if (backPath) {
+      await updateVerificationFiles(userId, {
+        governmentId: {
+          back: backPath
+        }
+      })
+    }
   }
 
   const handleBackRemove = async () => {
     setBackPath(undefined)
-    await updateVerificationFiles(userId, {
-      governmentId: {
-        front: frontPath,
-        back: undefined
-      }
-    })
+    // Don't update Firestore with undefined - let it keep existing data
+    if (frontPath) {
+      await updateVerificationFiles(userId, {
+        governmentId: {
+          front: frontPath
+        }
+      })
+    }
   }
 
   const handleContinue = async () => {

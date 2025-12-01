@@ -46,6 +46,7 @@ export async function getOrganizerEvents(organizerId: string) {
         commune: data.commune || data.city || '',
         price: data.price || 0,
         max_attendees: data.max_attendees || 0,
+        total_tickets: data.total_tickets || 0,
         banner_image_url: data.banner_image || data.banner_image_url || '',
         category: data.category || '',
         status: data.is_published ? 'published' : 'draft',

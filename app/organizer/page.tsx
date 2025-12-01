@@ -180,7 +180,7 @@ export default async function OrganizerDashboard() {
                         ...event,
                         ticketsSold,
                         revenue,
-                        total_tickets: event.total_tickets || 0
+                        capacity: event.total_tickets || event.max_attendees || 0
                       }}
                     />
                   )
