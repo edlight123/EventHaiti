@@ -68,8 +68,16 @@ export default async function OrganizerDashboard() {
     })
   }
 
-  // Note: Payout setup is shown in PayoutsWidget, not in ActionCenter
-  // to avoid showing both "All caught up" and payout message
+  if (!hasPayoutSetup) {
+    alerts.push({
+      id: 'payout-setup',
+      type: 'payout',
+      title: 'Payouts not set up',
+      description: 'Connect your bank account to receive payments',
+      ctaText: 'Setup Payouts',
+      ctaHref: '/organizer/settings/payouts'
+    })
+  }
 
   if (!isVerified) {
     alerts.push({
@@ -118,18 +126,20 @@ export default async function OrganizerDashboard() {
 
           {/* Action Center + Payouts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
-            {/* Action Center - Takes 2 columns on large screens */}
-            <div className="lg:col-span-2">
+            {/* Action Center - Takes 2 columns on large screens, or full width if no payouts widget */}
+            <div className={hasPayoutSetup ? 'lg:col-span-2' : 'lg:col-span-3'}>
               <ActionCenter alerts={alerts} />
             </div>
 
-            {/* Payouts Widget - Takes 1 column */}
-            <div>
-              <PayoutsWidget
-                status={hasPayoutSetup ? 'active' : 'not-setup'}
-                pendingBalance={0}
-              />
-            </div>
+            {/* Payouts Widget - Only show if payouts are set up */}
+            {hasPayoutSetup && (
+              <div>
+                <PayoutsWidget
+                  status="active"
+                  pendingBalance={0}
+                />
+              </div>
+            )}
           </div>
 
           {/* Sales Snapshot */}
