@@ -33,8 +33,9 @@ export default async function AdminVerifyPage() {
   const users = allUsers.data || []
 
   // Manually join user data with verification requests
+  // Note: userId field in verification_requests is the document ID
   const requestsWithUsers = verificationRequests.map((request: any) => {
-    const requestUser = users.find((u: any) => u.id === request.user_id)
+    const requestUser = users.find((u: any) => u.id === request.userId)
     return {
       ...request,
       user: requestUser
@@ -71,12 +72,12 @@ export default async function AdminVerifyPage() {
             Review pending organizer verification submissions
           </p>
 
-          {verificationRequests.filter((r: any) => r.status === 'pending').length === 0 ? (
+          {verificationRequests.filter((r: any) => r.status === 'pending_review' || r.status === 'in_review').length === 0 ? (
             <p className="text-[13px] sm:text-base text-gray-500 text-center py-6 sm:py-8">No pending verification requests</p>
           ) : (
             <div className="space-y-4 sm:space-y-6">
               {requestsWithUsers
-                .filter((r: any) => r.status === 'pending')
+                .filter((r: any) => r.status === 'pending_review' || r.status === 'in_review')
                 .map((request: any) => {
                   return (
                     <VerificationRequestReview

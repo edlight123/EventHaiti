@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import EventFormPremium from '../EventFormPremium'
 import { createClient } from '@/lib/firebase-db/server'
 import Link from 'next/link'
+import Navbar from '@/components/Navbar'
+import { isAdmin } from '@/lib/admin'
 
 export default async function NewEventPage() {
   const { user, error } = await requireAuth()
@@ -42,75 +44,29 @@ export default async function NewEventPage() {
   const isPendingOrInReview = verificationStatus === 'pending_review' || verificationStatus === 'in_review'
   if (userData?.is_verified !== true && userData?.verification_status !== 'approved' && !isPendingOrInReview) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-yellow-50 pb-mobile-nav flex items-center justify-center px-4">
-        <div className="max-w-3xl w-full py-8 md:py-16">
-          <div className="bg-white rounded-xl md:rounded-3xl shadow-medium border border-yellow-200 p-6 md:p-10">
+      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+        <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+        <div className="max-w-3xl mx-auto px-4 py-8 md:py-16">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-10">
             <div className="text-center">
-              <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-soft">
+              <div className="w-16 h-16 md:w-20 md:h-20 bg-yellow-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <svg className="w-8 h-8 md:w-10 md:h-10 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
               </div>
               
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 md:mb-3">
-                {isPendingOrInReview ? '⏳ Verification Pending' : '🔒 Verification Required'}
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                {verificationStatus === 'rejected' || verificationStatus === 'changes_requested' ? '🔒 Verification Required' : '🔒 Verification Required'}
               </h1>
               
-              {isPendingOrInReview ? (
+              {verificationStatus === 'rejected' || verificationStatus === 'changes_requested' ? (
                 <>
-                  <p className="text-base md:text-lg text-gray-600 mb-6 md:mb-8 max-w-xl mx-auto">
-                    Your verification request is being reviewed by our team. This usually takes 24-48 hours.
-                  </p>
-                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl md:rounded-2xl p-5 md:p-6 mb-6 md:mb-8">
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-500 rounded-lg md:rounded-xl flex items-center justify-center flex-shrink-0">
-                        <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div className="text-left">
-                        <p className="font-semibold text-blue-900 mb-1">What happens next?</p>
-                        <p className="text-[13px] md:text-sm text-blue-800">
-                          You&apos;ll receive an email once your account is verified. Thank you for your patience!
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <Link
-                    href="/organizer/events"
-                    className="inline-flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold transition-all shadow-soft hover:shadow-medium"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                    Back to Dashboard
-                  </Link>
-                </>
-              ) : verificationStatus === 'rejected' || verificationStatus === 'changes_requested' ? (
-                <>
-                  <p className="text-base md:text-lg text-gray-600 mb-6 md:mb-8 max-w-xl mx-auto">
+                  <p className="text-base text-gray-600 mb-8 max-w-xl mx-auto">
                     Unfortunately, your verification request was not approved. Please try again with clearer photos of your ID.
                   </p>
-                  <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl md:rounded-2xl p-5 md:p-6 mb-6 md:mb-8">
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 md:w-12 md:h-12 bg-red-500 rounded-lg md:rounded-xl flex items-center justify-center flex-shrink-0">
-                        <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                      </div>
-                      <div className="text-left">
-                        <p className="font-semibold text-red-900 mb-1">Common reasons for rejection:</p>
-                        <ul className="text-[13px] md:text-sm text-red-800 space-y-1">
-                          <li>• Photos are blurry or unclear</li>
-                          <li>• ID card is not fully visible</li>
-                          <li>• Selfie doesn&apos;t match ID photo</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
                   <Link
                     href="/organizer/verify"
-                    className="inline-flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-brand-600 to-accent-600 hover:from-brand-700 hover:to-accent-700 text-white rounded-xl font-bold transition-all shadow-soft hover:shadow-glow"
+                    className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white rounded-xl font-bold transition-all shadow-md hover:shadow-lg"
                   >
                     Try Again
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -120,55 +76,12 @@ export default async function NewEventPage() {
                 </>
               ) : (
                 <>
-                  <p className="text-base md:text-lg text-gray-600 mb-6 md:mb-8 max-w-xl mx-auto">
+                  <p className="text-base text-gray-600 mb-8 max-w-xl mx-auto">
                     To create events on EventHaiti, you need to verify your identity first. This helps keep our community safe and trustworthy.
                   </p>
-                  <div className="bg-gradient-to-r from-brand-50 to-accent-50 border border-brand-200 rounded-xl md:rounded-2xl p-6 md:p-8 mb-6 md:mb-8 text-left max-w-lg mx-auto">
-                    <h3 className="font-bold text-brand-900 mb-4 text-lg flex items-center gap-2">
-                      <svg className="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      What you&apos;ll need:
-                    </h3>
-                    <ul className="space-y-3 text-[13px] md:text-sm text-brand-800">
-                      <li className="flex items-start gap-3">
-                        <div className="w-6 h-6 bg-brand-500 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">Valid Haitian National ID Card</p>
-                          <p className="text-gray-600">Make sure it&apos;s not expired</p>
-                        </div>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <div className="w-6 h-6 bg-brand-500 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">Camera Access</p>
-                          <p className="text-gray-600">To take photos of your ID</p>
-                        </div>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <div className="w-6 h-6 bg-brand-500 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">5 Minutes</p>
-                          <p className="text-gray-600">Quick and easy process</p>
-                        </div>
-                      </li>
-                    </ul>
-                  </div>
                   <Link
                     href="/organizer/verify"
-                    className="inline-flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-brand-600 to-accent-600 hover:from-brand-700 hover:to-accent-700 text-white rounded-xl font-bold transition-all shadow-soft hover:shadow-glow text-base md:text-lg"
+                    className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white rounded-xl font-bold transition-all shadow-md hover:shadow-lg"
                   >
                     Start Verification
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,6 +90,44 @@ export default async function NewEventPage() {
                   </Link>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // If pending/in_review, show pending message
+  if (isPendingOrInReview) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+        <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+        <div className="max-w-3xl mx-auto px-4 py-8 md:py-16">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-10">
+            <div className="text-center">
+              <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <svg className="w-8 h-8 md:w-10 md:h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                ⏳ Verification Pending
+              </h1>
+              
+              <p className="text-base text-gray-600 mb-8 max-w-xl mx-auto">
+                Your verification request is being reviewed by our team. This usually takes 24-48 hours. You&apos;ll receive an email once your account is verified.
+              </p>
+              
+              <Link
+                href="/organizer"
+                className="inline-flex items-center gap-2 px-8 py-4 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold transition-all shadow-md hover:shadow-lg"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Dashboard
+              </Link>
             </div>
           </div>
         </div>
