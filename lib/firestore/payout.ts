@@ -102,15 +102,22 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
       const docData = doc.data()
       const type = doc.id as 'identity' | 'bank' | 'phone'
       if (type in verificationStatus) {
+        // Only override identity verification if not already verified from organizer verification
+        if (type === 'identity' && hasOrganizerVerification) {
+          // Keep it as 'verified' from organizer verification
+          return
+        }
         verificationStatus[type] = docData.status || 'pending'
       }
     })
 
-    // Merge with data from config (in case it was set there)
+    // Merge with data from config, prioritizing computed verification status (especially for identity)
     const finalVerificationStatus = {
-      identity: data.verificationStatus?.identity || verificationStatus.identity,
-      bank: data.verificationStatus?.bank || verificationStatus.bank,
-      phone: data.verificationStatus?.phone || verificationStatus.phone,
+      // For identity: prioritize organizer verification check, then payout-specific verification, then config data
+      identity: verificationStatus.identity,
+      // For bank/phone: use verification docs first, then config data
+      bank: verificationStatus.bank !== 'pending' ? verificationStatus.bank : (data.verificationStatus?.bank || 'pending'),
+      phone: verificationStatus.phone !== 'pending' ? verificationStatus.phone : (data.verificationStatus?.phone || 'pending'),
     }
 
     return {
