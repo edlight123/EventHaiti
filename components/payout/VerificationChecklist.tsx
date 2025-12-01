@@ -1,7 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import { Check, Clock, AlertCircle, User, CreditCard, Smartphone } from 'lucide-react'
 import type { PayoutConfig } from '@/lib/firestore/payout'
+import { IdentityVerificationModal } from './IdentityVerificationModal'
 
 interface VerificationChecklistProps {
   config: PayoutConfig | null
@@ -22,6 +24,8 @@ interface VerificationItem {
 }
 
 export function VerificationChecklist({ config }: VerificationChecklistProps) {
+  const [showIdentityModal, setShowIdentityModal] = useState(false)
+  
   const identityStatus = config?.verificationStatus?.identity || 'pending'
   const bankStatus = config?.verificationStatus?.bank || 'pending'
   const phoneStatus = config?.verificationStatus?.phone || 'pending'
@@ -35,7 +39,7 @@ export function VerificationChecklist({ config }: VerificationChecklistProps) {
       icon: User,
       action: identityStatus === 'pending' ? {
         label: 'Verify Identity',
-        onClick: () => console.log('Open identity verification'),
+        onClick: () => setShowIdentityModal(true),
       } : undefined,
     },
     {
@@ -207,6 +211,16 @@ export function VerificationChecklist({ config }: VerificationChecklistProps) {
           you and comply with financial regulations. All information is encrypted and secure.
         </p>
       </div>
+
+      {showIdentityModal && (
+        <IdentityVerificationModal
+          onClose={() => setShowIdentityModal(false)}
+          onComplete={() => {
+            // Optionally refresh data
+            window.location.reload()
+          }}
+        />
+      )}
     </div>
   )
 }

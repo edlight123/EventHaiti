@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { DollarSign, Check, X, Clock, RefreshCw, Download } from 'lucide-react'
 import type { Payout } from '@/lib/firestore/payout'
@@ -10,6 +11,55 @@ interface PayoutHistoryProps {
 }
 
 export function PayoutHistory({ payouts, loading }: PayoutHistoryProps) {
+  const [exporting, setExporting] = useState(false)
+  const [retrying, setRetrying] = useState<string | null>(null)
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const response = await fetch('/api/organizer/export-payouts?format=csv')
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `payouts-${new Date().toISOString().split('T')[0]}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Export failed:', error)
+      alert('Failed to export payouts')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleRetry = async (payoutId: string) => {
+    setRetrying(payoutId)
+    try {
+      const response = await fetch('/api/organizer/retry-payout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payoutId }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error)
+      }
+
+      alert('Payout scheduled for retry!')
+      window.location.reload()
+    } catch (error: any) {
+      console.error('Retry failed:', error)
+      alert(error.message || 'Failed to retry payout')
+    } finally {
+      setRetrying(null)
+    }
+  }
+
   const formatCurrency = (amountInCents: number): string => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -93,9 +143,13 @@ export function PayoutHistory({ payouts, loading }: PayoutHistoryProps) {
     <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold text-gray-900">Payout History</h3>
-        <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+        <button 
+          onClick={handleExport}
+          disabled={exporting || !payouts || payouts.length === 0}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+        >
           <Download className="w-4 h-4" />
-          Export
+          {exporting ? 'Exporting...' : 'Export'}
         </button>
       </div>
 
@@ -141,9 +195,13 @@ export function PayoutHistory({ payouts, loading }: PayoutHistoryProps) {
                 <td className="py-4 px-4">{getStatusBadge(payout.status)}</td>
                 <td className="py-4 px-4 text-right">
                   {payout.status === 'failed' && (
-                    <button className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-teal-600 hover:bg-teal-50 rounded-lg transition-colors">
-                      <RefreshCw className="w-3 h-3" />
-                      Retry
+                    <button 
+                      onClick={() => handleRetry(payout.id)}
+                      disabled={retrying === payout.id}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-teal-600 hover:bg-teal-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${retrying === payout.id ? 'animate-spin' : ''}`} />
+                      {retrying === payout.id ? 'Retrying...' : 'Retry'}
                     </button>
                   )}
                 </td>
@@ -196,9 +254,13 @@ export function PayoutHistory({ payouts, loading }: PayoutHistoryProps) {
             )}
 
             {payout.status === 'failed' && (
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-teal-600 hover:bg-teal-50 border-2 border-teal-600 rounded-lg transition-colors">
-                <RefreshCw className="w-4 h-4" />
-                Retry Payout
+              <button 
+                onClick={() => handleRetry(payout.id)}
+                disabled={retrying === payout.id}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-teal-600 hover:bg-teal-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed border-2 border-teal-600 disabled:border-gray-300 rounded-lg transition-colors"
+              >
+                <RefreshCw className={`w-4 h-4 ${retrying === payout.id ? 'animate-spin' : ''}`} />
+                {retrying === payout.id ? 'Retrying...' : 'Retry Payout'}
               </button>
             )}
           </div>

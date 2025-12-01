@@ -1,6 +1,7 @@
 'use client'
 
-import { DollarSign, Clock, Calendar } from 'lucide-react'
+import { useState } from 'react'
+import { DollarSign, Clock, Calendar, ArrowDownToLine } from 'lucide-react'
 
 interface BalanceRowProps {
   availableBalance: number
@@ -9,8 +10,44 @@ interface BalanceRowProps {
 }
 
 export function BalanceRow({ availableBalance, pendingBalance, nextPayoutDate }: BalanceRowProps) {
+  const [requesting, setRequesting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+
   const formatCurrency = (cents: number) => {
     return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
+
+  const handleRequestPayout = async () => {
+    if (availableBalance < 5000) {
+      setError('Minimum payout amount is $50.00')
+      return
+    }
+
+    setRequesting(true)
+    setError(null)
+    setSuccess(false)
+
+    try {
+      const response = await fetch('/api/organizer/request-payout', {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'Failed to request payout')
+      }
+
+      setSuccess(true)
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setRequesting(false)
+    }
   }
 
   const formatDate = (dateString: string | null) => {
@@ -20,7 +57,20 @@ export function BalanceRow({ availableBalance, pendingBalance, nextPayoutDate }:
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="space-y-4">
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800">
+          {error}
+        </div>
+      )}
+      
+      {success && (
+        <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800">
+          Payout request submitted successfully! Refreshing...
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* Available Balance */}
       <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl border-2 border-green-200 p-6">
         <div className="flex items-center gap-3 mb-3">
@@ -58,6 +108,24 @@ export function BalanceRow({ availableBalance, pendingBalance, nextPayoutDate }:
         </p>
         <p className="text-sm text-blue-600 mt-1">{formatDate(nextPayoutDate)}</p>
       </div>
+    </div>
+
+    {/* Request Payout Button */}
+    {availableBalance >= 5000 && (
+      <div className="mt-4">
+        <button
+          onClick={handleRequestPayout}
+          disabled={requesting}
+          className="w-full md:w-auto px-8 py-4 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all disabled:cursor-not-allowed flex items-center justify-center gap-3"
+        >
+          <ArrowDownToLine className="w-5 h-5" />
+          {requesting ? 'Requesting...' : 'Request Payout Now'}
+        </button>
+        <p className="text-sm text-gray-600 mt-2">
+          Your payout will be scheduled for the next Friday at 5:00 PM
+        </p>
+      </div>
+    )}
     </div>
   )
 }

@@ -1,0 +1,249 @@
+'use client'
+
+import { useState } from 'react'
+import { X, Upload, AlertCircle, CheckCircle } from 'lucide-react'
+
+interface IdentityVerificationModalProps {
+  onClose: () => void
+  onComplete: () => void
+}
+
+export function IdentityVerificationModal({ onClose, onComplete }: IdentityVerificationModalProps) {
+  const [step, setStep] = useState<'info' | 'upload' | 'submitted'>('info')
+  const [idType, setIdType] = useState<'national_id' | 'passport' | 'drivers_license'>('national_id')
+  const [frontImage, setFrontImage] = useState<File | null>(null)
+  const [backImage, setBackImage] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+
+  const handleFileChange = (side: 'front' | 'back', file: File | null) => {
+    if (side === 'front') {
+      setFrontImage(file)
+    } else {
+      setBackImage(file)
+    }
+  }
+
+  const handleSubmit = async () => {
+    if (!frontImage || (idType === 'national_id' && !backImage)) {
+      alert('Please upload all required documents')
+      return
+    }
+
+    setUploading(true)
+    // Simulate upload
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    setUploading(false)
+    setStep('submitted')
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-2xl font-bold text-gray-900">Identity Verification</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <X className="w-6 h-6 text-gray-600" />
+          </button>
+        </div>
+
+        <div className="p-6">
+          {step === 'info' && (
+            <div className="space-y-6">
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                <p className="text-sm text-blue-900">
+                  <strong>Why we need this:</strong> We verify your identity to comply with financial 
+                  regulations and protect your account. Your information is encrypted and secure.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-4">What you&apos;ll need:</h3>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2 text-sm text-gray-700">
+                    <span className="text-teal-600 font-bold mt-0.5">•</span>
+                    <span>A government-issued photo ID (National ID, Passport, or Driver&apos;s License)</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-sm text-gray-700">
+                    <span className="text-teal-600 font-bold mt-0.5">•</span>
+                    <span>Clear photos of both sides of your ID (if applicable)</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-sm text-gray-700">
+                    <span className="text-teal-600 font-bold mt-0.5">•</span>
+                    <span>All information must be clearly visible and match your account details</span>
+                  </li>
+                </ul>
+              </div>
+
+              <button
+                onClick={() => setStep('upload')}
+                className="w-full px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+              >
+                Continue
+              </button>
+            </div>
+          )}
+
+          {step === 'upload' && (
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">
+                  Select ID Type
+                </label>
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    onClick={() => setIdType('national_id')}
+                    className={`p-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+                      idType === 'national_id'
+                        ? 'border-teal-600 bg-teal-50 text-teal-700'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    National ID
+                  </button>
+                  <button
+                    onClick={() => setIdType('passport')}
+                    className={`p-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+                      idType === 'passport'
+                        ? 'border-teal-600 bg-teal-50 text-teal-700'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    Passport
+                  </button>
+                  <button
+                    onClick={() => setIdType('drivers_license')}
+                    className={`p-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+                      idType === 'drivers_license'
+                        ? 'border-teal-600 bg-teal-50 text-teal-700'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    Driver&apos;s License
+                  </button>
+                </div>
+              </div>
+
+              {/* Front Side Upload */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Front Side <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileChange('front', e.target.files?.[0] || null)}
+                    className="hidden"
+                    id="front-upload"
+                  />
+                  <label
+                    htmlFor="front-upload"
+                    className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-xl hover:border-teal-600 cursor-pointer transition-colors"
+                  >
+                    {frontImage ? (
+                      <div className="text-center">
+                        <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-2" />
+                        <p className="text-sm font-medium text-gray-900">{frontImage.name}</p>
+                        <p className="text-xs text-gray-500 mt-1">Click to change</p>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm font-medium text-gray-700">Upload front side</p>
+                        <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 10MB</p>
+                      </div>
+                    )}
+                  </label>
+                </div>
+              </div>
+
+              {/* Back Side Upload (if needed) */}
+              {idType !== 'passport' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Back Side <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleFileChange('back', e.target.files?.[0] || null)}
+                      className="hidden"
+                      id="back-upload"
+                    />
+                    <label
+                      htmlFor="back-upload"
+                      className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-xl hover:border-teal-600 cursor-pointer transition-colors"
+                    >
+                      {backImage ? (
+                        <div className="text-center">
+                          <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-2" />
+                          <p className="text-sm font-medium text-gray-900">{backImage.name}</p>
+                          <p className="text-xs text-gray-500 mt-1">Click to change</p>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm font-medium text-gray-700">Upload back side</p>
+                          <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 10MB</p>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-yellow-900">
+                  <p className="font-semibold mb-1">Important</p>
+                  <p>Make sure all corners are visible and text is clearly readable. Verification typically takes 1-2 business days.</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setStep('info')}
+                  disabled={uploading}
+                  className="flex-1 px-6 py-3 text-gray-700 font-semibold hover:bg-gray-100 rounded-xl transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={!frontImage || (idType !== 'passport' && !backImage) || uploading}
+                  className="flex-1 px-6 py-3 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all disabled:cursor-not-allowed"
+                >
+                  {uploading ? 'Uploading...' : 'Submit for Verification'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'submitted' && (
+            <div className="py-8 text-center">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-12 h-12 text-green-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Verification Submitted!</h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                Your identity documents have been submitted for review. We&apos;ll notify you within 1-2 
+                business days once verification is complete.
+              </p>
+              <button
+                onClick={() => {
+                  onComplete()
+                  onClose()
+                }}
+                className="px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+              >
+                Done
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
