@@ -176,13 +176,34 @@ export async function getPendingVerifications(limit: number = 3) {
 
     return pendingDocs.map((doc: any) => {
       const data = doc.data()
+      
+      // Handle both old and new formats for timestamps
+      let createdAt
+      if (data.submittedAt?._seconds) {
+        createdAt = new Date(data.submittedAt._seconds * 1000)
+      } else if (data.createdAt?._seconds) {
+        createdAt = new Date(data.createdAt._seconds * 1000)
+      } else if (data.createdAt?.toDate) {
+        createdAt = data.createdAt.toDate()
+      } else if (data.created_at?.toDate) {
+        createdAt = data.created_at.toDate()
+      } else {
+        createdAt = new Date(data.created_at || data.createdAt || Date.now())
+      }
+      
+      // Extract business name from nested format or direct field
+      const businessName = data.businessName 
+        || data.business_name 
+        || data.steps?.organizerInfo?.fields?.organization_name
+        || data.steps?.organizerInfo?.fields?.full_name
+      
       return {
         id: doc.id,
         userId: data.userId || data.user_id || doc.id,
-        businessName: data.businessName || data.business_name,
+        businessName,
         status: data.status,
-        createdAt: data.createdAt?.toDate?.() || data.created_at?.toDate?.() || new Date(data.created_at || data.createdAt || Date.now()),
-        idType: data.idType || data.id_type
+        createdAt,
+        idType: data.idType || data.id_type || 'Government ID'
       }
     })
   } catch (error) {

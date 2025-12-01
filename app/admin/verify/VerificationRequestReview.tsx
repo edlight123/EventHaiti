@@ -21,13 +21,19 @@ export default function VerificationRequestReview({ request, user }: Props) {
     if (!path) return null
     // If it's already a full URL, return it
     if (path.startsWith('http')) return path
-    // Otherwise, construct Firebase Storage URL
-    return `https://firebasestorage.googleapis.com/v0/b/event-haiti.firebasestorage.app/o/${encodeURIComponent(path)}?alt=media`
+    // Otherwise, construct Firebase Storage URL with proper encoding
+    // Split by / and encode each segment
+    const segments = path.split('/').map(segment => encodeURIComponent(segment))
+    const encodedPath = segments.join('%2F')
+    return `https://firebasestorage.googleapis.com/v0/b/event-haiti.firebasestorage.app/o/${encodedPath}?alt=media`
   }
 
   const idFrontUrl = request.id_front_url || getImageUrl(request.files?.governmentId?.front)
   const idBackUrl = request.id_back_url || getImageUrl(request.files?.governmentId?.back)
   const facePhotoUrl = request.face_photo_url || getImageUrl(request.files?.selfie?.path)
+
+  console.log('Verification images:', { idFrontUrl, idBackUrl, facePhotoUrl })
+  console.log('Request files:', request.files)
 
   // Normalize date
   const submittedDate = request.submittedAt?._seconds 
