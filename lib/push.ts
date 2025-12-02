@@ -10,11 +10,20 @@ function base64ToUint8Array(base64String: string) {
 }
 
 export async function subscribeToPush(publicKey: string, topics: string[] = [], userId?: string) {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null
+  console.log('[push] subscribeToPush called', { publicKey: publicKey?.substring(0, 20), topics, userId })
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.log('[push] Push not supported')
+    return null
+  }
+  console.log('[push] Requesting permission...')
   const permission = await Notification.requestPermission()
+  console.log('[push] Permission result:', permission)
   if (permission !== 'granted') return null
+  console.log('[push] Waiting for service worker...')
   const reg = await navigator.serviceWorker.ready
+  console.log('[push] Service worker ready')
   const existing = await reg.pushManager.getSubscription()
+  console.log('[push] Existing subscription:', existing?.endpoint?.substring(0, 50))
   function extractKeys(sub: PushSubscription) {
     const p256dhArray = sub.getKey && sub.getKey('p256dh')
     const authArray = sub.getKey && sub.getKey('auth')
@@ -32,26 +41,39 @@ export async function subscribeToPush(publicKey: string, topics: string[] = [], 
     const keys = extractKeys(existing)
     // If keys missing, re-subscribe fresh to ensure viable encryption keys
     if (!keys.p256dh || !keys.auth) {
+      console.log('[push] Keys missing, unsubscribing...')
       try { await existing.unsubscribe() } catch {}
     } else {
-      await fetch('/api/push/subscribe', {
+      console.log('[push] Updating existing subscription...')
+      const response = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ endpoint: existing.endpoint, keys, topics, userId })
       })
+      console.log('[push] Update response:', response.status)
+      if (!response.ok) {
+        console.error('[push] Subscribe failed:', await response.text())
+      }
       return existing
     }
   }
+  console.log('[push] Creating new subscription...')
   const sub = await reg.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: base64ToUint8Array(publicKey)
   })
+  console.log('[push] Subscription created:', sub.endpoint.substring(0, 50))
   const newKeys = extractKeys(sub)
-  await fetch('/api/push/subscribe', {
+  console.log('[push] Sending to server...')
+  const response = await fetch('/api/push/subscribe', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ endpoint: sub.endpoint, keys: newKeys, topics, userId })
   })
+  console.log('[push] Server response:', response.status)
+  if (!response.ok) {
+    console.error('[push] Subscribe failed:', await response.text())
+  }
   return sub
 }
 
