@@ -1,14 +1,13 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import DangerZone from './DangerZone';
 import Link from 'next/link';
 import { ChevronLeft, AlertTriangle } from 'lucide-react';
 
 export default async function DangerZoneSettingsPage() {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentUser();
 
-  if (!session?.user?.id) {
+  if (!user?.id) {
     redirect('/login');
   }
 
@@ -49,7 +48,7 @@ export default async function DangerZoneSettingsPage() {
         </div>
 
         {/* Danger Zone Actions */}
-        <DangerZone userId={session.user.id} />
+        <DangerZone userId={user.id} />
       </div>
     </div>
   );

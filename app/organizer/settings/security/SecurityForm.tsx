@@ -31,8 +31,8 @@ export default function SecurityForm({ userId, loginHistory }: SecurityFormProps
     if (newPassword !== confirmPassword) {
       showToast({
         title: 'Passwords do not match',
-        description: 'Please make sure your new passwords match.',
-        variant: 'error',
+        message: 'Please make sure your new passwords match.',
+        type: 'error',
       });
       return;
     }
@@ -40,8 +40,8 @@ export default function SecurityForm({ userId, loginHistory }: SecurityFormProps
     if (newPassword.length < 8) {
       showToast({
         title: 'Password too short',
-        description: 'Password must be at least 8 characters long.',
-        variant: 'error',
+        message: 'Password must be at least 8 characters long.',
+        type: 'error',
       });
       return;
     }
@@ -65,7 +65,8 @@ export default function SecurityForm({ userId, loginHistory }: SecurityFormProps
 
       showToast({
         title: 'Password changed',
-        description: 'Your password has been successfully updated.',
+        message: 'Your password has been successfully updated.',
+        type: 'success',
       });
 
       setCurrentPassword('');
@@ -75,8 +76,8 @@ export default function SecurityForm({ userId, loginHistory }: SecurityFormProps
       console.error('Error changing password:', error);
       showToast({
         title: 'Error',
-        description: error.message || 'Failed to change password',
-        variant: 'error',
+        message: error.message || 'Failed to change password',
+        type: 'error',
       });
     } finally {
       setIsChangingPassword(false);

@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getCurrentUser } from '@/lib/auth';
+import { adminDb } from '@/lib/firebase/admin';
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
-    if (!session?.user?.id) {
+    if (!user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -19,7 +18,7 @@ export async function PUT(request: NextRequest) {
     // Update notification preferences in Firestore
     await adminDb
       .collection('organizers')
-      .doc(session.user.id)
+      .doc(user.id)
       .collection('notificationPreferences')
       .doc('main')
       .set({

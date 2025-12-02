@@ -1,7 +1,6 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { adminDb } from '@/lib/firebase/admin';
 import SecurityForm from './SecurityForm';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
@@ -15,20 +14,20 @@ async function getLoginHistory(userId: string) {
     .limit(10)
     .get();
 
-  return loginSnapshot.docs.map((doc) => ({
+  return loginSnapshot.docs.map((doc: any) => ({
     id: doc.id,
     ...doc.data(),
   }));
 }
 
 export default async function SecuritySettingsPage() {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentUser();
 
-  if (!session?.user?.id) {
+  if (!user?.id) {
     redirect('/login');
   }
 
-  const loginHistory = await getLoginHistory(session.user.id);
+  const loginHistory = await getLoginHistory(user.id);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -52,7 +51,7 @@ export default async function SecuritySettingsPage() {
 
         {/* Security Form */}
         <SecurityForm 
-          userId={session.user.id}
+          userId={user.id}
           loginHistory={loginHistory}
         />
       </div>

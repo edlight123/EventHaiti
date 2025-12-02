@@ -45,14 +45,15 @@ export default function NotificationsForm({ userId, initialData }: Notifications
 
       showToast({
         title: 'Preferences saved',
-        description: 'Your notification preferences have been updated.',
+        message: 'Your notification preferences have been updated.',
+        type: 'success',
       });
     } catch (error) {
       console.error('Error updating notifications:', error);
       showToast({
         title: 'Error',
-        description: 'Failed to update preferences. Please try again.',
-        variant: 'error',
+        message: 'Failed to update preferences. Please try again.',
+        type: 'error',
       });
     } finally {
       setIsSubmitting(false);
@@ -70,31 +71,31 @@ export default function NotificationsForm({ userId, initialData }: Notifications
         <div className="space-y-4">
           <ToggleItem
             label="Ticket Sales"
-            description="Get notified when someone purchases a ticket"
+            message="Get notified when someone purchases a ticket"
             checked={formData.email_ticket_sales}
             onChange={() => handleToggle('email_ticket_sales')}
           />
           <ToggleItem
             label="New Reviews"
-            description="Get notified when your event receives a review"
+            message="Get notified when your event receives a review"
             checked={formData.email_new_reviews}
             onChange={() => handleToggle('email_new_reviews')}
           />
           <ToggleItem
             label="Payout Updates"
-            description="Get notified about payout status changes"
+            message="Get notified about payout status changes"
             checked={formData.email_payout_updates}
             onChange={() => handleToggle('email_payout_updates')}
           />
           <ToggleItem
             label="Event Reminders"
-            description="Get reminders before your events start"
+            message="Get reminders before your events start"
             checked={formData.email_event_reminders}
             onChange={() => handleToggle('email_event_reminders')}
           />
           <ToggleItem
             label="Marketing & Updates"
-            description="Receive tips, feature updates, and promotional content"
+            message="Receive tips, feature updates, and promotional content"
             checked={formData.email_marketing}
             onChange={() => handleToggle('email_marketing')}
           />
@@ -110,13 +111,13 @@ export default function NotificationsForm({ userId, initialData }: Notifications
         <div className="space-y-4">
           <ToggleItem
             label="Ticket Sales"
-            description="Receive SMS when someone purchases a ticket"
+            message="Receive SMS when someone purchases a ticket"
             checked={formData.sms_ticket_sales}
             onChange={() => handleToggle('sms_ticket_sales')}
           />
           <ToggleItem
             label="Event Reminders"
-            description="Receive SMS reminders before your events"
+            message="Receive SMS reminders before your events"
             checked={formData.sms_event_reminders}
             onChange={() => handleToggle('sms_event_reminders')}
           />
@@ -135,13 +136,13 @@ export default function NotificationsForm({ userId, initialData }: Notifications
         <div className="space-y-4">
           <ToggleItem
             label="Ticket Sales"
-            description="Get instant push notifications for ticket sales"
+            message="Get instant push notifications for ticket sales"
             checked={formData.push_ticket_sales}
             onChange={() => handleToggle('push_ticket_sales')}
           />
           <ToggleItem
             label="New Reviews"
-            description="Get instant push notifications for new reviews"
+            message="Get instant push notifications for new reviews"
             checked={formData.push_new_reviews}
             onChange={() => handleToggle('push_new_reviews')}
           />
@@ -168,12 +169,12 @@ export default function NotificationsForm({ userId, initialData }: Notifications
 
 function ToggleItem({
   label,
-  description,
+  message,
   checked,
   onChange,
 }: {
   label: string;
-  description: string;
+  message: string;
   checked: boolean;
   onChange: () => void;
 }) {
@@ -181,7 +182,7 @@ function ToggleItem({
     <div className="flex items-start justify-between gap-4">
       <div className="flex-1">
         <p className="font-medium text-gray-900">{label}</p>
-        <p className="text-sm text-gray-600">{description}</p>
+        <p className="text-sm text-gray-600">{message}</p>
       </div>
       <button
         type="button"

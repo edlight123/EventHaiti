@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getCurrentUser } from '@/lib/auth';
+import { adminDb } from '@/lib/firebase/admin';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
-    if (!session?.user?.id) {
+    if (!user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -25,18 +24,18 @@ export async function POST(request: NextRequest) {
     const batch = adminDb.batch();
 
     // Delete user document
-    const userRef = adminDb.collection('users').doc(session.user.id);
+    const userRef = adminDb.collection('users').doc(user.id);
     batch.delete(userRef);
 
     // Delete organizer document
-    const organizerRef = adminDb.collection('organizers').doc(session.user.id);
+    const organizerRef = adminDb.collection('organizers').doc(user.id);
     batch.delete(organizerRef);
 
     // Delete all events
     const eventsSnapshot = await adminDb.collection('events')
-      .where('organizer_id', '==', session.user.id)
+      .where('organizer_id', '==', user.id)
       .get();
-    eventsSnapshot.docs.forEach((doc) => {
+    eventsSnapshot.docs.forEach((doc: any) => {
       batch.delete(doc.ref);
     });
 

@@ -69,14 +69,15 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
 
       showToast({
         title: 'Defaults updated',
-        description: 'Your event defaults have been successfully updated.',
+        message: 'Your event defaults have been successfully updated.',
+        type: 'success',
       });
     } catch (error) {
       console.error('Error updating defaults:', error);
       showToast({
         title: 'Error',
-        description: 'Failed to update defaults. Please try again.',
-        variant: 'error',
+        message: 'Failed to update defaults. Please try again.',
+        type: 'error',
       });
     } finally {
       setIsSubmitting(false);

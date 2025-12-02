@@ -43,14 +43,15 @@ export default function DangerZone({ userId }: DangerZoneProps) {
 
       showToast({
         title: 'Data exported',
-        description: 'Your data has been downloaded successfully.',
+        message: 'Your data has been downloaded successfully.',
+        type: 'success',
       });
     } catch (error) {
       console.error('Error exporting data:', error);
       showToast({
         title: 'Error',
-        description: 'Failed to export data. Please try again.',
-        variant: 'error',
+        message: 'Failed to export data. Please try again.',
+        type: 'error',
       });
     } finally {
       setIsExporting(false);
@@ -71,7 +72,8 @@ export default function DangerZone({ userId }: DangerZoneProps) {
 
       showToast({
         title: 'Account deactivated',
-        description: 'Your account has been deactivated. You can reactivate within 30 days.',
+        message: 'Your account has been deactivated. You can reactivate within 30 days.',
+        type: 'success',
       });
 
       // Sign out and redirect
@@ -82,8 +84,8 @@ export default function DangerZone({ userId }: DangerZoneProps) {
       console.error('Error deactivating account:', error);
       showToast({
         title: 'Error',
-        description: 'Failed to deactivate account. Please try again.',
-        variant: 'error',
+        message: 'Failed to deactivate account. Please try again.',
+        type: 'error',
       });
     } finally {
       setIsDeactivating(false);
@@ -95,8 +97,8 @@ export default function DangerZone({ userId }: DangerZoneProps) {
     if (confirmText !== 'DELETE MY ACCOUNT') {
       showToast({
         title: 'Confirmation required',
-        description: 'Please type "DELETE MY ACCOUNT" exactly to confirm.',
-        variant: 'error',
+        message: 'Please type "DELETE MY ACCOUNT" exactly to confirm.',
+        type: 'error',
       });
       return;
     }
@@ -114,7 +116,8 @@ export default function DangerZone({ userId }: DangerZoneProps) {
 
       showToast({
         title: 'Account deleted',
-        description: 'Your account and all data have been permanently deleted.',
+        message: 'Your account and all data have been permanently deleted.',
+        type: 'success',
       });
 
       setTimeout(() => {
@@ -124,8 +127,8 @@ export default function DangerZone({ userId }: DangerZoneProps) {
       console.error('Error deleting account:', error);
       showToast({
         title: 'Error',
-        description: 'Failed to delete account. Please try again.',
-        variant: 'error',
+        message: 'Failed to delete account. Please try again.',
+        type: 'error',
       });
     } finally {
       setIsDeleting(false);

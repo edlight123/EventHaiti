@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { adminDb, adminStorage } from '@/lib/firebaseAdmin';
+import { getCurrentUser } from '@/lib/auth';
+import { adminDb, adminStorage } from '@/lib/firebase/admin';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
-    if (!session?.user?.id) {
+    if (!user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -42,7 +41,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes);
 
     const fileExtension = file.name.split('.').pop();
-    const fileName = `organization-logos/${session.user.id}/${Date.now()}.${fileExtension}`;
+    const fileName = `organization-logos/${user.id}/${Date.now()}.${fileExtension}`;
 
     const bucket = adminStorage.bucket();
     const fileRef = bucket.file(fileName);
@@ -57,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
 
-    await adminDb.collection('organizers').doc(session.user.id).update({
+    await adminDb.collection('organizers').doc(user.id).update({
       organization_logo: publicUrl,
       updated_at: new Date().toISOString(),
     });

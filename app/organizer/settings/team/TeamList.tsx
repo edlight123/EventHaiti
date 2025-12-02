@@ -55,14 +55,15 @@ export default function TeamList({ organizerId, initialMembers }: TeamListProps)
 
       showToast({
         title: 'Invitation sent',
-        description: `An invitation has been sent to ${inviteEmail}`,
+        message: `An invitation has been sent to ${inviteEmail}`,
+        type: 'success',
       });
     } catch (error: any) {
       console.error('Error inviting member:', error);
       showToast({
         title: 'Error',
-        description: error.message || 'Failed to send invitation',
-        variant: 'error',
+        message: error.message || 'Failed to send invitation',
+        type: 'error',
       });
     } finally {
       setIsInviting(false);
@@ -89,14 +90,15 @@ export default function TeamList({ organizerId, initialMembers }: TeamListProps)
 
       showToast({
         title: 'Member removed',
-        description: 'Team member has been successfully removed',
+        message: 'Team member has been successfully removed.',
+        type: 'success',
       });
     } catch (error) {
       console.error('Error removing member:', error);
       showToast({
         title: 'Error',
-        description: 'Failed to remove team member',
-        variant: 'error',
+        message: 'Failed to remove team member',
+        type: 'error',
       });
     } finally {
       setRemovingId(null);

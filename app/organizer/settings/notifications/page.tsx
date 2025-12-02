@@ -1,7 +1,6 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { adminDb } from '@/lib/firebase/admin';
 import NotificationsForm from './NotificationsForm';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
@@ -18,13 +17,13 @@ async function getNotificationPreferences(userId: string) {
 }
 
 export default async function NotificationsSettingsPage() {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentUser();
 
-  if (!session?.user?.id) {
+  if (!user?.id) {
     redirect('/login');
   }
 
-  const preferences = await getNotificationPreferences(session.user.id);
+  const preferences = await getNotificationPreferences(user.id);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -49,7 +48,7 @@ export default async function NotificationsSettingsPage() {
         {/* Notifications Form */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <NotificationsForm 
-            userId={session.user.id}
+            userId={user.id}
             initialData={{
               email_ticket_sales: preferences?.email_ticket_sales ?? true,
               email_new_reviews: preferences?.email_new_reviews ?? true,

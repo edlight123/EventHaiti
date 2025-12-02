@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { adminDb, adminStorage } from '@/lib/firebaseAdmin';
+import { getCurrentUser } from '@/lib/auth';
+import { adminDb, adminStorage } from '@/lib/firebase/admin';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
-    if (!session?.user?.id) {
+    if (!user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -46,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     // Generate unique filename
     const fileExtension = file.name.split('.').pop();
-    const fileName = `profile-photos/${session.user.id}/${Date.now()}.${fileExtension}`;
+    const fileName = `profile-photos/${user.id}/${Date.now()}.${fileExtension}`;
 
     // Upload to Firebase Storage
     const bucket = adminStorage.bucket();
@@ -65,7 +64,7 @@ export async function POST(request: NextRequest) {
     const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
 
     // Update user profile in Firestore
-    await adminDb.collection('users').doc(session.user.id).update({
+    await adminDb.collection('users').doc(user.id).update({
       photo_url: publicUrl,
       updated_at: new Date().toISOString(),
     });

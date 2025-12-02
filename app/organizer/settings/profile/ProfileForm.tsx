@@ -41,14 +41,15 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
 
       showToast({
         title: 'Profile updated',
-        description: 'Your profile has been successfully updated.',
+        message: 'Your profile has been successfully updated.',
+        type: 'success',
       });
     } catch (error) {
       console.error('Error updating profile:', error);
       showToast({
         title: 'Error',
-        description: 'Failed to update profile. Please try again.',
-        variant: 'error',
+        message: 'Failed to update profile. Please try again.',
+        type: 'error',
       });
     } finally {
       setIsSubmitting(false);
@@ -63,8 +64,8 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
     if (!file.type.startsWith('image/')) {
       showToast({
         title: 'Invalid file',
-        description: 'Please select an image file.',
-        variant: 'error',
+        message: 'Please select an image file.',
+        type: 'error',
       });
       return;
     }
@@ -73,8 +74,8 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
     if (file.size > 5 * 1024 * 1024) {
       showToast({
         title: 'File too large',
-        description: 'Please select an image smaller than 5MB.',
-        variant: 'error',
+        message: 'Please select an image smaller than 5MB.',
+        type: 'error',
       });
       return;
     }
@@ -100,14 +101,15 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
 
       showToast({
         title: 'Photo updated',
-        description: 'Your profile photo has been successfully updated.',
+        message: 'Your profile photo has been successfully updated.',
+        type: 'success',
       });
     } catch (error) {
       console.error('Error uploading photo:', error);
       showToast({
         title: 'Error',
-        description: 'Failed to upload photo. Please try again.',
-        variant: 'error',
+        message: 'Failed to upload photo. Please try again.',
+        type: 'error',
       });
     } finally {
       setIsUploadingPhoto(false);

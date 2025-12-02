@@ -1,7 +1,6 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { adminDb } from '@/lib/firebase/admin';
 import ProfileForm from './ProfileForm';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
@@ -12,13 +11,13 @@ async function getUserProfile(userId: string) {
 }
 
 export default async function ProfileSettingsPage() {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentUser();
 
-  if (!session?.user?.id) {
+  if (!user?.id) {
     redirect('/login');
   }
 
-  const userProfile = await getUserProfile(session.user.id);
+  const userProfile = await getUserProfile(user.id);
 
   if (!userProfile) {
     redirect('/');
@@ -47,12 +46,12 @@ export default async function ProfileSettingsPage() {
         {/* Profile Form */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <ProfileForm 
-            userId={session.user.id}
+            userId={user.id}
             initialData={{
               full_name: userProfile.full_name || '',
-              email: userProfile.email || session.user.email || '',
+              email: userProfile.email || user.email || '',
               phone_number: userProfile.phone_number || '',
-              photo_url: userProfile.photo_url || session.user.image || '',
+              photo_url: userProfile.photo_url || user.photo_url || '',
             }}
           />
         </div>

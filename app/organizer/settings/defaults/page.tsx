@@ -1,7 +1,6 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { adminDb } from '@/lib/firebase/admin';
 import DefaultsForm from './DefaultsForm';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
@@ -12,13 +11,13 @@ async function getOrganizerData(userId: string) {
 }
 
 export default async function DefaultsSettingsPage() {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentUser();
 
-  if (!session?.user?.id) {
+  if (!user?.id) {
     redirect('/login');
   }
 
-  const organizerData = await getOrganizerData(session.user.id);
+  const organizerData = await getOrganizerData(user.id);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -43,7 +42,7 @@ export default async function DefaultsSettingsPage() {
         {/* Defaults Form */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <DefaultsForm 
-            userId={session.user.id}
+            userId={user.id}
             initialData={{
               default_city: organizerData?.default_city || '',
               default_country: organizerData?.default_country || 'Haiti',

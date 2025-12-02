@@ -1,7 +1,6 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { adminDb } from '@/lib/firebase/admin';
 import TeamList from './TeamList';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
@@ -14,20 +13,20 @@ async function getTeamMembers(userId: string) {
     .orderBy('created_at', 'desc')
     .get();
 
-  return teamSnapshot.docs.map((doc) => ({
+  return teamSnapshot.docs.map((doc: any) => ({
     id: doc.id,
     ...doc.data(),
   }));
 }
 
 export default async function TeamSettingsPage() {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentUser();
 
-  if (!session?.user?.id) {
+  if (!user?.id) {
     redirect('/login');
   }
 
-  const teamMembers = await getTeamMembers(session.user.id);
+  const teamMembers = await getTeamMembers(user.id);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -51,7 +50,7 @@ export default async function TeamSettingsPage() {
 
         {/* Team List */}
         <TeamList 
-          organizerId={session.user.id}
+          organizerId={user.id}
           initialMembers={teamMembers}
         />
 

@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getCurrentUser } from '@/lib/auth';
+import { adminDb } from '@/lib/firebase/admin';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
-    if (!session?.user?.id) {
+    if (!user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -27,7 +26,7 @@ export async function POST(request: NextRequest) {
     // Check if member already exists
     const existingMembers = await adminDb
       .collection('organizers')
-      .doc(session.user.id)
+      .doc(user.id)
       .collection('team')
       .where('email', '==', email.toLowerCase())
       .get();
@@ -42,7 +41,7 @@ export async function POST(request: NextRequest) {
     // Create team member
     const teamMemberRef = await adminDb
       .collection('organizers')
-      .doc(session.user.id)
+      .doc(user.id)
       .collection('team')
       .add({
         email: email.toLowerCase(),
@@ -50,7 +49,7 @@ export async function POST(request: NextRequest) {
         role: 'door_staff',
         status: 'pending',
         created_at: new Date().toISOString(),
-        invited_by: session.user.id,
+        invited_by: user.id,
       });
 
     const teamMember = {
