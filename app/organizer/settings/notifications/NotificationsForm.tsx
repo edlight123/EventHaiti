@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Bell, Mail, MessageSquare, Smartphone, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/Toast';
 
 interface NotificationsFormProps {
   userId: string;
@@ -22,7 +22,7 @@ interface NotificationsFormProps {
 export default function NotificationsForm({ userId, initialData }: NotificationsFormProps) {
   const [formData, setFormData] = useState(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
+  const { showToast } = useToast();
 
   const handleToggle = (key: keyof typeof formData) => {
     setFormData((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -43,16 +43,16 @@ export default function NotificationsForm({ userId, initialData }: Notifications
         throw new Error('Failed to update notifications');
       }
 
-      toast({
+      showToast({
         title: 'Preferences saved',
         description: 'Your notification preferences have been updated.',
       });
     } catch (error) {
       console.error('Error updating notifications:', error);
-      toast({
+      showToast({
         title: 'Error',
         description: 'Failed to update preferences. Please try again.',
-        variant: 'destructive',
+        variant: 'error',
       });
     } finally {
       setIsSubmitting(false);

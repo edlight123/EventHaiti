@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Building2, Globe, Upload, Loader2, Facebook, Instagram, Twitter, Linkedin } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/Toast';
 import Image from 'next/image';
 
 interface OrganizationFormProps {
@@ -24,7 +24,7 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
   const [formData, setFormData] = useState(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-  const { toast } = useToast();
+  const { showToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,16 +41,16 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
         throw new Error('Failed to update organization');
       }
 
-      toast({
+      showToast({
         title: 'Organization updated',
         description: 'Your organization details have been successfully updated.',
       });
     } catch (error) {
       console.error('Error updating organization:', error);
-      toast({
+      showToast({
         title: 'Error',
         description: 'Failed to update organization. Please try again.',
-        variant: 'destructive',
+        variant: 'error',
       });
     } finally {
       setIsSubmitting(false);
@@ -62,19 +62,19 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast({
+      showToast({
         title: 'Invalid file',
         description: 'Please select an image file.',
-        variant: 'destructive',
+        variant: 'error',
       });
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast({
+      showToast({
         title: 'File too large',
         description: 'Please select an image smaller than 5MB.',
-        variant: 'destructive',
+        variant: 'error',
       });
       return;
     }
@@ -98,16 +98,16 @@ export default function OrganizationForm({ userId, initialData }: OrganizationFo
       const { logo_url } = await response.json();
       setFormData((prev) => ({ ...prev, organization_logo: logo_url }));
 
-      toast({
+      showToast({
         title: 'Logo updated',
         description: 'Your organization logo has been successfully updated.',
       });
     } catch (error) {
       console.error('Error uploading logo:', error);
-      toast({
+      showToast({
         title: 'Error',
         description: 'Failed to upload logo. Please try again.',
-        variant: 'destructive',
+        variant: 'error',
       });
     } finally {
       setIsUploadingLogo(false);

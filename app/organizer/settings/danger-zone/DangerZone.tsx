@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Download, XCircle, Trash2, Loader2, AlertTriangle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/Toast';
 import { useRouter } from 'next/navigation';
 
 interface DangerZoneProps {
@@ -16,7 +16,7 @@ export default function DangerZone({ userId }: DangerZoneProps) {
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmText, setConfirmText] = useState('');
-  const { toast } = useToast();
+  const { showToast } = useToast();
   const router = useRouter();
 
   const handleExportData = async () => {
@@ -41,16 +41,16 @@ export default function DangerZone({ userId }: DangerZoneProps) {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      toast({
+      showToast({
         title: 'Data exported',
         description: 'Your data has been downloaded successfully.',
       });
     } catch (error) {
       console.error('Error exporting data:', error);
-      toast({
+      showToast({
         title: 'Error',
         description: 'Failed to export data. Please try again.',
-        variant: 'destructive',
+        variant: 'error',
       });
     } finally {
       setIsExporting(false);
@@ -69,7 +69,7 @@ export default function DangerZone({ userId }: DangerZoneProps) {
         throw new Error('Failed to deactivate account');
       }
 
-      toast({
+      showToast({
         title: 'Account deactivated',
         description: 'Your account has been deactivated. You can reactivate within 30 days.',
       });
@@ -80,10 +80,10 @@ export default function DangerZone({ userId }: DangerZoneProps) {
       }, 2000);
     } catch (error) {
       console.error('Error deactivating account:', error);
-      toast({
+      showToast({
         title: 'Error',
         description: 'Failed to deactivate account. Please try again.',
-        variant: 'destructive',
+        variant: 'error',
       });
     } finally {
       setIsDeactivating(false);
@@ -93,10 +93,10 @@ export default function DangerZone({ userId }: DangerZoneProps) {
 
   const handleDelete = async () => {
     if (confirmText !== 'DELETE MY ACCOUNT') {
-      toast({
+      showToast({
         title: 'Confirmation required',
         description: 'Please type "DELETE MY ACCOUNT" exactly to confirm.',
-        variant: 'destructive',
+        variant: 'error',
       });
       return;
     }
@@ -112,7 +112,7 @@ export default function DangerZone({ userId }: DangerZoneProps) {
         throw new Error('Failed to delete account');
       }
 
-      toast({
+      showToast({
         title: 'Account deleted',
         description: 'Your account and all data have been permanently deleted.',
       });
@@ -122,10 +122,10 @@ export default function DangerZone({ userId }: DangerZoneProps) {
       }, 2000);
     } catch (error) {
       console.error('Error deleting account:', error);
-      toast({
+      showToast({
         title: 'Error',
         description: 'Failed to delete account. Please try again.',
-        variant: 'destructive',
+        variant: 'error',
       });
     } finally {
       setIsDeleting(false);

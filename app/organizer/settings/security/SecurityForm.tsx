@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Lock, Key, Monitor, MapPin, Clock, Loader2, Shield } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/Toast';
 
 interface LoginRecord {
   id: string;
@@ -23,25 +23,25 @@ export default function SecurityForm({ userId, loginHistory }: SecurityFormProps
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const { toast } = useToast();
+  const { showToast } = useToast();
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (newPassword !== confirmPassword) {
-      toast({
+      showToast({
         title: 'Passwords do not match',
         description: 'Please make sure your new passwords match.',
-        variant: 'destructive',
+        variant: 'error',
       });
       return;
     }
 
     if (newPassword.length < 8) {
-      toast({
+      showToast({
         title: 'Password too short',
         description: 'Password must be at least 8 characters long.',
-        variant: 'destructive',
+        variant: 'error',
       });
       return;
     }
@@ -63,7 +63,7 @@ export default function SecurityForm({ userId, loginHistory }: SecurityFormProps
         throw new Error(error.error || 'Failed to change password');
       }
 
-      toast({
+      showToast({
         title: 'Password changed',
         description: 'Your password has been successfully updated.',
       });
@@ -73,10 +73,10 @@ export default function SecurityForm({ userId, loginHistory }: SecurityFormProps
       setConfirmPassword('');
     } catch (error: any) {
       console.error('Error changing password:', error);
-      toast({
+      showToast({
         title: 'Error',
         description: error.message || 'Failed to change password',
-        variant: 'destructive',
+        variant: 'error',
       });
     } finally {
       setIsChangingPassword(false);

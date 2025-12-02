@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { MapPin, Globe, Clock, DollarSign, Tag, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/Toast';
 
 interface DefaultsFormProps {
   userId: string;
@@ -41,7 +41,7 @@ const CURRENCIES = [
 export default function DefaultsForm({ userId, initialData }: DefaultsFormProps) {
   const [formData, setFormData] = useState(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
+  const { showToast } = useToast();
 
   const handleCategoryToggle = (category: string) => {
     setFormData((prev) => ({
@@ -67,16 +67,16 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
         throw new Error('Failed to update defaults');
       }
 
-      toast({
+      showToast({
         title: 'Defaults updated',
         description: 'Your event defaults have been successfully updated.',
       });
     } catch (error) {
       console.error('Error updating defaults:', error);
-      toast({
+      showToast({
         title: 'Error',
         description: 'Failed to update defaults. Please try again.',
-        variant: 'destructive',
+        variant: 'error',
       });
     } finally {
       setIsSubmitting(false);

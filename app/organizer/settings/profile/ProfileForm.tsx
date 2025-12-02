@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { User, Phone, Mail, Camera, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/Toast';
 import Image from 'next/image';
 
 interface ProfileFormProps {
@@ -19,7 +19,7 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
   const [formData, setFormData] = useState(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const { toast } = useToast();
+  const { showToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,16 +39,16 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
         throw new Error('Failed to update profile');
       }
 
-      toast({
+      showToast({
         title: 'Profile updated',
         description: 'Your profile has been successfully updated.',
       });
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast({
+      showToast({
         title: 'Error',
         description: 'Failed to update profile. Please try again.',
-        variant: 'destructive',
+        variant: 'error',
       });
     } finally {
       setIsSubmitting(false);
@@ -61,20 +61,20 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast({
+      showToast({
         title: 'Invalid file',
         description: 'Please select an image file.',
-        variant: 'destructive',
+        variant: 'error',
       });
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast({
+      showToast({
         title: 'File too large',
         description: 'Please select an image smaller than 5MB.',
-        variant: 'destructive',
+        variant: 'error',
       });
       return;
     }
@@ -98,16 +98,16 @@ export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
       const { photo_url } = await response.json();
       setFormData((prev) => ({ ...prev, photo_url }));
 
-      toast({
+      showToast({
         title: 'Photo updated',
         description: 'Your profile photo has been successfully updated.',
       });
     } catch (error) {
       console.error('Error uploading photo:', error);
-      toast({
+      showToast({
         title: 'Error',
         description: 'Failed to upload photo. Please try again.',
-        variant: 'destructive',
+        variant: 'error',
       });
     } finally {
       setIsUploadingPhoto(false);

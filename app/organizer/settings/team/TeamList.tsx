@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Users, Mail, UserPlus, Trash2, Loader2, Shield } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/Toast';
 
 interface TeamMember {
   id: string;
@@ -26,7 +26,7 @@ export default function TeamList({ organizerId, initialMembers }: TeamListProps)
   const [inviteName, setInviteName] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const { toast } = useToast();
+  const { showToast } = useToast();
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,16 +53,16 @@ export default function TeamList({ organizerId, initialMembers }: TeamListProps)
       setInviteEmail('');
       setInviteName('');
 
-      toast({
+      showToast({
         title: 'Invitation sent',
         description: `An invitation has been sent to ${inviteEmail}`,
       });
     } catch (error: any) {
       console.error('Error inviting member:', error);
-      toast({
+      showToast({
         title: 'Error',
         description: error.message || 'Failed to send invitation',
-        variant: 'destructive',
+        variant: 'error',
       });
     } finally {
       setIsInviting(false);
@@ -87,16 +87,16 @@ export default function TeamList({ organizerId, initialMembers }: TeamListProps)
 
       setMembers(members.filter((m) => m.id !== memberId));
 
-      toast({
+      showToast({
         title: 'Member removed',
         description: 'Team member has been successfully removed',
       });
     } catch (error) {
       console.error('Error removing member:', error);
-      toast({
+      showToast({
         title: 'Error',
         description: 'Failed to remove team member',
-        variant: 'destructive',
+        variant: 'error',
       });
     } finally {
       setRemovingId(null);
