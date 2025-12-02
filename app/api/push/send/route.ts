@@ -36,8 +36,8 @@ export async function POST(req: Request) {
 
   const snap = await adminDb.collection('pushSubscriptions').get()
   const subs: any[] = snap.docs
-    .map((d: any) => ({ endpoint: d.id, keys: d.data().keys, topics: (d.data().topics || []) as string[] }))
-    .filter((s: any) => (!topicsFilter || s.topics.some((t: string) => topicsFilter.includes(t))) && s.keys && s.keys.p256dh && s.keys.auth)
+    .map((d: any) => ({ endpoint: d.data().endpoint, keys: d.data().keys, topics: (d.data().topics || []) as string[] }))
+    .filter((s: any) => s.endpoint && (!topicsFilter || s.topics.some((t: string) => topicsFilter.includes(t))) && s.keys && s.keys.p256dh && s.keys.auth)
 
   if (!subs.length) return NextResponse.json({ error: 'No valid matching subscriptions (keys missing or no topic match)' }, { status: 404 })
 

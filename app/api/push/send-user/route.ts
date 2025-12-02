@@ -61,8 +61,11 @@ export async function POST(req: Request) {
   }
 
   const snap = await adminDb.collection('pushSubscriptions').where('userId', '==', userId).get()
-  const subs: any[] = snap.docs.map((d: any) => ({ endpoint: d.id, keys: d.data().keys }))
+  const subs: any[] = snap.docs.map((d: any) => ({ endpoint: d.data().endpoint, keys: d.data().keys }))
+    .filter((s: any) => s.endpoint && s.keys && s.keys.p256dh && s.keys.auth)
   if (!subs.length) {
+    return NextResponse.json({ error: 'No subscriptions for user' }, { status: 404 })
+  }
     return NextResponse.json({ error: 'No subscriptions for user' }, { status: 404 })
   }
 

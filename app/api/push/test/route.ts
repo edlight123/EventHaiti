@@ -14,8 +14,8 @@ async function runTestSend() {
   // Fetch all stored subscriptions
   const snap = await adminDb.collection('pushSubscriptions').get()
   const subs: any[] = snap.docs
-    .map((d: any) => ({ endpoint: d.id, keys: d.data().keys }))
-    .filter((s: any) => s.keys && s.keys.p256dh && s.keys.auth)
+    .map((d: any) => ({ endpoint: d.data().endpoint, keys: d.data().keys }))
+    .filter((s: any) => s.endpoint && s.keys && s.keys.p256dh && s.keys.auth)
   if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
     return NextResponse.json({ error: 'VAPID keys not set' }, { status: 500 })
   }
