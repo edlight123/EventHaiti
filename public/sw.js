@@ -78,16 +78,16 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-    const data = event.notification.data || {}
-    let url = data.url || '/'
-    if (event.action === 'open-tickets') url = '/tickets'
-    if (event.action === 'open-home') url = '/'
+  const data = event.notification.data || {}
+  let url = data.url || '/'
+  if (event.action === 'open-tickets') url = '/tickets'
+  if (event.action === 'open-home') url = '/'
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
       for (const client of windowClients) {
-        if (client.url === target && 'focus' in client) return client.focus()
+        if (client.url === url && 'focus' in client) return client.focus()
       }
-      if (clients.openWindow) return clients.openWindow(target)
+      if (clients.openWindow) return clients.openWindow(url)
     })
   )
 })
