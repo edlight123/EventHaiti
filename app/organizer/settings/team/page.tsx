@@ -4,6 +4,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import TeamList from './TeamList';
 import Link from 'next/link';
 import { ChevronLeft, Users, UserPlus2, ShieldCheck, Mail } from 'lucide-react';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 type TeamMember = {
   id: string;
@@ -23,7 +24,7 @@ async function getTeamMembers(userId: string): Promise<TeamMember[]> {
     .orderBy('created_at', 'desc')
     .get();
 
-  return teamSnapshot.docs.map((doc) => ({
+  return teamSnapshot.docs.map((doc: QueryDocumentSnapshot) => ({
     id: doc.id,
     ...(doc.data() as Omit<TeamMember, 'id'>),
   }));
