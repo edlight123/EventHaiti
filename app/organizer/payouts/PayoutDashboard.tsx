@@ -1,0 +1,263 @@
+'use client'
+
+import { useState } from 'react'
+import { Payout } from '@/lib/firestore/payout'
+
+interface PayoutDashboardProps {
+  initialBalance: {
+    available: number
+    pending: number
+    nextPayoutDate: string | null
+    totalEarnings: number
+    currency: string
+  }
+  initialPayouts: Payout[]
+  organizerId: string
+}
+
+export default function PayoutDashboard({
+  initialBalance,
+  initialPayouts,
+  organizerId,
+}: PayoutDashboardProps) {
+  const [balance, setBalance] = useState(initialBalance)
+  const [payouts, setPayouts] = useState(initialPayouts)
+  const [isRequesting, setIsRequesting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+
+  const formatCurrency = (cents: number, currency: string = 'HTG') => {
+    const symbol = currency === 'HTG' ? 'G ' : '$'
+    return `${symbol}${(cents / 100).toFixed(2)}`
+  }
+
+  const handleRequestPayout = async () => {
+    if (balance.available < 5000) {
+      setError('Minimum payout is $50.00')
+      return
+    }
+
+    setIsRequesting(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const response = await fetch('/api/organizer/request-payout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'Failed to request payout')
+      }
+
+      setSuccess('Payout request submitted successfully! We will process it on the next scheduled date.')
+      
+      // Refresh data
+      const balanceResponse = await fetch('/api/organizer/balance')
+      if (balanceResponse.ok) {
+        const newBalance = await balanceResponse.json()
+        setBalance(newBalance)
+      }
+
+      const payoutsResponse = await fetch('/api/organizer/payouts')
+      if (payoutsResponse.ok) {
+        const newPayouts = await payoutsResponse.json()
+        setPayouts(newPayouts)
+      }
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setIsRequesting(false)
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    const styles = {
+      pending: 'bg-yellow-100 text-yellow-800',
+      approved: 'bg-blue-100 text-blue-800',
+      processing: 'bg-indigo-100 text-indigo-800',
+      completed: 'bg-green-100 text-green-800',
+      failed: 'bg-red-100 text-red-800',
+      cancelled: 'bg-gray-100 text-gray-800',
+    }
+    return styles[status as keyof typeof styles] || styles.pending
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Balance Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Available Balance */}
+        <div className="bg-white rounded-lg shadow p-6 border-l-4 border-teal-600">
+          <div className="text-sm font-medium text-gray-600 mb-2">Available Balance</div>
+          <div className="text-3xl font-bold text-gray-900">
+            {formatCurrency(balance.available, balance.currency)}
+          </div>
+          <div className="mt-4">
+            <button
+              onClick={handleRequestPayout}
+              disabled={balance.available < 5000 || isRequesting}
+              className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
+                balance.available < 5000
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-teal-600 text-white hover:bg-teal-700'
+              }`}
+            >
+              {isRequesting ? 'Processing...' : 'Request Payout'}
+            </button>
+            <p className="mt-2 text-xs text-gray-500 text-center">
+              Minimum ${(5000 / 100).toFixed(2)}
+            </p>
+          </div>
+        </div>
+
+        {/* Pending Balance */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-sm font-medium text-gray-600 mb-2">Pending Balance</div>
+          <div className="text-3xl font-bold text-gray-900">
+            {formatCurrency(balance.pending, balance.currency)}
+          </div>
+          <p className="mt-2 text-sm text-gray-500">
+            {balance.nextPayoutDate
+              ? `Available ${new Date(balance.nextPayoutDate).toLocaleDateString()}`
+              : 'No pending funds'}
+          </p>
+        </div>
+
+        {/* Total Earnings */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-sm font-medium text-gray-600 mb-2">Total Earnings</div>
+          <div className="text-3xl font-bold text-gray-900">
+            {formatCurrency(balance.totalEarnings, balance.currency)}
+          </div>
+          <p className="mt-2 text-sm text-gray-500">All-time</p>
+        </div>
+      </div>
+
+      {/* Messages */}
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {success && (
+        <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-green-700">{success}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Info Banner */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="text-sm font-medium text-blue-900 mb-2">How Payouts Work</h3>
+        <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+          <li>Funds become available 7 days after your event ends</li>
+          <li>Payouts are processed every Friday at 5:00 PM</li>
+          <li>10% platform fee is automatically deducted</li>
+          <li>Payment is sent to your configured payout method</li>
+        </ul>
+      </div>
+
+      {/* Payout History Table */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Payout History</h2>
+        </div>
+
+        {payouts.length === 0 ? (
+          <div className="px-6 py-12 text-center">
+            <svg
+              className="mx-auto h-12 w-12 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <p className="mt-2 text-gray-500">No payout history yet</p>
+            <p className="text-sm text-gray-400">Request your first payout when funds are available</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date Requested
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Method
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Scheduled
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Completed
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {payouts.map((payout) => (
+                  <tr key={payout.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {new Date(payout.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {formatCurrency(payout.amount, balance.currency)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {payout.method === 'mobile_money' ? 'MonCash/Natcash' : 'Bank Transfer'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(payout.status)}`}>
+                        {payout.status.charAt(0).toUpperCase() + payout.status.slice(1)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {new Date(payout.scheduledDate).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {payout.completedAt ? new Date(payout.completedAt).toLocaleDateString() : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

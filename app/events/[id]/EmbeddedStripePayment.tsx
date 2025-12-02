@@ -5,6 +5,7 @@ import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { useRouter } from 'next/navigation'
 import { X, CreditCard, Lock } from 'lucide-react'
+import { useToast } from '@/components/ui/Toast'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -22,6 +23,7 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, on
   const stripe = useStripe()
   const elements = useElements()
   const router = useRouter()
+  const { showToast } = useToast()
   const [error, setError] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
 
@@ -48,8 +50,39 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, on
         setError(submitError.message || 'Payment failed')
         setProcessing(false)
       } else {
-        // Payment succeeded
-        router.push('/purchase/success')
+        // Payment succeeded - create tickets immediately
+        try {
+          // Get the payment intent ID from the elements
+          const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret)
+          
+          if (paymentIntent) {
+            // Call our API to create tickets
+            const response = await fetch('/api/tickets/create-from-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
+            })
+
+            if (!response.ok) {
+              console.error('Failed to create tickets immediately, webhook will handle it')
+            }
+          }
+        } catch (err) {
+          console.error('Error creating tickets:', err)
+          // Don't fail the whole flow - webhook will handle it
+        }
+
+        // Show success message
+        showToast({
+          type: 'success',
+          title: 'Payment successful!',
+          message: `Your ${quantity > 1 ? 'tickets have' : 'ticket has'} been confirmed`,
+          duration: 5000
+        })
+
+        // Redirect to tickets page
+        router.push(`/tickets?payment_success=true`)
+        router.refresh()
       }
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred')

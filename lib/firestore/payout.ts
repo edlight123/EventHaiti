@@ -38,6 +38,24 @@ export interface Payout {
   completedAt?: string
   createdAt: string
   updatedAt: string
+  
+  // NEW: Idempotency & admin workflow fields
+  requestedBy: string           // organizerId (for audit)
+  approvedBy?: string           // admin userId
+  approvedAt?: string
+  declinedBy?: string           // admin userId  
+  declinedAt?: string
+  declineReason?: string
+  
+  // NEW: Ticket tracking (prevent double-counting)
+  ticketIds: string[]           // List of ticket IDs included in this payout
+  periodStart: string           // Earliest ticket purchased_at
+  periodEnd: string             // Latest ticket purchased_at
+  
+  // NEW: Manual payment tracking
+  paymentReferenceId?: string   // Admin enters after bank/MonCash transfer
+  paymentMethod?: 'moncash' | 'natcash' | 'bank_transfer'  // Actual method used
+  paymentNotes?: string         // Admin notes
 }
 
 /**
@@ -271,37 +289,233 @@ export async function getPayoutHistory(organizerId: string, limit: number = 10):
 }
 
 /**
- * Calculate organizer balance
+ * Calculate organizer balance from ticket sales
+ * 
+ * IDEMPOTENCY GUARANTEE: Tickets already included in completed/processing payouts
+ * are excluded from available balance to prevent double-counting.
  */
 export async function getOrganizerBalance(organizerId: string): Promise<{
-  available: number
-  pending: number
+  available: number       // Ready to withdraw (cents)
+  pending: number        // Locked until event ends (cents)
   nextPayoutDate: string | null
+  totalEarnings: number  // All-time earnings (cents)
+  currency: string       // HTG, USD, etc.
 }> {
   try {
-    // Get all completed tickets for this organizer's events
-    // This is a simplified version - in production you'd query tickets properly
+    // Step 1: Get all organizer's events
     const eventsSnapshot = await adminDb
       .collection('events')
       .where('organizer_id', '==', organizerId)
       .get()
 
-    const eventIds = eventsSnapshot.docs.map((doc: any) => doc.id)
-
-    if (eventIds.length === 0) {
-      return { available: 0, pending: 0, nextPayoutDate: null }
+    if (eventsSnapshot.empty) {
+      return { 
+        available: 0, 
+        pending: 0, 
+        nextPayoutDate: null, 
+        totalEarnings: 0,
+        currency: 'HTG' 
+      }
     }
 
-    // For now, return placeholder values
-    // In production, you'd calculate from actual ticket sales
+    const events = eventsSnapshot.docs.map((doc: any) => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+    
+    const eventIds = events.map((e: any) => e.id)
+    const primaryCurrency = events[0]?.currency || 'HTG'
+
+    // Step 2: Get all completed/processing payouts to find already-paid ticket IDs
+    const payoutsSnapshot = await adminDb
+      .collection('organizers')
+      .doc(organizerId)
+      .collection('payouts')
+      .where('status', 'in', ['completed', 'processing'])
+      .get()
+
+    const paidTicketIds = new Set<string>()
+    payoutsSnapshot.docs.forEach((doc: any) => {
+      const ticketIds = doc.data().ticketIds || []
+      ticketIds.forEach((id: string) => paidTicketIds.add(id))
+    })
+
+    // Step 3: Query tickets in batches (Firestore 'in' query limit = 10)
+    const BATCH_SIZE = 10
+    const allTickets: any[] = []
+    
+    for (let i = 0; i < eventIds.length; i += BATCH_SIZE) {
+      const batch = eventIds.slice(i, i + BATCH_SIZE)
+      const ticketsSnapshot = await adminDb
+        .collection('tickets')
+        .where('event_id', 'in', batch)
+        .where('status', '==', 'valid')  // Exclude cancelled/refunded
+        .get()
+      
+      ticketsSnapshot.docs.forEach((doc: any) => {
+        allTickets.push({ id: doc.id, ...doc.data() })
+      })
+    }
+
+    // Step 4: Filter out tickets already paid out (idempotency safeguard)
+    const unpaidTickets = allTickets.filter(t => !paidTicketIds.has(t.id))
+
+    // Step 5: Calculate platform fee (10% default, configurable)
+    const PLATFORM_FEE_PERCENT = 10
+    const calculateNet = (gross: number) => {
+      return Math.floor(gross * (1 - PLATFORM_FEE_PERCENT / 100))
+    }
+
+    // Step 6: Separate available vs pending based on event end date
+    const now = new Date()
+    const SETTLEMENT_DELAY_DAYS = 7  // Funds available 7 days after event ends
+    
+    let availableAmount = 0
+    let pendingAmount = 0
+    let totalEarnings = 0
+    let earliestPendingDateStr: string | null = null
+
+    unpaidTickets.forEach(ticket => {
+      const event = events.find((e: any) => e.id === ticket.event_id)
+      if (!event) return
+
+      const grossAmount = Math.round((ticket.price_paid || 0) * 100) // Convert to cents
+      const netAmount = calculateNet(grossAmount)
+      totalEarnings += netAmount
+
+      const eventEndDate = new Date(event.end_datetime || event.start_datetime)
+      const availableDate = new Date(eventEndDate.getTime() + SETTLEMENT_DELAY_DAYS * 24 * 60 * 60 * 1000)
+
+      if (now >= availableDate) {
+        // Event ended + settlement period passed → Available
+        availableAmount += netAmount
+      } else {
+        // Event hasn't ended or still in settlement period → Pending
+        pendingAmount += netAmount
+        const availableDateStr = availableDate.toISOString()
+        if (earliestPendingDateStr === null || availableDateStr < earliestPendingDateStr) {
+          earliestPendingDateStr = availableDateStr
+        }
+      }
+    })
+
     return {
-      available: 0,
-      pending: 0,
-      nextPayoutDate: null
+      available: availableAmount,
+      pending: pendingAmount,
+      nextPayoutDate: earliestPendingDateStr,
+      totalEarnings,
+      currency: primaryCurrency
     }
   } catch (error) {
     console.error('Error calculating balance:', error)
-    return { available: 0, pending: 0, nextPayoutDate: null }
+    return { 
+      available: 0, 
+      pending: 0, 
+      nextPayoutDate: null, 
+      totalEarnings: 0,
+      currency: 'HTG' 
+    }
+  }
+}
+
+/**
+ * Get available tickets for payout (not yet included in any payout)
+ * 
+ * IDEMPOTENCY GUARANTEE: Returns only tickets that haven't been paid out yet.
+ */
+export async function getAvailableTicketsForPayout(organizerId: string): Promise<{
+  tickets: any[]
+  totalAmount: number
+  periodStart: string | null
+  periodEnd: string | null
+}> {
+  try {
+    // Get organizer's events
+    const eventsSnapshot = await adminDb
+      .collection('events')
+      .where('organizer_id', '==', organizerId)
+      .get()
+
+    if (eventsSnapshot.empty) {
+      return { tickets: [], totalAmount: 0, periodStart: null, periodEnd: null }
+    }
+
+    const events = eventsSnapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }))
+    const eventIds = events.map((e: any) => e.id)
+
+    // Get already-paid ticket IDs
+    const payoutsSnapshot = await adminDb
+      .collection('organizers')
+      .doc(organizerId)
+      .collection('payouts')
+      .where('status', 'in', ['completed', 'processing'])
+      .get()
+
+    const paidTicketIds = new Set<string>()
+    payoutsSnapshot.docs.forEach((doc: any) => {
+      const ticketIds = doc.data().ticketIds || []
+      ticketIds.forEach((id: string) => paidTicketIds.add(id))
+    })
+
+    // Query tickets in batches
+    const BATCH_SIZE = 10
+    const allTickets: any[] = []
+    
+    for (let i = 0; i < eventIds.length; i += BATCH_SIZE) {
+      const batch = eventIds.slice(i, i + BATCH_SIZE)
+      const ticketsSnapshot = await adminDb
+        .collection('tickets')
+        .where('event_id', 'in', batch)
+        .where('status', '==', 'valid')
+        .get()
+      
+      ticketsSnapshot.docs.forEach((doc: any) => {
+        const ticket = { id: doc.id, ...doc.data() }
+        const event = events.find((e: any) => e.id === ticket.event_id)
+        
+        // Only include if:
+        // 1. Not already paid out
+        // 2. Event has ended + settlement period passed
+        if (!paidTicketIds.has(ticket.id) && event) {
+          const eventEndDate = new Date(event.end_datetime || event.start_datetime)
+          const availableDate = new Date(eventEndDate.getTime() + 7 * 24 * 60 * 60 * 1000)
+          
+          if (new Date() >= availableDate) {
+            allTickets.push({ ...ticket, event })
+          }
+        }
+      })
+    }
+
+    if (allTickets.length === 0) {
+      return { tickets: [], totalAmount: 0, periodStart: null, periodEnd: null }
+    }
+
+    // Calculate total with platform fee
+    const PLATFORM_FEE_PERCENT = 10
+    const totalAmount = allTickets.reduce((sum, t) => {
+      const gross = Math.round((t.price_paid || 0) * 100)
+      const net = Math.floor(gross * (1 - PLATFORM_FEE_PERCENT / 100))
+      return sum + net
+    }, 0)
+
+    // Find period range
+    const purchaseDates = allTickets
+      .map(t => new Date(t.purchased_at))
+      .sort((a, b) => a.getTime() - b.getTime())
+    
+    const periodStart = purchaseDates[0]?.toISOString() || null
+    const periodEnd = purchaseDates[purchaseDates.length - 1]?.toISOString() || null
+
+    return {
+      tickets: allTickets,
+      totalAmount,
+      periodStart,
+      periodEnd
+    }
+  } catch (error) {
+    console.error('Error fetching available tickets:', error)
+    return { tickets: [], totalAmount: 0, periodStart: null, periodEnd: null }
   }
 }
 

@@ -187,6 +187,12 @@ export async function POST(request: Request) {
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object
       
+      console.log('💳 Payment Intent Succeeded:', {
+        id: paymentIntent.id,
+        metadata: paymentIntent.metadata,
+        amount: paymentIntent.amount,
+      })
+      
       // Create tickets in database
       const supabase = await createClient()
       const quantity = parseInt(paymentIntent.metadata.quantity || '1', 10)
@@ -222,10 +228,33 @@ export async function POST(request: Request) {
         const createdTicket = insertResult.data?.[0]
         if (createdTicket) {
           createdTickets.push(createdTicket)
-          console.log('Created ticket from PaymentIntent:', createdTicket.id)
+          console.log('✅ Created ticket from PaymentIntent:', {
+            ticketId: createdTicket.id,
+            attendeeId: createdTicket.attendee_id,
+            eventId: createdTicket.event_id,
+            qrCode: createdTicket.qr_code_data
+          })
         }
       }
+      
+      console.log(`📊 Total tickets created: ${createdTickets.length} for user ${paymentIntent.metadata.userId}`)
 
+      // Update tickets_sold count
+      if (createdTickets.length > 0) {
+        const { data: eventData } = await supabase
+          .from('events')
+          .select('tickets_sold')
+          .eq('id', paymentIntent.metadata.eventId)
+          .single()
+
+        if (eventData) {
+          await supabase
+            .from('events')
+            .update({ tickets_sold: (eventData.tickets_sold || 0) + quantity })
+            .eq('id', paymentIntent.metadata.eventId)
+        }
+      }
+      
       // Send notifications (similar to checkout.session.completed)
       if (createdTickets.length > 0) {
         const eventQuery = await supabase.from('events').select('*')
@@ -233,6 +262,9 @@ export async function POST(request: Request) {
         
         const attendeeQuery = await supabase.from('users').select('*')
         const attendee = attendeeQuery.data?.find((u: any) => u.id === paymentIntent.metadata.userId)
+        
+        console.log('👤 Attendee found:', attendee?.email || 'No attendee')
+        console.log('🎫 Event found:', eventDetails?.title || 'No event')
         
         try {
           await notifyTicketPurchase(
