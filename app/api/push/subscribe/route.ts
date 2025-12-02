@@ -6,6 +6,7 @@ export const runtime = 'nodejs'
 export async function POST(req: Request) {
   try {
     const body = await req.json()
+    console.log('[push/subscribe] Received:', { endpoint: body?.endpoint?.substring(0, 50), hasKeys: !!body?.keys })
     if (!body || !body.endpoint) return NextResponse.json({ error: 'Invalid subscription' }, { status: 400 })
 
     // Accept optional topics array from client (e.g. ["reminders", "promotions"])
@@ -32,8 +33,10 @@ export async function POST(req: Request) {
       createdAt: existing?.createdAt || new Date().toISOString()
     }
     await ref.set(data, { merge: true })
+    console.log('[push/subscribe] Success:', { endpoint: data.endpoint.substring(0, 50), topics: data.topics })
     return NextResponse.json({ ok: true, topics: data.topics })
   } catch (e) {
+    console.error('[push/subscribe] Error:', e)
     return NextResponse.json({ error: 'Bad Request', detail: (e as any)?.message }, { status: 400 })
   }
 }
