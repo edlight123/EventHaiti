@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
+import { recomputePayoutStatus } from '@/lib/firestore/payout'
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,13 +62,13 @@ export async function POST(request: NextRequest) {
       .doc('main')
       .set(
         {
-          verificationStatus: {
-            bank: newStatus,
-          },
+          'verificationStatus.bank': newStatus,
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
       )
+
+    await recomputePayoutStatus(organizerId)
 
     // TODO: Send email notification to organizer
     // In production, you would notify the organizer of the decision

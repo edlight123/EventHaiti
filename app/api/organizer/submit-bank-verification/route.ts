@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
+import { recomputePayoutStatus } from '@/lib/firestore/payout'
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,17 +70,17 @@ export async function POST(request: NextRequest) {
 
     await configRef.set(
       {
-        verificationStatus: {
-          bank: 'verified',
-        },
+        'verificationStatus.bank': 'pending',
         updatedAt: new Date().toISOString(),
       },
       { merge: true }
     )
 
+    await recomputePayoutStatus(organizerId)
+
     return NextResponse.json({
       success: true,
-      message: 'Bank account verification submitted successfully',
+      message: 'Bank account verification submitted successfully. Awaiting admin review.',
       status: 'pending',
     })
   } catch (error: any) {

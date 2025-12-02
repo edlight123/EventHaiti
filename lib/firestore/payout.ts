@@ -58,6 +58,76 @@ export interface Payout {
   paymentNotes?: string         // Admin notes
 }
 
+const hasBankMethod = (config?: PayoutConfig | null) =>
+  Boolean(config && config.method === 'bank_transfer' && config.bankDetails)
+
+const hasMobileMoneyMethod = (config?: PayoutConfig | null) =>
+  Boolean(config && config.method === 'mobile_money' && config.mobileMoneyDetails)
+
+export const hasPayoutMethod = (config?: PayoutConfig | null): boolean =>
+  hasBankMethod(config) || hasMobileMoneyMethod(config)
+
+const identityVerified = (config?: PayoutConfig | null) =>
+  config?.verificationStatus?.identity === 'verified'
+
+const bankVerified = (config?: PayoutConfig | null) =>
+  config?.method !== 'bank_transfer' || config?.verificationStatus?.bank === 'verified'
+
+const phoneVerified = (config?: PayoutConfig | null) =>
+  config?.method !== 'mobile_money' || config?.verificationStatus?.phone === 'verified'
+
+export function determinePayoutStatus(config: PayoutConfig | null): PayoutStatus {
+  if (!config || !hasPayoutMethod(config)) {
+    return 'not_setup'
+  }
+
+  if (config.status === 'on_hold') {
+    return 'on_hold'
+  }
+
+  if (identityVerified(config) && bankVerified(config) && phoneVerified(config)) {
+    return 'active'
+  }
+
+  return 'pending_verification'
+}
+
+export async function recomputePayoutStatus(
+  organizerId: string
+): Promise<PayoutStatus | null> {
+  try {
+    const configRef = adminDb
+      .collection('organizers')
+      .doc(organizerId)
+      .collection('payoutConfig')
+      .doc('main')
+
+    const configSnapshot = await configRef.get()
+
+    if (!configSnapshot.exists) {
+      return null
+    }
+
+    const current = configSnapshot.data() as PayoutConfig
+    const nextStatus = determinePayoutStatus(current)
+
+    if (current.status !== nextStatus) {
+      await configRef.set(
+        {
+          status: nextStatus,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      )
+    }
+
+    return nextStatus
+  } catch (error) {
+    console.error('Error recomputing payout status:', error)
+    return null
+  }
+}
+
 /**
  * Get payout configuration for an organizer
  */
@@ -166,7 +236,7 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
       phone: verificationStatus.phone !== 'pending' ? verificationStatus.phone : (data.verificationStatus?.phone || 'pending'),
     }
 
-    return {
+    const baseConfig: PayoutConfig = {
       status: data.status || 'not_setup',
       method: data.method,
       bankDetails: data.bankDetails,
@@ -174,6 +244,11 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
       verificationStatus: finalVerificationStatus,
       createdAt: convertTimestamp(data.createdAt),
       updatedAt: convertTimestamp(data.updatedAt)
+    }
+
+    return {
+      ...baseConfig,
+      status: determinePayoutStatus(baseConfig)
     }
   } catch (error) {
     console.error('Error fetching payout config:', error)
@@ -229,6 +304,8 @@ export async function updatePayoutConfig(
     }
 
     await configRef.set(updateData, { merge: true })
+
+    await recomputePayoutStatus(organizerId)
 
     return { success: true }
   } catch (error: any) {

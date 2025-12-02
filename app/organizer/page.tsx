@@ -9,7 +9,7 @@ import { ActionCenter } from '@/components/organizer/ActionCenter'
 import { SalesSnapshot } from '@/components/organizer/SalesSnapshot'
 import { OrganizerEventCard } from '@/components/organizer/OrganizerEventCard'
 import { PayoutsWidget } from '@/components/organizer/PayoutsWidget'
-import { adminDb } from '@/lib/firebase/admin'
+import { determinePayoutStatus, getOrganizerBalance, getPayoutConfig, hasPayoutMethod } from '@/lib/firestore/payout'
 import Link from 'next/link'
 
 export const revalidate = 0
@@ -22,19 +22,33 @@ export default async function OrganizerDashboard() {
   }
 
   // Fetch organizer data
-  const [nextEvent, stats7d, stats30d, statsLifetime] = await Promise.all([
+  const [nextEvent, stats7d, stats30d, statsLifetime, payoutConfig, balanceData] = await Promise.all([
     getNextEvent(user.id),
     getOrganizerStats(user.id, '7d'),
     getOrganizerStats(user.id, '30d'),
-    getOrganizerStats(user.id, 'lifetime')
+    getOrganizerStats(user.id, 'lifetime'),
+    getPayoutConfig(user.id),
+    getOrganizerBalance(user.id)
   ])
 
   // Default to 7d stats
   const currentStats = stats7d
 
-  // Check verification status (placeholder - implement based on your verification system)
-  const isVerified = true // TODO: Check user verification status
-  const hasPayoutSetup = false // TODO: Check if payout method is configured
+  const payoutStatus = determinePayoutStatus(payoutConfig)
+  const hasPayoutSetup = hasPayoutMethod(payoutConfig)
+  const isVerified = payoutConfig?.verificationStatus?.identity === 'verified'
+  const payoutWidgetStatus: 'not-setup' | 'setup' | 'pending' | 'active' = (() => {
+    switch (payoutStatus) {
+      case 'active':
+        return 'active'
+      case 'pending_verification':
+        return 'pending'
+      case 'on_hold':
+        return 'pending'
+      default:
+        return 'not-setup'
+    }
+  })()
 
   // Build alerts for Action Center
   const alerts: Array<{
@@ -75,6 +89,15 @@ export default async function OrganizerDashboard() {
       title: 'Payouts not set up',
       description: 'Connect your bank account to receive payments',
       ctaText: 'Setup Payouts',
+      ctaHref: '/organizer/settings/payouts'
+    })
+  } else if (payoutWidgetStatus === 'pending') {
+    alerts.push({
+      id: 'payout-verification',
+      type: 'payout',
+      title: 'Payout verification pending',
+      description: 'We are reviewing your payout details. Hang tight!',
+      ctaText: 'View status',
       ctaHref: '/organizer/settings/payouts'
     })
   }
@@ -135,8 +158,8 @@ export default async function OrganizerDashboard() {
             {hasPayoutSetup && (
               <div>
                 <PayoutsWidget
-                  status="active"
-                  pendingBalance={0}
+                  status={payoutWidgetStatus}
+                  pendingBalance={balanceData.pending}
                 />
               </div>
             )}

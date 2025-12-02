@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
+import { recomputePayoutStatus } from '@/lib/firestore/payout'
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     await verificationRef.set(verificationData)
 
-    // Update payout config verification status
+    // Update payout config verification status to pending (admin must approve)
     const configRef = adminDb
       .collection('organizers')
       .doc(organizerId)
@@ -70,17 +71,17 @@ export async function POST(request: NextRequest) {
 
     await configRef.set(
       {
-        verificationStatus: {
-          identity: 'verified',
-        },
+        'verificationStatus.identity': 'pending',
         updatedAt: new Date().toISOString(),
       },
       { merge: true }
     )
 
+    await recomputePayoutStatus(organizerId)
+
     return NextResponse.json({
       success: true,
-      message: 'Identity verification submitted successfully',
+      message: 'Identity verification submitted successfully. Awaiting admin review.',
       status: 'pending',
     })
   } catch (error: any) {

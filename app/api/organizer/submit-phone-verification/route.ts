@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
+import { recomputePayoutStatus } from '@/lib/firestore/payout'
 
 export async function POST(request: NextRequest) {
   try {
@@ -90,13 +91,13 @@ export async function POST(request: NextRequest) {
       .doc('main')
       .set(
         {
-          verificationStatus: {
-            phone: 'verified',
-          },
+          'verificationStatus.phone': 'verified',
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
       )
+
+    await recomputePayoutStatus(organizerId)
 
     return NextResponse.json({
       success: true,
