@@ -5,7 +5,17 @@ import TeamList from './TeamList';
 import Link from 'next/link';
 import { ChevronLeft, Users, UserPlus2, ShieldCheck, Mail } from 'lucide-react';
 
-async function getTeamMembers(userId: string) {
+type TeamMember = {
+  id: string;
+  full_name?: string;
+  email?: string;
+  role?: string;
+  status?: string;
+  created_at?: string;
+  [key: string]: unknown;
+};
+
+async function getTeamMembers(userId: string): Promise<TeamMember[]> {
   const teamSnapshot = await adminDb
     .collection('organizers')
     .doc(userId)
@@ -13,9 +23,9 @@ async function getTeamMembers(userId: string) {
     .orderBy('created_at', 'desc')
     .get();
 
-  return teamSnapshot.docs.map((doc: any) => ({
+  return teamSnapshot.docs.map((doc) => ({
     id: doc.id,
-    ...doc.data(),
+    ...(doc.data() as Omit<TeamMember, 'id'>),
   }));
 }
 
