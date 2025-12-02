@@ -20,7 +20,10 @@ export async function subscribeToPush(publicKey: string, topics: string[] = [], 
   console.log('[push] Permission result:', permission)
   if (permission !== 'granted') return null
   console.log('[push] Waiting for service worker...')
-  const reg = await navigator.serviceWorker.ready
+  const reg = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Service worker timeout')), 10000))
+  ]) as ServiceWorkerRegistration
   console.log('[push] Service worker ready')
   const existing = await reg.pushManager.getSubscription()
   console.log('[push] Existing subscription:', existing?.endpoint?.substring(0, 50))
