@@ -1,0 +1,215 @@
+'use client';
+
+import { useState } from 'react';
+import { MapPin, Globe, Clock, DollarSign, Tag, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+interface DefaultsFormProps {
+  userId: string;
+  initialData: {
+    default_city: string;
+    default_country: string;
+    default_timezone: string;
+    default_currency: string;
+    default_categories: string[];
+  };
+}
+
+const HAITI_CITIES = [
+  'Port-au-Prince', 'Cap-Haïtien', 'Gonaïves', 'Les Cayes', 'Jacmel', 
+  'Jérémie', 'Petit-Goâve', 'Port-de-Paix', 'Hinche', 'Saint-Marc'
+];
+
+const CATEGORIES = [
+  'Music', 'Arts & Culture', 'Sports', 'Food & Drink', 'Business',
+  'Education', 'Charity', 'Community', 'Family', 'Technology'
+];
+
+const TIMEZONES = [
+  { value: 'America/Port-au-Prince', label: 'Haiti Time (EST)' },
+  { value: 'America/New_York', label: 'Eastern Time (ET)' },
+  { value: 'America/Chicago', label: 'Central Time (CT)' },
+  { value: 'America/Denver', label: 'Mountain Time (MT)' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
+];
+
+const CURRENCIES = [
+  { value: 'HTG', label: 'Haitian Gourde (HTG)', symbol: 'G' },
+  { value: 'USD', label: 'US Dollar (USD)', symbol: '$' },
+];
+
+export default function DefaultsForm({ userId, initialData }: DefaultsFormProps) {
+  const [formData, setFormData] = useState(initialData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const handleCategoryToggle = (category: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      default_categories: prev.default_categories.includes(category)
+        ? prev.default_categories.filter((c) => c !== category)
+        : [...prev.default_categories, category],
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/organizer/settings/defaults', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update defaults');
+      }
+
+      toast({
+        title: 'Defaults updated',
+        description: 'Your event defaults have been successfully updated.',
+      });
+    } catch (error) {
+      console.error('Error updating defaults:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update defaults. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      {/* Location */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Country */}
+        <div>
+          <label htmlFor="default_country" className="block text-sm font-medium text-gray-700 mb-2">
+            Default Country
+          </label>
+          <div className="relative">
+            <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              id="default_country"
+              value={formData.default_country}
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+              disabled
+            />
+          </div>
+        </div>
+
+        {/* City */}
+        <div>
+          <label htmlFor="default_city" className="block text-sm font-medium text-gray-700 mb-2">
+            Default City
+          </label>
+          <div className="relative">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <select
+              id="default_city"
+              value={formData.default_city}
+              onChange={(e) => setFormData({ ...formData, default_city: e.target.value })}
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none"
+            >
+              <option value="">Select a city</option>
+              {HAITI_CITIES.map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Timezone */}
+      <div>
+        <label htmlFor="default_timezone" className="block text-sm font-medium text-gray-700 mb-2">
+          Default Timezone
+        </label>
+        <div className="relative">
+          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <select
+            id="default_timezone"
+            value={formData.default_timezone}
+            onChange={(e) => setFormData({ ...formData, default_timezone: e.target.value })}
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none"
+          >
+            {TIMEZONES.map((tz) => (
+              <option key={tz.value} value={tz.value}>
+                {tz.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Currency */}
+      <div>
+        <label htmlFor="default_currency" className="block text-sm font-medium text-gray-700 mb-2">
+          Default Currency
+        </label>
+        <div className="relative">
+          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <select
+            id="default_currency"
+            value={formData.default_currency}
+            onChange={(e) => setFormData({ ...formData, default_currency: e.target.value })}
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none"
+          >
+            {CURRENCIES.map((currency) => (
+              <option key={currency.value} value={currency.value}>
+                {currency.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Categories */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          <Tag className="inline w-4 h-4 mr-1" />
+          Default Categories
+        </label>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {CATEGORIES.map((category) => (
+            <button
+              key={category}
+              type="button"
+              onClick={() => handleCategoryToggle(category)}
+              className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                formData.default_categories.includes(category)
+                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-gray-500 mt-2">
+          Select categories that best describe the types of events you typically organize
+        </p>
+      </div>
+
+      {/* Submit Button */}
+      <div className="flex justify-end pt-4 border-t border-gray-200">
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+        >
+          {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+          {isSubmitting ? 'Saving...' : 'Save Defaults'}
+        </button>
+      </div>
+    </form>
+  );
+}

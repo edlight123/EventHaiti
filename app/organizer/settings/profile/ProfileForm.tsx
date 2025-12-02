@@ -1,0 +1,238 @@
+'use client';
+
+import { useState } from 'react';
+import { User, Phone, Mail, Camera, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
+
+interface ProfileFormProps {
+  userId: string;
+  initialData: {
+    full_name: string;
+    email: string;
+    phone_number: string;
+    photo_url: string;
+  };
+}
+
+export default function ProfileForm({ userId, initialData }: ProfileFormProps) {
+  const [formData, setFormData] = useState(initialData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/organizer/settings/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: formData.full_name,
+          phone_number: formData.phone_number,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      toast({
+        title: 'Profile updated',
+        description: 'Your profile has been successfully updated.',
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update profile. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Invalid file',
+        description: 'Please select an image file.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Please select an image smaller than 5MB.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('userId', userId);
+
+      const response = await fetch('/api/organizer/settings/profile/upload-photo', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload photo');
+      }
+
+      const { photo_url } = await response.json();
+      setFormData((prev) => ({ ...prev, photo_url }));
+
+      toast({
+        title: 'Photo updated',
+        description: 'Your profile photo has been successfully updated.',
+      });
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to upload photo. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      {/* Profile Photo */}
+      <div className="flex items-start gap-6">
+        <div className="relative">
+          <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-200">
+            {formData.photo_url ? (
+              <Image
+                src={formData.photo_url}
+                alt="Profile photo"
+                width={96}
+                height={96}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <User className="w-12 h-12 text-gray-400" />
+              </div>
+            )}
+          </div>
+          {isUploadingPhoto && (
+            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+              <Loader2 className="w-6 h-6 text-white animate-spin" />
+            </div>
+          )}
+        </div>
+        <div className="flex-1">
+          <label
+            htmlFor="photo-upload"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg cursor-pointer transition-colors"
+          >
+            <Camera className="w-4 h-4" />
+            Change Photo
+          </label>
+          <input
+            id="photo-upload"
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoUpload}
+            className="hidden"
+            disabled={isUploadingPhoto}
+          />
+          <p className="text-xs text-gray-500 mt-2">
+            JPG, PNG or GIF. Max 5MB.
+          </p>
+        </div>
+      </div>
+
+      {/* Full Name */}
+      <div>
+        <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-2">
+          Full Name
+        </label>
+        <div className="relative">
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            id="full_name"
+            value={formData.full_name}
+            onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            placeholder="Enter your full name"
+            required
+          />
+        </div>
+      </div>
+
+      {/* Email (Read-only) */}
+      <div>
+        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+          Email Address
+        </label>
+        <div className="relative">
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="email"
+            id="email"
+            value={formData.email}
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+            disabled
+          />
+        </div>
+        <p className="text-xs text-gray-500 mt-1">
+          Email cannot be changed. Contact support if needed.
+        </p>
+      </div>
+
+      {/* Phone Number */}
+      <div>
+        <label htmlFor="phone_number" className="block text-sm font-medium text-gray-700 mb-2">
+          Phone Number
+        </label>
+        <div className="relative">
+          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="tel"
+            id="phone_number"
+            value={formData.phone_number}
+            onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            placeholder="+509 1234 5678"
+          />
+        </div>
+        <p className="text-xs text-gray-500 mt-1">
+          Used for account recovery and important notifications
+        </p>
+      </div>
+
+      {/* Submit Button */}
+      <div className="flex justify-end pt-4 border-t border-gray-200">
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+        >
+          {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+          {isSubmitting ? 'Saving...' : 'Save Changes'}
+        </button>
+      </div>
+    </form>
+  );
+}
