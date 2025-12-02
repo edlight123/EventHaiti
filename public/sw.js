@@ -57,23 +57,25 @@ self.addEventListener('fetch', (event) => {
 
 // Placeholder push handler (extend later)
 self.addEventListener('push', (event) => {
+  console.log('[SW] Push event received:', event)
   const data = event.data ? event.data.json() : { title: 'EventHaiti', body: 'New update available.', data: { url: '/' } }
+  console.log('[SW] Push data:', data)
   const actions = [
     { action: 'open-tickets', title: 'Tickets' },
     { action: 'open-home', title: 'Home' }
   ]
-  event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: '/icon-192.svg',
-      badge: '/icon-192.svg',
-      tag: 'eventhaiti-general',
-      renotify: false,
-      timestamp: Date.now(),
-      actions,
-      data: data.data || {}
-    })
-  )
+  const notificationPromise = self.registration.showNotification(data.title, {
+    body: data.body,
+    icon: '/icon-192.svg',
+    badge: '/icon-192.svg',
+    tag: 'eventhaiti-general',
+    renotify: false,
+    timestamp: Date.now(),
+    actions,
+    data: data.data || {}
+  })
+  console.log('[SW] Showing notification')
+  event.waitUntil(notificationPromise)
 })
 
 self.addEventListener('notificationclick', (event) => {
