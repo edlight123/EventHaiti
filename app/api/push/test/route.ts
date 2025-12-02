@@ -5,7 +5,7 @@ import { adminDb } from '@/lib/firebase/admin'
 
 export const runtime = 'nodejs'
 
-export async function POST() {
+async function runTestSend() {
   // Fetch all stored subscriptions
   const snap = await adminDb.collection('pushSubscriptions').get()
   const subs: any[] = snap.docs
@@ -39,4 +39,16 @@ export async function POST() {
     })
   } catch {}
   return NextResponse.json({ sent: results, pruned: expired.map((e: SendResult) => e.endpoint) })
+}
+
+export async function POST() {
+  return runTestSend()
+}
+
+export async function GET(request: Request) {
+  const secret = process.env.PUSH_TEST_SECRET
+  if (!secret) return NextResponse.json({ error: 'PUSH_TEST_SECRET not configured' }, { status: 501 })
+  const token = new URL(request.url).searchParams.get('secret')
+  if (token !== secret) return NextResponse.json({ error: 'Invalid secret' }, { status: 401 })
+  return runTestSend()
 }

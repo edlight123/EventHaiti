@@ -481,8 +481,25 @@ Add VAPID keys to `.env.local`:
 ```
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=your_public_key
 VAPID_PRIVATE_KEY=your_private_key
+
+# Optional but recommended for managed tests
+PUSH_TEST_SECRET=your_random_secret
 ```
 Generate with the `web-push` library or existing tooling.
+
+### Testing Push on Vercel
+1. In Vercel → Project → Settings → Environment Variables add:
+   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
+   - `VAPID_PRIVATE_KEY`
+   - `PUSH_TEST_SECRET` (any long random string; enables secure remote tests)
+   Redeploy after saving.
+2. Visit your deployed domain, sign in, and open `/settings/notifications` to subscribe. Use the **Send Test** button for an end-to-end check (it issues a POST to `/api/push/test`).
+3. For quick smoke tests without loading the UI, call the secured GET helper: `https://<your-app>.vercel.app/api/push/test?secret=<PUSH_TEST_SECRET>`.
+4. Example curl command:
+   ```bash
+   curl "https://eventhaiti.vercel.app/api/push/test?secret=$PUSH_TEST_SECRET"
+   ```
+   Successful responses include `sent` and `pruned` arrays. A `401 Invalid secret` error means the query parameter or Vercel env is incorrect; `404 No valid subscriptions` means nobody is currently subscribed on that environment.
 
 ### Sending Notifications
 - Topic broadcast: POST `/api/push/send` body:
