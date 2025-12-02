@@ -17,6 +17,9 @@ export interface UserProfile {
     updates: boolean
     promos: boolean
   }
+  role?: string
+  isVerified?: boolean
+  verificationStatus?: string
   createdAt?: Date
   updatedAt?: Date
 }
@@ -49,6 +52,9 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
         updates: data.notify?.updates ?? true,
         promos: data.notify?.promos ?? false
       },
+      role: data.role || 'attendee',
+      isVerified: data.is_verified || false,
+      verificationStatus: data.verification_status || 'none',
       createdAt: data.created_at?.toDate?.() || data.createdAt?.toDate?.() || new Date(),
       updatedAt: data.updated_at?.toDate?.() || data.updatedAt?.toDate?.() || new Date()
     }
