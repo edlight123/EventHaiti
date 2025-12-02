@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
+import { createHash } from 'crypto'
 
 export const runtime = 'nodejs'
+
+function encodeEndpoint(endpoint: string): string {
+  return createHash('sha256').update(endpoint).digest('hex')
+}
 
 export async function POST(req: Request) {
   try {
@@ -17,7 +22,8 @@ export async function POST(req: Request) {
           .slice(0, 10)
       : []
 
-    const ref = adminDb.collection('pushSubscriptions').doc(body.endpoint)
+    const docId = encodeEndpoint(body.endpoint)
+    const ref = adminDb.collection('pushSubscriptions').doc(docId)
     const doc = await ref.get()
     const existing = doc.exists ? doc.data() : null
     const mergedTopics = Array.from(new Set([...(existing?.topics || []), ...topics]))

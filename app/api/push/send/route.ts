@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server'
 // @ts-expect-error no types
 import webpush from 'web-push'
 import { adminDb } from '@/lib/firebase/admin'
+import { createHash } from 'crypto'
+
+function encodeEndpoint(endpoint: string): string {
+  return createHash('sha256').update(endpoint).digest('hex')
+}
 
 export const runtime = 'nodejs'
 
@@ -52,7 +57,7 @@ export async function POST(req: Request) {
 
   // Prune expired (410 Gone or 404 Not Found)
   const expired = results.filter((r: any) => !r.ok && (r.statusCode === 410 || r.statusCode === 404))
-  await Promise.all(expired.map((r: any) => adminDb.collection('pushSubscriptions').doc(r.endpoint).delete()))
+  await Promise.all(expired.map((r: any) => adminDb.collection('pushSubscriptions').doc(encodeEndpoint(r.endpoint)).delete()))
 
   // Dispatch log (non-blocking)
   try {
