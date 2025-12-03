@@ -48,8 +48,13 @@ export async function sendPushNotification(
   url?: string,
   data?: Record<string, any>
 ): Promise<void> {
+  // Skip if VAPID keys not configured or during build time
+  if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY || !process.env.NEXT_PUBLIC_APP_URL) {
+    return
+  }
+
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/push/send-user`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send-user`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -79,6 +84,11 @@ export async function notifyTicketPurchase(
   ticketId: string,
   eventId: string
 ): Promise<void> {
+  // Skip if VAPID keys not configured or during build time
+  if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY || !process.env.NEXT_PUBLIC_APP_URL) {
+    return
+  }
+
   // Check user preferences
   const prefs = await getNotificationPreferences(userId)
   
@@ -118,6 +128,11 @@ export async function notifyEventUpdate(
   updateMessage: string,
   attendeeIds: string[]
 ): Promise<void> {
+  // Skip if VAPID keys not configured or during build time
+  if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY || !process.env.NEXT_PUBLIC_APP_URL) {
+    return
+  }
+
   const { createNotification } = await import('./notifications/helpers')
   
   const notifications = attendeeIds.map(async (userId) => {
@@ -161,6 +176,11 @@ export async function sendEventReminder(
   attendeeIds: string[],
   reminderType: 'event_reminder_24h' | 'event_reminder_3h' | 'event_reminder_30min'
 ): Promise<void> {
+  // Skip if VAPID keys not configured or during build time
+  if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY || !process.env.NEXT_PUBLIC_APP_URL) {
+    return
+  }
+
   const timeLabels = {
     event_reminder_24h: '24 hours',
     event_reminder_3h: '3 hours',
@@ -221,6 +241,11 @@ export async function notifyOrganizerTicketSale(
   ticketCount: number,
   revenue: number
 ): Promise<void> {
+  // Skip if VAPID keys not configured or during build time
+  if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY || !process.env.NEXT_PUBLIC_APP_URL) {
+    return
+  }
+
   // Check organizer preferences
   const prefs = await getNotificationPreferences(organizerId)
   
