@@ -134,11 +134,11 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
             <div>
               {isFree ? (
                 <span className="text-sm sm:text-base font-bold text-success-600">
-                  From $0
+                  From {event.ticket_price} <span className="text-xs font-normal">{event.currency}</span>
                 </span>
               ) : (
                 <span className="text-sm sm:text-base font-bold text-gray-900">
-                  From ${event.ticket_price}
+                  From {event.ticket_price} <span className="text-xs font-normal">{event.currency}</span>
                 </span>
               )}
             </div>

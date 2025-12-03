@@ -29,7 +29,7 @@ export function DiscoverEventCard({ event }: DiscoverEventCardProps) {
   }
 
   const cue = getEventCue(event)
-  const priceLabel = getPriceLabel(event.ticket_price)
+  const priceLabel = getPriceLabel(event.ticket_price, event.currency)
   const locationSummary = getLocationSummary(event.city, event.commune)
   const dateLabel = formatEventDate(event.start_datetime)
 

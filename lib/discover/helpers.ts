@@ -31,10 +31,11 @@ export function formatEventDate(datetime: string): string {
 /**
  * Get price label for display
  */
-export function getPriceLabel(price: number): string {
+export function getPriceLabel(price: number, currency?: string): string {
+  const curr = currency || 'HTG'
   if (price === 0) return 'Free'
-  if (price <= 500) return `≤${price}`
-  return `From ${price}`
+  if (price <= 500) return `≤${price} ${curr}`
+  return `From ${price} ${curr}`
 }
 
 /**
