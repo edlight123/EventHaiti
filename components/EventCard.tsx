@@ -191,7 +191,7 @@ export default function EventCard({ event, priority = false, index = 0 }: EventC
                 <p className="text-2xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">FREE</p>
               ) : (
                 <p className="text-2xl sm:text-2xl md:text-3xl font-bold text-gray-900">
-                  {event.ticket_price} <span className="text-sm sm:text-sm font-normal text-gray-600">{event.currency}</span>
+                  From {event.ticket_price} <span className="text-sm sm:text-sm font-normal text-gray-600">{event.currency}</span>
                 </p>
               )}
             </div>
