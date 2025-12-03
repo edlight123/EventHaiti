@@ -52,9 +52,12 @@ export default function EventCard({ event, priority = false, index = 0 }: EventC
               alt={event.title}
               fill
               className="object-cover group-hover:scale-110 transition-transform duration-700"
-              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              quality={75}
               priority={priority || index < 3}
               loading={priority || index < 3 ? 'eager' : 'lazy'}
+              placeholder="blur"
+              blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2VmZjZmZiIvPjwvc3ZnPg=="
             />
             {/* Premium gradient overlay for better text contrast */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

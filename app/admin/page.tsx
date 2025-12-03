@@ -247,7 +247,7 @@ export default async function AdminDashboard() {
         </div>
       </div>
       
-      <MobileNavWrapper user={null} isAdmin={true} />
+      <MobileNavWrapper user={user} isAdmin={true} />
     </div>
     </PullToRefresh>
   )
