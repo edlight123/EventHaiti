@@ -2,12 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { updateUserProfile, type UserProfile } from '@/lib/firestore/user-profile'
+import { type UserProfile } from '@/lib/firestore/user-profile'
 import { ProfileHeaderCard } from '@/components/profile/ProfileHeaderCard'
 import { PreferencesCard } from '@/components/profile/PreferencesCard'
 import { NotificationsCard } from '@/components/profile/NotificationsCard'
 import { AccountCard } from '@/components/profile/AccountCard'
-import { getUserProfile } from '@/lib/firestore/user-profile'
 
 interface ProfileClientProps {
   initialProfile: UserProfile
@@ -22,10 +21,19 @@ export default function ProfileClient({ initialProfile, userId, isVerifiedOrgani
   const handleUpdateProfile = async (updates: Partial<UserProfile>) => {
     try {
       // Optimistic update
+      const previousProfile = profile
       setProfile(prev => ({ ...prev, ...updates }))
 
-      // Update in Firestore
-      await updateUserProfile(userId, updates)
+      // Update via API route (uses admin SDK)
+      const response = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile')
+      }
 
       // Refresh the page to update navbar
       router.refresh()
@@ -34,10 +42,7 @@ export default function ProfileClient({ initialProfile, userId, isVerifiedOrgani
     } catch (error) {
       console.error('Failed to update profile:', error)
       // Revert optimistic update on error
-      const currentProfile = await getUserProfile(userId)
-      if (currentProfile) {
-        setProfile(currentProfile)
-      }
+      router.refresh()
       throw error
     }
   }

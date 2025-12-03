@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
-import { getUserProfile, createUserProfile } from '@/lib/firestore/user-profile'
-import { getServerSession } from '@/lib/firebase/server'
+import { getUserProfileAdmin, createUserProfileAdmin } from '@/lib/firestore/user-profile-admin'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import ProfileClient from './ProfileClient'
@@ -16,18 +15,12 @@ export default async function ProfilePage() {
     redirect('/auth/login?redirect=/profile')
   }
 
-  // Get Firebase session for user ID
-  const { user: firebaseUser } = await getServerSession()
-  if (!firebaseUser) {
-    redirect('/auth/login?redirect=/profile')
-  }
-
-  // Try to get existing profile
-  let profile = await getUserProfile(firebaseUser.id)
+  // Try to get existing profile using admin SDK
+  let profile = await getUserProfileAdmin(user.id)
 
   // If profile doesn't exist, create it
   if (!profile) {
-    await createUserProfile(firebaseUser.id, {
+    await createUserProfileAdmin(user.id, {
       displayName: user.full_name || '',
       email: user.email || '',
       photoURL: '',
@@ -45,7 +38,7 @@ export default async function ProfilePage() {
     })
 
     // Fetch the newly created profile
-    profile = await getUserProfile(firebaseUser.id)
+    profile = await getUserProfileAdmin(user.id)
   }
 
   if (!profile) {
@@ -61,7 +54,7 @@ export default async function ProfilePage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
         <ProfileClient 
           initialProfile={profile} 
-          userId={firebaseUser.id}
+          userId={user.id}
           isVerifiedOrganizer={isVerifiedOrganizer}
         />
       </div>
