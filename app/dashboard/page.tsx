@@ -63,7 +63,7 @@ export default async function DashboardPage() {
     // Get event IDs from tickets and favorites
     const ticketEventIds = userTickets.map((t: any) => t.event_id)
     const favoriteEventIds = favoritesData.data?.map((f: any) => f.event_id) || []
-    const allEventIds = [...new Set([...ticketEventIds, ...favoriteEventIds])]
+    const allEventIds = [...ticketEventIds, ...favoriteEventIds].filter((id, index, arr) => arr.indexOf(id) === index)
 
     // Fetch all needed events in one query
     const { data: allEvents } = allEventIds.length > 0
