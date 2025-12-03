@@ -12,8 +12,6 @@ const nextConfig = {
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['lucide-react', 'date-fns', '@supabase/supabase-js'],
-    // Enable CSS optimization
-    optimizeCss: true,
   },
   
   // Add headers for better caching and performance
