@@ -66,11 +66,6 @@ export async function GET(request: Request) {
     let totalNotificationsSent = 0
     const results = []
 
-    let totalEmailsSent = 0
-    let totalWhatsAppSent = 0
-    let totalNotificationsSent = 0
-    const results = []
-
     for (const reminder of reminders) {
       // Find events starting within the reminder window
       const { data: events, error: eventsError } = await supabase
@@ -124,11 +119,6 @@ export async function GET(request: Request) {
         } catch (error) {
           console.error(`Failed to send ${reminder.type} notifications for event ${event.id}:`, error)
         }
-
-        // Send email and WhatsApp for 24h reminder only (to avoid spam)
-        if (reminder.type === 'event_reminder_24h') {
-          for (const ticket of tickets) {
-            if (!ticket.attendee) continue
 
         // Send email and WhatsApp for 24h reminder only (to avoid spam)
         if (reminder.type === 'event_reminder_24h') {
