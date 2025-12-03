@@ -8,16 +8,28 @@ type EmailParams = {
 }
 
 export async function sendEmail({ to, subject, html }: EmailParams) {
-  // In development or if no email API key, just log
+  // Check API key configuration
   const apiKey = process.env.RESEND_API_KEY
   
   if (!apiKey) {
-    console.log('📧 Email would be sent (no RESEND_API_KEY configured):', { to, subject })
-    console.log('HTML Preview:', html.substring(0, 200) + '...')
-    return { success: true, messageId: 'dev-mode' }
+    console.warn('❌ RESEND_API_KEY not configured - email will not be sent')
+    console.warn('   Add RESEND_API_KEY to your environment variables')
+    console.warn(`   Would send to: ${to}`)
+    console.warn(`   Subject: ${subject}`)
+    return { success: false, error: 'No API key configured', messageId: undefined }
+  }
+
+  if (apiKey === 're_dummy_key_for_build') {
+    console.warn('❌ RESEND_API_KEY is set to dummy value - email will not be sent')
+    console.warn('   Replace with a real API key from https://resend.com')
+    console.warn(`   Would send to: ${to}`)
+    console.warn(`   Subject: ${subject}`)
+    return { success: false, error: 'Dummy API key - replace with real key from Resend', messageId: undefined }
   }
 
   try {
+    console.log(`📧 Sending email to ${to}: ${subject}`)
+    
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -35,10 +47,11 @@ export async function sendEmail({ to, subject, html }: EmailParams) {
     const data = await response.json()
 
     if (!response.ok) {
+      console.error('❌ Email API error:', data)
       throw new Error(data.message || 'Failed to send email')
     }
 
-    console.log('✅ Email sent successfully:', data.id)
+    console.log('✅ Email sent successfully! Message ID:', data.id)
     return { success: true, messageId: data.id }
   } catch (error: any) {
     console.error('❌ Failed to send email:', error)
