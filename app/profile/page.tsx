@@ -1,190 +1,72 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { onAuthStateChanged } from 'firebase/auth'
-import { auth } from '@/lib/firebase/client'
-import { getUserProfile, createUserProfile, updateUserProfile, type UserProfile } from '@/lib/firestore/user-profile'
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
+import { getUserProfile, createUserProfile } from '@/lib/firestore/user-profile'
+import { getServerSession } from '@/lib/firebase/server'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import { ProfileHeaderCard } from '@/components/profile/ProfileHeaderCard'
-import { PreferencesCard } from '@/components/profile/PreferencesCard'
-import { NotificationsCard } from '@/components/profile/NotificationsCard'
-import { AccountCard } from '@/components/profile/AccountCard'
-import { Loader2 } from 'lucide-react'
+import ProfileClient from './ProfileClient'
 
-export default function ProfilePage() {
-  const router = useRouter()
-  const [firebaseUser, setFirebaseUser] = useState<any>(null)
-  const [navbarUser, setNavbarUser] = useState<any>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+export const revalidate = 60 // Cache for 1 minute
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      if (!authUser) {
-        router.push('/auth/login?redirect=/profile')
-        return
-      }
+export default async function ProfilePage() {
+  const user = await getCurrentUser()
 
-      setFirebaseUser(authUser)
+  if (!user) {
+    redirect('/auth/login?redirect=/profile')
+  }
 
-      try {
-        // Try to get existing profile
-        let userProfile = await getUserProfile(authUser.uid)
+  // Get Firebase session for user ID
+  const { user: firebaseUser } = await getServerSession()
+  if (!firebaseUser) {
+    redirect('/auth/login?redirect=/profile')
+  }
 
-        // If profile doesn't exist, create it
-        if (!userProfile) {
-          await createUserProfile(authUser.uid, {
-            displayName: authUser.displayName || '',
-            email: authUser.email || '',
-            photoURL: authUser.photoURL || '',
-            phone: '',
-            defaultCity: '',
-            subareaType: 'COMMUNE',
-            defaultSubarea: '',
-            favoriteCategories: [],
-            language: 'en',
-            notify: {
-              reminders: true,
-              updates: true,
-              promos: false
-            }
-          })
+  // Try to get existing profile
+  let profile = await getUserProfile(firebaseUser.id)
 
-          // Fetch the newly created profile
-          userProfile = await getUserProfile(authUser.uid)
-        }
-
-        setProfile(userProfile)
-
-        // Create navbar user object with proper format
-        setNavbarUser({
-          id: authUser.uid,
-          full_name: userProfile?.displayName || authUser.displayName || '',
-          email: authUser.email || '',
-          role: 'attendee' as const
-        })
-      } catch (err) {
-        console.error('Error loading profile:', err)
-        setError('Failed to load profile')
-      } finally {
-        setIsLoading(false)
+  // If profile doesn't exist, create it
+  if (!profile) {
+    await createUserProfile(firebaseUser.id, {
+      displayName: user.full_name || '',
+      email: user.email || '',
+      photoURL: '',
+      phone: user.phone_number || '',
+      defaultCity: '',
+      subareaType: 'COMMUNE',
+      defaultSubarea: '',
+      favoriteCategories: [],
+      language: 'en',
+      notify: {
+        reminders: true,
+        updates: true,
+        promos: false
       }
     })
 
-    return () => unsubscribe()
-  }, [router])
-
-  const handleUpdateProfile = async (updates: Partial<UserProfile>) => {
-    if (!firebaseUser) return
-
-    try {
-      // Optimistic update
-      setProfile(prev => prev ? { ...prev, ...updates } : prev)
-
-      // Update navbar user if displayName changed
-      if (updates.displayName !== undefined) {
-        setNavbarUser((prev: any) => prev ? { ...prev, full_name: updates.displayName } : prev)
-      }
-
-      // Update in Firestore
-      await updateUserProfile(firebaseUser.uid, updates)
-
-      // Show success toast (you can add a toast library)
-      console.log('Profile updated successfully')
-    } catch (error) {
-      console.error('Failed to update profile:', error)
-      // Revert optimistic update on error
-      const currentProfile = await getUserProfile(firebaseUser.uid)
-      setProfile(currentProfile)
-      if (currentProfile) {
-        setNavbarUser((prev: any) => prev ? { ...prev, full_name: currentProfile.displayName } : prev)
-      }
-      throw error
-    }
+    // Fetch the newly created profile
+    profile = await getUserProfile(firebaseUser.id)
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 text-teal-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading your profile...</p>
-        </div>
-      </div>
-    )
+  if (!profile) {
+    redirect('/auth/login?redirect=/profile')
   }
 
-  if (error || !profile) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Profile</h1>
-          <p className="text-gray-600 mb-6">{error || 'Something went wrong'}</p>
-          <button
-            onClick={() => router.push('/')}
-            className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-          >
-            Go Home
-          </button>
-        </div>
-      </div>
-    )
-  }
+  const isVerifiedOrganizer = profile.verificationStatus === 'approved'
 
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={navbarUser} />
+      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
-        {/* Page Header */}
-        <div className="mb-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">My Profile</h1>
-              <p className="text-gray-600">Manage your account settings and preferences</p>
-            </div>
-            {/* Organizer Settings Button - Only show for verified organizers */}
-            {profile.verificationStatus === 'approved' && (
-              <a
-                href="/organizer/settings"
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors shadow-sm"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span className="hidden sm:inline">Organizer Settings</span>
-                <span className="sm:hidden">Settings</span>
-              </a>
-            )}
-          </div>
-        </div>
-
-        {/* Profile Cards */}
-        <div className="space-y-6">
-          {/* Profile Header */}
-          <ProfileHeaderCard profile={profile} onUpdate={handleUpdateProfile} />
-
-          {/* Preferences */}
-          <PreferencesCard profile={profile} onUpdate={handleUpdateProfile} />
-
-          {/* Notifications */}
-          <NotificationsCard profile={profile} onUpdate={handleUpdateProfile} />
-
-          {/* Account */}
-          <AccountCard />
-        </div>
+        <ProfileClient 
+          initialProfile={profile} 
+          userId={firebaseUser.id}
+          isVerifiedOrganizer={isVerifiedOrganizer}
+        />
       </div>
 
-      <MobileNavWrapper user={navbarUser} />
+      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
   )
 }
