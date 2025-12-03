@@ -37,7 +37,7 @@ export async function sendEmail({ to, subject, html }: EmailParams) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM || 'EventHaiti <noreply@eventhaiti.com>',
+        from: process.env.EMAIL_FROM || 'EventHaiti <onboarding@resend.dev>',
         to,
         subject,
         html,
