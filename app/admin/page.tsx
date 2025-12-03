@@ -86,17 +86,17 @@ export default async function AdminDashboard() {
         {/* Command Bar */}
         <AdminCommandBar pendingVerifications={pendingCount} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-1">Platform operations & analytics</p>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">Platform operations & analytics</p>
         </div>
 
-        {/* KPI Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+        {/* KPI Grid - Mobile optimized: 2 columns on mobile, more on larger screens */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <KpiCard
-            title="Total Users"
+            title="Users"
             value={usersCount}
             icon={Users}
             iconColor="text-blue-600"
@@ -105,7 +105,7 @@ export default async function AdminDashboard() {
           />
           
           <KpiCard
-            title="Total Events"
+            title="Events"
             value={eventsCount}
             icon={Calendar}
             iconColor="text-purple-600"
@@ -116,7 +116,7 @@ export default async function AdminDashboard() {
           <KpiCard
             title="Tickets (7d)"
             value={tickets7d}
-            subtitle="Last 7 days"
+            subtitle="Last week"
             icon={Ticket}
             iconColor="text-teal-600"
             iconBg="bg-teal-50"
@@ -124,25 +124,26 @@ export default async function AdminDashboard() {
           
           <KpiCard
             title="GMV (7d)"
-            value={`${gmv7d.toLocaleString()} HTG`}
-            subtitle="Last 7 days"
+            value={`${(gmv7d / 1000).toFixed(1)}k`}
+            subtitle="HTG"
             icon={DollarSign}
             iconColor="text-green-600"
             iconBg="bg-green-50"
           />
           
           <KpiCard
-            title="Refunds (7d)"
+            title="Refunds"
             value={refunds7d}
-            subtitle={`${refundsAmount7d.toLocaleString()} HTG`}
+            subtitle={`${(refundsAmount7d / 1000).toFixed(1)}k HTG`}
             icon={RefreshCcw}
             iconColor="text-orange-600"
             iconBg="bg-orange-50"
           />
           
           <KpiCard
-            title="Pending Verifications"
+            title="Pending"
             value={pendingCount}
+            subtitle="Verifications"
             icon={ShieldCheck}
             iconColor="text-yellow-800"
             iconBg="bg-yellow-50"
@@ -150,8 +151,8 @@ export default async function AdminDashboard() {
           />
         </div>
 
-        {/* Work Queues Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Work Queues - Mobile: Stack vertically, Desktop: Side by side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Pending Verifications Queue */}
           <WorkQueueCard
             title="Pending Verifications"
@@ -213,35 +214,31 @@ export default async function AdminDashboard() {
           />
         </div>
 
-        {/* Additional Info Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Additional Info - Mobile: Stack, Desktop: Side by side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Recent Activity Timeline */}
           <RecentActivityTimeline activities={recentActivities} />
 
-          {/* Notes Card */}
-          <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
+          {/* Notes Card - Simplified for mobile */}
+          <div className="bg-blue-50 rounded-xl border border-blue-200 p-4 sm:p-6">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                 <AlertCircle className="w-5 h-5 text-blue-600" />
               </div>
-              <div>
-                <h3 className="font-bold text-blue-900 mb-2">📊 Daily Statistics System</h3>
-                <div className="text-sm text-blue-800 space-y-2">
-                  <p>
+              <div className="min-w-0">
+                <h3 className="font-bold text-blue-900 mb-2 text-sm sm:text-base">📊 Daily Statistics</h3>
+                <div className="text-xs sm:text-sm text-blue-800 space-y-2">
+                  <p className="hidden sm:block">
                     Metrics are calculated from <code className="bg-blue-100 px-1 rounded">platform_stats_daily</code> rollups for optimal performance.
                   </p>
-                  <p className="font-medium">✅ Automated daily at 1:00 AM UTC:</p>
-                  <ul className="list-disc list-inside space-y-1 ml-2">
-                    <li>GMV from confirmed ticket sales</li>
+                  <p className="font-medium">✅ Updated daily at 1 AM UTC</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2 text-xs">
+                    <li>GMV from ticket sales</li>
                     <li>Total tickets sold</li>
-                    <li>Refunds count and amount</li>
+                    <li>Refunds tracking</li>
                   </ul>
-                  <p className="font-medium mt-3">To backfill historical data:</p>
-                  <code className="block bg-blue-100 px-2 py-1 rounded text-xs mt-1">
-                    npm run backfill-stats
-                  </code>
-                  <p className="text-xs mt-3 text-blue-700">
-                    📖 See <code>docs/DAILY_STATS_SYSTEM.md</code> for full documentation
+                  <p className="text-xs text-blue-700 hidden sm:block mt-3">
+                    📖 See <code>docs/DAILY_STATS_SYSTEM.md</code> for docs
                   </p>
                 </div>
               </div>

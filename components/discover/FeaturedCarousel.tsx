@@ -1,9 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Database } from '@/types/database'
 import { formatEventDate, getPriceLabel, getLocationSummary } from '@/lib/discover/helpers'
 
@@ -15,18 +14,43 @@ interface FeaturedCarouselProps {
 
 export function FeaturedCarousel({ events }: FeaturedCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [touchStart, setTouchStart] = useState(0)
+  const [touchEnd, setTouchEnd] = useState(0)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   if (events.length === 0) return null
 
-  const handlePrev = () => {
-    setCurrentIndex((prev) => (prev === 0 ? events.length - 1 : prev - 1))
-  }
-
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev === events.length - 1 ? 0 : prev + 1))
-  }
-
   const visibleEvents = events.slice(0, 6) // Max 6 featured events
+
+  // Minimum swipe distance (in px) to trigger slide change
+  const minSwipeDistance = 50
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(0) // Reset touchEnd
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > minSwipeDistance
+    const isRightSwipe = distance < -minSwipeDistance
+
+    if (isLeftSwipe) {
+      // Swipe left - go to next
+      setCurrentIndex((prev) => (prev === visibleEvents.length - 1 ? 0 : prev + 1))
+    }
+    
+    if (isRightSwipe) {
+      // Swipe right - go to previous
+      setCurrentIndex((prev) => (prev === 0 ? visibleEvents.length - 1 : prev - 1))
+    }
+  }
 
   return (
     <div className="relative">
@@ -37,38 +61,26 @@ export function FeaturedCarousel({ events }: FeaturedCarouselProps) {
         ))}
       </div>
 
-      {/* Mobile: Carousel */}
+      {/* Mobile: Swipeable Carousel */}
       <div className="md:hidden relative">
-        <div className="overflow-hidden">
+        <div 
+          ref={containerRef}
+          className="overflow-hidden"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           <div 
-            className="flex transition-transform duration-300 ease-in-out"
+            className="flex transition-transform duration-300 ease-out"
             style={{ transform: `translateX(-${currentIndex * 100}%)` }}
           >
             {visibleEvents.map((event) => (
-              <div key={event.id} className="w-full flex-shrink-0">
+              <div key={event.id} className="w-full flex-shrink-0 px-1">
                 <FeaturedEventCard event={event} />
               </div>
             ))}
           </div>
         </div>
-
-        {/* Navigation Arrows */}
-        {visibleEvents.length > 1 && (
-          <>
-            <button
-              onClick={handlePrev}
-              className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-all z-10"
-            >
-              <ChevronLeft className="w-5 h-5 text-gray-900" />
-            </button>
-            <button
-              onClick={handleNext}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-all z-10"
-            >
-              <ChevronRight className="w-5 h-5 text-gray-900" />
-            </button>
-          </>
-        )}
 
         {/* Dots Indicator */}
         {visibleEvents.length > 1 && (
@@ -77,9 +89,10 @@ export function FeaturedCarousel({ events }: FeaturedCarouselProps) {
               <button
                 key={index}
                 onClick={() => setCurrentIndex(index)}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  index === currentIndex ? 'bg-black w-6' : 'bg-gray-300'
+                className={`h-2 rounded-full transition-all ${
+                  index === currentIndex ? 'bg-black w-6' : 'bg-gray-300 w-2'
                 }`}
+                aria-label={`Go to slide ${index + 1}`}
               />
             ))}
           </div>
