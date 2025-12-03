@@ -29,16 +29,20 @@ export async function createNotification(
 ): Promise<string> {
   const notificationsRef = collection(db, 'users', userId, 'notifications')
   
-  const notification = {
+  const notification: any = {
     userId,
     type,
     title,
     message,
-    eventId: metadata?.eventId,
-    ticketId: metadata?.ticketId,
     isRead: false,
     createdAt: Timestamp.now()
   }
+  
+  // Only add optional fields if they exist (Firestore doesn't allow undefined)
+  if (actionUrl) notification.actionUrl = actionUrl
+  if (metadata?.eventId) notification.eventId = metadata.eventId
+  if (metadata?.ticketId) notification.ticketId = metadata.ticketId
+  if (metadata) notification.metadata = metadata
   
   const docRef = await addDoc(notificationsRef, notification)
   return docRef.id
