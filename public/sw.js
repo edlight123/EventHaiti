@@ -1,7 +1,7 @@
 // Basic service worker for EventHaiti PWA
 // Extensible: add caching strategies or push handlers later
-const STATIC_CACHE = 'eventhaiti-static-v2'
-const NAV_CACHE = 'eventhaiti-nav-v1'
+const STATIC_CACHE = 'eventhaiti-static-v3'
+const NAV_CACHE = 'eventhaiti-nav-v2'
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -29,28 +29,54 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event
+  
+  // Only handle GET requests
   if (request.method !== 'GET') return
+  
+  // Skip API requests and external resources - let them pass through
+  const url = new URL(request.url)
+  if (url.pathname.startsWith('/api/') || url.origin !== self.location.origin) {
+    return
+  }
+  
   const isNavigation = request.mode === 'navigate'
+  
   if (isNavigation) {
     event.respondWith(
-      fetch(request).then(resp => {
-        const clone = resp.clone()
-        if (resp.ok) caches.open(NAV_CACHE).then(c => c.put(request, clone))
-        return resp
-      }).catch(() => caches.match(request).then(r => r || caches.match('/offline.html')))
+      fetch(request)
+        .then(resp => {
+          const clone = resp.clone()
+          if (resp.ok) caches.open(NAV_CACHE).then(c => c.put(request, clone))
+          return resp
+        })
+        .catch(() => caches.match(request).then(r => r || caches.match('/offline.html')))
     )
     return
   }
+  
+  // For other same-origin GET requests, try cache first then network
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached
-      return fetch(request).then((resp) => {
-        const clone = resp.clone()
-        if (resp.ok && request.url.startsWith(self.location.origin)) {
-          caches.open(STATIC_CACHE).then(cache => cache.put(request, clone))
-        }
-        return resp
-      }).catch(() => cached || Response.error())
+      
+      return fetch(request)
+        .then((resp) => {
+          // Only cache successful responses from our origin
+          if (resp.ok && resp.status < 400) {
+            const clone = resp.clone()
+            caches.open(STATIC_CACHE).then(cache => cache.put(request, clone))
+          }
+          return resp
+        })
+        .catch((err) => {
+          // On network error, return 404 response instead of error response
+          console.warn('[SW] Fetch failed for:', request.url, err)
+          return new Response('Network error', {
+            status: 408,
+            statusText: 'Request Timeout',
+            headers: { 'Content-Type': 'text/plain' }
+          })
+        })
     })
   )
 })
