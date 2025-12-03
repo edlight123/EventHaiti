@@ -104,7 +104,7 @@ export async function GET(request: Request) {
         if (ticketsError || !tickets || tickets.length === 0) continue
 
         // Get unique attendee IDs for in-app/push notifications
-        const attendeeIds = [...new Set(tickets.map(t => t.attendee_id))]
+        const attendeeIds = Array.from(new Set(tickets.map((t: any) => t.attendee_id))) as string[]
 
         // Send in-app and push notifications via notification-triggers
         try {
