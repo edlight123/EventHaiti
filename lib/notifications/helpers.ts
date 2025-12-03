@@ -208,3 +208,34 @@ export async function getUnreadCountServer(userId: string): Promise<number> {
     return 0
   }
 }
+
+/**
+ * Delete all notifications for a user (server-side)
+ */
+export async function deleteAllNotifications(userId: string): Promise<number> {
+  try {
+    const notificationsRef = adminDb
+      .collection('users')
+      .doc(userId)
+      .collection('notifications')
+    
+    const snapshot = await notificationsRef.get()
+    const deleteCount = snapshot.size
+    
+    if (deleteCount === 0) {
+      return 0
+    }
+    
+    // Batch delete for efficiency
+    const batch = adminDb.batch()
+    snapshot.docs.forEach((doc: any) => {
+      batch.delete(doc.ref)
+    })
+    
+    await batch.commit()
+    return deleteCount
+  } catch (error) {
+    console.error('Error deleting all notifications:', error)
+    return 0
+  }
+}

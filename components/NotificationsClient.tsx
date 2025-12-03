@@ -27,6 +27,7 @@ export function NotificationsClient({
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications)
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount)
   const [isLoading, setIsLoading] = useState(false)
+  const [isClearing, setIsClearing] = useState(false)
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
@@ -58,6 +59,32 @@ export function NotificationsClient({
       console.error('Error marking all as read:', error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleClearAll = async () => {
+    if (!confirm('Are you sure you want to clear all notifications? This cannot be undone.')) {
+      return
+    }
+
+    setIsClearing(true)
+    try {
+      const response = await fetch('/api/notifications/clear-all', {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to clear notifications')
+      }
+
+      // Clear local state
+      setNotifications([])
+      setUnreadCount(0)
+    } catch (error) {
+      console.error('Error clearing notifications:', error)
+      alert('Failed to clear notifications. Please try again.')
+    } finally {
+      setIsClearing(false)
     }
   }
 
@@ -106,16 +133,28 @@ export function NotificationsClient({
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Notifications</h1>
-            {unreadCount > 0 && (
-              <button
-                onClick={handleMarkAllAsRead}
-                disabled={isLoading}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-brand-600 hover:text-brand-700 transition-colors disabled:opacity-50"
-              >
-                <CheckCheck className="w-4 h-4" />
-                Mark all as read
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button
+                  onClick={handleMarkAllAsRead}
+                  disabled={isLoading}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-brand-600 hover:text-brand-700 transition-colors disabled:opacity-50"
+                >
+                  <CheckCheck className="w-4 h-4" />
+                  <span className="hidden sm:inline">Mark all read</span>
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  onClick={handleClearAll}
+                  disabled={isClearing}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 transition-colors disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Clear all</span>
+                </button>
+              )}
+            </div>
           </div>
           <p className="text-gray-600">
             {unreadCount > 0 
