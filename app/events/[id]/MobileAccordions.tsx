@@ -68,7 +68,7 @@ export default function MobileAccordions({
   shareButton
 }: MobileAccordionsProps) {
   return (
-    <div className="md:hidden space-y-3 -mx-4 px-4">
+    <div className="md:hidden space-y-3">
       {/* About */}
       <AccordionSection
         title="About This Event"

@@ -38,8 +38,8 @@ export default function MobileKeyFacts({
   }
 
   return (
-    <div className="md:hidden bg-white border-y border-gray-200 -mx-4 px-4 py-4">
-      <div className="grid grid-cols-2 gap-3">
+    <div className="md:hidden bg-gray-50 border-y border-gray-200 py-4">
+      <div className="grid grid-cols-2 gap-3 px-4">
         {/* Date/Time */}
         <div className="bg-gray-50 rounded-xl p-3 border border-gray-200">
           <div className="flex items-center gap-2 mb-2">

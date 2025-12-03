@@ -30,7 +30,7 @@ export default function MobileHero({
   selloutSoon
 }: MobileHeroProps) {
   return (
-    <div className="md:hidden -mx-4">
+    <div className="md:hidden">
       {/* Hero Image - 16:9 aspect ratio */}
       <div className="relative w-full aspect-video bg-gray-900">
         {bannerUrl ? (

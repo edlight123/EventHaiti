@@ -393,8 +393,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       />
 
       {/* MAIN CONTENT */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8" style={{ paddingBottom: 'calc(68px + env(safe-area-inset-bottom, 0px))' }}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+      <div className="max-w-7xl mx-auto px-0 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8" style={{ paddingBottom: 'calc(68px + env(safe-area-inset-bottom, 0px))' }}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 px-4 md:px-0">
           
           {/* Left Column - Event Details */}
           <div className="lg:col-span-2 space-y-4">
@@ -659,7 +659,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
         {/* Related Events Section - Horizontal on mobile */}
         {relatedEvents.length > 0 && (
-          <div className="mt-12 md:mt-16">
+          <div className="mt-8 md:mt-16">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-xl md:text-2xl font-bold text-gray-900">Similar Events</h2>
