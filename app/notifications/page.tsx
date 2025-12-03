@@ -11,6 +11,8 @@ export const metadata = {
   description: 'View your notifications'
 }
 
+export const revalidate = 30 // Cache for 30 seconds
+
 export default async function NotificationsPage() {
   const user = await getCurrentUser()
   

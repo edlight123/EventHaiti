@@ -8,6 +8,8 @@ export const metadata = {
   description: 'Review and process organizer payout requests',
 }
 
+export const revalidate = 60 // Cache for 1 minute
+
 async function getPendingPayouts() {
   try {
     // Query all pending payouts across all organizers (collectionGroup)

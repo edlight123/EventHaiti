@@ -11,6 +11,8 @@ export const metadata = {
   description: 'Manage your organizer payouts and earnings',
 }
 
+export const revalidate = 60 // Cache for 1 minute
+
 export default async function PayoutsPage() {
   const user = await getCurrentUser()
 
