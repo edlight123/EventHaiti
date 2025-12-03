@@ -68,6 +68,12 @@ body {
     transform: scale(0.95) translateZ(0);
   }
   
+  /* Prevent bottom nav from disappearing during navigation */
+  nav[class*="fixed bottom-"] {
+    contain: layout style;
+    content-visibility: auto;
+  }
+  
   /* Optimize animations */
   .will-change-contents {
     will-change: contents;
