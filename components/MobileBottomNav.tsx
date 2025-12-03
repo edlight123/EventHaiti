@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, Compass, Ticket, User, Briefcase, Shield } from 'lucide-react'
+import { useMemo } from 'react'
 
 interface MobileBottomNavProps {
   isLoggedIn: boolean
@@ -18,13 +19,13 @@ export default function MobileBottomNav({ isLoggedIn, isOrganizer = false, isAdm
     return pathname?.startsWith(path)
   }
 
-  const tabs = [
+  const tabs = useMemo(() => [
     { href: '/', label: 'Home', icon: Home, show: true },
     { href: '/discover', label: 'Discover', icon: Compass, show: true },
     { href: '/tickets', label: 'Tickets', icon: Ticket, show: isLoggedIn },
     { href: '/profile', label: 'Profile', icon: User, show: isLoggedIn },
     { href: isAdmin ? '/admin' : '/organizer', label: isAdmin ? 'Admin' : 'Organizer', icon: isAdmin ? Shield : Briefcase, show: isLoggedIn && (isOrganizer || isAdmin) },
-  ].filter(tab => tab.show)
+  ].filter(tab => tab.show), [isLoggedIn, isOrganizer, isAdmin])
 
   // Don't show if not logged in and only 2 tabs would show
   if (!isLoggedIn && tabs.length <= 2) {
@@ -32,7 +33,7 @@ export default function MobileBottomNav({ isLoggedIn, isOrganizer = false, isAdm
   }
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-inset-bottom">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-inset-bottom will-change-contents">
       <div className="flex items-center justify-around px-2 py-2">
         {tabs.map((tab) => {
           const Icon = tab.icon
@@ -42,18 +43,14 @@ export default function MobileBottomNav({ isLoggedIn, isOrganizer = false, isAdm
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-col items-center justify-center min-w-[64px] py-2 px-3 rounded-xl transition-all duration-200 ${
+              prefetch={true}
+              className={`flex flex-col items-center justify-center min-w-[64px] py-2 px-3 rounded-xl transition-colors will-change-auto ${
                 active
                   ? 'text-brand-600'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  : 'text-gray-600 active:text-gray-900 active:bg-gray-50'
               }`}
             >
-              <div className="relative">
-                <Icon className={`w-6 h-6 mb-1 transition-transform ${active ? 'scale-110' : ''}`} />
-                {active && (
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-brand-600 rounded-full" />
-                )}
-              </div>
+              <Icon className={`w-6 h-6 mb-1 ${active ? 'scale-110' : ''}`} strokeWidth={active ? 2.5 : 2} />
               <span className={`text-xs font-medium ${active ? 'text-brand-600' : ''}`}>
                 {tab.label}
               </span>

@@ -51,3 +51,29 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Performance optimizations for mobile navigation */
+@media (max-width: 768px) {
+  /* Hardware acceleration for smooth tab switching */
+  nav a {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+  
+  /* Instant visual feedback on tap */
+  nav a:active {
+    transform: scale(0.95) translateZ(0);
+  }
+  
+  /* Optimize animations */
+  .will-change-contents {
+    will-change: contents;
+  }
+  
+  .will-change-auto {
+    will-change: auto;
+  }
+}
