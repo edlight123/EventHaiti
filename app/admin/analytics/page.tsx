@@ -14,7 +14,7 @@ import {
   getOrganizerRankings,
 } from '@/lib/admin-analytics'
 
-export const revalidate = 0
+export const revalidate = 120 // Cache for 2 minutes
 
 export default async function AdminAnalyticsPage() {
   const user = await getCurrentUser()

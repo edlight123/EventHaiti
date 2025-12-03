@@ -25,9 +25,11 @@ interface Event {
 
 interface EventCardProps {
   event: Event
+  priority?: boolean
+  index?: number
 }
 
-export default function EventCard({ event }: EventCardProps) {
+export default function EventCard({ event, priority = false, index = 0 }: EventCardProps) {
   const remainingTickets = event.total_tickets - event.tickets_sold
   const isSoldOut = remainingTickets <= 0
   const isFree = !event.ticket_price || event.ticket_price === 0
@@ -39,7 +41,7 @@ export default function EventCard({ event }: EventCardProps) {
   const selloutSoon = !isSoldOut && remainingTickets < 10
 
   return (
-    <Link href={`/events/${event.id}`} className="group">
+    <Link href={`/events/${event.id}`} prefetch={true} className="group">
       <div className="bg-white rounded-xl sm:rounded-2xl shadow-soft hover:shadow-hard transition-all duration-300 overflow-hidden border border-gray-100 group-hover:-translate-y-1.5 group-hover:border-brand-200 relative">
         
         {/* Image Container with Gradient Overlay */}
@@ -51,7 +53,8 @@ export default function EventCard({ event }: EventCardProps) {
               fill
               className="object-cover group-hover:scale-110 transition-transform duration-700"
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              priority={false}
+              priority={priority || index < 3}
+              loading={priority || index < 3 ? 'eager' : 'lazy'}
             />
             {/* Premium gradient overlay for better text contrast */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

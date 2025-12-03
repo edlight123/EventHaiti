@@ -15,7 +15,7 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 
 type Event = Database['public']['Tables']['events']['Row']
 
-export const revalidate = 0
+export const revalidate = 30 // Cache for 30 seconds
 
 export default async function FavoritesPage() {
   const user = await getCurrentUser()

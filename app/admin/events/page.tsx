@@ -5,7 +5,7 @@ import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { AdminEventsModerationConsole } from './AdminEventsModerationConsole'
 
-export const revalidate = 0
+export const revalidate = 60 // Cache for 1 minute
 
 export default async function AdminEventsPage() {
   const { user, error } = await requireAuth()

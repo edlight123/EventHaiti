@@ -160,8 +160,8 @@ export default async function HomePage({
                 
                 {/* Desktop: Grid Cards */}
                 <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {events.map((event) => (
-                    <EventCard key={event.id} event={event} />
+                  {events.map((event, index) => (
+                    <EventCard key={event.id} event={event} index={index} />
                   ))}
                 </div>
               </>
@@ -217,8 +217,8 @@ export default async function HomePage({
                   </div>
                   {/* Desktop: Grid Cards */}
                   <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {trendingEvents.map((event) => (
-                      <EventCard key={event.id} event={event} />
+                    {trendingEvents.map((event, index) => (
+                      <EventCard key={event.id} event={event} index={index} />
                     ))}
                   </div>
                 </Suspense>
@@ -246,8 +246,8 @@ export default async function HomePage({
                   </div>
                   {/* Desktop: Grid Cards */}
                   <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {upcomingThisWeek.map((event) => (
-                      <EventCard key={event.id} event={event} />
+                    {upcomingThisWeek.map((event, index) => (
+                      <EventCard key={event.id} event={event} index={index} />
                     ))}
                   </div>
                 </Suspense>
@@ -272,8 +272,8 @@ export default async function HomePage({
                   </div>
                   {/* Desktop: Grid Cards */}
                   <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {events.slice(0, 12).map((event) => (
-                      <EventCard key={event.id} event={event} />
+                    {events.slice(0, 12).map((event, index) => (
+                      <EventCard key={event.id} event={event} index={index} />
                     ))}
                   </div>
                 </Suspense>

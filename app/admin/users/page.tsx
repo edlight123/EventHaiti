@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache'
 import { updateUserRole } from '@/lib/firestore/user-profile-server'
 import { getAdminUsers, getUserCounts } from '@/lib/data/users'
 
-export const revalidate = 0
+export const revalidate = 60 // Cache for 1 minute
 
 async function promoteToOrganizer(formData: FormData) {
   'use server'

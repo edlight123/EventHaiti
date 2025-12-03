@@ -11,7 +11,7 @@ import PullToRefresh from '@/components/PullToRefresh'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { revalidatePath } from 'next/cache'
 
-export const revalidate = 0
+export const revalidate = 120 // Cache for 2 minutes
 
 export default async function AnalyticsPage() {
   const user = await getCurrentUser()

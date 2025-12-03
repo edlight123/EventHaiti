@@ -51,17 +51,27 @@ export default async function DashboardPage() {
       status: 'active' as const
     }))
   } else {
-    // Fetch user's tickets
-    const { data: allTickets } = await supabase.from('tickets').select('*')
-    const userTickets = allTickets?.filter((t: any) => t.attendee_id === user.id) || []
+    // Parallelize all data fetching for faster load
+    const [ticketsData, favoritesData] = await Promise.all([
+      supabase.from('tickets').select('*'),
+      supabase.from('event_favorites').select('event_id').eq('user_id', user.id)
+    ])
+
+    const userTickets = ticketsData.data?.filter((t: any) => t.attendee_id === user.id) || []
     totalTickets = userTickets.length
 
-    // Get event IDs from tickets
+    // Get event IDs from tickets and favorites
     const ticketEventIds = userTickets.map((t: any) => t.event_id)
+    const favoriteEventIds = favoritesData.data?.map((f: any) => f.event_id) || []
+    const allEventIds = [...new Set([...ticketEventIds, ...favoriteEventIds])]
 
-    // Fetch all events
-    const { data: allEvents } = await supabase.from('events').select('*')
+    // Fetch all needed events in one query
+    const { data: allEvents } = allEventIds.length > 0
+      ? await supabase.from('events').select('*').in('id', allEventIds)
+      : { data: [] }
+
     const ticketedEvents = allEvents?.filter((e: any) => ticketEventIds.includes(e.id)) || []
+    favoriteEvents = allEvents?.filter((e: any) => favoriteEventIds.includes(e.id) && e.is_published) || []
 
     // Separate upcoming events
     allUpcomingEvents = ticketedEvents
@@ -85,30 +95,6 @@ export default async function DashboardPage() {
         status: 'active' as const
       }
     })
-
-    // Fetch favorites
-    try {
-      const { data: favorites } = await supabase
-        .from('event_favorites')
-        .select('event_id')
-        .eq('user_id', user.id)
-      
-      if (favorites && favorites.length > 0) {
-        const favoriteEventIds = favorites.map((f: any) => f.event_id)
-        const { data: events } = await supabase
-          .from('events')
-          .select('*')
-          .in('id', favoriteEventIds)
-          .eq('is_published', true)
-        
-        favoriteEvents = events || []
-      } else {
-        favoriteEvents = []
-      }
-    } catch (error) {
-      console.error('Error fetching favorites:', error)
-      favoriteEvents = []
-    }
   }
 
   return (

@@ -13,7 +13,7 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 
 type Event = Database['public']['Tables']['events']['Row']
 
-export const revalidate = 0
+export const revalidate = 120 // Cache for 2 minutes
 
 export default async function CategoriesPage({
   searchParams,

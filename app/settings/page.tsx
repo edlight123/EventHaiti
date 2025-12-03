@@ -9,7 +9,7 @@ import PullToRefresh from '@/components/PullToRefresh'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { revalidatePath } from 'next/cache'
 
-export const revalidate = 0
+export const revalidate = 60 // Cache for 1 minute
 
 export default async function SettingsPage() {
   const user = await getCurrentUser()

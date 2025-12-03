@@ -26,7 +26,7 @@ import MobileKeyFacts from './MobileKeyFacts'
 import MobileAccordions from './MobileAccordions'
 import StickyMobileCTA from './StickyMobileCTA'
 
-export const revalidate = 0
+export const revalidate = 300 // Cache for 5 minutes
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params

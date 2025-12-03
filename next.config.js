@@ -4,6 +4,10 @@ const nextConfig = {
   generateBuildId: async () => {
     return `build-${Date.now()}`
   },
+  // Performance optimizations
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'date-fns'],
+  },
   // Add headers to prevent aggressive caching
   async headers() {
     return [
@@ -37,6 +41,7 @@ const nextConfig = {
         hostname: 'firebasestorage.googleapis.com',
       },
     ],
+    formats: ['image/avif', 'image/webp'],
   },
 }
 

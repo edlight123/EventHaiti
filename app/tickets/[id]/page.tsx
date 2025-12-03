@@ -31,7 +31,7 @@ import { revalidatePath } from 'next/cache'
 import Image from 'next/image'
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const revalidate = 60 // Cache for 1 minute
 
 // Helper function to serialize all Timestamp objects recursively
 function serializeTimestamps(obj: any): any {

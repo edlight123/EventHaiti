@@ -12,7 +12,7 @@ import { PayoutsWidget } from '@/components/organizer/PayoutsWidget'
 import { determinePayoutStatus, getOrganizerBalance, getPayoutConfig, hasPayoutMethod } from '@/lib/firestore/payout'
 import Link from 'next/link'
 
-export const revalidate = 0
+export const revalidate = 30 // Cache for 30 seconds
 
 export default async function OrganizerDashboard() {
   const { user, error } = await requireAuth()

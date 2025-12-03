@@ -45,6 +45,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {/* DNS Prefetch for faster external resource loading */}
+        <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
+        <link rel="dns-prefetch" href="https://api.stripe.com" />
+        <link rel="dns-prefetch" href="https://api.resend.com" />
+        {/* Preconnect for critical resources */}
+        <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://api.stripe.com" crossOrigin="anonymous" />
+      </head>
       <body className={inter.className + ' mobile-typography'}>
         <ToastProvider>
           {children}

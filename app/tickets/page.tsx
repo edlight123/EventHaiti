@@ -14,7 +14,7 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import MyTicketsList from './sections/MyTicketsList'
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const revalidate = 30 // Cache for 30 seconds
 
 // Helper function to serialize all Timestamp objects recursively
 function serializeTimestamps(obj: any): any {

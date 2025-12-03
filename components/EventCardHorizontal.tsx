@@ -70,7 +70,7 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
     <div className="group">
       <div className="rounded-xl overflow-hidden transition-all duration-300">
         
-        <Link href={`/events/${event.id}`} className="block">
+        <Link href={`/events/${event.id}`} prefetch={true} className="block">
         
         {/* Image - reduced height by 25% */}
         <div className="relative w-full aspect-[2/1] bg-gray-200">
@@ -81,6 +81,7 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 50vw"
+              loading="lazy"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-brand-100 to-accent-100 flex items-center justify-center">
