@@ -1,5 +1,41 @@
-import { createNotification, getNotificationPreferences } from './notifications'
+import { adminDb } from '@/lib/firebase/admin'
 import type { NotificationType } from '@/types/database'
+
+/**
+ * SERVER-SIDE notification triggers
+ * Uses Firebase Admin SDK for all database operations
+ */
+
+/**
+ * Get user notification preferences (server-side)
+ */
+async function getNotificationPreferences(userId: string) {
+  try {
+    const userDoc = await adminDb.collection('users').doc(userId).get()
+    
+    if (!userDoc.exists) {
+      return {
+        notifyTicketPurchase: true,
+        notifyEventUpdates: true,
+        notifyReminders: true
+      }
+    }
+    
+    const data = userDoc.data()
+    return {
+      notifyTicketPurchase: data?.notify_ticket_purchase ?? true,
+      notifyEventUpdates: data?.notify_event_updates ?? true,
+      notifyReminders: data?.notify_reminders ?? true
+    }
+  } catch (error) {
+    console.error('Error getting notification preferences:', error)
+    return {
+      notifyTicketPurchase: true,
+      notifyEventUpdates: true,
+      notifyReminders: true
+    }
+  }
+}
 
 /**
  * Send a web push notification to a user (server-side only)
@@ -46,14 +82,15 @@ export async function notifyTicketPurchase(
   // Check user preferences
   const prefs = await getNotificationPreferences(userId)
   
-  // Always create in-app notification
+  // Always create in-app notification via server-side helper
+  const { createNotification } = await import('./notifications/helpers')
   await createNotification(
     userId,
     'ticket_purchased',
     'Ticket Purchased Successfully!',
     `Your ticket for "${eventTitle}" has been confirmed. Show your QR code at the entrance.`,
-    eventId,
-    ticketId
+    `/events/${eventId}/tickets/${ticketId}`,
+    { eventId, ticketId }
   )
 
   // Send push notification if enabled
@@ -81,6 +118,8 @@ export async function notifyEventUpdate(
   updateMessage: string,
   attendeeIds: string[]
 ): Promise<void> {
+  const { createNotification } = await import('./notifications/helpers')
+  
   const notifications = attendeeIds.map(async (userId) => {
     const prefs = await getNotificationPreferences(userId)
     
@@ -90,7 +129,8 @@ export async function notifyEventUpdate(
       'event_updated',
       `Event Update: ${eventTitle}`,
       updateMessage,
-      eventId
+      `/events/${eventId}`,
+      { eventId }
     )
 
     // Send push notification if enabled
@@ -136,6 +176,8 @@ export async function sendEventReminder(
     minute: '2-digit'
   })
 
+  const { createNotification } = await import('./notifications/helpers')
+  
   const notifications = attendeeIds.map(async (userId) => {
     const prefs = await getNotificationPreferences(userId)
     
@@ -149,7 +191,8 @@ export async function sendEventReminder(
       reminderType,
       `Reminder: ${eventTitle}`,
       `Your event starts in ${timeLabel}! ${formattedDate}`,
-      eventId
+      `/events/${eventId}`,
+      { eventId }
     )
 
     // Send push notification
@@ -182,12 +225,14 @@ export async function notifyOrganizerTicketSale(
   const prefs = await getNotificationPreferences(organizerId)
   
   // Create in-app notification
+  const { createNotification } = await import('./notifications/helpers')
   await createNotification(
     organizerId,
     'ticket_purchased',
     `🎫 ${ticketCount} New Ticket${ticketCount > 1 ? 's' : ''} Sold!`,
     `${ticketCount} ticket${ticketCount > 1 ? 's' : ''} sold for "${eventTitle}". Revenue: $${revenue.toFixed(2)}`,
-    eventId
+    `/organizer/events/${eventId}/attendees`,
+    { eventId, ticketCount, revenue }
   )
 
   // Send push notification if enabled
