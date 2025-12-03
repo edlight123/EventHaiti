@@ -47,15 +47,15 @@ export async function POST(
           .where('organizer_id', '==', user.id)
           .get()
 
-        const followerIds = followersSnapshot.docs.map(doc => doc.data().follower_id)
+        const followerIds = followersSnapshot.docs.map((doc: any) => doc.data().follower_id)
 
         if (followerIds.length > 0) {
           // Notify each follower
-          const notifications = followerIds.map(async (followerId) => {
+          const notifications = followerIds.map(async (followerId: string) => {
             // Create in-app notification
             await createNotification(
               followerId,
-              'event_created',
+              'event_updated',
               `New Event: ${eventData.title}`,
               `${eventData.organizer_name || 'An organizer you follow'} just published a new event!`,
               `/events/${id}`,

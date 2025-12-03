@@ -134,7 +134,7 @@ export default function TestNotificationsPage() {
             <h2 className="font-semibold text-gray-900 mb-2">💡 How to Test:</h2>
             <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
               <li>Click any notification type above</li>
-              <li>You'll be redirected to /notifications</li>
+              <li>You&apos;ll be redirected to /notifications</li>
               <li>Check your notification bell icon</li>
               <li>Check browser push notifications (if enabled)</li>
               <li>Check your email inbox (for email test)</li>
