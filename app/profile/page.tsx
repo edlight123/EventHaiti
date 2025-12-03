@@ -51,7 +51,7 @@ export default async function ProfilePage() {
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6 md:py-8">
         <ProfileClient 
           initialProfile={profile} 
           userId={user.id}

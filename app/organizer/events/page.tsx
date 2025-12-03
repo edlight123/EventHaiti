@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged } from 'firebase/auth'
+import { doc, getDoc } from 'firebase/firestore'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import OrganizerEventsTopBar from '@/components/organizer/events-manager/OrganizerEventsTopBar'
@@ -12,7 +13,7 @@ import OrganizerEventCard from '@/components/organizer/events-manager/OrganizerE
 import CalendarView from '@/components/organizer/events-manager/CalendarView'
 import EventCardSkeleton from '@/components/organizer/events-manager/EventCardSkeleton'
 import EventsEmptyState from '@/components/organizer/events-manager/EventsEmptyState'
-import { auth } from '@/lib/firebase/client'
+import { auth, db } from '@/lib/firebase/client'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import { getOrganizerEventsClient } from '@/lib/data/events.client'
 import { debounce } from '@/lib/data/utils'
@@ -23,6 +24,7 @@ export default function OrganizerEventsPage() {
   const [firebaseUser, setFirebaseUser] = useState<any>(null)
   const [navbarUser, setNavbarUser] = useState<any>(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [roleChecked, setRoleChecked] = useState(false)
   
   // State
   const [events, setEvents] = useState<any[]>([])
@@ -57,13 +59,32 @@ export default function OrganizerEventsPage() {
         return
       }
 
-      setFirebaseUser(authUser)
-      setNavbarUser({
-        id: authUser.uid,
-        full_name: authUser.displayName || '',
-        email: authUser.email || '',
-        role: 'organizer' as const
-      })
+      // Check user role in Firestore
+      try {
+        const userDocRef = doc(db, 'users', authUser.uid)
+        const userDoc = await getDoc(userDocRef)
+        const userData = userDoc.data()
+        const userRole = userData?.role || 'attendee'
+
+        if (userRole !== 'organizer') {
+          // Not an organizer, redirect to profile
+          router.push('/profile')
+          return
+        }
+
+        setFirebaseUser(authUser)
+        setNavbarUser({
+          id: authUser.uid,
+          full_name: authUser.displayName || userData?.full_name || '',
+          email: authUser.email || '',
+          role: 'organizer' as const
+        })
+        setRoleChecked(true)
+      } catch (error) {
+        console.error('Error checking user role:', error)
+        router.push('/profile')
+        return
+      }
       setAuthLoading(false)
 
       // Fetch events using optimized data layer
