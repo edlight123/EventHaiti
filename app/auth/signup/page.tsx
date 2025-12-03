@@ -52,9 +52,8 @@ export default function SignupPage() {
         body: JSON.stringify({ idToken }),
       })
 
-      // Redirect to home
-      router.push('/')
-      router.refresh()
+      // Force full page reload
+      window.location.href = '/'
     } catch (err: any) {
       setError(err.message || 'An error occurred during signup')
     } finally {
@@ -95,9 +94,8 @@ export default function SignupPage() {
         body: JSON.stringify({ idToken }),
       })
 
-      // Redirect to home
-      router.push('/')
-      router.refresh()
+      // Force full page reload
+      window.location.href = '/'
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') {
         setError('Sign-up cancelled')

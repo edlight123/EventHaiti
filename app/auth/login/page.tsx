@@ -32,9 +32,8 @@ export default function LoginPage() {
           throw new Error(result.error)
         }
 
-        // Redirect to home
-        router.push('/')
-        router.refresh()
+        // Force full page reload for demo mode
+        window.location.href = '/'
         return
       }
 
@@ -49,9 +48,8 @@ export default function LoginPage() {
         body: JSON.stringify({ idToken }),
       })
 
-      // Redirect to home
-      router.push('/')
-      router.refresh()
+      // Force router refresh and navigate
+      window.location.href = '/'
     } catch (err: any) {
       setError(err.message || 'An error occurred during login')
     } finally {
@@ -91,9 +89,8 @@ export default function LoginPage() {
         body: JSON.stringify({ idToken }),
       })
 
-      // Redirect to home
-      router.push('/')
-      router.refresh()
+      // Force full page reload
+      window.location.href = '/'
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') {
         setError('Sign-in cancelled')
