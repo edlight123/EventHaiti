@@ -153,3 +153,58 @@ export async function notifyOrganizerTicketSale(
   }
 }
 
+/**
+ * Get user notifications (server-side)
+ */
+export async function getUserNotificationsServer(
+  userId: string,
+  limitCount: number = 50
+): Promise<any[]> {
+  try {
+    const notificationsRef = adminDb
+      .collection('users')
+      .doc(userId)
+      .collection('notifications')
+      .orderBy('createdAt', 'desc')
+      .limit(limitCount)
+    
+    const snapshot = await notificationsRef.get()
+    
+    return snapshot.docs.map((doc: any) => ({
+      id: doc.id,
+      userId,
+      type: doc.data().type,
+      title: doc.data().title,
+      message: doc.data().message,
+      actionUrl: doc.data().actionUrl,
+      eventId: doc.data().eventId,
+      ticketId: doc.data().ticketId,
+      metadata: doc.data().metadata,
+      isRead: doc.data().isRead || false,
+      createdAt: doc.data().createdAt?.toDate?.() || new Date(),
+      readAt: doc.data().readAt?.toDate?.()
+    }))
+  } catch (error) {
+    console.error('Error getting user notifications:', error)
+    return []
+  }
+}
+
+/**
+ * Get unread notification count (server-side)
+ */
+export async function getUnreadCountServer(userId: string): Promise<number> {
+  try {
+    const notificationsRef = adminDb
+      .collection('users')
+      .doc(userId)
+      .collection('notifications')
+      .where('isRead', '==', false)
+    
+    const snapshot = await notificationsRef.get()
+    return snapshot.size
+  } catch (error) {
+    console.error('Error getting unread count:', error)
+    return 0
+  }
+}
