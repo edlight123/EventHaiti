@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { Resend } from 'resend'
+import { createNotification } from '@/lib/notifications/helpers'
+import { sendPushNotification } from '@/lib/notification-triggers'
 
 const resend = new Resend(process.env.RESEND_API_KEY || '')
 
@@ -65,6 +67,29 @@ export async function POST(request: NextRequest) {
 
     if (updateError) {
       console.error('Error updating user status:', updateError)
+    }
+
+    // Create in-app notification
+    try {
+      await createNotification(
+        userId,
+        'verification',
+        '📝 Verification Submitted',
+        'Your verification request has been received. We\'ll review it within 24-48 hours.',
+        '/organizer/verify',
+        { status: 'pending' }
+      )
+
+      // Send push notification
+      await sendPushNotification(
+        userId,
+        '📝 Verification Submitted',
+        'Your request is under review. We\'ll notify you within 24-48 hours.',
+        '/organizer/verify',
+        { type: 'verification_submitted' }
+      )
+    } catch (notificationError) {
+      console.error('Error creating notification:', notificationError)
     }
 
     // Send confirmation email to user

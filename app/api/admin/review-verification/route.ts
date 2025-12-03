@@ -3,7 +3,8 @@ import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { Resend } from 'resend'
 import { adminDb } from '@/lib/firebase/admin'
-import { createNotification } from '@/lib/notifications'
+import { createNotification } from '@/lib/notifications/helpers'
+import { sendPushNotification } from '@/lib/notification-triggers'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@eventhaiti.com').split(',')
@@ -99,23 +100,47 @@ export async function POST(request: NextRequest) {
     // Get user details for email (we already have it from above)
     const organizer = userToUpdate
 
-    // Create in-app notification
+    // Create in-app notification and send push
     try {
       if (status === 'approved') {
         await createNotification(
           userId,
           'verification',
           '✅ Verification Approved!',
-          'Congratulations! Your EventHaiti account has been verified. You can now create and publish events.'
+          'Congratulations! Your EventHaiti account has been verified. You can now create and publish events.',
+          '/organizer/verify',
+          { status: 'approved' }
+        )
+
+        // Send push notification for approval
+        await sendPushNotification(
+          userId,
+          '✅ You\'re Verified!',
+          'Your account is now verified. Start creating events!',
+          '/organizer/events/new',
+          { type: 'verification_approved' }
         )
       } else {
+        const message = rejectionReason 
+          ? `Your verification was not approved. Reason: ${rejectionReason}. You can resubmit your application from the verification page.`
+          : 'Your verification was not approved. You can resubmit your application from the verification page.'
+        
         await createNotification(
           userId,
           'verification',
           'Verification Update',
-          rejectionReason 
-            ? `Your verification was not approved. Reason: ${rejectionReason}. You can resubmit your application from the verification page.`
-            : 'Your verification was not approved. You can resubmit your application from the verification page.'
+          message,
+          '/organizer/verify',
+          { status: 'rejected', reason: rejectionReason }
+        )
+
+        // Send push notification for rejection
+        await sendPushNotification(
+          userId,
+          'Verification Update',
+          'Your verification needs attention. Please review and resubmit.',
+          '/organizer/verify',
+          { type: 'verification_rejected' }
         )
       }
     } catch (notificationError) {
