@@ -4,7 +4,7 @@ import { sendEmail, getTicketConfirmationEmail } from '@/lib/email'
 import { generateTicketQRCode } from '@/lib/qrcode'
 import { sendWhatsAppMessage, getTicketConfirmationWhatsApp } from '@/lib/whatsapp'
 import { trackPromoCodeUsage, calculateDiscount } from '@/lib/promo-codes'
-import { notifyTicketPurchase } from '@/lib/notifications/helpers'
+import { notifyTicketPurchase, notifyOrganizerTicketSale } from '@/lib/notifications/helpers'
 
 // Lazy load Stripe to avoid build-time initialization
 function getStripe() {
@@ -176,6 +176,16 @@ export async function POST(request: Request) {
             ticket.event.title,
             quantity
           )
+          
+          // Notify organizer
+          await notifyOrganizerTicketSale(
+            ticket.event.organizer_id,
+            session.metadata.eventId,
+            ticket.event.title,
+            quantity,
+            session.amount_total ? session.amount_total / 100 : 0,
+            ticket.user?.full_name
+          )
         } catch (error) {
           console.error('Failed to send notification:', error)
           // Don't fail the webhook if notification fails
@@ -273,6 +283,18 @@ export async function POST(request: Request) {
             eventDetails?.title || 'Event',
             quantity
           )
+          
+          // Notify organizer
+          if (eventDetails) {
+            await notifyOrganizerTicketSale(
+              eventDetails.organizer_id,
+              paymentIntent.metadata.eventId,
+              eventDetails.title,
+              quantity,
+              paymentIntent.amount / 100,
+              attendee?.full_name
+            )
+          }
         } catch (error) {
           console.error('Failed to send notification:', error)
         }

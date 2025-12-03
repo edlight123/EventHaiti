@@ -136,6 +136,14 @@ export async function notifyTicketPurchase(
     `/tickets/event/${eventId}`,
     { eventId, ticketCount }
   )
+  
+  // Also trigger web-push notification via notification-triggers
+  try {
+    const { notifyTicketPurchase: sendPush } = await import('@/lib/notification-triggers')
+    await sendPush(userId, eventTitle, eventId, eventId) // last param is ticketId placeholder
+  } catch (error) {
+    console.error('Failed to send push notification:', error)
+  }
 }
 
 /**
@@ -192,4 +200,34 @@ export async function notifyEventReminder(
     `/tickets/event/${eventId}`,
     { eventId, timeUntil }
   )
+}
+
+/**
+ * Notify organizer when a ticket is sold
+ */
+export async function notifyOrganizerTicketSale(
+  organizerId: string,
+  eventId: string,
+  eventTitle: string,
+  ticketCount: number,
+  revenue: number,
+  buyerName?: string
+): Promise<void> {
+  const buyer = buyerName || 'Someone'
+  await createNotification(
+    organizerId,
+    'ticket_purchased',
+    `🎫 ${ticketCount} New Ticket${ticketCount > 1 ? 's' : ''} Sold!`,
+    `${buyer} just purchased ${ticketCount} ticket${ticketCount > 1 ? 's' : ''} for "${eventTitle}". Revenue: $${revenue.toFixed(2)}`,
+    `/organizer/events/${eventId}/attendees`,
+    { eventId, ticketCount, revenue }
+  )
+  
+  // Also trigger web-push notification via notification-triggers
+  try {
+    const { notifyOrganizerTicketSale: sendPush } = await import('@/lib/notification-triggers')
+    await sendPush(organizerId, eventTitle, eventId, ticketCount, revenue)
+  } catch (error) {
+    console.error('Failed to send push notification:', error)
+  }
 }

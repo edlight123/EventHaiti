@@ -3,7 +3,7 @@ import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { sendEmail, getTicketConfirmationEmail } from '@/lib/email'
 import { generateTicketQRCode } from '@/lib/qrcode'
-import { notifyTicketPurchase } from '@/lib/notifications/helpers'
+import { notifyTicketPurchase, notifyOrganizerTicketSale } from '@/lib/notifications/helpers'
 
 // Lazy load Stripe
 function getStripe() {
@@ -118,6 +118,19 @@ export async function POST(request: Request) {
           paymentIntent.metadata.eventId,
           eventDetails.title,
           quantity
+        )
+        
+        // Notify organizer about the sale
+        const attendeeQuery = await supabase.from('users').select('*')
+        const attendee = attendeeQuery.data?.find((u: any) => u.id === paymentIntent.metadata.userId)
+        
+        await notifyOrganizerTicketSale(
+          eventDetails.organizer_id,
+          paymentIntent.metadata.eventId,
+          eventDetails.title,
+          quantity,
+          paymentIntent.amount / 100,
+          attendee?.full_name
         )
       } catch (error) {
         console.error('Failed to send notification:', error)

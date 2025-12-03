@@ -1,41 +1,33 @@
 import { createNotification, getNotificationPreferences } from './notifications'
-import { getUserFCMTokens } from './fcm'
 import type { NotificationType } from '@/types/database'
 
 /**
- * Send a push notification via FCM (server-side only)
- * This should be called from API routes or server actions
+ * Send a web push notification to a user (server-side only)
+ * Uses our working web-push API instead of FCM
  */
 export async function sendPushNotification(
   userId: string,
   title: string,
   body: string,
-  data?: Record<string, string>
+  url?: string,
+  data?: Record<string, any>
 ): Promise<void> {
-  // Get user's FCM tokens
-  const tokens = await getUserFCMTokens(userId)
-  
-  if (tokens.length === 0) {
-    console.log(`No FCM tokens found for user ${userId}`)
-    return
-  }
-
-  // Send push notification via Firebase Cloud Messaging
-  // This requires the Firebase Admin SDK which should be initialized server-side
   try {
-    const response = await fetch('/api/notifications/send-push', {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/push/send-user`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        tokens,
+        userId,
         title,
         body,
+        url,
         data
       })
     })
 
     if (!response.ok) {
-      console.error('Failed to send push notification:', await response.text())
+      const error = await response.text()
+      console.error('Failed to send push notification:', error)
     }
   } catch (error) {
     console.error('Error sending push notification:', error)
@@ -70,6 +62,7 @@ export async function notifyTicketPurchase(
       userId,
       'Ticket Purchased! 🎫',
       `Your ticket for "${eventTitle}" is ready`,
+      `/events/${eventId}/tickets/${ticketId}`,
       {
         type: 'ticket_purchased',
         ticketId,
@@ -106,6 +99,7 @@ export async function notifyEventUpdate(
         userId,
         `Event Update: ${eventTitle}`,
         updateMessage,
+        `/events/${eventId}`,
         {
           type: 'event_updated',
           eventId
@@ -163,6 +157,7 @@ export async function sendEventReminder(
       userId,
       `⏰ Event Reminder: ${eventTitle}`,
       `Starting in ${timeLabel} - ${formattedDate}`,
+      `/events/${eventId}`,
       {
         type: reminderType,
         eventId
@@ -171,4 +166,43 @@ export async function sendEventReminder(
   })
 
   await Promise.all(notifications)
+}
+
+/**
+ * Notify organizer about a ticket sale
+ */
+export async function notifyOrganizerTicketSale(
+  organizerId: string,
+  eventTitle: string,
+  eventId: string,
+  ticketCount: number,
+  revenue: number
+): Promise<void> {
+  // Check organizer preferences
+  const prefs = await getNotificationPreferences(organizerId)
+  
+  // Create in-app notification
+  await createNotification(
+    organizerId,
+    'ticket_purchased',
+    `🎫 ${ticketCount} New Ticket${ticketCount > 1 ? 's' : ''} Sold!`,
+    `${ticketCount} ticket${ticketCount > 1 ? 's' : ''} sold for "${eventTitle}". Revenue: $${revenue.toFixed(2)}`,
+    eventId
+  )
+
+  // Send push notification if enabled
+  if (prefs.notifyTicketPurchase) {
+    await sendPushNotification(
+      organizerId,
+      `🎫 New Sale: ${eventTitle}`,
+      `${ticketCount} ticket${ticketCount > 1 ? 's' : ''} sold - $${revenue.toFixed(2)}`,
+      `/organizer/events/${eventId}/attendees`,
+      {
+        type: 'ticket_sale',
+        eventId,
+        ticketCount,
+        revenue
+      }
+    )
+  }
 }

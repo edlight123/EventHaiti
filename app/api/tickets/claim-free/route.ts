@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
-import { notifyTicketPurchase } from '@/lib/notifications/helpers'
+import { notifyTicketPurchase, notifyOrganizerTicketSale } from '@/lib/notifications/helpers'
 
 export async function POST(request: Request) {
   try {
@@ -107,6 +107,16 @@ export async function POST(request: Request) {
         eventId,
         event.title,
         ticketQuantity
+      )
+      
+      // Notify organizer
+      await notifyOrganizerTicketSale(
+        event.organizer_id,
+        eventId,
+        event.title,
+        ticketQuantity,
+        0, // free event
+        user.full_name
       )
     } catch (error) {
       console.error('Failed to send notification:', error)
