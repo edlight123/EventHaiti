@@ -1,14 +1,9 @@
 import { getCurrentUser } from '@/lib/auth'
-import EventCard from '@/components/EventCard'
-import EventCardHorizontal from '@/components/EventCardHorizontal'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import SearchBar from '@/components/SearchBar'
-import CategoryGrid from '@/components/CategoryGrid'
-import { Suspense } from 'react'
-import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
-import FeaturedCarousel from '@/components/FeaturedCarousel'
 import PullToRefresh from '@/components/PullToRefresh'
+import HeroSection from '@/components/HeroSection'
+import HomePageContent from '@/components/HomePageContent'
 import { BRAND } from '@/config/brand'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import { isAdmin } from '@/lib/admin'
@@ -102,26 +97,11 @@ export default async function HomePage({
       )}
 
       {/* HERO: Featured Carousel OR Search Hero */}
-      {!hasActiveFilters && featuredEvents.length > 0 ? (
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <FeaturedCarousel events={featuredEvents} />
-        </div>
-      ) : (
-        <div className="relative bg-gradient-to-br from-brand-600 via-brand-700 to-accent-600 overflow-hidden">
-          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16 relative">
-            <div className="text-center mb-6 sm:mb-8">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4 drop-shadow-lg">
-                {hasActiveFilters ? 'Find Your Perfect Event' : BRAND.tagline || 'Discover Events in Haiti'}
-              </h1>
-              <p className="text-sm sm:text-base md:text-lg lg:text-xl text-brand-50 max-w-2xl mx-auto drop-shadow-md">
-                Search concerts, parties, conferences, festivals, and more across Haiti
-              </p>
-            </div>
-            <SearchBar />
-          </div>
-        </div>
-      )}
+      <HeroSection 
+        hasActiveFilters={hasActiveFilters}
+        featuredEvents={featuredEvents}
+        brandTagline={BRAND.tagline}
+      />
 
       {/* Search/Filter Bar (always visible below hero) */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
@@ -138,167 +118,12 @@ export default async function HomePage({
         revalidatePath('/')
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
-        
-          {/* SEARCH RESULTS VIEW */}
-          {hasActiveFilters ? (
-          <div className="space-y-4 sm:space-y-6 md:space-y-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Filtered Results</h2>
-                <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-1 sm:mt-2">{events.length} events found</p>
-              </div>
-            </div>
-
-            {events.length > 0 ? (
-              <>
-                {/* Mobile: Horizontal Cards */}
-                <div className="md:hidden space-y-3">
-                  {events.map((event) => (
-                    <EventCardHorizontal key={event.id} event={event} />
-                  ))}
-                </div>
-                
-                {/* Desktop: Grid Cards */}
-                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {events.map((event, index) => (
-                    <EventCard key={event.id} event={event} index={index} />
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-20 bg-white rounded-3xl shadow-soft">
-                <div className="text-7xl mb-6">🔍</div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">No events found</h3>
-                <p className="text-gray-600 mb-6">Try adjusting your search or filters</p>
-                <a
-                  href="/"
-                  className="inline-block px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-xl hover:shadow-glow transition-all duration-300 font-semibold"
-                >
-                  View All Events
-                </a>
-              </div>
-            )}
-          </div>
-        ) : (
-          /* DISCOVERY VIEW - Premium Sections */
-          <div className="space-y-8 sm:space-y-12 md:space-y-16">
-            
-            {/* Browse by Category */}
-            <section>
-              <div className="mb-4 sm:mb-6 md:mb-8">
-                <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-brand-600 to-gray-900 bg-clip-text text-transparent mb-1 sm:mb-2">
-                  Browse by Category
-                </h2>
-                <p className="text-gray-600 text-sm sm:text-base md:text-lg">Find events that match your interests</p>
-              </div>
-              <Suspense fallback={<div className="space-y-3"><div className="h-6 w-40 bg-gray-200 rounded animate-pulse" /><LoadingSkeleton rows={9} animated={false} /></div>}>
-                <CategoryGrid />
-              </Suspense>
-            </section>
-
-            {/* Trending Events */}
-            {trendingEvents.length > 0 && (
-              <section>
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">🔥 Trending Now</h2>
-                    <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-0.5 sm:mt-1">Hot events everyone is talking about</p>
-                  </div>
-                  <a href="/discover?sort=popular" className="text-brand-600 hover:text-brand-700 font-semibold">
-                    View All →
-                  </a>
-                </div>
-                <Suspense fallback={<LoadingSkeleton rows={6} animated={false} />}>
-                  {/* Mobile: Horizontal Cards */}
-                  <div className="md:hidden space-y-4">
-                    {trendingEvents.map((event) => (
-                      <EventCardHorizontal key={event.id} event={event} />
-                    ))}
-                  </div>
-                  {/* Desktop: Grid Cards */}
-                  <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {trendingEvents.map((event, index) => (
-                      <EventCard key={event.id} event={event} index={index} />
-                    ))}
-                  </div>
-                </Suspense>
-              </section>
-            )}
-
-            {/* Upcoming This Week */}
-            {upcomingThisWeek.length > 0 && (
-              <section>
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">📅 This Week</h2>
-                    <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-0.5 sm:mt-1">Don&apos;t miss out on these upcoming events</p>
-                  </div>
-                  <a href="/discover?date=week" className="text-brand-600 hover:text-brand-700 font-semibold">
-                    View All →
-                  </a>
-                </div>
-                <Suspense fallback={<LoadingSkeleton rows={6} animated={false} />}>
-                  {/* Mobile: Horizontal Cards */}
-                  <div className="md:hidden space-y-4">
-                    {upcomingThisWeek.map((event) => (
-                      <EventCardHorizontal key={event.id} event={event} />
-                    ))}
-                  </div>
-                  {/* Desktop: Grid Cards */}
-                  <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {upcomingThisWeek.map((event, index) => (
-                      <EventCard key={event.id} event={event} index={index} />
-                    ))}
-                  </div>
-                </Suspense>
-              </section>
-            )}
-
-            {/* All Upcoming Events */}
-            <section>
-              <div className="flex items-center justify-between mb-4 sm:mb-6">
-                <div>
-                  <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">All Upcoming Events</h2>
-                  <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-0.5 sm:mt-1">{events.length} events happening soon</p>
-                </div>
-              </div>
-              {events.length > 0 ? (
-                <Suspense fallback={<LoadingSkeleton rows={8} animated={false} />}>
-                  {/* Mobile: Horizontal Cards */}
-                  <div className="md:hidden space-y-4">
-                    {events.slice(0, 12).map((event) => (
-                      <EventCardHorizontal key={event.id} event={event} />
-                    ))}
-                  </div>
-                  {/* Desktop: Grid Cards */}
-                  <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {events.slice(0, 12).map((event, index) => (
-                      <EventCard key={event.id} event={event} index={index} />
-                    ))}
-                  </div>
-                </Suspense>
-              ) : (
-                <div className="text-center py-20 bg-white rounded-3xl shadow-soft">
-                  <div className="text-7xl mb-6">📭</div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">No upcoming events</h3>
-                  <p className="text-gray-600">Check back soon for new events!</p>
-                </div>
-              )}
-              
-              {events.length > 12 && (
-                <div className="text-center mt-8">
-                  <a
-                    href="/discover"
-                    className="inline-block px-8 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-xl hover:shadow-glow transition-all duration-300 font-semibold"
-                  >
-                    Explore All Events
-                  </a>
-                </div>
-              )}
-            </section>
-
-          </div>
-        )}
+          <HomePageContent 
+            hasActiveFilters={hasActiveFilters}
+            events={events}
+            trendingEvents={trendingEvents}
+            upcomingThisWeek={upcomingThisWeek}
+          />
         </div>
       </PullToRefresh>
       

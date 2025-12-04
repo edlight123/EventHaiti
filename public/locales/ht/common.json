@@ -78,10 +78,18 @@
     "featured_weekend_desc": "Evènman nou chwazi pou ou",
     "no_events": "Pa gen evènman",
     "browse_categories": "Gade pa kategori",
+    "browse_categories_desc": "Jwenn evènman ki matche ak enterè w",
     "all_events": "Tout evènman yo",
     "filtered_results": "Rezilta filtre",
     "events_found": "{{count}} evènman jwenn",
-    "event_found": "{{count}} evènman jwenn"
+    "event_found": "{{count}} evènman jwenn",
+    "trending_now": "Popilè kounye a",
+    "trending_desc": "Evènman popilè tout moun ap pale de yo",
+    "this_week": "Semèn sa a",
+    "this_week_desc": "Pa rate evènman sa yo k ap vini",
+    "explore_all": "Gade tout evènman yo",
+    "find_perfect_event": "Jwenn evènman pafè pou ou",
+    "hero_subtitle": "Chèche konsè, fèt, konferans, festival, ak plis nan tout Ayiti"
   },
   "ticket": {
     "ticket": "Tikè",

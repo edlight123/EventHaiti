@@ -78,10 +78,18 @@
     "featured_weekend_desc": "Hand-picked events you won't want to miss",
     "no_events": "No events found",
     "browse_categories": "Browse by Category",
+    "browse_categories_desc": "Find events that match your interests",
     "all_events": "All Events",
     "filtered_results": "Filtered Results",
     "events_found": "{{count}} events found",
-    "event_found": "{{count}} event found"
+    "event_found": "{{count}} event found",
+    "trending_now": "Trending Now",
+    "trending_desc": "Hot events everyone is talking about",
+    "this_week": "This Week",
+    "this_week_desc": "Don't miss out on these upcoming events",
+    "explore_all": "Explore All Events",
+    "find_perfect_event": "Find Your Perfect Event",
+    "hero_subtitle": "Search concerts, parties, conferences, festivals, and more across Haiti"
   },
   "ticket": {
     "ticket": "Ticket",

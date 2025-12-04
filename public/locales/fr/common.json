@@ -78,10 +78,18 @@
     "featured_weekend_desc": "Événements sélectionnés à ne pas manquer",
     "no_events": "Aucun événement trouvé",
     "browse_categories": "Parcourir par catégorie",
+    "browse_categories_desc": "Trouvez des événements qui correspondent à vos intérêts",
     "all_events": "Tous les événements",
     "filtered_results": "Résultats filtrés",
     "events_found": "{{count}} événements trouvés",
-    "event_found": "{{count}} événement trouvé"
+    "event_found": "{{count}} événement trouvé",
+    "trending_now": "Tendance maintenant",
+    "trending_desc": "Événements populaires dont tout le monde parle",
+    "this_week": "Cette semaine",
+    "this_week_desc": "Ne manquez pas ces événements à venir",
+    "explore_all": "Explorer tous les événements",
+    "find_perfect_event": "Trouvez votre événement parfait",
+    "hero_subtitle": "Recherchez des concerts, fêtes, conférences, festivals et plus à travers Haïti"
   },
   "ticket": {
     "ticket": "Billet",
