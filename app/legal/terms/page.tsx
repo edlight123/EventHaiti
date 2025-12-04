@@ -1,6 +1,5 @@
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import PullToRefresh from '@/components/PullToRefresh'
 import { getCurrentUser } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
@@ -11,12 +10,7 @@ export default async function TermsOfServicePage() {
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} />
 
-      <PullToRefresh
-        onRefresh={async () => {
-          'use server'
-          revalidatePath('/legal/terms')
-        }}
-      >
+      
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8 lg:py-12">
           <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-3 md:mb-4">Terms of Service</h1>
           <p className="text-[11px] sm:text-[13px] md:text-base text-gray-600 mb-4 sm:mb-6 md:mb-8">Last updated: November 23, 2025</p>
@@ -116,7 +110,7 @@ export default async function TermsOfServicePage() {
           </p>
         </div>
       </div>
-      </PullToRefresh>
+      
       <MobileNavWrapper user={user} />
     </div>
   )

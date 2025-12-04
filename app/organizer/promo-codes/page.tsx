@@ -2,7 +2,6 @@ import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import PullToRefresh from '@/components/PullToRefresh'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import PromoCodeManager from './PromoCodeManager'
@@ -77,12 +76,7 @@ export default async function PromoCodesPage({
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} />
 
-      <PullToRefresh onRefresh={async () => {
-        'use server'
-        const { revalidatePath } = await import('next/cache')
-        revalidatePath('/organizer/promo-codes')
-      }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
           <div className="mb-6 md:mb-8">
             <Link
               href="/organizer/events"
@@ -141,7 +135,7 @@ export default async function PromoCodesPage({
             organizerId={user.id}
           />
         </div>
-      </PullToRefresh>
+      
 
       <MobileNavWrapper user={user} />
     </div>

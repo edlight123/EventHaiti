@@ -25,7 +25,6 @@ import {
   Sparkles
 } from 'lucide-react'
 import Badge from '@/components/ui/Badge'
-import PullToRefresh from '@/components/PullToRefresh'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { revalidatePath } from 'next/cache'
 import Image from 'next/image'
@@ -129,7 +128,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
   const isValid = (serializedTicket.status === 'valid' || serializedTicket.status === 'active') && !serializedTicket.checked_in_at
 
   return (
-    <PullToRefresh onRefresh={refreshPage}>
+    
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 pb-mobile-nav">
         <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
@@ -372,6 +371,6 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
       
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
-    </PullToRefresh>
+    
   )
 }

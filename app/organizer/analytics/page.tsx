@@ -7,7 +7,6 @@ import SalesChart from '@/components/charts/SalesChart'
 import CategoryChart from '@/components/charts/CategoryChart'
 import { TrendingUp, DollarSign, Ticket, Calendar, ArrowLeft } from 'lucide-react'
 import Badge from '@/components/ui/Badge'
-import PullToRefresh from '@/components/PullToRefresh'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { revalidatePath } from 'next/cache'
 
@@ -95,7 +94,7 @@ export default async function AnalyticsPage() {
   }
 
   return (
-    <PullToRefresh onRefresh={refreshPage}>
+    
       <div className="min-h-screen bg-gray-50 pb-mobile-nav">
         <Navbar user={user} />
 
@@ -261,6 +260,6 @@ export default async function AnalyticsPage() {
       
       <MobileNavWrapper user={user} />
     </div>
-    </PullToRefresh>
+    
   )
 }

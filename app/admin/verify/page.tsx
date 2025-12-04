@@ -4,7 +4,6 @@ import { isAdmin } from '@/lib/admin'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import PullToRefresh from '@/components/PullToRefresh'
 import VerifyOrganizerForm from './VerifyOrganizerForm'
 import VerificationRequestReview from './VerificationRequestReview'
 import { revalidatePath } from 'next/cache'
@@ -89,12 +88,7 @@ export default async function AdminVerifyPage() {
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
       
-      <PullToRefresh
-        onRefresh={async () => {
-          'use server'
-          revalidatePath('/admin/verify')
-        }}
-      >
+      
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
         {/* Breadcrumb */}
         <div className="mb-4 sm:mb-6">
@@ -147,7 +141,7 @@ export default async function AdminVerifyPage() {
           <VerifyOrganizerForm organizers={organizers} />
         </div>
       </div>
-      </PullToRefresh>
+      
       <MobileNavWrapper user={user} />
     </div>
   )

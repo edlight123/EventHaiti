@@ -1,7 +1,6 @@
 import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
-import PullToRefresh from '@/components/PullToRefresh'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { revalidatePath } from 'next/cache'
 import { 
@@ -53,7 +52,7 @@ export default async function AdminDashboard() {
   const { gmv7d, tickets7d, refunds7d, refundsAmount7d } = metrics7d
 
   return (
-    <PullToRefresh onRefresh={refreshPage}>
+    
       <div className="min-h-screen bg-gray-50 pb-mobile-nav">
         <Navbar user={user} isAdmin={true} />
         
@@ -173,7 +172,7 @@ export default async function AdminDashboard() {
       
       <MobileNavWrapper user={user} isAdmin={true} />
     </div>
-    </PullToRefresh>
+    
   )
   } catch (error) {
     console.error('Admin dashboard fatal error:', error)

@@ -8,7 +8,6 @@ import { format } from 'date-fns'
 import QRCodeDisplay from '@/app/tickets/[id]/QRCodeDisplay'
 import AddToWalletButton from '@/components/AddToWalletButton'
 import { isDemoMode, DEMO_TICKETS, DEMO_EVENTS } from '@/lib/demo'
-import PullToRefresh from '@/components/PullToRefresh'
 import { revalidatePath } from 'next/cache'
 import Image from 'next/image'
 import { 
@@ -125,7 +124,7 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
   const usedTickets = serializedTickets.filter(t => t && t.checked_in_at)
 
   return (
-    <PullToRefresh onRefresh={refreshPage}>
+    
       <div className="min-h-screen bg-gray-50 pb-mobile-nav">
         <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
@@ -433,6 +432,6 @@ export default async function EventTicketsPage({ params }: { params: Promise<{ e
       
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
-    </PullToRefresh>
+    
   )
 }

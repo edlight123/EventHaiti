@@ -2,7 +2,6 @@ import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import PullToRefresh from '@/components/PullToRefresh'
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import { updateUserRole } from '@/lib/firestore/user-profile-server'
@@ -49,12 +48,7 @@ export default async function AdminUsersPage() {
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={true} />
 
-      <PullToRefresh
-        onRefresh={async () => {
-          'use server'
-          revalidatePath('/admin/users')
-        }}
-      >
+      
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
         <div className="mb-4 sm:mb-6">
           <Link href="/admin" className="text-teal-600 hover:text-teal-700 text-[13px] sm:text-sm font-medium">
@@ -222,7 +216,7 @@ export default async function AdminUsersPage() {
           )}
         </div>
       </div>
-      </PullToRefresh>
+      
       <MobileNavWrapper user={user} />
     </div>
   )

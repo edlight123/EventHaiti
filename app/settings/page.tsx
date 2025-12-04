@@ -5,7 +5,6 @@ import { redirect } from 'next/navigation'
 import { User, Mail, Phone, Shield, Bell, Lock, Trash2, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import Badge from '@/components/ui/Badge'
-import PullToRefresh from '@/components/PullToRefresh'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { revalidatePath } from 'next/cache'
 
@@ -24,7 +23,7 @@ export default async function SettingsPage() {
   }
 
   return (
-    <PullToRefresh onRefresh={refreshPage}>
+    
       <div className="min-h-screen bg-gray-50 pb-mobile-nav">
         <Navbar user={user} />
 
@@ -209,6 +208,6 @@ export default async function SettingsPage() {
       
       <MobileNavWrapper user={user} />
     </div>
-    </PullToRefresh>
+    
   )
 }

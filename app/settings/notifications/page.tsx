@@ -2,7 +2,6 @@ import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import PullToRefresh from '@/components/PullToRefresh'
 import { revalidatePath } from 'next/cache'
 import NotificationPreferences from '@/components/settings/NotificationPreferences'
 
@@ -18,7 +17,7 @@ export default async function NotificationSettingsPage() {
   }
 
   return (
-    <PullToRefresh onRefresh={refreshPage}>
+    
       <div className="min-h-screen bg-gray-50 pb-mobile-nav">
         <Navbar user={user} />
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -30,6 +29,6 @@ export default async function NotificationSettingsPage() {
         </div>
         <MobileNavWrapper user={user} />
       </div>
-    </PullToRefresh>
+    
   )
 }

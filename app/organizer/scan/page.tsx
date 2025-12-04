@@ -1,7 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import PullToRefresh from '@/components/PullToRefresh'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/firebase-db/server'
 import EventSelector from './EventSelector'
@@ -56,28 +55,22 @@ export default async function ScanTicketPage() {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-brand-50 pb-mobile-nav">
       <Navbar user={user} />
 
-      <PullToRefresh onRefresh={async () => {
-        'use server'
-        const { revalidatePath } = await import('next/cache')
-        revalidatePath('/organizer/scan')
-      }}>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-          <div className="mb-6 md:mb-8 text-center">
-            <div className="inline-flex items-center justify-center w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-purple-500 to-brand-500 rounded-xl md:rounded-2xl mb-3 md:mb-4 shadow-glow">
-              <QrCode className="w-7 h-7 md:w-8 md:h-8 text-white" />
-            </div>
-            <h1 className="text-2xl md:text-4xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">
-              Scan Tickets
-              <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-purple-500" />
-            </h1>
-            <p className="text-[13px] md:text-lg text-gray-600">
-              Fast and secure ticket validation for your events
-            </p>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        <div className="mb-6 md:mb-8 text-center">
+          <div className="inline-flex items-center justify-center w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-purple-500 to-brand-500 rounded-xl md:rounded-2xl mb-3 md:mb-4 shadow-glow">
+            <QrCode className="w-7 h-7 md:w-8 md:h-8 text-white" />
           </div>
-
-          <EventSelector events={events} organizerId={user.id} />
+          <h1 className="text-2xl md:text-4xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">
+            Scan Tickets
+            <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-purple-500" />
+          </h1>
+          <p className="text-[13px] md:text-lg text-gray-600">
+            Fast and secure ticket validation for your events
+          </p>
         </div>
-      </PullToRefresh>
+
+        <EventSelector events={events} organizerId={user.id} />
+      </div>
 
       <MobileNavWrapper user={user} />
     </div>
