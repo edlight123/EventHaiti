@@ -1,11 +1,75 @@
 {
-  "title": "Mes Billets",
+  "title": "Mes billets",
   "subtitle": "Vos billets",
-  "no_tickets": "Pas encore de billets",
-  "no_tickets_description": "Vous n'avez pas encore acheté de billets. Parcourez les événements pour trouver quelque chose qui vous intéresse!",
-  "browse_events": "Parcourir les Événements",
-  "upcoming": "À venir",
-  "past": "Passés",
-  "transferred": "Transférés",
-  "cancelled": "Annulés"
+  "empty": {
+    "title": "Pas encore de billets",
+    "description": "Vous n'avez pas encore acheté de billets. Parcourez les événements pour trouver quelque chose qui vous intéresse!",
+    "action": "Parcourir les événements"
+  },
+  "upcoming": {
+    "title": "Événements à venir",
+    "count": "{{count}} événement(s) à venir"
+  },
+  "past": {
+    "title": "Événements passés",
+    "count": "{{count}} événement(s) passé(s)"
+  },
+  "status": {
+    "transferred": "Transféré",
+    "cancelled": "Annulé"
+  },
+  "detail": {
+    "back": "Tous les billets",
+    "ticket_code": "Code du billet",
+    "checked_in": "Enregistré",
+    "checked_in_at": "à {{time}}",
+    "date": "Date",
+    "venue": "Lieu",
+    "attendee": "Participant",
+    "purchased": "Acheté",
+    "view_event": "Voir les détails de l'événement",
+    "google_maps": "Google Maps",
+    "apple_maps": "Apple Plans",
+    "how_to_use_title": "Comment utiliser",
+    "how_to_use_subtitle": "Votre guide d'entrée",
+    "how_to_use_steps": {
+      "arrive": "Arrivez 15-30 minutes avant le début de l'événement",
+      "qr_code": "Présentez votre code QR à l'entrée pour le scanner",
+      "id": "Apportez une pièce d'identité valide correspondant au nom sur votre billet",
+      "offline": "Capturez cette page au cas où vous seriez hors ligne sur le lieu"
+    }
+  },
+  "event_tickets": {
+    "ready": "Vos billets sont prêts à être utilisés",
+    "date_time": "Date et heure",
+    "date_tba": "Date à confirmer",
+    "time_tba": "Heure à confirmer",
+    "venue_tba": "Lieu à confirmer",
+    "location_tba": "À confirmer",
+    "active_tickets": "Billets actifs",
+    "used_tickets": "Billets utilisés",
+    "ticket_number": "#{{number}}",
+    "ticket_id": "ID du billet",
+    "qr_unavailable": "Code QR indisponible",
+    "qr_used": "Code QR utilisé",
+    "used_at": "Utilisé le {{date}}",
+    "view_details": "Voir les détails",
+    "purchase_note": "Gardez ce code QR en sécurité. Vous en aurez besoin pour entrer à l'événement.",
+    "how_to_use": {
+      "title": "Comment utiliser",
+      "subtitle": "Montrez votre code QR à l'entrée",
+      "arrive": "Arrivez au lieu à l'heure",
+      "present": "Présentez votre code QR au personnel",
+      "enjoy": "Enregistrez-vous et profitez!"
+    },
+    "save_wallet": {
+      "title": "Enregistrer dans le portefeuille",
+      "subtitle": "Accès rapide le jour de l'événement",
+      "offline": "Fonctionne hors ligne",
+      "lock_screen": "Affiche sur l'écran de verrouillage",
+      "reminders": "Rappels automatiques"
+    },
+    "back_to_tickets": "← Retour à tous les billets",
+    "add_to_calendar": "Ajouter au calendrier"
+  }
 }

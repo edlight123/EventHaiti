@@ -1,11 +1,75 @@
 {
   "title": "Biyè Mwen",
   "subtitle": "Biyè ou yo",
-  "no_tickets": "Pa gen biyè ankò",
-  "no_tickets_description": "Ou poko achte biyè. Gade evènman yo pou jwenn yon bagay ou ta renmen patisipe!",
-  "browse_events": "Gade Evènman yo",
-  "upcoming": "K ap vini",
-  "past": "Pase",
-  "transferred": "Transfere",
-  "cancelled": "Anile"
+  "empty": {
+    "title": "Pa gen biyè ankò",
+    "description": "Ou poko achte biyè. Gade evènman yo pou jwenn yon bagay ou ta renmen patisipe!",
+    "action": "Gade Evènman yo"
+  },
+  "upcoming": {
+    "title": "Evènman k ap vini",
+    "count": "{{count}} evènman k ap vini"
+  },
+  "past": {
+    "title": "Evènman ki pase",
+    "count": "{{count}} evènman ki pase"
+  },
+  "status": {
+    "transferred": "Transfere",
+    "cancelled": "Anile"
+  },
+  "detail": {
+    "back": "Tout tikè",
+    "ticket_code": "Kòd tikè",
+    "checked_in": "Anrejistre",
+    "checked_in_at": "nan {{time}}",
+    "date": "Dat",
+    "venue": "Kote",
+    "attendee": "Patisipan",
+    "purchased": "Achte",
+    "view_event": "Gade detay evènman an",
+    "google_maps": "Google Maps",
+    "apple_maps": "Apple Maps",
+    "how_to_use_title": "Kijan pou itilize",
+    "how_to_use_subtitle": "Gid antre ou",
+    "how_to_use_steps": {
+      "arrive": "Rive 15-30 minit anvan evènman an kòmanse",
+      "qr_code": "Prezante kòd QR ou nan antre a pou eskane",
+      "id": "Pote yon ID valid ki matche ak non ki sou tikè ou",
+      "offline": "Pran yon screenshot paj sa a nan ka ou pa gen entènèt nan kote a"
+    }
+  },
+  "event_tickets": {
+    "ready": "Tikè ou yo pare pou itilize",
+    "date_time": "Dat ak lè",
+    "date_tba": "Dat pou konfime",
+    "time_tba": "Lè pou konfime",
+    "venue_tba": "Kote pou konfime",
+    "location_tba": "Pou konfime",
+    "active_tickets": "Tikè aktif",
+    "used_tickets": "Tikè itilize",
+    "ticket_number": "#{{number}}",
+    "ticket_id": "ID tikè",
+    "qr_unavailable": "Kòd QR pa disponib",
+    "qr_used": "Kòd QR itilize",
+    "used_at": "Itilize {{date}}",
+    "view_details": "Gade detay",
+    "purchase_note": "Kenbe kòd QR sa a an sekirite. Ou pral bezwen li pou antre nan evènman an.",
+    "how_to_use": {
+      "title": "Kijan pou itilize",
+      "subtitle": "Montre kòd QR ou nan antre a",
+      "arrive": "Rive nan kote a alè",
+      "present": "Prezante kòd QR ou bay anplwaye yo",
+      "enjoy": "Anrejistre epi jwi!"
+    },
+    "save_wallet": {
+      "title": "Anrejistre nan Wallet",
+      "subtitle": "Aksè rapid jou evènman an",
+      "offline": "Fonksyone san entènèt",
+      "lock_screen": "Parèt sou ekran bloke",
+      "reminders": "Rapèl otomatik"
+    },
+    "back_to_tickets": "← Retounen nan tout tikè",
+    "add_to_calendar": "Ajoute nan kalandriye"
+  }
 }

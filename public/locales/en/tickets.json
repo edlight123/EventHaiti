@@ -1,11 +1,75 @@
 {
   "title": "My Tickets",
   "subtitle": "Your tickets",
-  "no_tickets": "No tickets yet",
-  "no_tickets_description": "You haven't purchased any tickets yet. Browse events to find something you'd like to attend!",
-  "browse_events": "Browse Events",
-  "upcoming": "Upcoming",
-  "past": "Past",
-  "transferred": "Transferred",
-  "cancelled": "Cancelled"
+  "empty": {
+    "title": "No tickets yet",
+    "description": "You haven't purchased any tickets yet. Browse events to find something you'd like to attend!",
+    "action": "Browse Events"
+  },
+  "upcoming": {
+    "title": "Upcoming Events",
+    "count": "{{count}} upcoming event(s)"
+  },
+  "past": {
+    "title": "Past Events",
+    "count": "{{count}} past event(s)"
+  },
+  "status": {
+    "transferred": "Transferred",
+    "cancelled": "Cancelled"
+  },
+  "detail": {
+    "back": "All Tickets",
+    "ticket_code": "Ticket Code",
+    "checked_in": "Checked In",
+    "checked_in_at": "at {{time}}",
+    "date": "Date",
+    "venue": "Venue",
+    "attendee": "Attendee",
+    "purchased": "Purchased",
+    "view_event": "View Event Details",
+    "google_maps": "Google Maps",
+    "apple_maps": "Apple Maps",
+    "how_to_use_title": "How to Use",
+    "how_to_use_subtitle": "Your entry guide",
+    "how_to_use_steps": {
+      "arrive": "Arrive 15-30 minutes before the event starts",
+      "qr_code": "Present your QR code at the entrance for scanning",
+      "id": "Bring valid ID matching the name on your ticket",
+      "offline": "Screenshot this page in case you're offline at the venue"
+    }
+  },
+  "event_tickets": {
+    "ready": "Your tickets are ready to use",
+    "date_time": "Date & Time",
+    "date_tba": "Date TBA",
+    "time_tba": "Time TBA",
+    "venue_tba": "Venue TBA",
+    "location_tba": "TBA",
+    "active_tickets": "Active Tickets",
+    "used_tickets": "Used Tickets",
+    "ticket_number": "#{{number}}",
+    "ticket_id": "Ticket ID",
+    "qr_unavailable": "QR Code Unavailable",
+    "qr_used": "QR Code Used",
+    "used_at": "Used on {{date}}",
+    "view_details": "View Details",
+    "purchase_note": "Keep this QR code safe. You'll need it to enter the event.",
+    "how_to_use": {
+      "title": "How to Use",
+      "subtitle": "Show your QR code at the entrance",
+      "arrive": "Arrive at the venue on time",
+      "present": "Present your QR code to staff",
+      "enjoy": "Get checked in and enjoy!"
+    },
+    "save_wallet": {
+      "title": "Save to Wallet",
+      "subtitle": "Quick access on event day",
+      "offline": "Works offline",
+      "lock_screen": "Shows on lock screen",
+      "reminders": "Automatic reminders"
+    },
+    "back_to_tickets": "← Back to All Tickets",
+    "add_to_calendar": "Add to Calendar"
+  }
 }
