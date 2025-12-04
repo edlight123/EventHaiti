@@ -1,0 +1,33 @@
+{
+  "dashboard": {
+    "title": "Tablo Bò Admin",
+    "subtitle": "Jere operasyon platfòm nan"
+  },
+  "events": {
+    "title": "Moderasyon Evènman",
+    "subtitle": "Egzaminen epi jere tout evènman sou platfòm nan",
+    "back_to_dashboard": "Retounen nan Tablo Bò Admin",
+    "filter_all": "Tout evènman yo",
+    "filter_pending": "K ap tann egzamen",
+    "filter_published": "Pibliye",
+    "filter_rejected": "Rejte",
+    "filter_unpublished": "Pa pibliye",
+    "approve": "Apwouve",
+    "reject": "Rejte",
+    "view_details": "Gade detay",
+    "no_events": "Pa gen evènman nan kategori sa a"
+  },
+  "users": {
+    "title": "Jesyon Itilizatè",
+    "subtitle": "Jere kont itilizatè yo ak pèmisyon",
+    "total_users": "Total itilizatè",
+    "active_users": "Itilizatè aktif",
+    "banned_users": "Itilizatè bani"
+  },
+  "stats": {
+    "total_events": "Total evènman",
+    "pending_approval": "K ap tann apwobasyon",
+    "total_tickets_sold": "Total tikè vann",
+    "revenue": "Revni"
+  }
+}

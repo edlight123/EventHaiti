@@ -4,6 +4,7 @@ import './globals.css'
 import { BRAND } from '@/config/brand'
 import { ToastProvider } from '@/components/ui/Toast'
 import PWAInstallPrompt from '@/components/pwa/PWAInstallPrompt'
+import { I18nProvider } from '@/components/I18nProvider'
 
 // Force rebuild 2024-01-XX - Fix Suspense errors cascading from discover page
 const inter = Inter({ subsets: ['latin'] })
@@ -58,10 +59,12 @@ export default function RootLayout({
         <link rel="preconnect" href="https://api.stripe.com" crossOrigin="anonymous" />
       </head>
       <body className={inter.className + ' mobile-typography'}>
-        <ToastProvider>
-          {children}
-        </ToastProvider>
-        <PWAInstallPrompt />
+        <I18nProvider>
+          <ToastProvider>
+            {children}
+          </ToastProvider>
+          <PWAInstallPrompt />
+        </I18nProvider>
       </body>
     </html>
   )

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { MapPin, Tag, Globe, Info } from 'lucide-react'
 import { CITIES, CITY_CONFIG, CATEGORIES, getLocationTypeLabel, getSubdivisions } from '@/lib/filters/config'
 import type { UserProfile } from '@/lib/firestore/user-profile'
@@ -11,6 +12,7 @@ interface PreferencesCardProps {
 }
 
 export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
+  const { i18n, t } = useTranslation('profile')
   const [defaultCity, setDefaultCity] = useState(profile.defaultCity || '')
   const [defaultSubarea, setDefaultSubarea] = useState(profile.defaultSubarea || '')
   const [favoriteCategories, setFavoriteCategories] = useState<string[]>(profile.favoriteCategories || [])
@@ -80,6 +82,9 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
     setLanguage(lang)
     setIsUpdating(true)
     try {
+      // Update i18n language immediately for UI
+      await i18n.changeLanguage(lang)
+      // Persist to user profile
       await onUpdate({ language: lang })
     } catch (error) {
       console.error('Failed to update language:', error)
@@ -92,8 +97,8 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-1">Preferences</h2>
-        <p className="text-sm text-gray-600">Customize your event discovery experience</p>
+        <h2 className="text-xl font-bold text-gray-900 mb-1">{t('preferences.title')}</h2>
+        <p className="text-sm text-gray-600">{t('preferences.subtitle')}</p>
       </div>
 
       <div className="space-y-6">
@@ -106,13 +111,13 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
               </div>
               <div>
                 <p className="text-xs font-semibold text-teal-700 uppercase tracking-wide mb-1">
-                  Default Location (Used by Discover)
+                  {t('preferences.default_location')}
                 </p>
                 <p className="text-lg font-bold text-gray-900">
                   {defaultCity} • {defaultSubarea}
                 </p>
                 <p className="text-xs text-teal-600 mt-1">
-                  Events near this location will be prioritized in your feed
+                  {t('preferences.location_note')}
                 </p>
               </div>
             </div>
@@ -123,7 +128,7 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
         <div>
           <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
             <MapPin className="w-4 h-4" />
-            Default City
+            {t('preferences.default_city')}
           </label>
           <select
             value={defaultCity}
@@ -131,7 +136,7 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
             disabled={isUpdating}
             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <option value="">Select a city...</option>
+            <option value="">{t('preferences.select_city')}</option>
             {CITIES.map(city => (
               <option key={city} value={city}>{city}</option>
             ))}
@@ -151,7 +156,7 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
               disabled={isUpdating}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="">Select a {subareaLabel.toLowerCase()}...</option>
+              <option value="">{t('preferences.select_area', { type: subareaLabel.toLowerCase() })}</option>
               {subdivisions.map(subarea => (
                 <option key={subarea} value={subarea}>{subarea}</option>
               ))}
@@ -163,7 +168,7 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
         <div>
           <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
             <Tag className="w-4 h-4" />
-            Favorite Categories
+            {t('preferences.favorite_categories')}
           </label>
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map(category => {
@@ -185,7 +190,7 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
             })}
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            Select your interests to get personalized event recommendations
+            {t('preferences.categories_note')}
           </p>
         </div>
 
@@ -193,13 +198,13 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
         <div>
           <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
             <Globe className="w-4 h-4" />
-            Language
+            {t('preferences.language')}
           </label>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { code: 'en' as const, label: 'English' },
-              { code: 'fr' as const, label: 'Français' },
-              { code: 'ht' as const, label: 'Kreyòl' }
+              { code: 'en' as const, label: t('preferences.language_en') },
+              { code: 'fr' as const, label: t('preferences.language_fr') },
+              { code: 'ht' as const, label: t('preferences.language_ht') }
             ].map(({ code, label }) => (
               <button
                 key={code}

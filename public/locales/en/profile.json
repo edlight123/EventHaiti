@@ -1,0 +1,49 @@
+{
+  "title": "My Profile",
+  "subtitle": "Manage your account settings and preferences",
+  "organizer_settings": "Organizer Settings",
+  "header": {
+    "edit_profile": "Edit Profile",
+    "full_name": "Full Name",
+    "email": "Email",
+    "phone": "Phone Number",
+    "bio": "Bio",
+    "save": "Save Changes"
+  },
+  "preferences": {
+    "title": "Preferences",
+    "subtitle": "Customize your event discovery experience",
+    "default_location": "Default Location (Used by Discover)",
+    "location_note": "Events near this location will be prioritized in your feed",
+    "default_city": "Default City",
+    "select_city": "Select a city...",
+    "select_area": "Select a {{type}}...",
+    "favorite_categories": "Favorite Categories",
+    "categories_note": "Select your interests to get personalized event recommendations",
+    "language": "Language",
+    "language_en": "English",
+    "language_fr": "Français",
+    "language_ht": "Kreyòl"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Manage how you receive updates",
+    "email_notifications": "Email Notifications",
+    "event_reminders": "Event Reminders",
+    "event_reminders_desc": "Get notified before your events start",
+    "ticket_purchase": "Ticket Purchase Confirmations",
+    "ticket_purchase_desc": "Receive confirmations when you buy tickets",
+    "new_events": "New Events",
+    "new_events_desc": "Get notified about new events in your favorite categories",
+    "organizer_updates": "Organizer Updates",
+    "organizer_updates_desc": "Receive updates from organizers you follow"
+  },
+  "account": {
+    "title": "Account",
+    "subtitle": "Manage your account settings",
+    "change_password": "Change Password",
+    "delete_account": "Delete Account",
+    "delete_account_warning": "This action cannot be undone",
+    "sign_out": "Sign Out"
+  }
+}

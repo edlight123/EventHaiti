@@ -1,0 +1,33 @@
+{
+  "dashboard": {
+    "title": "Tableau de bord Admin",
+    "subtitle": "Gérer les opérations de la plateforme"
+  },
+  "events": {
+    "title": "Modération des événements",
+    "subtitle": "Examiner et gérer tous les événements sur la plateforme",
+    "back_to_dashboard": "Retour au tableau de bord Admin",
+    "filter_all": "Tous les événements",
+    "filter_pending": "En attente d'examen",
+    "filter_published": "Publiés",
+    "filter_rejected": "Rejetés",
+    "filter_unpublished": "Non publiés",
+    "approve": "Approuver",
+    "reject": "Rejeter",
+    "view_details": "Voir les détails",
+    "no_events": "Aucun événement dans cette catégorie"
+  },
+  "users": {
+    "title": "Gestion des utilisateurs",
+    "subtitle": "Gérer les comptes utilisateurs et les permissions",
+    "total_users": "Total d'utilisateurs",
+    "active_users": "Utilisateurs actifs",
+    "banned_users": "Utilisateurs bannis"
+  },
+  "stats": {
+    "total_events": "Total d'événements",
+    "pending_approval": "En attente d'approbation",
+    "total_tickets_sold": "Total de billets vendus",
+    "revenue": "Revenus"
+  }
+}

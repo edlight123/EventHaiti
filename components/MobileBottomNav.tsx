@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, Compass, Ticket, User, Briefcase, Shield } from 'lucide-react'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface MobileBottomNavProps {
   isLoggedIn: boolean
@@ -13,6 +14,7 @@ interface MobileBottomNavProps {
 
 export default function MobileBottomNav({ isLoggedIn, isOrganizer = false, isAdmin = false }: MobileBottomNavProps) {
   const pathname = usePathname()
+  const { t } = useTranslation('common')
 
   const isActive = (path: string) => {
     if (path === '/') return pathname === '/'
@@ -20,12 +22,12 @@ export default function MobileBottomNav({ isLoggedIn, isOrganizer = false, isAdm
   }
 
   const tabs = useMemo(() => [
-    { href: '/', label: 'Home', icon: Home, show: true },
-    { href: '/discover', label: 'Discover', icon: Compass, show: true },
-    { href: '/tickets', label: 'Tickets', icon: Ticket, show: isLoggedIn },
-    { href: '/profile', label: 'Profile', icon: User, show: isLoggedIn },
-    { href: isAdmin ? '/admin' : '/organizer', label: isAdmin ? 'Admin' : 'Organizer', icon: isAdmin ? Shield : Briefcase, show: isLoggedIn && (isOrganizer || isAdmin) },
-  ].filter(tab => tab.show), [isLoggedIn, isOrganizer, isAdmin])
+    { href: '/', label: t('nav.home'), icon: Home, show: true },
+    { href: '/discover', label: t('nav.discover'), icon: Compass, show: true },
+    { href: '/tickets', label: t('nav.myTickets'), icon: Ticket, show: isLoggedIn },
+    { href: '/profile', label: t('nav.profile'), icon: User, show: isLoggedIn },
+    { href: isAdmin ? '/admin' : '/organizer', label: isAdmin ? t('nav.admin') : t('nav.organizer'), icon: isAdmin ? Shield : Briefcase, show: isLoggedIn && (isOrganizer || isAdmin) },
+  ].filter(tab => tab.show), [isLoggedIn, isOrganizer, isAdmin, t])
 
   // Don't show if not logged in and only 2 tabs would show
   if (!isLoggedIn && tabs.length <= 2) {

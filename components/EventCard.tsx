@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { format } from 'date-fns'
 import Badge from './ui/Badge'
 import { TrendingUp, Star, Sparkles } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface Event {
   id: string
@@ -30,6 +31,7 @@ interface EventCardProps {
 }
 
 export default function EventCard({ event, priority = false, index = 0 }: EventCardProps) {
+  const { t } = useTranslation('common')
   const remainingTickets = event.total_tickets - event.tickets_sold
   const isSoldOut = remainingTickets <= 0
   const isFree = !event.ticket_price || event.ticket_price === 0
@@ -71,12 +73,12 @@ export default function EventCard({ event, priority = false, index = 0 }: EventC
               )}
               {isTrending && (
                 <Badge variant="trending" size="sm" icon={<TrendingUp className="w-3 h-3" />}>
-                  Trending
+                  {t('events.trending')}
                 </Badge>
               )}
               {isNew && (
                 <Badge variant="new" size="sm" icon={<Sparkles className="w-3 h-3" />}>
-                  New
+                  {t('events.new')}
                 </Badge>
               )}
             </div>
@@ -85,12 +87,12 @@ export default function EventCard({ event, priority = false, index = 0 }: EventC
             <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
               {isSoldOut && (
                 <Badge variant="error" size="sm">
-                  SOLD OUT
+                  {t('events.soldOut')}
                 </Badge>
               )}
               {selloutSoon && !isSoldOut && (
                 <Badge variant="warning" size="sm">
-                  {remainingTickets} left!
+                  {t('ticket.remaining', { count: remainingTickets })}
                 </Badge>
               )}
             </div>
@@ -188,17 +190,17 @@ export default function EventCard({ event, priority = false, index = 0 }: EventC
           <div className="flex items-center justify-between pt-2 sm:pt-2.5 md:pt-3 border-t border-gray-100">
             <div>
               {isFree ? (
-                <p className="text-2xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">FREE</p>
+                <p className="text-2xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">{t('common.free')}</p>
               ) : (
                 <p className="text-2xl sm:text-2xl md:text-3xl font-bold text-gray-900">
-                  From {event.ticket_price} <span className="text-sm sm:text-sm font-normal text-gray-600">{event.currency}</span>
+                  {t('common.from')} {event.ticket_price} <span className="text-sm sm:text-sm font-normal text-gray-600">{event.currency}</span>
                 </p>
               )}
             </div>
             {!isSoldOut && (
               <div className="text-right">
                 <p className={`text-sm sm:text-sm font-bold ${selloutSoon ? 'text-warning-600' : 'text-brand-700'}`}>
-                  {remainingTickets} left
+                  {t('ticket.remaining', { count: remainingTickets })}
                 </p>
               </div>
             )}

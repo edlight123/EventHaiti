@@ -1,0 +1,49 @@
+{
+  "title": "Mon Profil",
+  "subtitle": "Gérez les paramètres et préférences de votre compte",
+  "organizer_settings": "Paramètres organisateur",
+  "header": {
+    "edit_profile": "Modifier le profil",
+    "full_name": "Nom complet",
+    "email": "E-mail",
+    "phone": "Numéro de téléphone",
+    "bio": "Biographie",
+    "save": "Enregistrer les modifications"
+  },
+  "preferences": {
+    "title": "Préférences",
+    "subtitle": "Personnalisez votre expérience de découverte d'événements",
+    "default_location": "Lieu par défaut (Utilisé par Découvrir)",
+    "location_note": "Les événements près de cet endroit seront priorisés dans votre fil",
+    "default_city": "Ville par défaut",
+    "select_city": "Sélectionner une ville...",
+    "select_area": "Sélectionner un(e) {{type}}...",
+    "favorite_categories": "Catégories favorites",
+    "categories_note": "Sélectionnez vos intérêts pour obtenir des recommandations personnalisées",
+    "language": "Langue",
+    "language_en": "English",
+    "language_fr": "Français",
+    "language_ht": "Kreyòl"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Gérez comment vous recevez les mises à jour",
+    "email_notifications": "Notifications par e-mail",
+    "event_reminders": "Rappels d'événements",
+    "event_reminders_desc": "Soyez notifié avant le début de vos événements",
+    "ticket_purchase": "Confirmations d'achat de billets",
+    "ticket_purchase_desc": "Recevez des confirmations lors de l'achat de billets",
+    "new_events": "Nouveaux événements",
+    "new_events_desc": "Soyez notifié des nouveaux événements dans vos catégories favorites",
+    "organizer_updates": "Mises à jour des organisateurs",
+    "organizer_updates_desc": "Recevez des mises à jour des organisateurs que vous suivez"
+  },
+  "account": {
+    "title": "Compte",
+    "subtitle": "Gérez les paramètres de votre compte",
+    "change_password": "Changer le mot de passe",
+    "delete_account": "Supprimer le compte",
+    "delete_account_warning": "Cette action ne peut pas être annulée",
+    "sign_out": "Se déconnecter"
+  }
+}

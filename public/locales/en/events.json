@@ -1,0 +1,29 @@
+{
+  "details": {
+    "title": "Event Details",
+    "description": "Description",
+    "when": "When",
+    "where": "Where",
+    "organizer": "Organizer",
+    "category": "Category",
+    "tickets_available": "Tickets Available",
+    "price_range": "Price Range",
+    "share": "Share Event",
+    "favorite": "Add to Favorites",
+    "unfavorite": "Remove from Favorites"
+  },
+  "actions": {
+    "buy_now": "Buy Tickets Now",
+    "sold_out": "Sold Out",
+    "join_waitlist": "Join Waitlist",
+    "get_directions": "Get Directions",
+    "add_to_calendar": "Add to Calendar"
+  },
+  "info": {
+    "verified_organizer": "Verified Organizer",
+    "popular_event": "Popular Event",
+    "selling_fast": "Selling Fast",
+    "almost_full": "Almost Full",
+    "last_tickets": "Last tickets remaining"
+  }
+}

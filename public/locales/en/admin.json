@@ -1,0 +1,33 @@
+{
+  "dashboard": {
+    "title": "Admin Dashboard",
+    "subtitle": "Manage platform operations"
+  },
+  "events": {
+    "title": "Events Moderation",
+    "subtitle": "Review and manage all events on the platform",
+    "back_to_dashboard": "Back to Admin Dashboard",
+    "filter_all": "All Events",
+    "filter_pending": "Pending Review",
+    "filter_published": "Published",
+    "filter_rejected": "Rejected",
+    "filter_unpublished": "Unpublished",
+    "approve": "Approve",
+    "reject": "Reject",
+    "view_details": "View Details",
+    "no_events": "No events in this category"
+  },
+  "users": {
+    "title": "User Management",
+    "subtitle": "Manage user accounts and permissions",
+    "total_users": "Total Users",
+    "active_users": "Active Users",
+    "banned_users": "Banned Users"
+  },
+  "stats": {
+    "total_events": "Total Events",
+    "pending_approval": "Pending Approval",
+    "total_tickets_sold": "Total Tickets Sold",
+    "revenue": "Revenue"
+  }
+}

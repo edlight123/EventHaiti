@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 import Badge from './ui/Badge'
 import { TrendingUp, Heart, Share2 } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Event {
   id: string
@@ -32,6 +33,7 @@ interface EventCardHorizontalProps {
 }
 
 export default function EventCardHorizontal({ event }: EventCardHorizontalProps) {
+  const { t } = useTranslation('common')
   const remainingTickets = event.total_tickets - event.tickets_sold
   const isSoldOut = remainingTickets <= 0
   const isFree = !event.ticket_price || event.ticket_price === 0
@@ -95,7 +97,7 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
           {/* Status badges */}
           <div className="absolute top-2 left-2 flex flex-col gap-1">
             {isSoldOut && (
-              <Badge variant="error" size="sm">SOLD OUT</Badge>
+              <Badge variant="error" size="sm">{t('events.soldOut')}</Badge>
             )}
             {isTrending && !isSoldOut && (
               <Badge variant="trending" size="sm">
@@ -134,11 +136,11 @@ export default function EventCardHorizontal({ event }: EventCardHorizontalProps)
             <div>
               {isFree ? (
                 <span className="text-sm sm:text-base font-bold text-success-600">
-                  FREE
+                  {t('common.free')}
                 </span>
               ) : (
                 <span className="text-sm sm:text-base font-bold text-gray-900">
-                  From {event.ticket_price} <span className="text-xs font-normal">{event.currency}</span>
+                  {t('common.from')} {event.ticket_price} <span className="text-xs font-normal">{event.currency}</span>
                 </span>
               )}
             </div>

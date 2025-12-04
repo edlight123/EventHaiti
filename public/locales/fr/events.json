@@ -1,0 +1,29 @@
+{
+  "details": {
+    "title": "Détails de l'événement",
+    "description": "Description",
+    "when": "Quand",
+    "where": "Où",
+    "organizer": "Organisateur",
+    "category": "Catégorie",
+    "tickets_available": "Billets disponibles",
+    "price_range": "Fourchette de prix",
+    "share": "Partager l'événement",
+    "favorite": "Ajouter aux favoris",
+    "unfavorite": "Retirer des favoris"
+  },
+  "actions": {
+    "buy_now": "Acheter des billets maintenant",
+    "sold_out": "Complet",
+    "join_waitlist": "Rejoindre la liste d'attente",
+    "get_directions": "Obtenir l'itinéraire",
+    "add_to_calendar": "Ajouter au calendrier"
+  },
+  "info": {
+    "verified_organizer": "Organisateur vérifié",
+    "popular_event": "Événement populaire",
+    "selling_fast": "Se vend rapidement",
+    "almost_full": "Presque complet",
+    "last_tickets": "Derniers billets restants"
+  }
+}

@@ -2,11 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 
 export default function SearchBar() {
   const [searchQuery, setSearchQuery] = useState('')
   const [location, setLocation] = useState('')
   const router = useRouter()
+  const { t } = useTranslation('common')
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,7 +40,7 @@ export default function SearchBar() {
             </svg>
             <input
               type="text"
-              placeholder="Search for events..."
+              placeholder={t('common.search_placeholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full outline-none text-gray-900 placeholder-gray-400 bg-transparent text-lg"
@@ -76,7 +78,7 @@ export default function SearchBar() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-              Search
+              {t('common.search')}
             </span>
           </button>
         </div>

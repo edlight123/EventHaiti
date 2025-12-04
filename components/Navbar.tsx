@@ -6,6 +6,7 @@ import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 import { useRouter } from 'next/navigation'
 import { BRAND } from '@/config/brand'
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { isDemoMode, isDemoEmail } from '@/lib/demo'
 import { demoLogout } from '@/app/auth/actions'
 import { NotificationBell } from './NotificationBell'
@@ -23,6 +24,7 @@ interface NavbarProps {
 export default function Navbar({ user, isAdmin = false }: NavbarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const { t } = useTranslation('common')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   async function handleSignOut() {
@@ -55,7 +57,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                   pathname === '/' ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                Events
+                {t('nav.home')}
               </Link>
               <Link
                 href="/discover"
@@ -63,7 +65,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                   pathname === '/discover' ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                Discover
+                {t('nav.discover')}
               </Link>
               {user && (
                 <>
@@ -81,7 +83,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                       pathname?.startsWith('/tickets') ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
                     }`}
                   >
-                    My Tickets
+                    {t('nav.myTickets')}
                   </Link>
                   <Link
                     href="/favorites"
@@ -89,7 +91,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                       pathname === '/favorites' ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
                     }`}
                   >
-                    Favorites
+                    {t('nav.favorites')}
                   </Link>
                   <Link
                     href="/organizer"
@@ -97,7 +99,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                       pathname?.startsWith('/organizer') ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
                     }`}
                   >
-                    Organizer
+                    {t('nav.organizer')}
                   </Link>
                   {isAdmin && (
                     <Link
@@ -106,7 +108,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                         pathname?.startsWith('/admin') ? 'bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
                       }`}
                     >
-                      Admin
+                      {t('nav.admin')}
                     </Link>
                   )}
                 </>
@@ -133,7 +135,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                   onClick={handleSignOut}
                   className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
                 >
-                  Sign out
+                  {t('nav.signOut')}
                 </button>
               </>
             ) : (
@@ -142,13 +144,13 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                   href="/auth/login"
                   className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
                 >
-                  Sign in
+                  {t('nav.signIn')}
                 </Link>
                 <Link
                   href="/auth/signup"
                   className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 shadow-md hover:shadow-lg transition-all duration-200"
                 >
-                  Sign up
+                  {t('auth:signup.submit')}
                 </Link>
               </>
             )}
@@ -180,7 +182,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                   pathname === '/' ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                Events
+                {t('nav.home')}
               </Link>
               <Link
                 href="/discover"
@@ -189,7 +191,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                   pathname === '/discover' ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                Discover
+                {t('nav.discover')}
               </Link>
               {user && (
                 <>
@@ -200,7 +202,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                       pathname?.startsWith('/tickets') ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
-                    My Tickets
+                    {t('nav.myTickets')}
                   </Link>
                   <Link
                     href="/favorites"
@@ -209,7 +211,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                       pathname === '/favorites' ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
-                    Favorites
+                    {t('nav.favorites')}
                   </Link>
                   <Link
                     href="/organizer/events"
@@ -218,7 +220,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                       pathname?.startsWith('/organizer') ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
-                    My Events
+                    {t('nav.myEvents')}
                   </Link>
                   {isAdmin && (
                     <Link
@@ -228,7 +230,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                         pathname?.startsWith('/admin') ? 'bg-orange-50 text-orange-700' : 'text-gray-700 hover:bg-gray-100'
                       }`}
                     >
-                      Admin
+                      {t('nav.admin')}
                     </Link>
                   )}
                   <Link
@@ -238,7 +240,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                       pathname === '/profile' ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
-                    Profile
+                    {t('nav.profile')}
                   </Link>
                 </>
               )}

@@ -1,0 +1,49 @@
+{
+  "title": "Pwofil Mwen",
+  "subtitle": "Jere paramèt ak preferans kont ou a",
+  "organizer_settings": "Paramèt òganizatè",
+  "header": {
+    "edit_profile": "Modifye pwofil",
+    "full_name": "Non konplè",
+    "email": "Imel",
+    "phone": "Nimewo telefòn",
+    "bio": "Byografi",
+    "save": "Anrejistre chanjman yo"
+  },
+  "preferences": {
+    "title": "Preferans",
+    "subtitle": "Pèsonalize eksperyans dekouvèt evènman ou",
+    "default_location": "Kote pa defo (Itilize pa Dekouvri)",
+    "location_note": "Evènman tou pre kote sa a ap gen priyorite nan fil ou a",
+    "default_city": "Vil pa defo",
+    "select_city": "Chwazi yon vil...",
+    "select_area": "Chwazi yon {{type}}...",
+    "favorite_categories": "Kategori favori",
+    "categories_note": "Chwazi enterè w yo pou jwenn rekòmandasyon pèsonalize",
+    "language": "Lang",
+    "language_en": "English",
+    "language_fr": "Français",
+    "language_ht": "Kreyòl"
+  },
+  "notifications": {
+    "title": "Notifikasyon",
+    "subtitle": "Jere kòman w resevwa mizajou",
+    "email_notifications": "Notifikasyon pa imel",
+    "event_reminders": "Raple evènman",
+    "event_reminders_desc": "Resevwa notifikasyon anvan evènman ou yo kòmanse",
+    "ticket_purchase": "Konfimasyon acha tikè",
+    "ticket_purchase_desc": "Resevwa konfimasyon lè w achte tikè",
+    "new_events": "Nouvo evènman",
+    "new_events_desc": "Resevwa notifikasyon sou nouvo evènman nan kategori favori w yo",
+    "organizer_updates": "Mizajou òganizatè",
+    "organizer_updates_desc": "Resevwa mizajou soti nan òganizatè w swiv yo"
+  },
+  "account": {
+    "title": "Kont",
+    "subtitle": "Jere paramèt kont ou a",
+    "change_password": "Chanje modpas",
+    "delete_account": "Efase kont",
+    "delete_account_warning": "Aksyon sa a pa ka defèt",
+    "sign_out": "Dekonekte"
+  }
+}
