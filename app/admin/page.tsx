@@ -17,7 +17,7 @@ import { AdminDashboardHeader } from '@/components/admin/AdminDashboardHeader'
 import { AdminKpiGrid } from '@/components/admin/AdminKpiGrid'
 import { WorkQueueCard } from '@/components/admin/WorkQueueCard'
 import { RecentActivityTimeline } from '@/components/admin/RecentActivityTimeline'
-import { ShieldCheck } from 'lucide-react'
+import { ShieldCheck, AlertCircle, Calendar } from 'lucide-react'
 
 export const revalidate = 0
 

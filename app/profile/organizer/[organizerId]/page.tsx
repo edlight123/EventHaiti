@@ -8,6 +8,7 @@ import EventCard from '@/components/EventCard'
 import { Shield, Calendar, Users, Star } from 'lucide-react'
 import type { Metadata } from 'next'
 
+export const runtime = 'nodejs'
 export const revalidate = 0
 
 export async function generateMetadata({ params }: { params: Promise<{ organizerId: string }> }): Promise<Metadata> {

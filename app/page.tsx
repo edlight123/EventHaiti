@@ -111,12 +111,7 @@ export default async function HomePage({
       </div>
 
       {/* Main Content */}
-      <PullToRefresh onRefresh={async () => {
-        'use server'
-        // This will trigger a full page refresh to reload events
-        const { revalidatePath } = await import('next/cache')
-        revalidatePath('/')
-      }}>
+      <PullToRefresh onRefresh={async () => {}}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
           <HomePageContent 
             hasActiveFilters={hasActiveFilters}

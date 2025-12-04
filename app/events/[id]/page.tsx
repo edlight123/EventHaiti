@@ -16,16 +16,16 @@ import { format } from 'date-fns'
 import Image from 'next/image'
 import Badge from '@/components/ui/Badge'
 import type { Metadata } from 'next'
-import PullToRefresh from '@/components/PullToRefresh'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import { revalidatePath } from 'next/cache'
 import ShareButton from './ShareButton'
 import ShareButtonInline from './ShareButtonInline'
 import MobileHero from './MobileHero'
 import MobileKeyFacts from './MobileKeyFacts'
 import MobileAccordions from './MobileAccordions'
 import StickyMobileCTA from './StickyMobileCTA'
+import EventPageContent from './EventPageContent'
 
+export const runtime = 'nodejs'
 export const revalidate = 300 // Cache for 5 minutes
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -80,12 +80,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser()
   const { id } = await params
-  
-  // Server action for pull-to-refresh
-  async function refreshPage() {
-    'use server'
-    revalidatePath(`/events/${id}`)
-  }
   
   let event: any = null
   
@@ -234,9 +228,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   }
 
   return (
-    <PullToRefresh onRefresh={refreshPage}>
-      <div className="min-h-screen bg-gray-50 pb-mobile-nav md:pb-8">
-        <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+    <div className="min-h-screen bg-gray-50 pb-mobile-nav md:pb-8">
+      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
         {/* MOBILE HERO - Full width with 16:9 aspect ratio */}
         <MobileHero
@@ -715,6 +708,5 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>
-    </PullToRefresh>
   )
 }
