@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { Bell, Check, CheckCheck, Trash2, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import { 
   getUserNotifications, 
   markAsRead, 
@@ -24,6 +25,7 @@ export function NotificationsClient({
   initialUnreadCount 
 }: NotificationsClientProps) {
   const router = useRouter()
+  const { t } = useTranslation('notifications')
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications)
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount)
   const [isLoading, setIsLoading] = useState(false)
@@ -63,7 +65,7 @@ export function NotificationsClient({
   }
 
   const handleClearAll = async () => {
-    if (!confirm('Are you sure you want to clear all notifications? This cannot be undone.')) {
+    if (!confirm(t('confirm_clear'))) {
       return
     }
 
@@ -82,7 +84,7 @@ export function NotificationsClient({
       setUnreadCount(0)
     } catch (error) {
       console.error('Error clearing notifications:', error)
-      alert('Failed to clear notifications. Please try again.')
+      alert(t('clear_failed'))
     } finally {
       setIsClearing(false)
     }
@@ -132,7 +134,7 @@ export function NotificationsClient({
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Notifications</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{t('title')}</h1>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
@@ -141,7 +143,7 @@ export function NotificationsClient({
                   className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-brand-600 hover:text-brand-700 transition-colors disabled:opacity-50"
                 >
                   <CheckCheck className="w-4 h-4" />
-                  <span className="hidden sm:inline">Mark all read</span>
+                  <span className="hidden sm:inline">{t('mark_all_read')}</span>
                 </button>
               )}
               {notifications.length > 0 && (
@@ -151,15 +153,15 @@ export function NotificationsClient({
                   className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 transition-colors disabled:opacity-50"
                 >
                   <Trash2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">Clear all</span>
+                  <span className="hidden sm:inline">{t('clear_all')}</span>
                 </button>
               )}
             </div>
           </div>
           <p className="text-gray-600">
             {unreadCount > 0 
-              ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`
-              : 'You\'re all caught up!'}
+              ? t('unread_count', { count: unreadCount })
+              : t('all_caught_up')}
           </p>
         </div>
 
@@ -167,9 +169,9 @@ export function NotificationsClient({
         {notifications.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-12 text-center">
             <Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No notifications yet</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('empty.title')}</h3>
             <p className="text-gray-600">
-              When you get notifications, they&apos;ll show up here.
+              {t('empty.description')}
             </p>
           </div>
         ) : (
@@ -216,7 +218,7 @@ export function NotificationsClient({
                       
                       {getNotificationLink(notification) !== '#' && (
                         <span className="flex items-center gap-1 text-brand-600">
-                          View details
+                          {t('view_details')}
                           <ExternalLink className="w-3 h-3" />
                         </span>
                       )}
@@ -231,7 +233,7 @@ export function NotificationsClient({
                         handleMarkAsRead(notification.id)
                       }}
                       className="flex-shrink-0 p-2 text-gray-400 hover:text-brand-600 transition-colors"
-                      title="Mark as read"
+                      title={t('mark_read')}
                     >
                       <Check className="w-5 h-5" />
                     </button>

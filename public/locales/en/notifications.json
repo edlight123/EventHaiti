@@ -1,0 +1,16 @@
+{
+  "title": "Notifications",
+  "mark_all_read": "Mark all read",
+  "clear_all": "Clear all",
+  "unread_count_one": "You have {{count}} unread notification",
+  "unread_count_other": "You have {{count}} unread notifications",
+  "all_caught_up": "You're all caught up!",
+  "empty": {
+    "title": "No notifications yet",
+    "description": "When you get notifications, they'll show up here."
+  },
+  "view_details": "View details",
+  "mark_read": "Mark as read",
+  "confirm_clear": "Are you sure you want to clear all notifications? This cannot be undone.",
+  "clear_failed": "Failed to clear notifications. Please try again."
+}

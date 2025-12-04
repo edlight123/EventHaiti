@@ -1,0 +1,16 @@
+{
+  "title": "Notifikasyon",
+  "mark_all_read": "Make tout li",
+  "clear_all": "Efase tout",
+  "unread_count_one": "Ou gen {{count}} notifikasyon ki poko li",
+  "unread_count_other": "Ou gen {{count}} notifikasyon ki poko li",
+  "all_caught_up": "Ou ajou!",
+  "empty": {
+    "title": "Poko gen notifikasyon",
+    "description": "Lè w resevwa notifikasyon, y ap parèt la a."
+  },
+  "view_details": "Gade detay",
+  "mark_read": "Make kòm li",
+  "confirm_clear": "Ou si ou vle efase tout notifikasyon yo? Sa pa ka defèt.",
+  "clear_failed": "Echwe efase notifikasyon yo. Tanpri eseye ankò."
+}

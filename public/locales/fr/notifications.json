@@ -1,0 +1,16 @@
+{
+  "title": "Notifications",
+  "mark_all_read": "Tout marquer comme lu",
+  "clear_all": "Tout effacer",
+  "unread_count_one": "Vous avez {{count}} notification non lue",
+  "unread_count_other": "Vous avez {{count}} notifications non lues",
+  "all_caught_up": "Vous êtes à jour !",
+  "empty": {
+    "title": "Pas encore de notifications",
+    "description": "Quand vous recevrez des notifications, elles apparaîtront ici."
+  },
+  "view_details": "Voir les détails",
+  "mark_read": "Marquer comme lu",
+  "confirm_clear": "Êtes-vous sûr de vouloir effacer toutes les notifications ? Cette action est irréversible.",
+  "clear_failed": "Échec de la suppression des notifications. Veuillez réessayer."
+}
