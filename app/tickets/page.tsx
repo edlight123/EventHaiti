@@ -3,11 +3,8 @@ import { requireAuth } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import EmptyState from '@/components/EmptyState'
 import { redirect } from 'next/navigation'
-import { isDemoMode, DEMO_TICKETS, DEMO_EVENTS } from '@/lib/demo'
-import { Ticket, TrendingUp, Clock, CheckCircle2 } from 'lucide-react'
-import TicketCard from './TicketCard'
+import TicketsPageClient from './TicketsPageClient'
 import { Suspense } from 'react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import MyTicketsList from './sections/MyTicketsList'
@@ -46,26 +43,15 @@ export default async function MyTicketsPage() {
     redirect('/auth/login')
   }
 
-  // List now loads within Suspense async component
-
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-          {/* Header - Refined */}
-          <div className="mb-6">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">My Tickets</h1>
-            <p className="text-sm text-gray-600 mt-1">
-              {/* Hint text kept simple; detailed count comes from list */}
-              Your tickets
-            </p>
-          </div>
-
+      <TicketsPageClient userId={user.id}>
         <Suspense fallback={<LoadingSkeleton rows={5} animated={false} />}>
           <MyTicketsList userId={user.id} />
         </Suspense>
-      </div>
+      </TicketsPageClient>
       
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>

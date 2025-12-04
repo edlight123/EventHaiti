@@ -1,0 +1,40 @@
+{
+  "title": "Account Settings",
+  "subtitle": "Manage your account preferences and settings",
+  "back_to_profile": "Back to Profile",
+  "personal_info": {
+    "title": "Personal Information",
+    "subtitle": "Update your personal details",
+    "full_name": "Full Name",
+    "email": "Email",
+    "phone": "Phone Number",
+    "not_provided": "Not provided",
+    "note": "Note",
+    "note_text": "To update your personal information, please contact support or use your account provider settings."
+  },
+  "security": {
+    "title": "Account Security",
+    "subtitle": "Manage your account security settings",
+    "verification_status": "Verification Status",
+    "verified": "Verified Account",
+    "not_verified": "Not Verified",
+    "get_verified": "Get Verified",
+    "role": "Role",
+    "event_organizer": "Event Organizer",
+    "event_attendee": "Event Attendee",
+    "change_password": "Change Password"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Manage how you receive notifications",
+    "preferences": "Notification Preferences",
+    "preferences_desc": "Choose which notifications you want to receive"
+  },
+  "danger": {
+    "title": "Danger Zone",
+    "subtitle": "Irreversible actions",
+    "delete_account": "Delete Account",
+    "delete_warning": "Once you delete your account, there is no going back. Please be certain.",
+    "delete_button": "Delete Account (Contact Support)"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "title": "Bilye Mwen",
+  "subtitle": "Gade epi jere bilye evènman ou yo",
+  "empty": {
+    "title": "Ou poko gen bilye",
+    "description": "Lè w achte bilye, y ap parèt la a ak kòd QR pou fasil antre.",
+    "action": "Gade Evènman"
+  },
+  "upcoming": {
+    "title": "Evènman k ap Vini",
+    "count_one": "{{count}} evènman",
+    "count_other": "{{count}} evènman"
+  },
+  "past": {
+    "title": "Evènman ki Pase",
+    "count_one": "{{count}} evènman",
+    "count_other": "{{count}} evènman"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "title": "Paramèt kont ou",
+  "subtitle": "Jere preferans ak paramèt kont ou",
+  "back_to_profile": "Tounen nan pwofil",
+  "personal_info": {
+    "title": "Enfòmasyon pèsonèl",
+    "subtitle": "Mete ajou detay pèsonèl ou yo",
+    "full_name": "Non konplè",
+    "email": "Imel",
+    "phone": "Nimewo telefòn",
+    "not_provided": "Pa bay",
+    "note": "Nòt",
+    "note_text": "Pou mete ajou enfòmasyon pèsonèl ou yo, tanpri kontakte sipò oswa sèvi ak paramèt founisè kont ou."
+  },
+  "security": {
+    "title": "Sekirite kont",
+    "subtitle": "Jere paramèt sekirite kont ou",
+    "verification_status": "Estati verifikasyon",
+    "verified": "Kont verifye",
+    "not_verified": "Pa verifye",
+    "get_verified": "Fè verifye",
+    "role": "Wòl",
+    "event_organizer": "Òganizatè evènman",
+    "event_attendee": "Patisipan evènman",
+    "change_password": "Chanje modpas"
+  },
+  "notifications": {
+    "title": "Notifikasyon",
+    "subtitle": "Jere fason ou resevwa notifikasyon",
+    "preferences": "Preferans notifikasyon",
+    "preferences_desc": "Chwazi ki notifikasyon ou vle resevwa"
+  },
+  "danger": {
+    "title": "Zòn danje",
+    "subtitle": "Aksyon san retou",
+    "delete_account": "Efase kont",
+    "delete_warning": "Yon fwa ou efase kont ou, pa gen retou. Tanpri asire w.",
+    "delete_button": "Efase kont (Kontakte sipò)"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "title": "My Tickets",
+  "subtitle": "Your tickets",
+  "no_tickets": "No tickets yet",
+  "no_tickets_description": "You haven't purchased any tickets yet. Browse events to find something you'd like to attend!",
+  "browse_events": "Browse Events",
+  "upcoming": "Upcoming",
+  "past": "Past",
+  "transferred": "Transferred",
+  "cancelled": "Cancelled"
+}

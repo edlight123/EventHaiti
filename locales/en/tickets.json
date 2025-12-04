@@ -1,0 +1,19 @@
+{
+  "title": "My Tickets",
+  "subtitle": "View and manage your event tickets",
+  "empty": {
+    "title": "No tickets yet",
+    "description": "When you purchase tickets, they'll appear here with QR codes for easy check-in.",
+    "action": "Browse Events"
+  },
+  "upcoming": {
+    "title": "Upcoming Events",
+    "count_one": "{{count}} event",
+    "count_other": "{{count}} events"
+  },
+  "past": {
+    "title": "Past Events",
+    "count_one": "{{count}} event",
+    "count_other": "{{count}} events"
+  }
+}

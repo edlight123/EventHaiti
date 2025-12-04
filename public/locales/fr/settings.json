@@ -1,0 +1,40 @@
+{
+  "title": "Paramètres de compte",
+  "subtitle": "Gérez vos préférences et paramètres de compte",
+  "back_to_profile": "Retour au profil",
+  "personal_info": {
+    "title": "Informations personnelles",
+    "subtitle": "Mettre à jour vos informations personnelles",
+    "full_name": "Nom complet",
+    "email": "Email",
+    "phone": "Numéro de téléphone",
+    "not_provided": "Non fourni",
+    "note": "Note",
+    "note_text": "Pour mettre à jour vos informations personnelles, veuillez contacter le support ou utiliser les paramètres de votre fournisseur de compte."
+  },
+  "security": {
+    "title": "Sécurité du compte",
+    "subtitle": "Gérer les paramètres de sécurité de votre compte",
+    "verification_status": "Statut de vérification",
+    "verified": "Compte vérifié",
+    "not_verified": "Non vérifié",
+    "get_verified": "Se faire vérifier",
+    "role": "Rôle",
+    "event_organizer": "Organisateur d'événements",
+    "event_attendee": "Participant à l'événement",
+    "change_password": "Changer le mot de passe"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Gérer la façon dont vous recevez les notifications",
+    "preferences": "Préférences de notification",
+    "preferences_desc": "Choisissez les notifications que vous souhaitez recevoir"
+  },
+  "danger": {
+    "title": "Zone de danger",
+    "subtitle": "Actions irréversibles",
+    "delete_account": "Supprimer le compte",
+    "delete_warning": "Une fois que vous supprimez votre compte, il n'y a pas de retour en arrière. Soyez certain.",
+    "delete_button": "Supprimer le compte (Contacter le support)"
+  }
+}

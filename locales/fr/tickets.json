@@ -1,0 +1,19 @@
+{
+  "title": "Mes Billets",
+  "subtitle": "Voir et gérer vos billets d'événement",
+  "empty": {
+    "title": "Pas encore de billets",
+    "description": "Lorsque vous achetez des billets, ils apparaîtront ici avec des codes QR pour un check-in facile.",
+    "action": "Parcourir les événements"
+  },
+  "upcoming": {
+    "title": "Événements à venir",
+    "count_one": "{{count}} événement",
+    "count_other": "{{count}} événements"
+  },
+  "past": {
+    "title": "Événements passés",
+    "count_one": "{{count}} événement",
+    "count_other": "{{count}} événements"
+  }
+}
