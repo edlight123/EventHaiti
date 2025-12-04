@@ -12,11 +12,7 @@ import {
 import { getRecentAdminActivities } from '@/lib/admin/audit-log'
 import { AdminCommandBar } from '@/components/admin/AdminCommandBar'
 import { AdminAccessDenied } from '@/components/admin/AdminAccessDenied'
-import { AdminDashboardHeader } from '@/components/admin/AdminDashboardHeader'
-import { AdminKpiGrid } from '@/components/admin/AdminKpiGrid'
-import { WorkQueueCard } from '@/components/admin/WorkQueueCard'
-import { RecentActivityTimeline } from '@/components/admin/RecentActivityTimeline'
-import { ShieldCheck, AlertCircle, Calendar } from 'lucide-react'
+import { AdminDashboardClient } from './AdminDashboardClient'
 
 export const revalidate = 0
 
@@ -59,12 +55,7 @@ export default async function AdminDashboard() {
         {/* Command Bar */}
         <AdminCommandBar pendingVerifications={pendingCount} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        {/* Header */}
-        <AdminDashboardHeader />
-
-        {/* KPI Grid - Mobile optimized: 2 columns on mobile, more on larger screens */}
-        <AdminKpiGrid
+        <AdminDashboardClient
           usersCount={usersCount}
           eventsCount={eventsCount}
           tickets7d={tickets7d}
@@ -72,103 +63,10 @@ export default async function AdminDashboard() {
           refunds7d={refunds7d}
           refundsAmount7d={refundsAmount7d}
           pendingCount={pendingCount}
+          pendingVerifications={pendingVerifications}
+          recentEvents={recentEvents}
+          recentActivities={recentActivities}
         />
-
-        {/* Work Queues - Mobile: Stack vertically, Desktop: Side by side */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          {/* Pending Verifications Queue */}
-          <WorkQueueCard
-            title="Pending Verifications"
-            count={pendingCount}
-            items={pendingVerifications.map((v: any) => ({
-              id: v.id,
-              title: v.businessName || 'Unknown Business',
-              subtitle: v.idType || 'ID verification',
-              timestamp: v.createdAt,
-              badge: {
-                label: 'Pending',
-                variant: 'warning' as const
-              }
-            }))}
-            icon={ShieldCheck}
-            iconColor="text-yellow-700"
-            iconBg="bg-yellow-50"
-            viewAllHref="/admin/verify"
-            emptyMessage="No pending verifications"
-          />
-
-          {/* Recent Events Queue */}
-          <WorkQueueCard
-            title="Recent Events"
-            count={eventsCount}
-            items={recentEvents.map((e: any) => {
-              // Build location string - show city, commune, and venue if available
-              const locationParts = []
-              if (e.venueName) locationParts.push(e.venueName)
-              if (e.commune) locationParts.push(e.commune)
-              if (e.city) locationParts.push(e.city)
-              const location = locationParts.length > 0 ? locationParts.join(', ') : 'Location TBD'
-              
-              // Format price with correct currency
-              const currency = e.currency || 'HTG'
-              const price = e.ticketPrice != null && e.ticketPrice > 0
-                ? `${e.ticketPrice.toFixed(2)} ${currency}`
-                : 'Free'
-              
-              return {
-                id: e.id,
-                title: e.title || 'Untitled Event',
-                subtitle: `${location} • ${price}`,
-                timestamp: e.createdAt,
-                badge: e.isPublished ? {
-                  label: 'Published',
-                  variant: 'success' as const
-                } : {
-                  label: 'Draft',
-                  variant: 'neutral' as const
-                }
-              }
-            })}
-            icon={Calendar}
-            iconColor="text-purple-600"
-            iconBg="bg-purple-50"
-            viewAllHref="/admin/events"
-            emptyMessage="No events created yet"
-          />
-        </div>
-
-        {/* Additional Info - Mobile: Stack, Desktop: Side by side */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {/* Recent Activity Timeline */}
-          <RecentActivityTimeline activities={recentActivities} />
-
-          {/* Notes Card - Simplified for mobile */}
-          <div className="bg-blue-50 rounded-xl border border-blue-200 p-4 sm:p-6">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="w-5 h-5 text-blue-600" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-bold text-blue-900 mb-2 text-sm sm:text-base">📊 Daily Statistics</h3>
-                <div className="text-xs sm:text-sm text-blue-800 space-y-2">
-                  <p className="hidden sm:block">
-                    Metrics are calculated from <code className="bg-blue-100 px-1 rounded">platform_stats_daily</code> rollups for optimal performance.
-                  </p>
-                  <p className="font-medium">✅ Updated daily at 1 AM UTC</p>
-                  <ul className="list-disc list-inside space-y-1 ml-2 text-xs">
-                    <li>GMV from ticket sales</li>
-                    <li>Total tickets sold</li>
-                    <li>Refunds tracking</li>
-                  </ul>
-                  <p className="text-xs text-blue-700 hidden sm:block mt-3">
-                    📖 See <code>docs/DAILY_STATS_SYSTEM.md</code> for docs
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
       
       <MobileNavWrapper user={user} isAdmin={true} />
     </div>
