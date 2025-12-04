@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { auth, db } from '@/lib/firebase/client'
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
@@ -12,6 +13,7 @@ import { demoLogin } from '../actions'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { t } = useTranslation('auth')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -51,7 +53,7 @@ export default function LoginPage() {
       // Force router refresh and navigate
       window.location.href = '/'
     } catch (err: any) {
-      setError(err.message || 'An error occurred during login')
+      setError(err.message || t('errors.login_failed'))
     } finally {
       setLoading(false)
     }
@@ -93,9 +95,9 @@ export default function LoginPage() {
       window.location.href = '/'
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') {
-        setError('Sign-in cancelled')
+        setError(t('errors.signin_cancelled'))
       } else {
-        setError(err.message || 'An error occurred during Google sign-in')
+        setError(err.message || t('errors.google_signin_failed'))
       }
     } finally {
       setLoading(false)
@@ -111,7 +113,7 @@ export default function LoginPage() {
           </h1>
           <p className="mt-1.5 text-sm text-gray-600">{BRAND.tagline}</p>
           <h2 className="mt-5 text-xl md:text-2xl font-semibold text-gray-900">
-            Sign in to your account
+            {t('login.title')}
           </h2>
         </div>
 
@@ -125,7 +127,7 @@ export default function LoginPage() {
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                Email address
+                {t('login.email')}
               </label>
               <input
                 id="email"
@@ -137,13 +139,13 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="block w-full px-4 py-3 text-base border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-                placeholder="you@example.com"
+                placeholder={t('login.email_placeholder')}
               />
             </div>
 
             <div>
               <label htmlFor="password" className="block text-[13px] font-medium text-gray-700 mb-1.5">
-                Password
+                {t('login.password')}
               </label>
               <div className="relative">
                 <input
@@ -155,13 +157,13 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full px-4 py-3 pr-11 text-base border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent"
-                  placeholder="••••••••"
+                  placeholder={t('login.password_placeholder')}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 p-1"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? t('login.hide_password') : t('login.show_password')}
                 >
                   {showPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -183,7 +185,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-white text-base font-semibold bg-teal-700 hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? t('login.submit_loading') : t('login.submit')}
           </button>
 
           <div className="relative">
@@ -191,7 +193,7 @@ export default function LoginPage() {
               <div className="w-full border-t border-gray-300" />
             </div>
             <div className="relative flex justify-center text-[13px]">
-              <span className="px-2 bg-white text-gray-500">Or continue with</span>
+              <span className="px-2 bg-white text-gray-500">{t('login.or_continue_with')}</span>
             </div>
           </div>
 
@@ -219,17 +221,17 @@ export default function LoginPage() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            Sign in with Google
+            {t('login.google')}
           </button>
 
           <div className="text-center">
             <p className="text-[13px] text-gray-600">
-              Don&apos;t have an account?{' '}
+              {t('login.no_account')}{' '}
               <Link
                 href="/auth/signup"
                 className="font-semibold text-teal-700 hover:text-teal-800"
               >
-                Sign up
+                {t('login.sign_up')}
               </Link>
             </p>
           </div>
