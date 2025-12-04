@@ -53,9 +53,12 @@
     "no_events": "No events in this category"
   },
   "users": {
-    "title": "User Management",
-    "subtitle": "Manage user accounts and permissions",
+    "title": "Manage Users",
+    "subtitle": "View and manage all users on the platform",
+    "back_to_dashboard": "← Back to Admin Dashboard",
     "total_users": "Total Users",
+    "organizers": "Organizers",
+    "verified_organizers": "Verified Organizers",
     "active_users": "Active Users",
     "banned_users": "Banned Users",
     "search_users": "Search users...",
@@ -74,15 +77,20 @@
     "organizer": "Organizer",
     "attendee": "Attendee",
     "active": "Active",
-    "banned": "Banned"
+    "banned": "Banned",
+    "no_users_found": "No users found",
+    "promote_to_organizer": "Promote to Organizer",
+    "admin": "ADMIN",
+    "verified": "Verified"
   },
   "verify": {
-    "title": "Organizer Verifications",
-    "subtitle": "Review verification requests from event organizers",
+    "title": "Verification Requests",
+    "subtitle": "Review pending organizer verification submissions",
+    "back_to_dashboard": "← Back to Admin Dashboard",
     "pending_requests": "Pending Requests",
     "approved": "Approved",
     "rejected": "Rejected",
-    "no_pending": "No Pending Verifications",
+    "no_pending": "No pending verification requests",
     "all_caught_up": "All caught up! No verification requests to review.",
     "organizer_name": "Organizer",
     "submitted": "Submitted",
@@ -90,7 +98,9 @@
     "view_details": "View Details",
     "approve": "Approve",
     "reject": "Reject",
-    "view_document": "View Document"
+    "view_document": "View Document",
+    "quick_toggle_title": "Quick Verification Toggle",
+    "quick_toggle_subtitle": "Manually manage verified status for organizers"
   },
   "stats": {
     "total_events": "Total Events",
