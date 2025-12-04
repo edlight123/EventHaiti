@@ -23,6 +23,22 @@ import adminEn from '@/public/locales/en/admin.json'
 import adminFr from '@/public/locales/fr/admin.json'
 import adminHt from '@/public/locales/ht/admin.json'
 
+import ticketsEn from '@/public/locales/en/tickets.json'
+import ticketsFr from '@/public/locales/fr/tickets.json'
+import ticketsHt from '@/public/locales/ht/tickets.json'
+
+import notificationsEn from '@/public/locales/en/notifications.json'
+import notificationsFr from '@/public/locales/fr/notifications.json'
+import notificationsHt from '@/public/locales/ht/notifications.json'
+
+import organizerEn from '@/public/locales/en/organizer.json'
+import organizerFr from '@/public/locales/fr/organizer.json'
+import organizerHt from '@/public/locales/ht/organizer.json'
+
+import settingsEn from '@/public/locales/en/settings.json'
+import settingsFr from '@/public/locales/fr/settings.json'
+import settingsHt from '@/public/locales/ht/settings.json'
+
 const resources = {
   en: {
     common: commonEn,
@@ -30,6 +46,10 @@ const resources = {
     events: eventsEn,
     profile: profileEn,
     admin: adminEn,
+    tickets: ticketsEn,
+    notifications: notificationsEn,
+    organizer: organizerEn,
+    settings: settingsEn,
   },
   fr: {
     common: commonFr,
@@ -37,6 +57,10 @@ const resources = {
     events: eventsFr,
     profile: profileFr,
     admin: adminFr,
+    tickets: ticketsFr,
+    notifications: notificationsFr,
+    organizer: organizerFr,
+    settings: settingsFr,
   },
   ht: {
     common: commonHt,
@@ -44,6 +68,10 @@ const resources = {
     events: eventsHt,
     profile: profileHt,
     admin: adminHt,
+    tickets: ticketsHt,
+    notifications: notificationsHt,
+    organizer: organizerHt,
+    settings: settingsHt,
   },
 }
 
@@ -55,7 +83,7 @@ i18n
     fallbackLng: 'en',
     supportedLngs: ['en', 'fr', 'ht'],
     defaultNS: 'common',
-    ns: ['common', 'auth', 'events', 'profile', 'admin'],
+    ns: ['common', 'auth', 'events', 'profile', 'admin', 'tickets', 'notifications', 'organizer', 'settings'],
     
     // Enable debug mode in development
     debug: process.env.NODE_ENV === 'development',
