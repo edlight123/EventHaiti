@@ -41,7 +41,17 @@
     "select": "Chwazi",
     "search_placeholder": "Chèche evènman, kote, atis…",
     "no_results": "Pa gen rezilta",
-    "try_different_search": "Eseye ajiste rechèch ou a oswa filt yo"
+    "try_different_search": "Eseye ajiste rechèch ou oswa filtres ou",
+    "no_events_available": "Pa gen evènman disponib",
+    "check_back_soon": "Tounen gade pita pou evènman k ap vini!",
+    "clear_all_filters": "Efase tout filtres",
+    "show_any_date": "Montre nenpòt dat",
+    "expand_location": "Elaji nan nivo vil la",
+    "show_online_events": "Montre evènman sou entènèt",
+    "happening_soon": "Byento",
+    "happening_soon_desc": "Pa rate evènman sa yo k ap vini",
+    "near_you": "Tou pre w",
+    "when": "Kilè"
   },
   "time": {
     "today": "Jodi a",

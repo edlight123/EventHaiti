@@ -1,6 +1,9 @@
+'use client'
+
 import React from 'react'
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { Database } from '@/types/database'
 import { DiscoverEventCard } from './DiscoverEventCard'
 
@@ -21,8 +24,10 @@ export function EventsSection({
   emoji, 
   events, 
   seeAllLink, 
-  seeAllLabel = 'See all' 
+  seeAllLabel
 }: EventsSectionProps) {
+  const { t } = useTranslation('common')
+  
   if (events.length === 0) {
     return null
   }
@@ -45,7 +50,7 @@ export function EventsSection({
             href={seeAllLink}
             className="flex items-center gap-1 text-brand-600 hover:text-brand-700 font-semibold text-sm sm:text-base transition-colors"
           >
-            {seeAllLabel}
+            {seeAllLabel || t('common.seeAll')}
             <ChevronRight className="w-4 h-4" />
           </Link>
         )}

@@ -39,9 +39,19 @@
     "next": "Suivant",
     "submit": "Soumettre",
     "select": "Sélectionner",
-    "search_placeholder": "Rechercher événements, lieux, artistes…",
+    "search_placeholder": "Rechercher des événements, lieux, artistes…",
     "no_results": "Aucun résultat trouvé",
-    "try_different_search": "Essayez d'ajuster votre recherche ou vos filtres"
+    "try_different_search": "Essayez d'ajuster votre recherche ou vos filtres",
+    "no_events_available": "Aucun événement disponible",
+    "check_back_soon": "Revenez bientôt pour les événements à venir !",
+    "clear_all_filters": "Effacer tous les filtres",
+    "show_any_date": "Afficher toutes les dates",
+    "expand_location": "Élargir au niveau de la ville",
+    "show_online_events": "Afficher les événements en ligne",
+    "happening_soon": "Bientôt",
+    "happening_soon_desc": "Ne manquez pas ces événements à venir",
+    "near_you": "Près de vous",
+    "when": "Quand"
   },
   "time": {
     "today": "Aujourd'hui",

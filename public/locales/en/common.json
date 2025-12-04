@@ -41,7 +41,17 @@
     "select": "Select",
     "search_placeholder": "Search events, venues, artists…",
     "no_results": "No results found",
-    "try_different_search": "Try adjusting your search or filters"
+    "try_different_search": "Try adjusting your search or filters",
+    "no_events_available": "No events available",
+    "check_back_soon": "Check back soon for upcoming events!",
+    "clear_all_filters": "Clear all filters",
+    "show_any_date": "Show any date",
+    "expand_location": "Expand to city-level",
+    "show_online_events": "Show online events",
+    "happening_soon": "Happening Soon",
+    "happening_soon_desc": "Don't miss these upcoming events",
+    "near_you": "Near You",
+    "when": "When"
   },
   "time": {
     "today": "Today",

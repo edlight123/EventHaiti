@@ -1,0 +1,144 @@
+'use client'
+
+import { useTranslation } from 'react-i18next'
+import type { DateFilter } from '@/lib/filters/types'
+import { DateChips } from './DateChips'
+import { CategoryChips } from './CategoryChips'
+import { EventsSection } from './EventsSection'
+import { EmptyState } from './EmptyState'
+import { FeaturedCarousel } from './FeaturedCarousel'
+
+interface DiscoverPageContentProps {
+  currentDate: DateFilter
+  selectedCategories: string[]
+  hasActiveFilters: boolean
+  featuredEvents: any[]
+  upcomingEvents: any[]
+  nearYouEvents: any[]
+  budgetEvents: any[]
+  onlineEvents: any[]
+  filteredEvents: any[]
+  city?: string
+  commune?: string
+}
+
+export function DiscoverPageContent({
+  currentDate,
+  selectedCategories,
+  hasActiveFilters,
+  featuredEvents,
+  upcomingEvents,
+  nearYouEvents,
+  budgetEvents,
+  onlineEvents,
+  filteredEvents,
+  city,
+  commune
+}: DiscoverPageContentProps) {
+  const { t } = useTranslation('common')
+
+  return (
+    <div className="space-y-8">
+      {/* Date Strip */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+          {t('common.when')}
+        </h3>
+        <DateChips currentDate={currentDate} />
+      </div>
+
+      {/* Featured Carousel (only if no active filters and has featured) */}
+      {!hasActiveFilters && featuredEvents.length > 0 && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
+              ⭐ {t('events.featured_weekend')}
+            </h2>
+            <p className="text-gray-600 text-sm sm:text-base mt-1">
+              {t('events.featured_weekend_desc')}
+            </p>
+          </div>
+          <FeaturedCarousel events={featuredEvents} />
+        </div>
+      )}
+
+      {/* Category Shortcuts */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+          {t('common.categories')}
+        </h3>
+        <CategoryChips selectedCategories={selectedCategories} />
+      </div>
+
+      {/* Show sections only if no active filters */}
+      {!hasActiveFilters ? (
+        <>
+          {/* Happening Soon */}
+          <EventsSection
+            title={t('common.happening_soon')}
+            description={t('common.happening_soon_desc')}
+            emoji="🔥"
+            events={upcomingEvents}
+            seeAllLink="/discover?date=this-week"
+          />
+
+          {/* Near You (only if location set) */}
+          {nearYouEvents.length > 0 && (
+            <EventsSection
+              title={t('common.near_you')}
+              description={`${t('events.events')} ${city ? `${city}` : ''}${commune ? ` • ${commune}` : ''}`}
+              emoji="📍"
+              events={nearYouEvents}
+              seeAllLink={`/discover?city=${city}`}
+            />
+          )}
+
+          {/* Free & Budget Events */}
+          {budgetEvents.length > 0 && (
+            <EventsSection
+              title={t('events.budget_friendly')}
+              description={t('events.budget_friendly_desc')}
+              emoji="💰"
+              events={budgetEvents}
+              seeAllLink="/discover?price=%3C%3D500"
+            />
+          )}
+
+          {/* Online Events */}
+          {onlineEvents.length > 0 && (
+            <EventsSection
+              title={t('events.onlineEvents')}
+              description={t('events.online_desc')}
+              emoji="💻"
+              events={onlineEvents}
+              seeAllLink="/discover?eventType=online"
+            />
+          )}
+
+          {/* All Events Fallback */}
+          {upcomingEvents.length === 0 && 
+           nearYouEvents.length === 0 && 
+           budgetEvents.length === 0 && 
+           onlineEvents.length === 0 && (
+            <EmptyState hasFilters={false} />
+          )}
+        </>
+      ) : (
+        /* Filtered Results */
+        <>
+          {filteredEvents.length > 0 ? (
+            <EventsSection
+              title={t('events.filtered_results')}
+              description={filteredEvents.length === 1 
+                ? t('events.event_found', { count: filteredEvents.length })
+                : t('events.events_found', { count: filteredEvents.length })}
+              events={filteredEvents}
+            />
+          ) : (
+            <EmptyState hasFilters={true} />
+          )}
+        </>
+      )}
+    </div>
+  )
+}
