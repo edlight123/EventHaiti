@@ -1,7 +1,26 @@
 {
   "dashboard": {
     "title": "Admin Dashboard",
-    "subtitle": "Manage platform operations"
+    "subtitle": "Platform operations & analytics",
+    "access_denied": "Access Denied",
+    "no_admin_privileges": "You don't have admin privileges for this platform.",
+    "your_email": "Your email:",
+    "contact_admin": "Contact an administrator to request access.",
+    "return_home": "Return to Home",
+    "users": "Users",
+    "events": "Events",
+    "tickets_7d": "Tickets (7d)",
+    "last_week": "Last week",
+    "gmv_7d": "GMV (7d)",
+    "htg": "HTG",
+    "refunds": "Refunds",
+    "pending": "Pending",
+    "verifications": "Verifications",
+    "pending_verifications": "Pending Verifications",
+    "recent_events": "Recent Events",
+    "recent_activity": "Recent Activity",
+    "no_pending": "No pending verifications",
+    "view_all": "View all"
   },
   "events": {
     "title": "Events Moderation",

@@ -1,7 +1,26 @@
 {
   "dashboard": {
-    "title": "Tablo Bò Admin",
-    "subtitle": "Jere operasyon platfòm nan"
+    "title": "Tablo de bò Admin",
+    "subtitle": "Operasyon platfòm nan ak analize",
+    "access_denied": "Aks refize",
+    "no_admin_privileges": "Ou pa gen privilej administrateur pou platfòm sa a.",
+    "your_email": "Imel ou:",
+    "contact_admin": "Kontakte yon administrateur pou mande aksè.",
+    "return_home": "Tounen lakay",
+    "users": "Itilizatè yo",
+    "events": "Evènman yo",
+    "tickets_7d": "Tikè (7j)",
+    "last_week": "Semèn pase",
+    "gmv_7d": "GMV (7j)",
+    "htg": "HTG",
+    "refunds": "Ranbousman",
+    "pending": "Annatant",
+    "verifications": "Verifikasyon",
+    "pending_verifications": "Verifikasyon annatant",
+    "recent_events": "Evènman resan",
+    "recent_activity": "Aktivite resan",
+    "no_pending": "Pa gen verifikasyon annatant",
+    "view_all": "Gade tout"
   },
   "events": {
     "title": "Moderasyon Evènman",

@@ -1,7 +1,26 @@
 {
   "dashboard": {
     "title": "Tableau de bord Admin",
-    "subtitle": "Gérer les opérations de la plateforme"
+    "subtitle": "Opérations de la plateforme et analyses",
+    "access_denied": "Accès refusé",
+    "no_admin_privileges": "Vous n'avez pas de privilèges d'administrateur pour cette plateforme.",
+    "your_email": "Votre e-mail :",
+    "contact_admin": "Contactez un administrateur pour demander l'accès.",
+    "return_home": "Retour à l'accueil",
+    "users": "Utilisateurs",
+    "events": "Événements",
+    "tickets_7d": "Billets (7j)",
+    "last_week": "Semaine dernière",
+    "gmv_7d": "GMV (7j)",
+    "htg": "HTG",
+    "refunds": "Remboursements",
+    "pending": "En attente",
+    "verifications": "Vérifications",
+    "pending_verifications": "Vérifications en attente",
+    "recent_events": "Événements récents",
+    "recent_activity": "Activité récente",
+    "no_pending": "Aucune vérification en attente",
+    "view_all": "Voir tout"
   },
   "events": {
     "title": "Modération des événements",

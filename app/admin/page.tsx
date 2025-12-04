@@ -12,10 +12,12 @@ import {
 } from '@/lib/firestore/admin'
 import { getRecentAdminActivities } from '@/lib/admin/audit-log'
 import { AdminCommandBar } from '@/components/admin/AdminCommandBar'
-import { KpiCard } from '@/components/admin/KpiCard'
+import { AdminAccessDenied } from '@/components/admin/AdminAccessDenied'
+import { AdminDashboardHeader } from '@/components/admin/AdminDashboardHeader'
+import { AdminKpiGrid } from '@/components/admin/AdminKpiGrid'
 import { WorkQueueCard } from '@/components/admin/WorkQueueCard'
 import { RecentActivityTimeline } from '@/components/admin/RecentActivityTimeline'
-import { Users, Calendar, Ticket, DollarSign, ShieldCheck, AlertCircle, RefreshCcw } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -35,35 +37,7 @@ export default async function AdminDashboard() {
     const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e)
 
     if (!ADMIN_EMAILS.includes(user.email || '')) {
-      return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-gray-200 p-8 text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-            <p className="text-gray-600 mb-4">
-              You don&apos;t have admin privileges for this platform.
-            </p>
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <p className="text-sm text-gray-700">
-                <strong>Your email:</strong> {user.email}
-              </p>
-              <p className="text-xs text-gray-500 mt-2">
-                Contact an administrator to request access.
-              </p>
-            </div>
-            <a
-              href="/"
-              className="inline-block bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition-colors"
-            >
-              Return to Home
-            </a>
-          </div>
-        </div>
-      )
+      return <AdminAccessDenied userEmail={user.email} />
     }
 
   // Fetch platform statistics using Firestore
@@ -88,68 +62,18 @@ export default async function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">Platform operations & analytics</p>
-        </div>
+        <AdminDashboardHeader />
 
         {/* KPI Grid - Mobile optimized: 2 columns on mobile, more on larger screens */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <KpiCard
-            title="Users"
-            value={usersCount}
-            icon={Users}
-            iconColor="text-blue-600"
-            iconBg="bg-blue-50"
-            href="/admin/users"
-          />
-          
-          <KpiCard
-            title="Events"
-            value={eventsCount}
-            icon={Calendar}
-            iconColor="text-purple-600"
-            iconBg="bg-purple-50"
-            href="/admin/events"
-          />
-          
-          <KpiCard
-            title="Tickets (7d)"
-            value={tickets7d}
-            subtitle="Last week"
-            icon={Ticket}
-            iconColor="text-teal-600"
-            iconBg="bg-teal-50"
-          />
-          
-          <KpiCard
-            title="GMV (7d)"
-            value={`${(gmv7d / 1000).toFixed(1)}k`}
-            subtitle="HTG"
-            icon={DollarSign}
-            iconColor="text-green-600"
-            iconBg="bg-green-50"
-          />
-          
-          <KpiCard
-            title="Refunds"
-            value={refunds7d}
-            subtitle={`${(refundsAmount7d / 1000).toFixed(1)}k HTG`}
-            icon={RefreshCcw}
-            iconColor="text-orange-600"
-            iconBg="bg-orange-50"
-          />
-          
-          <KpiCard
-            title="Pending"
-            value={pendingCount}
-            subtitle="Verifications"
-            icon={ShieldCheck}
-            iconColor="text-yellow-800"
-            iconBg="bg-yellow-50"
-            href="/admin/verify"
-          />
-        </div>
+        <AdminKpiGrid
+          usersCount={usersCount}
+          eventsCount={eventsCount}
+          tickets7d={tickets7d}
+          gmv7d={gmv7d}
+          refunds7d={refunds7d}
+          refundsAmount7d={refundsAmount7d}
+          pendingCount={pendingCount}
+        />
 
         {/* Work Queues - Mobile: Stack vertically, Desktop: Side by side */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
