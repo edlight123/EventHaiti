@@ -1,0 +1,21 @@
+{
+  "welcome": "Byenveni ankò, {{name}}!",
+  "subtitle": "Vwayaj evènman ou an yon ti je",
+  "stats": {
+    "upcoming_events": "Evènman k ap vini",
+    "total_tickets": "Total tikè",
+    "favorites": "Favori",
+    "next_event": "Pwochen: {{date}}",
+    "no_upcoming": "Pa gen evènman k ap vini",
+    "active_tickets": "{{count}} {{count, plural, one {tikè aktif} other {tikè aktif}}}",
+    "no_tickets": "Poko gen tikè",
+    "saved_events": "{{count}} {{count, plural, one {evènman anrejistre} other {evènman anrejistre}}}",
+    "no_favorites": "Poko gen favori"
+  },
+  "sections": {
+    "my_tickets": "Tikè mwen",
+    "saved_events": "Evènman anrejistre",
+    "upcoming_events": "Evènman k ap vini",
+    "view_all": "Gade tout"
+  }
+}

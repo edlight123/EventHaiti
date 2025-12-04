@@ -1,0 +1,21 @@
+{
+  "welcome": "Bon retour, {{name}}!",
+  "subtitle": "Votre parcours événementiel en un coup d'œil",
+  "stats": {
+    "upcoming_events": "Événements à venir",
+    "total_tickets": "Total des billets",
+    "favorites": "Favoris",
+    "next_event": "Prochain : {{date}}",
+    "no_upcoming": "Aucun événement à venir",
+    "active_tickets": "{{count}} {{count, plural, one {billet actif} other {billets actifs}}}",
+    "no_tickets": "Pas encore de billets",
+    "saved_events": "{{count}} {{count, plural, one {événement enregistré} other {événements enregistrés}}}",
+    "no_favorites": "Pas encore de favoris"
+  },
+  "sections": {
+    "my_tickets": "Mes billets",
+    "saved_events": "Événements enregistrés",
+    "upcoming_events": "Événements à venir",
+    "view_all": "Voir tout"
+  }
+}

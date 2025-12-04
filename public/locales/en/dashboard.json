@@ -1,0 +1,21 @@
+{
+  "welcome": "Welcome back, {{name}}!",
+  "subtitle": "Your event journey at a glance",
+  "stats": {
+    "upcoming_events": "Upcoming Events",
+    "total_tickets": "Total Tickets",
+    "favorites": "Favorites",
+    "next_event": "Next: {{date}}",
+    "no_upcoming": "No upcoming events",
+    "active_tickets": "{{count}} active {{count, plural, one {ticket} other {tickets}}}",
+    "no_tickets": "No tickets yet",
+    "saved_events": "{{count}} saved {{count, plural, one {event} other {events}}}",
+    "no_favorites": "No favorites yet"
+  },
+  "sections": {
+    "my_tickets": "My Tickets",
+    "saved_events": "Saved Events",
+    "upcoming_events": "Upcoming Events",
+    "view_all": "View all"
+  }
+}
