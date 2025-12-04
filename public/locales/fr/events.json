@@ -1,29 +1,29 @@
 {
   "details": {
-    "title": "Détails de l'événement",
-    "description": "Description",
-    "when": "Quand",
-    "where": "Où",
-    "organizer": "Organisateur",
+    "title": "Détails de l'Événement",
+    "description": "À Propos de Cet Événement",
+    "when": "Date et Heure",
+    "where": "Informations sur le Lieu",
+    "organizer": "Organisé Par",
     "category": "Catégorie",
-    "tickets_available": "Billets disponibles",
-    "price_range": "Fourchette de prix",
-    "share": "Partager l'événement",
-    "favorite": "Ajouter aux favoris",
-    "unfavorite": "Retirer des favoris"
+    "tickets_available": "Disponibilité",
+    "price_range": "Gamme de Prix",
+    "share": "Partager l'Événement",
+    "favorite": "Ajouter aux Favoris",
+    "unfavorite": "Retirer des Favoris"
   },
   "actions": {
-    "buy_now": "Acheter des billets maintenant",
+    "buy_now": "Obtenir des Billets",
     "sold_out": "Complet",
-    "join_waitlist": "Rejoindre la liste d'attente",
-    "get_directions": "Obtenir l'itinéraire",
-    "add_to_calendar": "Ajouter au calendrier"
+    "join_waitlist": "Rejoindre la Liste d'Attente",
+    "get_directions": "Obtenir l'Itinéraire",
+    "add_to_calendar": "Ajouter au Calendrier"
   },
   "info": {
-    "verified_organizer": "Organisateur vérifié",
-    "popular_event": "Événement populaire",
-    "selling_fast": "Se vend rapidement",
-    "almost_full": "Presque complet",
-    "last_tickets": "Derniers billets restants"
+    "verified_organizer": "Organisateur Vérifié",
+    "popular_event": "Événement Populaire",
+    "selling_fast": "Presque Complet",
+    "almost_full": "Presque Plein",
+    "last_tickets": "Il ne reste que quelques billets!"
   }
 }
