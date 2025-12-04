@@ -1,29 +1,29 @@
 {
   "details": {
-    "title": "Detay Evènman",
-    "description": "Konsènan Evènman Sa",
-    "when": "Dat ak Lè",
-    "where": "Enfòmasyon sou Kote a",
-    "organizer": "Òganize Pa",
+    "title": "Detay evènman",
+    "description": "Deskripsyon",
+    "when": "Kilè",
+    "where": "Kote",
+    "organizer": "Òganizatè",
     "category": "Kategori",
-    "tickets_available": "Disponibilite",
-    "price_range": "Pri",
-    "share": "Pataje Evènman",
-    "favorite": "Ajoute nan Favori",
-    "unfavorite": "Retire nan Favori"
+    "tickets_available": "Tikè disponib",
+    "price_range": "Ranje pri",
+    "share": "Pataje evènman",
+    "favorite": "Ajoute nan favori",
+    "unfavorite": "Retire nan favori"
   },
   "actions": {
-    "buy_now": "Jwenn Tikè",
-    "sold_out": "Tout Vann",
-    "join_waitlist": "Antre nan Lis Datant",
-    "get_directions": "Jwenn Direksyon",
-    "add_to_calendar": "Ajoute nan Kalandriye"
+    "buy_now": "Achte tikè kounye a",
+    "sold_out": "Epize",
+    "join_waitlist": "Enskri sou lis datant",
+    "get_directions": "Jwenn direksyon",
+    "add_to_calendar": "Ajoute nan kalandriye"
   },
   "info": {
-    "verified_organizer": "Òganizatè Verifye",
-    "popular_event": "Evènman Popilè",
-    "selling_fast": "Prèske Fini",
-    "almost_full": "Prèske Plen",
-    "last_tickets": "Gen kèk tikè sèlman ki rete!"
+    "verified_organizer": "Òganizatè verifye",
+    "popular_event": "Evènman popilè",
+    "selling_fast": "K ap vann vit",
+    "almost_full": "Prèske epize",
+    "last_tickets": "Dènye tikè ki rete"
   }
 }

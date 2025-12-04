@@ -8,6 +8,7 @@ import type { Database } from '@/types/database'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { firebaseDb } from '@/lib/firebase-db/client'
+import { useTranslation } from 'react-i18next'
 
 type Event = Database['public']['Tables']['events']['Row']
 
@@ -16,6 +17,7 @@ interface CategoriesContentProps {
 }
 
 export default function CategoriesContent({ initialCategory }: CategoriesContentProps) {
+  const { t } = useTranslation('common')
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -51,8 +53,8 @@ export default function CategoriesContent({ initialCategory }: CategoriesContent
     <PullToRefresh onRefresh={loadEvents}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
         <div className="mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Browse by Category</h1>
-          <p className="text-[13px] md:text-base text-gray-600 mt-1 md:mt-2">Find events that match your interests</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{t('events.browse_categories')}</h1>
+          <p className="text-[13px] md:text-base text-gray-600 mt-1 md:mt-2">{t('events.browse_categories_desc')}</p>
         </div>
 
         {/* Category Grid */}
@@ -64,7 +66,7 @@ export default function CategoriesContent({ initialCategory }: CategoriesContent
         {initialCategory && (
           <div>
             <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 capitalize">
-              {initialCategory} Events
+              {t('events.category_events', { category: initialCategory })}
             </h2>
             {loading ? (
               <LoadingSkeleton rows={9} animated />
@@ -76,10 +78,10 @@ export default function CategoriesContent({ initialCategory }: CategoriesContent
                   </svg>
                 </div>
                 <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-2">
-                  No {initialCategory} events yet
+                  {t('events.no_category_events', { category: initialCategory })}
                 </h3>
                 <p className="text-[13px] md:text-base text-gray-600">
-                  Check back later or explore other categories
+                  {t('events.check_back_or_explore')}
                 </p>
               </div>
             ) : (

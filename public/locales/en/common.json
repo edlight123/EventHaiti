@@ -99,7 +99,34 @@
     "this_week_desc": "Don't miss out on these upcoming events",
     "explore_all": "Explore All Events",
     "find_perfect_event": "Find Your Perfect Event",
-    "hero_subtitle": "Search concerts, parties, conferences, festivals, and more across Haiti"
+    "hero_subtitle": "Search concerts, parties, conferences, festivals, and more across Haiti",
+    "category_events": "{{category}} Events",
+    "no_category_events": "No {{category}} events yet",
+    "check_back_or_explore": "Check back later or explore other categories"
+  },
+  "favorites": {
+    "title": "My Favorites",
+    "subtitle": "Events you've saved for later",
+    "no_favorites": "No Favorite Events Yet",
+    "no_favorites_desc": "Start exploring events and save your favorites here",
+    "discover_events": "Discover Events"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Stay updated on your events",
+    "mark_all_read": "Mark all as read",
+    "no_notifications": "No Notifications",
+    "no_notifications_desc": "You're all caught up!",
+    "time_ago": "{{time}} ago"
+  },
+  "organizer_dashboard": {
+    "title": "Organizer Dashboard",
+    "subtitle": "Manage your events and tickets",
+    "create_event": "Create Event",
+    "my_events": "My Events",
+    "analytics": "Analytics",
+    "payouts": "Payouts",
+    "settings": "Settings"
   },
   "ticket": {
     "ticket": "Ticket",
