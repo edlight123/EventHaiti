@@ -1,0 +1,10 @@
+{
+  "your_events": "Evènman Ou Yo",
+  "view_all_events": "Gade tout evènman yo →",
+  "create_event": "Kreye Evènman",
+  "no_events": {
+    "title": "Pa gen evènman ankò",
+    "description": "Kreye premye evènman ou a epi kòmanse vann tikè bay piblik ou a",
+    "cta": "Kreye Premye Evènman Ou"
+  }
+}

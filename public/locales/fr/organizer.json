@@ -1,0 +1,10 @@
+{
+  "your_events": "Vos Événements",
+  "view_all_events": "Voir tous les événements →",
+  "create_event": "Créer un Événement",
+  "no_events": {
+    "title": "Aucun événement pour l'instant",
+    "description": "Créez votre premier événement et commencez à vendre des billets à votre public",
+    "cta": "Créer Votre Premier Événement"
+  }
+}

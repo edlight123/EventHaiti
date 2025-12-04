@@ -4,13 +4,8 @@ import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { getOrganizerStats, getNextEvent } from '@/lib/firestore/organizer'
-import { NextEventHero } from '@/components/organizer/NextEventHero'
-import { ActionCenter } from '@/components/organizer/ActionCenter'
-import { SalesSnapshot } from '@/components/organizer/SalesSnapshot'
-import { OrganizerEventCard } from '@/components/organizer/OrganizerEventCard'
-import { PayoutsWidget } from '@/components/organizer/PayoutsWidget'
 import { determinePayoutStatus, getOrganizerBalance, getPayoutConfig, hasPayoutMethod } from '@/lib/firestore/payout'
-import Link from 'next/link'
+import OrganizerDashboardClient from './OrganizerDashboardClient'
 
 export const revalidate = 30 // Cache for 30 seconds
 
@@ -139,99 +134,18 @@ export default async function OrganizerDashboard() {
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
-          {/* Next Event Hero - Mobile First */}
-          {nextEvent && (
-            <div className="mb-6">
-              <NextEventHero event={nextEvent} />
-            </div>
-          )}
+      <OrganizerDashboardClient
+        nextEvent={nextEvent}
+        alerts={alerts}
+        hasPayoutSetup={hasPayoutSetup}
+        payoutWidgetStatus={payoutWidgetStatus}
+        pendingBalance={balanceData.pending}
+        salesData={salesData}
+        events={currentStats.events}
+        tickets={currentStats.tickets}
+      />
 
-          {/* Action Center + Payouts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
-            {/* Action Center - Takes 2 columns on large screens, or full width if no payouts widget */}
-            <div className={hasPayoutSetup ? 'lg:col-span-2' : 'lg:col-span-3'}>
-              <ActionCenter alerts={alerts} />
-            </div>
-
-            {/* Payouts Widget - Only show if payouts are set up */}
-            {hasPayoutSetup && (
-              <div>
-                <PayoutsWidget
-                  status={payoutWidgetStatus}
-                  pendingBalance={balanceData.pending}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Sales Snapshot */}
-          <div className="mb-6">
-            <SalesSnapshot data={salesData} />
-          </div>
-
-          {/* Events Grid */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900">Your Events</h2>
-                <Link
-                  href="/organizer/events"
-                  className="text-sm text-teal-600 hover:text-teal-700 font-medium hover:underline"
-                >
-                  View all events →
-                </Link>
-              </div>
-              <a
-                href="/organizer/events/new"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors text-sm"
-              >
-                Create Event
-              </a>
-            </div>
-
-            {currentStats.events.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {currentStats.events.map((event: any) => {
-                  // Get ticket count for this event
-                  const eventTickets = currentStats.tickets.filter((t: any) => t.event_id === event.id)
-                  const ticketsSold = eventTickets.length
-                  const revenue = eventTickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0)
-                  
-                  return (
-                    <OrganizerEventCard
-                      key={event.id}
-                      event={{
-                        ...event,
-                        ticketsSold,
-                        revenue,
-                        capacity: event.total_tickets || event.max_attendees || 0
-                      }}
-                    />
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="bg-white rounded-xl border-2 border-dashed border-gray-300 p-8 md:p-12 text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-teal-50 to-purple-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl">🎉</span>
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">No events yet</h3>
-                <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  Create your first event and start selling tickets to your audience
-                </p>
-                <a
-                  href="/organizer/events/new"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-600 to-purple-600 text-white rounded-xl font-bold hover:shadow-lg transition-all"
-                >
-                  Create Your First Event
-                </a>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
-      </div>
+      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
+    </div>
   )
 }

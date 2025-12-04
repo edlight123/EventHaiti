@@ -1,0 +1,10 @@
+{
+  "your_events": "Your Events",
+  "view_all_events": "View all events →",
+  "create_event": "Create Event",
+  "no_events": {
+    "title": "No events yet",
+    "description": "Create your first event and start selling tickets to your audience",
+    "cta": "Create Your First Event"
+  }
+}
