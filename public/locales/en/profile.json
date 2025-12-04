@@ -2,6 +2,19 @@
   "title": "My Profile",
   "subtitle": "Manage your account settings and preferences",
   "organizer_settings": "Organizer Settings",
+  "organizer": {
+    "verified": "Verified",
+    "events": "Events",
+    "followers": "Followers",
+    "tickets_sold": "Sold",
+    "upcoming_events": "Upcoming Events",
+    "past_events": "Past Events",
+    "no_upcoming_events": "No Upcoming Events",
+    "no_upcoming_events_desc": "This organizer doesn't have any upcoming events at the moment.",
+    "previous_events": "Previous events organized by {{name}}",
+    "event_count": "{{count}} event coming soon",
+    "event_count_plural": "{{count}} events coming soon"
+  },
   "header": {
     "edit_profile": "Edit Profile",
     "full_name": "Full Name",
