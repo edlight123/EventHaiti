@@ -2,6 +2,7 @@
   "nav": {
     "home": "Events",
     "discover": "Discover",
+    "dashboard": "Dashboard",
     "myTickets": "My Tickets",
     "myEvents": "My Events",
     "favorites": "Favorites",
@@ -14,6 +15,7 @@
   },
   "common": {
     "free": "FREE",
+    "free_event": "Free Event",
     "from": "From",
     "search": "Search",
     "filter": "Filter",
@@ -102,7 +104,17 @@
     "hero_subtitle": "Search concerts, parties, conferences, festivals, and more across Haiti",
     "category_events": "{{category}} Events",
     "no_category_events": "No {{category}} events yet",
-    "check_back_or_explore": "Check back later or explore other categories"
+    "check_back_or_explore": "Check back later or explore other categories",
+    "vip_event": "VIP Event",
+    "verified": "Verified",
+    "about_event": "About This Event",
+    "date_time": "Date & Time",
+    "availability": "Availability",
+    "tickets_remaining": "Tickets remaining:",
+    "almost_sold_out_alert": "Almost sold out!",
+    "sign_in_to_get_tickets": "Sign in to Get Tickets",
+    "processing": "Processing...",
+    "view_event_details": "View Event Details"
   },
   "favorites": {
     "title": "My Favorites",
@@ -134,8 +146,16 @@
     "buy_ticket": "Buy Ticket",
     "get_tickets": "Get Tickets",
     "remaining": "{{count}} remaining",
+    "remaining_short": "{{count}} left",
     "available": "Available",
-    "unavailable": "Unavailable"
+    "unavailable": "Unavailable",
+    "sold_out": "Sold Out",
+    "sold_out_caps": "SOLD OUT",
+    "almost_sold_out": "Almost Sold Out",
+    "only_x_left": "Only {{count}} left",
+    "x_available": "{{count}} available",
+    "total_tickets": "{{count}} total",
+    "unlimited": "Unlimited"
   },
   "footer": {
     "copyright": "© {{year}} EventHaiti. All rights reserved."

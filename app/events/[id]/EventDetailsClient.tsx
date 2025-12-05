@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslation } from 'react-i18next'
 import BuyTicketButton from './BuyTicketButton'
 import FavoriteButton from '@/components/FavoriteButton'
 import FollowButton from '@/components/FollowButton'
@@ -23,6 +24,7 @@ interface EventDetailsClientProps {
 }
 
 export default function EventDetailsClient({ event, user, isFavorite, isFollowing, relatedEvents }: EventDetailsClientProps) {
+  const { t } = useTranslation('common')
   const startDate = new Date(event.start_datetime)
   const isSoldOut = (event.total_tickets && event.tickets_sold >= event.total_tickets) || false
   const ticketsRemaining = event.total_tickets ? event.total_tickets - (event.tickets_sold || 0) : null
@@ -78,22 +80,22 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
               </Badge>
               {isVIP && (
                 <Badge variant="vip" size="md" icon={<Star className="w-4 h-4" />}>
-                  VIP Event
+                  {t('common.vip_event')}
                 </Badge>
               )}
               {isTrending && (
                 <Badge variant="trending" size="md" icon={<TrendingUp className="w-4 h-4" />}>
-                  Trending
+                  {t('events.trending')}
                 </Badge>
               )}
               {isSoldOut && (
                 <Badge variant="error" size="md">
-                  SOLD OUT
+                  {t('ticket.sold_out_caps')}
                 </Badge>
               )}
               {selloutSoon && (
                 <Badge variant="warning" size="md">
-                  Almost Sold Out
+                  {t('ticket.almost_sold_out')}
                 </Badge>
               )}
             </div>
@@ -115,7 +117,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 {event.users?.is_verified && (
                   <div className="flex items-center gap-1 text-blue-300 text-xs md:text-sm">
                     <Shield className="w-3 h-3 md:w-4 md:h-4" />
-                    <span>Verified</span>
+                    <span>{t('common.verified')}</span>
                   </div>
                 )}
               </div>
@@ -129,7 +131,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   <Calendar className="w-4 h-4 md:w-5 md:h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-[11px] md:text-xs text-gray-300 mb-0.5">Date & Time</p>
+                  <p className="text-[11px] md:text-xs text-gray-300 mb-0.5">{t('common.date_time')}</p>
                   <p className="text-white font-semibold text-[13px] md:text-sm">
                     {format(new Date(event.start_datetime), 'MMM d, yyyy')}
                   </p>
@@ -145,7 +147,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   <MapPin className="w-4 h-4 md:w-5 md:h-5 text-white" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] md:text-xs text-gray-300 mb-0.5">Location</p>
+                  <p className="text-[11px] md:text-xs text-gray-300 mb-0.5">{t('common.location')}</p>
                   <p className="text-white font-semibold text-[13px] md:text-sm line-clamp-1">
                     {event.venue_name}
                   </p>
@@ -161,12 +163,12 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   <Users className="w-4 h-4 md:w-5 md:h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-[11px] md:text-xs text-gray-300 mb-0.5">Availability</p>
+                  <p className="text-[11px] md:text-xs text-gray-300 mb-0.5">{t('common.availability')}</p>
                   <p className="text-white font-semibold text-[13px] md:text-sm">
-                    {isSoldOut ? 'Sold Out' : ticketsRemaining !== null ? `${ticketsRemaining} left` : 'Available'}
+                    {isSoldOut ? t('ticket.sold_out') : ticketsRemaining !== null ? t('ticket.remaining_short', { count: ticketsRemaining }) : t('ticket.available')}
                   </p>
                   <p className="text-gray-300 text-[11px] md:text-xs">
-                    {event.total_tickets ? `${event.total_tickets} total` : 'Unlimited'}
+                    {event.total_tickets ? t('ticket.total_tickets', { count: event.total_tickets }) : t('ticket.unlimited')}
                   </p>
                 </div>
               </div>
@@ -189,7 +191,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
             />
           ) : (
             <a href="/auth/login" className="block w-full bg-brand-600 text-white text-center font-semibold py-3 rounded-xl">
-              Sign in to Get Tickets
+              {t('common.sign_in_to_get_tickets')}
             </a>
           )}
         </div>
@@ -241,7 +243,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
             <div className="hidden md:block bg-white rounded-2xl shadow-soft border border-gray-100 p-3 sm:p-4 md:p-6">
               <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-2 sm:mb-3 flex items-center gap-1.5 sm:gap-2">
                 <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-brand-600" />
-                About This Event
+                {t('common.about_event')}
               </h2>
               <p className="text-sm sm:text-[15px] text-gray-700 whitespace-pre-wrap leading-relaxed">
                 {event.description}

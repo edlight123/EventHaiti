@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslation } from 'react-i18next'
 import { Calendar, MapPin, DollarSign, Users } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -28,6 +29,7 @@ export function QuickFacts({
   totalTickets,
   showAvailability,
 }: QuickFactsProps) {
+  const { t } = useTranslation('common')
   const lowInventory = remainingTickets < 20 && remainingTickets > 0
 
   return (
@@ -78,11 +80,11 @@ export function QuickFacts({
                 Price
               </p>
               {isFree ? (
-                <p className="text-sm font-bold text-success-600">FREE</p>
+                <p className="text-sm font-bold text-success-600">{t('common.free')}</p>
               ) : (
                 <>
                   <p className="text-sm font-bold text-gray-900">
-                    From {price} {currency}
+                    {t('common.from')} {price} {currency}
                   </p>
                 </>
               )}
@@ -100,7 +102,7 @@ export function QuickFacts({
                   Availability
                 </p>
                 <p className="text-sm font-bold text-warning-600">
-                  Only {remainingTickets} left
+                  {t('ticket.only_x_left', { count: remainingTickets })}
                 </p>
               </div>
             </div>

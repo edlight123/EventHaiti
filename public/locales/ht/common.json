@@ -2,6 +2,7 @@
   "nav": {
     "home": "Evènman",
     "discover": "Dekouvri",
+    "dashboard": "Tablo",
     "myTickets": "Tikè Mwen",
     "myEvents": "Evènman Mwen",
     "favorites": "Favori",
@@ -99,16 +100,37 @@
     "this_week_desc": "Pa rate evènman sa yo k ap vini",
     "explore_all": "Gade tout evènman yo",
     "find_perfect_event": "Jwenn evènman pafè pou ou",
-    "hero_subtitle": "Chèche konsè, fèt, konferans, festival, ak plis nan tout Ayiti"
+    "hero_subtitle": "Chèche konsè, fèt, konferans, festival, ak plis atravè Ayiti",
+    "category_events": "Evènman {{category}}",
+    "no_category_events": "Pa gen evènman {{category}} pou kounye a",
+    "check_back_or_explore": "Tounen pi ta oswa eksplore lòt kategori",
+    "vip_event": "Evènman VIP",
+    "verified": "Verifye",
+    "about_event": "Konsènan",
+    "date_time": "Dat & Lè",
+    "availability": "Disponibilite",
+    "tickets_remaining": "Tikè ki rete:",
+    "almost_sold_out_alert": "Prèske fini!",
+    "sign_in_to_get_tickets": "Konekte pou Tikè",
+    "processing": "Ap trete...",
+    "view_event_details": "Wè Detay"
   },
   "ticket": {
     "ticket": "Tikè",
-    "tickets": "Tikè yo",
-    "buy_ticket": "Achte tikè",
-    "get_tickets": "Jwenn tikè",
+    "tickets": "Tikè",
+    "buy_ticket": "Achte",
+    "get_tickets": "Jwenn Tikè",
     "remaining": "{{count}} ki rete",
+    "remaining_short": "{{count}} rete",
     "available": "Disponib",
-    "unavailable": "Pa disponib"
+    "unavailable": "Pa disponib",
+    "sold_out": "Fini",
+    "sold_out_caps": "FINI",
+    "almost_sold_out": "Prèske Fini",
+    "only_x_left": "{{count}} rete",
+    "x_available": "{{count}} gen",
+    "total_tickets": "{{count}} total",
+    "unlimited": "San limit"
   },
   "footer": {
     "copyright": "© {{year}} EventHaiti. Tout dwa rezève."

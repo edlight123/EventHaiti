@@ -75,7 +75,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                       pathname === '/dashboard' ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
                     }`}
                   >
-                    Dashboard
+                    {t('nav.dashboard')}
                   </Link>
                   <Link
                     href="/tickets"

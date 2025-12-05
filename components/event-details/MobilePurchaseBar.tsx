@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslation } from 'react-i18next'
 import { useEffect, useState } from 'react'
 
 interface MobilePurchaseBarProps {
@@ -19,6 +20,7 @@ export function MobilePurchaseBar({
   isSoldOut,
   ctaButton,
 }: MobilePurchaseBarProps) {
+  const { t } = useTranslation('common')
   const [isVisible, setIsVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
 
@@ -55,7 +57,7 @@ export function MobilePurchaseBar({
           <div className="flex-shrink-0">
             {isFree ? (
               <div>
-                <p className="text-lg font-bold text-success-600">FREE</p>
+                <p className="text-lg font-bold text-success-600">{t('common.free')}</p>
                 <p className="text-xs text-gray-600">No payment required</p>
               </div>
             ) : (
@@ -65,7 +67,7 @@ export function MobilePurchaseBar({
                   <span className="text-xs text-gray-600">{currency}</span>
                 </div>
                 <p className="text-xs text-gray-600">
-                  {isSoldOut ? 'Sold Out' : `${remainingTickets} left`}
+                  {isSoldOut ? t('ticket.sold_out') : t('ticket.remaining_short', { count: remainingTickets })}
                 </p>
               </div>
             )}

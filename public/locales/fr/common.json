@@ -2,6 +2,7 @@
   "nav": {
     "home": "Événements",
     "discover": "Découvrir",
+    "dashboard": "Tableau",
     "myTickets": "Mes Billets",
     "myEvents": "Mes Événements",
     "favorites": "Favoris",
@@ -14,6 +15,7 @@
   },
   "common": {
     "free": "GRATUIT",
+    "free_event": "Événement Gratuit",
     "from": "À partir de",
     "search": "Rechercher",
     "filter": "Filtrer",
@@ -99,16 +101,37 @@
     "this_week_desc": "Ne manquez pas ces événements à venir",
     "explore_all": "Explorer tous les événements",
     "find_perfect_event": "Trouvez votre événement parfait",
-    "hero_subtitle": "Recherchez des concerts, fêtes, conférences, festivals et plus à travers Haïti"
+    "hero_subtitle": "Recherchez des concerts, fêtes, conférences, festivals et plus à travers Haïti",
+    "category_events": "Événements {{category}}",
+    "no_category_events": "Aucun événement {{category}} pour le moment",
+    "check_back_or_explore": "Revenez plus tard ou explorez d'autres catégories",
+    "vip_event": "Événement VIP",
+    "verified": "Vérifié",
+    "about_event": "À Propos",
+    "date_time": "Date & Heure",
+    "availability": "Disponibilité",
+    "tickets_remaining": "Billets restants:",
+    "almost_sold_out_alert": "Presque épuisé!",
+    "sign_in_to_get_tickets": "Connexion pour Billets",
+    "processing": "Traitement...",
+    "view_event_details": "Voir Détails"
   },
   "ticket": {
     "ticket": "Billet",
     "tickets": "Billets",
-    "buy_ticket": "Acheter un billet",
-    "get_tickets": "Obtenir des billets",
-    "remaining": "{{count}} restants",
+    "buy_ticket": "Acheter",
+    "get_tickets": "Obtenir Billets",
+    "remaining": "{{count}} restant",
+    "remaining_short": "{{count}} rest.",
     "available": "Disponible",
-    "unavailable": "Indisponible"
+    "unavailable": "Indisponible",
+    "sold_out": "Épuisé",
+    "sold_out_caps": "ÉPUISÉ",
+    "almost_sold_out": "Presque Épuisé",
+    "only_x_left": "{{count}} rest.",
+    "x_available": "{{count}} dispo.",
+    "total_tickets": "{{count}} total",
+    "unlimited": "Illimité"
   },
   "footer": {
     "copyright": "© {{year}} EventHaiti. Tous droits réservés."

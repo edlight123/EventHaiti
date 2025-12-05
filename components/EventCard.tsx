@@ -87,12 +87,12 @@ export default function EventCard({ event, priority = false, index = 0 }: EventC
             <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
               {isSoldOut && (
                 <Badge variant="error" size="sm">
-                  {t('events.soldOut')}
+                  {t('ticket.sold_out_caps')}
                 </Badge>
               )}
               {selloutSoon && !isSoldOut && (
                 <Badge variant="warning" size="sm">
-                  {t('ticket.remaining', { count: remainingTickets })}
+                  {t('ticket.remaining_short', { count: remainingTickets })}
                 </Badge>
               )}
             </div>
@@ -110,12 +110,12 @@ export default function EventCard({ event, priority = false, index = 0 }: EventC
               )}
               {isTrending && (
                 <Badge variant="trending" size="sm" icon={<TrendingUp className="w-3 h-3" />}>
-                  Trending
+                  {t('events.trending')}
                 </Badge>
               )}
               {isNew && (
                 <Badge variant="new" size="sm" icon={<Sparkles className="w-3 h-3" />}>
-                  New
+                  {t('events.new')}
                 </Badge>
               )}
             </div>
@@ -123,12 +123,12 @@ export default function EventCard({ event, priority = false, index = 0 }: EventC
             <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
               {isSoldOut && (
                 <Badge variant="error" size="sm">
-                  SOLD OUT
+                  {t('ticket.sold_out_caps')}
                 </Badge>
               )}
               {selloutSoon && !isSoldOut && (
                 <Badge variant="warning" size="sm">
-                  {remainingTickets} left!
+                  {t('ticket.remaining_short', { count: remainingTickets })}
                 </Badge>
               )}
             </div>
