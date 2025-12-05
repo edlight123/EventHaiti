@@ -3,12 +3,22 @@
   "subtitle": "Gérez les paramètres et préférences de votre compte",
   "organizer_settings": "Paramètres organisateur",
   "header": {
-    "edit_profile": "Modifier le profil",
+    "title": "Profil",
+    "edit_profile": "Modifier",
+    "cancel": "Annuler",
+    "save": "Sauvegarder",
+    "saving": "Sauvegarde...",
     "full_name": "Nom complet",
-    "email": "E-mail",
-    "phone": "Numéro de téléphone",
-    "bio": "Biographie",
-    "save": "Enregistrer les modifications"
+    "full_name_placeholder": "Entrez votre nom",
+    "full_name_required": "Le nom est requis",
+    "email": "Email",
+    "email_readonly": "Lecture seule",
+    "phone": "Téléphone",
+    "phone_placeholder": "+509 1234 5678",
+    "phone_not_set": "Non défini",
+    "member_since": "Membre depuis",
+    "bio": "Bio",
+    "save_error": "Échec de la mise à jour"
   },
   "preferences": {
     "title": "Préférences",
@@ -19,22 +29,22 @@
     "select_city": "Sélectionner une ville...",
     "select_area": "Sélectionner un(e) {{type}}...",
     "favorite_categories": "Catégories favorites",
-    "categories_note": "Sélectionnez vos intérêts pour obtenir des recommandations personnalisées",
+    "categories_note": "Sélectionnez vos centres d'intérêt pour obtenir des recommandations personnalisées",
     "language": "Langue",
-    "language_en": "English",
+    "language_en": "Anglais",
     "language_fr": "Français",
     "language_ht": "Kreyòl"
   },
   "notifications": {
     "title": "Notifications",
-    "subtitle": "Gérez comment vous recevez les mises à jour",
-    "email_notifications": "Notifications par e-mail",
+    "subtitle": "Gérez vos préférences de notifications",
+    "email_notifications": "Notifications par email",
     "event_reminders": "Rappels d'événements",
-    "event_reminders_desc": "Soyez notifié avant le début de vos événements",
+    "event_reminders_desc": "Recevez des rappels avant vos événements",
     "ticket_purchase": "Confirmations d'achat de billets",
     "ticket_purchase_desc": "Recevez des confirmations lors de l'achat de billets",
     "new_events": "Nouveaux événements",
-    "new_events_desc": "Soyez notifié des nouveaux événements dans vos catégories favorites",
+    "new_events_desc": "Soyez informé des nouveaux événements dans vos catégories favorites",
     "organizer_updates": "Mises à jour des organisateurs",
     "organizer_updates_desc": "Recevez des mises à jour des organisateurs que vous suivez"
   },
@@ -43,7 +53,7 @@
     "subtitle": "Gérez les paramètres de votre compte",
     "change_password": "Changer le mot de passe",
     "delete_account": "Supprimer le compte",
-    "delete_account_warning": "Cette action ne peut pas être annulée",
-    "sign_out": "Se déconnecter"
+    "delete_account_warning": "Cette action est irréversible",
+    "sign_out": "Déconnexion"
   }
 }

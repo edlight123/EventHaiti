@@ -3,12 +3,22 @@
   "subtitle": "Manage your account settings and preferences",
   "organizer_settings": "Organizer Settings",
   "header": {
-    "edit_profile": "Edit Profile",
-    "full_name": "Full Name",
+    "title": "Profile",
+    "edit_profile": "Edit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving...",
+    "full_name": "Display Name",
+    "full_name_placeholder": "Enter your name",
+    "full_name_required": "Display name is required",
     "email": "Email",
-    "phone": "Phone Number",
+    "email_readonly": "Read-only",
+    "phone": "Phone",
+    "phone_placeholder": "+509 1234 5678",
+    "phone_not_set": "Not set",
+    "member_since": "Member since",
     "bio": "Bio",
-    "save": "Save Changes"
+    "save_error": "Failed to update profile"
   },
   "preferences": {
     "title": "Preferences",

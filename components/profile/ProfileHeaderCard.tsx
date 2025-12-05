@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Image from 'next/image'
 import { User, Mail, Phone, Calendar, Edit2, Check, X } from 'lucide-react'
 import type { UserProfile } from '@/lib/firestore/user-profile'
@@ -11,6 +12,7 @@ interface ProfileHeaderCardProps {
 }
 
 export function ProfileHeaderCard({ profile, onUpdate }: ProfileHeaderCardProps) {
+  const { t } = useTranslation('profile')
   const [isEditing, setIsEditing] = useState(false)
   const [displayName, setDisplayName] = useState(profile.displayName)
   const [phone, setPhone] = useState(profile.phone || '')
@@ -18,7 +20,7 @@ export function ProfileHeaderCard({ profile, onUpdate }: ProfileHeaderCardProps)
 
   const handleSave = async () => {
     if (!displayName.trim()) {
-      alert('Display name is required')
+      alert(t('header.full_name_required'))
       return
     }
 
@@ -28,7 +30,7 @@ export function ProfileHeaderCard({ profile, onUpdate }: ProfileHeaderCardProps)
       setIsEditing(false)
     } catch (error) {
       console.error('Failed to update profile:', error)
-      alert('Failed to update profile')
+      alert(t('header.save_error'))
     } finally {
       setIsLoading(false)
     }
@@ -48,14 +50,14 @@ export function ProfileHeaderCard({ profile, onUpdate }: ProfileHeaderCardProps)
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Profile</h2>
+        <h2 className="text-xl font-bold text-gray-900">{t('header.title')}</h2>
         {!isEditing ? (
           <button
             onClick={() => setIsEditing(true)}
             className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors"
           >
             <Edit2 className="w-4 h-4" />
-            Edit
+            {t('header.edit_profile')}
           </button>
         ) : (
           <div className="flex items-center gap-2">
@@ -65,7 +67,7 @@ export function ProfileHeaderCard({ profile, onUpdate }: ProfileHeaderCardProps)
               className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
             >
               <X className="w-4 h-4" />
-              Cancel
+              {t('header.cancel')}
             </button>
             <button
               onClick={handleSave}
@@ -73,7 +75,7 @@ export function ProfileHeaderCard({ profile, onUpdate }: ProfileHeaderCardProps)
               className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
             >
               <Check className="w-4 h-4" />
-              {isLoading ? 'Saving...' : 'Save'}
+              {isLoading ? t('header.saving') : t('header.save')}
             </button>
           </div>
         )}
@@ -103,7 +105,7 @@ export function ProfileHeaderCard({ profile, onUpdate }: ProfileHeaderCardProps)
           {/* Display Name */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-              Display Name
+              {t('header.full_name')}
             </label>
             {isEditing ? (
               <input
@@ -111,35 +113,35 @@ export function ProfileHeaderCard({ profile, onUpdate }: ProfileHeaderCardProps)
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="Enter your name"
+                placeholder={t('header.full_name_placeholder')}
               />
             ) : (
-              <p className="text-lg font-bold text-gray-900">{profile.displayName || 'Not set'}</p>
+              <p className="text-lg font-bold text-gray-900">{profile.displayName || t('header.phone_not_set')}</p>
             )}
           </div>
 
           {/* Member Since */}
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Calendar className="w-4 h-4" />
-            <span>Member since {memberSince}</span>
+            <span>{t('header.member_since')} {memberSince}</span>
           </div>
 
           {/* Email */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-              Email
+              {t('header.email')}
             </label>
             <div className="flex items-center gap-2 text-gray-900">
               <Mail className="w-4 h-4 text-gray-400" />
               <span>{profile.email}</span>
-              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">Read-only</span>
+              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{t('header.email_readonly')}</span>
             </div>
           </div>
 
           {/* Phone */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-              Phone
+              {t('header.phone')}
             </label>
             {isEditing ? (
               <input
@@ -147,12 +149,12 @@ export function ProfileHeaderCard({ profile, onUpdate }: ProfileHeaderCardProps)
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="+509 1234 5678"
+                placeholder={t('header.phone_placeholder')}
               />
             ) : (
               <div className="flex items-center gap-2 text-gray-900">
                 <Phone className="w-4 h-4 text-gray-400" />
-                <span>{profile.phone || 'Not set'}</span>
+                <span>{profile.phone || t('header.phone_not_set')}</span>
               </div>
             )}
           </div>
