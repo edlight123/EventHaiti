@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { LogOut, Trash2, AlertTriangle } from 'lucide-react'
 import { signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase/client'
@@ -11,6 +12,7 @@ interface AccountCardProps {
 }
 
 export function AccountCard({ onDeleteAccount }: AccountCardProps) {
+  const { t } = useTranslation('profile')
   const router = useRouter()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
@@ -22,13 +24,13 @@ export function AccountCard({ onDeleteAccount }: AccountCardProps) {
       router.push('/')
     } catch (error) {
       console.error('Error signing out:', error)
-      alert('Failed to sign out')
+      alert(t('account.sign_out_error'))
     }
   }
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== 'DELETE') {
-      alert('Please type DELETE to confirm')
+      alert(t('account.delete_confirm_error'))
       return
     }
 
@@ -38,12 +40,12 @@ export function AccountCard({ onDeleteAccount }: AccountCardProps) {
         await onDeleteAccount()
       } else {
         // Stub implementation
-        alert('Account deletion is not yet implemented. Please contact support.')
+        alert(t('account.delete_error'))
       }
       setShowDeleteModal(false)
     } catch (error) {
       console.error('Error deleting account:', error)
-      alert('Failed to delete account')
+      alert(t('account.delete_error'))
     } finally {
       setIsDeleting(false)
     }
@@ -54,8 +56,8 @@ export function AccountCard({ onDeleteAccount }: AccountCardProps) {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
         {/* Header */}
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Account</h2>
-          <p className="text-sm text-gray-600">Manage your account settings</p>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">{t('account.title')}</h2>
+          <p className="text-sm text-gray-600">{t('account.subtitle')}</p>
         </div>
 
         <div className="space-y-3">
@@ -68,8 +70,8 @@ export function AccountCard({ onDeleteAccount }: AccountCardProps) {
               <LogOut className="w-5 h-5 text-gray-600" />
             </div>
             <div className="flex-1 text-left">
-              <p className="font-semibold text-gray-900">Sign Out</p>
-              <p className="text-sm text-gray-600">Sign out of your account</p>
+              <p className="font-semibold text-gray-900">{t('account.sign_out')}</p>
+              <p className="text-sm text-gray-600">{t('account.sign_out_desc')}</p>
             </div>
           </button>
 
@@ -82,8 +84,8 @@ export function AccountCard({ onDeleteAccount }: AccountCardProps) {
               <Trash2 className="w-5 h-5 text-red-600" />
             </div>
             <div className="flex-1 text-left">
-              <p className="font-semibold text-red-900">Delete Account</p>
-              <p className="text-sm text-red-700">Permanently delete your account and data</p>
+              <p className="font-semibold text-red-900">{t('account.delete_account')}</p>
+              <p className="text-sm text-red-700">{t('account.delete_account_desc')}</p>
             </div>
           </button>
         </div>
@@ -100,23 +102,23 @@ export function AccountCard({ onDeleteAccount }: AccountCardProps) {
 
             {/* Content */}
             <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
-              Delete Account?
+              {t('account.delete_modal_title')}
             </h3>
             <p className="text-gray-600 text-center mb-6">
-              This action cannot be undone. All your data, tickets, and event history will be permanently deleted.
+              {t('account.delete_modal_desc')}
             </p>
 
             {/* Confirmation Input */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Type <span className="text-red-600">DELETE</span> to confirm:
+                {t('account.delete_confirm_label')}
               </label>
               <input
                 type="text"
                 value={deleteConfirmText}
                 onChange={(e) => setDeleteConfirmText(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                placeholder="DELETE"
+                placeholder={t('account.delete_confirm_placeholder')}
                 autoFocus
               />
             </div>
@@ -131,14 +133,14 @@ export function AccountCard({ onDeleteAccount }: AccountCardProps) {
                 disabled={isDeleting}
                 className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-colors disabled:opacity-50"
               >
-                Cancel
+                {t('account.cancel')}
               </button>
               <button
                 onClick={handleDeleteAccount}
                 disabled={isDeleting || deleteConfirmText !== 'DELETE'}
                 className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isDeleting ? 'Deleting...' : 'Delete Account'}
+                {isDeleting ? t('account.deleting') : t('account.delete_button')}
               </button>
             </div>
           </div>

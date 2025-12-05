@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Bell, BellOff } from 'lucide-react'
 import type { UserProfile } from '@/lib/firestore/user-profile'
 
@@ -10,6 +11,7 @@ interface NotificationsCardProps {
 }
 
 export function NotificationsCard({ profile, onUpdate }: NotificationsCardProps) {
+  const { t } = useTranslation('profile')
   const [notify, setNotify] = useState(profile.notify || {
     reminders: true,
     updates: true,
@@ -40,8 +42,8 @@ export function NotificationsCard({ profile, onUpdate }: NotificationsCardProps)
           <Bell className="w-5 h-5 text-purple-600" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Notifications</h2>
-          <p className="text-sm text-gray-600">Manage how you hear from us</p>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">{t('notifications.title')}</h2>
+          <p className="text-sm text-gray-600">{t('notifications.subtitle')}</p>
         </div>
       </div>
 
@@ -50,9 +52,9 @@ export function NotificationsCard({ profile, onUpdate }: NotificationsCardProps)
         {/* Event Reminders */}
         <div className="flex items-start justify-between py-3 border-b border-gray-100">
           <div className="flex-1 pr-4">
-            <h3 className="font-semibold text-gray-900 mb-1">Event Reminders</h3>
+            <h3 className="font-semibold text-gray-900 mb-1">{t('notifications.event_reminders')}</h3>
             <p className="text-sm text-gray-600">
-              Get notified before events you&apos;re attending
+              {t('notifications.event_reminders_desc')}
             </p>
           </div>
           <button
@@ -73,9 +75,9 @@ export function NotificationsCard({ profile, onUpdate }: NotificationsCardProps)
         {/* Event Updates */}
         <div className="flex items-start justify-between py-3 border-b border-gray-100">
           <div className="flex-1 pr-4">
-            <h3 className="font-semibold text-gray-900 mb-1">Event Updates</h3>
+            <h3 className="font-semibold text-gray-900 mb-1">{t('notifications.event_updates')}</h3>
             <p className="text-sm text-gray-600">
-              Changes to events you&apos;re attending or following
+              {t('notifications.event_updates_desc')}
             </p>
           </div>
           <button
@@ -96,9 +98,9 @@ export function NotificationsCard({ profile, onUpdate }: NotificationsCardProps)
         {/* Promotions */}
         <div className="flex items-start justify-between py-3">
           <div className="flex-1 pr-4">
-            <h3 className="font-semibold text-gray-900 mb-1">Promotions & News</h3>
+            <h3 className="font-semibold text-gray-900 mb-1">{t('notifications.promos')}</h3>
             <p className="text-sm text-gray-600">
-              Special offers, featured events, and platform updates
+              {t('notifications.promos_desc')}
             </p>
           </div>
           <button
@@ -120,7 +122,7 @@ export function NotificationsCard({ profile, onUpdate }: NotificationsCardProps)
       {/* Info */}
       <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-xs text-blue-800">
-          <strong>Note:</strong> Important account and security notifications will always be sent regardless of these settings.
+          {t('notifications.note')}
         </p>
       </div>
     </div>

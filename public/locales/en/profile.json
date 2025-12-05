@@ -37,23 +37,31 @@
   },
   "notifications": {
     "title": "Notifications",
-    "subtitle": "Manage how you receive updates",
-    "email_notifications": "Email Notifications",
+    "subtitle": "Manage how you hear from us",
     "event_reminders": "Event Reminders",
-    "event_reminders_desc": "Get notified before your events start",
-    "ticket_purchase": "Ticket Purchase Confirmations",
-    "ticket_purchase_desc": "Receive confirmations when you buy tickets",
-    "new_events": "New Events",
-    "new_events_desc": "Get notified about new events in your favorite categories",
-    "organizer_updates": "Organizer Updates",
-    "organizer_updates_desc": "Receive updates from organizers you follow"
+    "event_reminders_desc": "Get notified before events you're attending",
+    "event_updates": "Event Updates",
+    "event_updates_desc": "Changes to events you're attending or following",
+    "promos": "Promotions & News",
+    "promos_desc": "Special offers, featured events, and platform updates",
+    "note": "Important account and security notifications will always be sent regardless of these settings."
   },
   "account": {
     "title": "Account",
     "subtitle": "Manage your account settings",
-    "change_password": "Change Password",
+    "sign_out": "Sign Out",
+    "sign_out_desc": "Sign out of your account",
     "delete_account": "Delete Account",
-    "delete_account_warning": "This action cannot be undone",
-    "sign_out": "Sign Out"
+    "delete_account_desc": "Permanently delete your account and data",
+    "delete_modal_title": "Delete Account?",
+    "delete_modal_desc": "This action cannot be undone. All your data, tickets, and event history will be permanently deleted.",
+    "delete_confirm_label": "Type DELETE to confirm:",
+    "delete_confirm_placeholder": "DELETE",
+    "delete_confirm_error": "Please type DELETE to confirm",
+    "cancel": "Cancel",
+    "delete_button": "Delete Account",
+    "deleting": "Deleting...",
+    "sign_out_error": "Failed to sign out",
+    "delete_error": "Failed to delete account"
   }
 }
