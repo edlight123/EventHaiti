@@ -50,7 +50,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                 {BRAND.logoText}
               </span>
             </Link>
-            <div className="hidden md:ml-8 md:flex md:space-x-4">
+            <div className="hidden md:ml-8 md:flex md:space-x-2 lg:space-x-4">
               <Link
                 href="/"
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
