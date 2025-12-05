@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslation } from 'react-i18next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Calendar, MapPin, Users, DollarSign, Edit, Eye, QrCode, Share2 } from 'lucide-react'
@@ -19,20 +20,22 @@ interface NextEventHeroProps {
 }
 
 export function NextEventHero({ event }: NextEventHeroProps) {
+  const { t } = useTranslation('organizer')
+  
   if (!event) {
     return (
       <div className="bg-gradient-to-br from-brand-50 to-accent-50 rounded-2xl border border-gray-200 p-8 text-center">
         <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
           <Calendar className="w-8 h-8 text-gray-400" />
         </div>
-        <h3 className="text-lg font-bold text-gray-900 mb-2">No upcoming events</h3>
-        <p className="text-gray-600 mb-6">Create your next event to see it here</p>
+        <h3 className="text-lg font-bold text-gray-900 mb-2">{t('next_event.no_upcoming_title')}</h3>
+        <p className="text-gray-600 mb-6">{t('next_event.no_upcoming_desc')}</p>
         <Link
           href="/organizer/events/new"
           className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-brand-600 to-accent-600 text-white rounded-xl font-bold hover:shadow-glow transition-all"
         >
           <Calendar className="w-5 h-5" />
-          Create Event
+          {t('next_event.create_event')}
         </Link>
       </div>
     )
@@ -44,11 +47,11 @@ export function NextEventHero({ event }: NextEventHeroProps) {
   const progress = event.capacity > 0 ? (event.ticketsSold / event.capacity) * 100 : 0
 
   const getCountdownText = () => {
-    if (daysUntil < 0) return 'Event passed'
-    if (daysUntil === 0) return 'Today!'
-    if (daysUntil === 1) return 'Tomorrow'
-    if (daysUntil <= 7) return `In ${daysUntil} days`
-    return `In ${Math.ceil(daysUntil / 7)} weeks`
+    if (daysUntil < 0) return t('next_event.event_passed')
+    if (daysUntil === 0) return t('next_event.today')
+    if (daysUntil === 1) return t('next_event.tomorrow')
+    if (daysUntil <= 7) return t('next_event.in_days', { count: daysUntil })
+    return t('next_event.in_weeks', { count: Math.ceil(daysUntil / 7) })
   }
 
   return (

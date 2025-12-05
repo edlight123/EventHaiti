@@ -61,7 +61,17 @@
     "sold": "Vendus",
     "revenue": "Revenus",
     "earned": "Gagnés",
-    "avg_event": "Moy/Événement",
+    "avg_event": "Moy/Évén",
     "tickets_per_event": "Billets"
+  },
+  "next_event": {
+    "event_passed": "Événement passé",
+    "today": "Aujourd'hui!",
+    "tomorrow": "Demain",
+    "in_days": "Dans {{count}} jours",
+    "in_weeks": "Dans {{count}} sem.",
+    "no_upcoming_title": "Aucun événement à venir",
+    "no_upcoming_desc": "Créez votre prochain événement pour le voir ici",
+    "create_event": "Créer un événement"
   }
 }

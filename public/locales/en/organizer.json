@@ -63,5 +63,15 @@
     "earned": "Earned",
     "avg_event": "Avg/Event",
     "tickets_per_event": "Tickets"
+  },
+  "next_event": {
+    "event_passed": "Event passed",
+    "today": "Today!",
+    "tomorrow": "Tomorrow",
+    "in_days": "In {{count}} days",
+    "in_weeks": "In {{count}} weeks",
+    "no_upcoming_title": "No upcoming events",
+    "no_upcoming_desc": "Create your next event to see it here",
+    "create_event": "Create Event"
   }
 }

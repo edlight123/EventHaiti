@@ -188,17 +188,20 @@ export default function EventCard({ event, priority = false, index = 0 }: EventC
           </div>
 
           <div className="flex items-center justify-between pt-2 sm:pt-2.5 md:pt-3 border-t border-gray-100">
-            <div>
+            <div className="flex-1 min-w-0">
               {isFree ? (
                 <p className="text-2xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-success-600 to-success-700 bg-clip-text text-transparent">{t('common.free')}</p>
               ) : (
-                <p className="text-2xl sm:text-2xl md:text-3xl font-bold text-gray-900">
-                  {t('common.from')} {event.ticket_price} <span className="text-sm sm:text-sm font-normal text-gray-600">{event.currency}</span>
-                </p>
+                <div className="flex items-baseline gap-1 flex-wrap">
+                  <span className="text-xs sm:text-sm font-medium text-gray-600 whitespace-nowrap">{t('common.from')}</span>
+                  <span className="text-2xl sm:text-2xl md:text-3xl font-bold text-gray-900 whitespace-nowrap">
+                    {event.ticket_price} <span className="text-sm sm:text-sm font-normal text-gray-600">{event.currency}</span>
+                  </span>
+                </div>
               )}
             </div>
             {!isSoldOut && (
-              <div className="text-right">
+              <div className="text-right flex-shrink-0">
                 <p className={`text-sm sm:text-sm font-bold ${selloutSoon ? 'text-warning-600' : 'text-brand-700'}`}>
                   {t('ticket.remaining', { count: remainingTickets })}
                 </p>

@@ -61,7 +61,17 @@
     "sold": "Vann",
     "revenue": "Revni",
     "earned": "Genyen",
-    "avg_event": "Mwayen/Evènman",
+    "avg_event": "Mwayn/Ev",
     "tickets_per_event": "Tikè"
+  },
+  "next_event": {
+    "event_passed": "Evènman pase",
+    "today": "Jodi a!",
+    "tomorrow": "Demen",
+    "in_days": "Nan {{count}} jou",
+    "in_weeks": "Nan {{count}} semèn",
+    "no_upcoming_title": "Pa gen evènman k ap vini",
+    "no_upcoming_desc": "Kreye pwochen evènman ou pou wè l la a",
+    "create_event": "Kreye Evènman"
   }
 }
