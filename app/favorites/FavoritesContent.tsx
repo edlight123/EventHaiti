@@ -100,8 +100,8 @@ export default function FavoritesContent({ userId }: FavoritesContentProps) {
     <PullToRefresh onRefresh={loadFavorites}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Favorites</h1>
-          <p className="text-gray-600 mt-2">Events you&apos;ve saved for later</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
+          <p className="text-gray-600 mt-2">{t('subtitle')}</p>
         </div>
 
         {favoriteEvents.length === 0 ? (

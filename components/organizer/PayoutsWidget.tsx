@@ -1,3 +1,6 @@
+'use client'
+
+import { useTranslation } from 'react-i18next'
 import Link from 'next/link'
 import { CreditCard, AlertCircle, CheckCircle, Clock, DollarSign } from 'lucide-react'
 
@@ -15,6 +18,8 @@ interface PayoutsWidgetProps {
 }
 
 export function PayoutsWidget({ status, pendingBalance = 0, lastPayout, nextPayout }: PayoutsWidgetProps) {
+  const { t } = useTranslation('organizer')
+  
   const getStatusInfo = () => {
     switch (status) {
       case 'not-setup':
@@ -22,9 +27,9 @@ export function PayoutsWidget({ status, pendingBalance = 0, lastPayout, nextPayo
           icon: <AlertCircle className="w-5 h-5" />,
           iconBg: 'bg-red-50',
           iconColor: 'text-red-600',
-          title: 'Payouts not set up',
-          description: 'Connect your bank account to receive payments',
-          ctaText: 'Setup Payouts',
+          title: t('payouts.not_setup_title'),
+          description: t('payouts.not_setup_description'),
+          ctaText: t('payouts.setup_payouts'),
           ctaHref: '/organizer/settings/payouts',
           ctaColor: 'bg-red-600 hover:bg-red-700'
         }
@@ -33,9 +38,9 @@ export function PayoutsWidget({ status, pendingBalance = 0, lastPayout, nextPayo
           icon: <CheckCircle className="w-5 h-5" />,
           iconBg: 'bg-green-50',
           iconColor: 'text-green-600',
-          title: 'Payouts ready',
-          description: 'Your account is set up and ready to receive payments',
-          ctaText: 'View Settings',
+          title: t('payouts.ready_title'),
+          description: t('payouts.ready_description'),
+          ctaText: t('payouts.view_settings'),
           ctaHref: '/organizer/settings/payouts',
           ctaColor: 'bg-green-600 hover:bg-green-700'
         }
@@ -44,9 +49,9 @@ export function PayoutsWidget({ status, pendingBalance = 0, lastPayout, nextPayo
           icon: <Clock className="w-5 h-5" />,
           iconBg: 'bg-yellow-50',
           iconColor: 'text-yellow-600',
-          title: 'Payout pending',
-          description: 'Your payout is being processed',
-          ctaText: 'View Details',
+          title: t('payouts.pending_title'),
+          description: t('payouts.pending_description'),
+          ctaText: t('payouts.view_details'),
           ctaHref: '/organizer/payouts',
           ctaColor: 'bg-yellow-600 hover:bg-yellow-700'
         }
@@ -55,9 +60,9 @@ export function PayoutsWidget({ status, pendingBalance = 0, lastPayout, nextPayo
           icon: <DollarSign className="w-5 h-5" />,
           iconBg: 'bg-blue-50',
           iconColor: 'text-blue-600',
-          title: 'Payouts active',
-          description: 'Regular payouts are being processed',
-          ctaText: 'View History',
+          title: t('payouts.active_title'),
+          description: t('payouts.active_description'),
+          ctaText: t('payouts.view_history'),
           ctaHref: '/organizer/payouts',
           ctaColor: 'bg-blue-600 hover:bg-blue-700'
         }
@@ -85,7 +90,7 @@ export function PayoutsWidget({ status, pendingBalance = 0, lastPayout, nextPayo
         <div className="space-y-4 mb-6">
           {/* Pending Balance */}
           <div className="bg-gray-50 rounded-xl p-4">
-            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Pending Balance</p>
+            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">{t('payouts.pending_balance')}</p>
             <p className="text-2xl font-bold text-gray-900">
               ${(pendingBalance / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
@@ -95,7 +100,7 @@ export function PayoutsWidget({ status, pendingBalance = 0, lastPayout, nextPayo
           {lastPayout && (
             <div className="flex items-center justify-between py-2 border-b border-gray-100">
               <div>
-                <p className="text-sm font-semibold text-gray-900">Last Payout</p>
+                <p className="text-sm font-semibold text-gray-900">{t('payouts.last_payout')}</p>
                 <p className="text-xs text-gray-600">
                   {new Date(lastPayout.date).toLocaleDateString('en-US', { 
                     month: 'short', 
@@ -114,7 +119,7 @@ export function PayoutsWidget({ status, pendingBalance = 0, lastPayout, nextPayo
           {nextPayout && nextPayout.amount > 0 && (
             <div className="flex items-center justify-between py-2">
               <div>
-                <p className="text-sm font-semibold text-gray-900">Next Payout (Est.)</p>
+                <p className="text-sm font-semibold text-gray-900">{t('payouts.next_payout_est')}</p>
                 <p className="text-xs text-gray-600">
                   {new Date(nextPayout.estimatedDate).toLocaleDateString('en-US', { 
                     month: 'short', 
@@ -141,7 +146,7 @@ export function PayoutsWidget({ status, pendingBalance = 0, lastPayout, nextPayo
 
       {status !== 'not-setup' && (
         <p className="text-xs text-gray-500 text-center mt-3">
-          Payouts are processed within 2-5 business days
+          {t('payouts.processing_time')}
         </p>
       )}
     </div>

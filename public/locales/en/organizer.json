@@ -6,5 +6,62 @@
     "title": "No events yet",
     "description": "Create your first event and start selling tickets to your audience",
     "cta": "Create Your First Event"
+  },
+  "action_center": {
+    "title": "Needs Attention",
+    "action_items": "action item",
+    "action_items_plural": "action items",
+    "all_caught_up": "All caught up! 🎉",
+    "no_action_items": "No action items need your attention right now.",
+    "draft_events": "Draft Event",
+    "draft_events_plural": "Draft Events",
+    "draft_description": "Publish your events to start selling tickets",
+    "publish_events": "Publish Events",
+    "events_starting_soon": "Event Starting Soon",
+    "events_starting_soon_plural": "Events Starting Soon",
+    "no_sales_description": "These events start within 7 days with no sales yet",
+    "promote_events": "Promote Events"
+  },
+  "payouts": {
+    "not_setup_title": "Payouts not set up",
+    "not_setup_description": "Connect your bank account to receive payments",
+    "setup_payouts": "Setup Payouts",
+    "ready_title": "Payouts ready",
+    "ready_description": "Your account is set up and ready to receive payments",
+    "pending_title": "Payout pending",
+    "pending_description": "Your payout is being processed",
+    "active_title": "Payouts active",
+    "active_description": "Regular payouts are being processed",
+    "view_history": "View History",
+    "view_details": "View Details",
+    "view_settings": "View Settings",
+    "pending_balance": "Pending Balance",
+    "last_payout": "Last Payout",
+    "next_payout_est": "Next Payout (Est.)",
+    "processing_time": "Payouts are processed within 2-5 business days"
+  },
+  "event_card": {
+    "published": "Published",
+    "draft": "Draft",
+    "tickets_sold": "Tickets sold",
+    "capacity": "capacity",
+    "manage": "Manage",
+    "promote": "Promote",
+    "attendees": "Attendees",
+    "checkin": "Check-in"
+  },
+  "sales_snapshot": {
+    "title": "Sales Snapshot",
+    "7d": "Last 7 days",
+    "30d": "Last 30 days",
+    "lifetime": "All time",
+    "events": "Events",
+    "upcoming": "Upcoming",
+    "tickets": "Tickets",
+    "sold": "Sold",
+    "revenue": "Revenue",
+    "earned": "Earned",
+    "avg_event": "Avg/Event",
+    "tickets_per_event": "Tickets"
   }
 }

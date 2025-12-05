@@ -1,3 +1,6 @@
+'use client'
+
+import { useTranslation } from 'react-i18next'
 import Link from 'next/link'
 import { AlertCircle, FileText, TrendingUp, CreditCard, ShieldCheck } from 'lucide-react'
 
@@ -15,6 +18,8 @@ interface ActionCenterProps {
 }
 
 export function ActionCenter({ alerts }: ActionCenterProps) {
+  const { t } = useTranslation('organizer')
+  
   if (alerts.length === 0) {
     return (
       <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-2xl border border-green-200 p-6">
@@ -23,8 +28,8 @@ export function ActionCenter({ alerts }: ActionCenterProps) {
             <ShieldCheck className="w-6 h-6 text-green-600" />
           </div>
           <div>
-            <h3 className="font-bold text-green-900 text-lg mb-1">All caught up! 🎉</h3>
-            <p className="text-sm text-green-700">No action items need your attention right now.</p>
+            <h3 className="font-bold text-green-900 text-lg mb-1">{t('action_center.all_caught_up')}</h3>
+            <p className="text-sm text-green-700">{t('action_center.no_action_items')}</p>
           </div>
         </div>
       </div>
@@ -68,8 +73,10 @@ export function ActionCenter({ alerts }: ActionCenterProps) {
           <AlertCircle className="w-5 h-5 text-red-600" />
         </div>
         <div>
-          <h3 className="font-bold text-gray-900 text-lg">Needs Attention</h3>
-          <p className="text-sm text-gray-600">{alerts.length} action item{alerts.length !== 1 ? 's' : ''}</p>
+          <h3 className="font-bold text-gray-900 text-lg">{t('action_center.title')}</h3>
+          <p className="text-sm text-gray-600">
+            {alerts.length} {alerts.length !== 1 ? t('action_center.action_items_plural') : t('action_center.action_items')}
+          </p>
         </div>
       </div>
 

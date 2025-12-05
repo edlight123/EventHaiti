@@ -1,10 +1,67 @@
 {
-  "your_events": "Evènman Ou Yo",
+  "your_events": "Evènman ou yo",
   "view_all_events": "Gade tout evènman yo →",
-  "create_event": "Kreye Evènman",
+  "create_event": "Kreye evènman",
   "no_events": {
     "title": "Pa gen evènman ankò",
-    "description": "Kreye premye evènman ou a epi kòmanse vann tikè bay piblik ou a",
-    "cta": "Kreye Premye Evènman Ou"
+    "description": "Kreye premye evènman ou epi kòmanse vann tikè bay piblik ou",
+    "cta": "Kreye premye evènman ou"
+  },
+  "action_center": {
+    "title": "Bezwen atansyon",
+    "action_items": "aksyon",
+    "action_items_plural": "aksyon",
+    "all_caught_up": "Tout bagay ajou! 🎉",
+    "no_action_items": "Pa gen okenn aksyon ki bezwen atansyon ou kounye a.",
+    "draft_events": "Evènman bwouyon",
+    "draft_events_plural": "Evènman bwouyon",
+    "draft_description": "Pibliye evènman ou yo pou kòmanse vann tikè",
+    "publish_events": "Pibliye evènman yo",
+    "events_starting_soon": "Evènman ap kòmanse byento",
+    "events_starting_soon_plural": "Evènman ap kòmanse byento",
+    "no_sales_description": "Evènman sa yo ap kòmanse nan 7 jou san okenn vant ankò",
+    "promote_events": "Pwomote evènman yo"
+  },
+  "payouts": {
+    "not_setup_title": "Peman pa konfigure",
+    "not_setup_description": "Konekte kont bank ou pou resevwa peman",
+    "setup_payouts": "Konfigure peman",
+    "ready_title": "Peman pare",
+    "ready_description": "Kont ou konfigure epi li pare pou resevwa peman",
+    "pending_title": "Peman an atant",
+    "pending_description": "Peman ou ap trete",
+    "active_title": "Peman aktif",
+    "active_description": "Peman regilye ap trete",
+    "view_history": "Gade istorik",
+    "view_details": "Gade detay",
+    "view_settings": "Gade paramèt",
+    "pending_balance": "Balans an atant",
+    "last_payout": "Dènye peman",
+    "next_payout_est": "Pwochen peman (estime)",
+    "processing_time": "Peman yo trete nan 2-5 jou travay"
+  },
+  "event_card": {
+    "published": "Pibliye",
+    "draft": "Bwouyon",
+    "tickets_sold": "Tikè vann",
+    "capacity": "kapasite",
+    "manage": "Jere",
+    "promote": "Pwomote",
+    "attendees": "Patisipan",
+    "checkin": "Anrejistreman"
+  },
+  "sales_snapshot": {
+    "title": "Apèsi vant",
+    "7d": "7 dènye jou",
+    "30d": "30 dènye jou",
+    "lifetime": "Tout tan",
+    "events": "Evènman",
+    "upcoming": "Ki gen pou vini",
+    "tickets": "Tikè",
+    "sold": "Vann",
+    "revenue": "Revni",
+    "earned": "Genyen",
+    "avg_event": "Mwayen/Evènman",
+    "tickets_per_event": "Tikè"
   }
 }

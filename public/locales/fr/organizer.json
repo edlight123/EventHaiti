@@ -1,10 +1,67 @@
 {
-  "your_events": "Vos Événements",
+  "your_events": "Vos événements",
   "view_all_events": "Voir tous les événements →",
-  "create_event": "Créer un Événement",
+  "create_event": "Créer un événement",
   "no_events": {
     "title": "Aucun événement pour l'instant",
     "description": "Créez votre premier événement et commencez à vendre des billets à votre public",
-    "cta": "Créer Votre Premier Événement"
+    "cta": "Créer votre premier événement"
+  },
+  "action_center": {
+    "title": "Nécessite une attention",
+    "action_items": "élément d'action",
+    "action_items_plural": "éléments d'action",
+    "all_caught_up": "Tout est à jour! 🎉",
+    "no_action_items": "Aucun élément d'action ne nécessite votre attention pour le moment.",
+    "draft_events": "Événement brouillon",
+    "draft_events_plural": "Événements brouillons",
+    "draft_description": "Publiez vos événements pour commencer à vendre des billets",
+    "publish_events": "Publier les événements",
+    "events_starting_soon": "Événement bientôt",
+    "events_starting_soon_plural": "Événements bientôt",
+    "no_sales_description": "Ces événements commencent dans 7 jours sans ventes pour l'instant",
+    "promote_events": "Promouvoir les événements"
+  },
+  "payouts": {
+    "not_setup_title": "Paiements non configurés",
+    "not_setup_description": "Connectez votre compte bancaire pour recevoir les paiements",
+    "setup_payouts": "Configurer les paiements",
+    "ready_title": "Paiements prêts",
+    "ready_description": "Votre compte est configuré et prêt à recevoir les paiements",
+    "pending_title": "Paiement en attente",
+    "pending_description": "Votre paiement est en cours de traitement",
+    "active_title": "Paiements actifs",
+    "active_description": "Les paiements réguliers sont en cours de traitement",
+    "view_history": "Voir l'historique",
+    "view_details": "Voir les détails",
+    "view_settings": "Voir les paramètres",
+    "pending_balance": "Solde en attente",
+    "last_payout": "Dernier paiement",
+    "next_payout_est": "Prochain paiement (est.)",
+    "processing_time": "Les paiements sont traités sous 2-5 jours ouvrables"
+  },
+  "event_card": {
+    "published": "Publié",
+    "draft": "Brouillon",
+    "tickets_sold": "Billets vendus",
+    "capacity": "capacité",
+    "manage": "Gérer",
+    "promote": "Promouvoir",
+    "attendees": "Participants",
+    "checkin": "Enregistrement"
+  },
+  "sales_snapshot": {
+    "title": "Aperçu des ventes",
+    "7d": "7 derniers jours",
+    "30d": "30 derniers jours",
+    "lifetime": "Tout le temps",
+    "events": "Événements",
+    "upcoming": "À venir",
+    "tickets": "Billets",
+    "sold": "Vendus",
+    "revenue": "Revenus",
+    "earned": "Gagnés",
+    "avg_event": "Moy/Événement",
+    "tickets_per_event": "Billets"
   }
 }
