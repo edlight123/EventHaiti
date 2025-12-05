@@ -54,6 +54,19 @@
     "near_you": "Tou pre w",
     "when": "Kilè"
   },
+  "categories": {
+    "Music": "Mizik",
+    "Sports": "Espò",
+    "Arts & Culture": "Atizay ak Kilti",
+    "Business": "Biznis",
+    "Food & Drink": "Manje ak Bwason",
+    "Education": "Edikasyon",
+    "Technology": "Teknoloji",
+    "Health & Wellness": "Sante ak Byennèt",
+    "Party": "Fèt",
+    "Religious": "Relijye",
+    "Other": "Lòt"
+  },
   "filters": {
     "filters": "Filt",
     "all_cities": "Tout vil",

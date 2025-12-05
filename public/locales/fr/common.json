@@ -55,6 +55,19 @@
     "near_you": "Près de vous",
     "when": "Quand"
   },
+  "categories": {
+    "Music": "Musique",
+    "Sports": "Sports",
+    "Arts & Culture": "Arts et Culture",
+    "Business": "Affaires",
+    "Food & Drink": "Gastronomie",
+    "Education": "Éducation",
+    "Technology": "Technologie",
+    "Health & Wellness": "Santé et Bien-être",
+    "Party": "Fête",
+    "Religious": "Religieux",
+    "Other": "Autre"
+  },
   "filters": {
     "filters": "Filtres",
     "all_cities": "Toutes les villes",

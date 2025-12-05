@@ -2,28 +2,30 @@
 
 import React, { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import type { DateFilter } from '@/lib/filters/types'
 import { FilterChip } from '@/components/FilterChip'
 import { X } from 'lucide-react'
-
-const DATE_OPTIONS: { value: DateFilter; label: string }[] = [
-  { value: 'any', label: 'Any date' },
-  { value: 'today', label: 'Today' },
-  { value: 'tomorrow', label: 'Tomorrow' },
-  { value: 'this-week', label: 'This week' },
-  { value: 'this-weekend', label: 'This weekend' },
-  { value: 'pick-date', label: 'Pick a date' }
-]
 
 interface DateChipsProps {
   currentDate: DateFilter
 }
 
 export function DateChips({ currentDate }: DateChipsProps) {
+  const { t } = useTranslation('common')
   const router = useRouter()
   const searchParams = useSearchParams()
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [selectedDate, setSelectedDate] = useState('')
+
+  const DATE_OPTIONS: { value: DateFilter; label: string }[] = [
+    { value: 'any', label: t('filters.any_date') },
+    { value: 'today', label: t('filters.today') },
+    { value: 'tomorrow', label: t('filters.tomorrow') },
+    { value: 'this-week', label: t('filters.this_week') },
+    { value: 'this-weekend', label: t('filters.this_weekend') },
+    { value: 'pick-date', label: t('filters.pick_date') }
+  ]
 
   const handleDateChange = (date: DateFilter) => {
     const params = new URLSearchParams(searchParams)

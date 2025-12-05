@@ -55,6 +55,19 @@
     "near_you": "Near You",
     "when": "When"
   },
+  "categories": {
+    "Music": "Music",
+    "Sports": "Sports",
+    "Arts & Culture": "Arts & Culture",
+    "Business": "Business",
+    "Food & Drink": "Food & Drink",
+    "Education": "Education",
+    "Technology": "Technology",
+    "Health & Wellness": "Health & Wellness",
+    "Party": "Party",
+    "Religious": "Religious",
+    "Other": "Other"
+  },
   "filters": {
     "filters": "Filters",
     "all_cities": "All cities",

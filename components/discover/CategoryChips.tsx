@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import { FilterChip } from '@/components/FilterChip'
 import { CATEGORIES } from '@/lib/filters/config'
 import { Music, Trophy, Palette, Briefcase, Utensils, GraduationCap, Laptop, HeartPulse, PartyPopper, Church, Sparkles } from 'lucide-react'
@@ -26,6 +27,7 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 }
 
 export function CategoryChips({ selectedCategories }: CategoryChipsProps) {
+  const { t } = useTranslation('common')
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -60,7 +62,7 @@ export function CategoryChips({ selectedCategories }: CategoryChipsProps) {
               }`}
           >
             {CATEGORY_ICONS[category]}
-            {category}
+            {t(`categories.${category}`)}
           </button>
         ))}
       </div>
