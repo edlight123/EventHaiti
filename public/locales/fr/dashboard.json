@@ -17,5 +17,31 @@
     "saved_events": "Événements enregistrés",
     "upcoming_events": "Événements à venir",
     "view_all": "Voir tout"
+  },
+  "next_event_hero": {
+    "happening_soon": "Bientôt !",
+    "next_event": "Prochain événement",
+    "recently_attended": "Récemment assisté",
+    "online_event": "Événement en Ligne",
+    "view_ticket_qr": "Voir Billet (QR)",
+    "add_to_calendar": "Ajouter au calendrier",
+    "calendar_short": "Calendrier",
+    "directions": "Itinéraire",
+    "map_short": "Carte",
+    "join_event": "Rejoindre",
+    "join_short": "Rejoindre"
+  },
+  "tickets_preview": {
+    "no_tickets_title": "Aucun billet",
+    "no_tickets_subtitle": "Achetez des billets pour les voir ici",
+    "browse_events": "Parcourir les Événements",
+    "active": "Actif",
+    "used": "Utilisé",
+    "expired": "Expiré",
+    "ticket": "billet",
+    "tickets": "billets",
+    "view_qr": "Voir QR",
+    "receipt": "Reçu",
+    "view_all_tickets": "Voir les {{count}} billets"
   }
 }

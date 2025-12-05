@@ -13,9 +13,35 @@
     "no_favorites": "Poko gen favori"
   },
   "sections": {
-    "my_tickets": "Tikè mwen",
-    "saved_events": "Evènman anrejistre",
-    "upcoming_events": "Evènman k ap vini",
+    "my_tickets": "Tikè Mwen",
+    "saved_events": "Evènman Anrejistre",
+    "upcoming_events": "Evènman k ap Vini",
     "view_all": "Gade tout"
+  },
+  "next_event_hero": {
+    "happening_soon": "Pral fèt byento !",
+    "next_event": "Pwochen evènman",
+    "recently_attended": "Patisipe resamman",
+    "online_event": "Evènman Sou Entènèt",
+    "view_ticket_qr": "Gade Tikè (QR)",
+    "add_to_calendar": "Ajoute nan kalandriye",
+    "calendar_short": "Kalandriye",
+    "directions": "Direksyon",
+    "map_short": "Kat",
+    "join_event": "Rantre",
+    "join_short": "Rantre"
+  },
+  "tickets_preview": {
+    "no_tickets_title": "Pa gen tikè",
+    "no_tickets_subtitle": "Achte tikè pou wè yo isit la",
+    "browse_events": "Gade Evènman yo",
+    "active": "Aktif",
+    "used": "Itilize",
+    "expired": "Ekspire",
+    "ticket": "tikè",
+    "tickets": "tikè",
+    "view_qr": "Gade QR",
+    "receipt": "Resi",
+    "view_all_tickets": "Gade {{count}} tikè yo"
   }
 }

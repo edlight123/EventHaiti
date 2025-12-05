@@ -17,5 +17,31 @@
     "saved_events": "Saved Events",
     "upcoming_events": "Upcoming Events",
     "view_all": "View all"
+  },
+  "next_event_hero": {
+    "happening_soon": "Happening soon!",
+    "next_event": "Next event",
+    "recently_attended": "Recently attended",
+    "online_event": "Online Event",
+    "view_ticket_qr": "View Ticket (QR)",
+    "add_to_calendar": "Add to Calendar",
+    "calendar_short": "Calendar",
+    "directions": "Directions",
+    "map_short": "Map",
+    "join_event": "Join Event",
+    "join_short": "Join"
+  },
+  "tickets_preview": {
+    "no_tickets_title": "No tickets yet",
+    "no_tickets_subtitle": "Purchase tickets to see them here",
+    "browse_events": "Browse Events",
+    "active": "Active",
+    "used": "Used",
+    "expired": "Expired",
+    "ticket": "ticket",
+    "tickets": "tickets",
+    "view_qr": "View QR",
+    "receipt": "Receipt",
+    "view_all_tickets": "View all {{count}} tickets"
   }
 }

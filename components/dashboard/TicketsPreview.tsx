@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Calendar, MapPin, QrCode, Download, ArrowRight, Ticket } from 'lucide-react'
 import { format } from 'date-fns'
 import jsPDF from 'jspdf'
+import { useTranslation } from 'react-i18next'
 
 interface TicketPreviewItem {
   eventId: string
@@ -132,6 +133,7 @@ function generateReceipt(ticket: TicketPreviewItem) {
 }
 
 export function TicketsPreview({ tickets }: TicketsPreviewProps) {
+  const { t } = useTranslation('dashboard')
   const displayTickets = tickets.slice(0, 3)
 
   if (tickets.length === 0) {
@@ -140,13 +142,13 @@ export function TicketsPreview({ tickets }: TicketsPreviewProps) {
         <div className="w-16 h-16 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-4">
           <Ticket className="w-8 h-8 text-purple-600" />
         </div>
-        <h3 className="text-lg font-bold text-gray-900 mb-2">No tickets yet</h3>
-        <p className="text-sm text-gray-600 mb-6">Purchase tickets to see them here</p>
+        <h3 className="text-lg font-bold text-gray-900 mb-2">{t('tickets_preview.no_tickets_title')}</h3>
+        <p className="text-sm text-gray-600 mb-6">{t('tickets_preview.no_tickets_subtitle')}</p>
         <Link
           href="/discover"
           className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-brand-600 to-accent-600 text-white rounded-xl font-semibold hover:shadow-glow transition-all"
         >
-          Browse Events
+          {t('tickets_preview.browse_events')}
           <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
@@ -206,13 +208,13 @@ export function TicketsPreview({ tickets }: TicketsPreviewProps) {
                     ? 'bg-red-50 text-red-700'
                     : 'bg-green-50 text-green-700'
                 }`}>
-                  {ticket.status === 'used' ? 'Used' : ticket.status === 'expired' ? 'Expired' : 'Active'}
+                  {ticket.status === 'used' ? t('tickets_preview.used') : ticket.status === 'expired' ? t('tickets_preview.expired') : t('tickets_preview.active')}
                 </span>
               </div>
 
               {/* Ticket Count */}
               <p className="text-sm text-gray-500 mb-3">
-                {ticket.ticketCount} {ticket.ticketCount === 1 ? 'ticket' : 'tickets'}
+                {ticket.ticketCount} {ticket.ticketCount === 1 ? t('tickets_preview.ticket') : t('tickets_preview.tickets')}
               </p>
 
               {/* Actions */}
@@ -222,14 +224,14 @@ export function TicketsPreview({ tickets }: TicketsPreviewProps) {
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 transition-colors text-sm"
                 >
                   <QrCode className="w-4 h-4" />
-                  View QR
+                  {t('tickets_preview.view_qr')}
                 </Link>
                 <button 
                   onClick={() => generateReceipt(ticket)}
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
                 >
                   <Download className="w-4 h-4" />
-                  Receipt
+                  {t('tickets_preview.receipt')}
                 </button>
               </div>
             </div>
@@ -243,7 +245,7 @@ export function TicketsPreview({ tickets }: TicketsPreviewProps) {
           href="/tickets"
           className="block text-center py-3 text-brand-600 hover:text-brand-700 font-semibold hover:bg-brand-50 rounded-xl transition-colors"
         >
-          View all {tickets.length} tickets →
+          {t('tickets_preview.view_all_tickets', { count: tickets.length })} →
         </Link>
       )}
     </div>

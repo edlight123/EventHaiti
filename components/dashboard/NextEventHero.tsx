@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Calendar, MapPin, Download, Navigation, Video, Clock } from 'lucide-react'
 import { format, formatDistanceToNow, differenceInHours, isPast } from 'date-fns'
+import { useTranslation } from 'react-i18next'
 
 interface NextEventHeroProps {
   event: {
@@ -21,6 +22,7 @@ interface NextEventHeroProps {
 }
 
 export function NextEventHero({ event, ticketId, orderId }: NextEventHeroProps) {
+  const { t } = useTranslation('dashboard')
   const eventDate = new Date(event.start_datetime)
   const now = new Date()
   const hoursUntilEvent = differenceInHours(eventDate, now)
@@ -88,7 +90,7 @@ END:VCALENDAR`
         {/* Badge */}
         <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-semibold mb-4">
           <Clock className="w-4 h-4" />
-          {isPastEvent ? 'Recently attended' : isEventSoon ? 'Happening soon!' : 'Next event'}
+          {isPastEvent ? t('next_event_hero.recently_attended') : isEventSoon ? t('next_event_hero.happening_soon') : t('next_event_hero.next_event')}
         </div>
 
         {/* Event Details */}
@@ -111,7 +113,7 @@ END:VCALENDAR`
             <div className="flex items-start gap-2 text-white/90">
               {isOnline ? <Video className="w-5 h-5 flex-shrink-0 mt-0.5" /> : <MapPin className="w-5 h-5 flex-shrink-0 mt-0.5" />}
               <div>
-                <p className="font-semibold">{isOnline ? 'Online Event' : event.city}</p>
+                <p className="font-semibold">{isOnline ? t('next_event_hero.online_event') : event.city}</p>
                 <p className="text-sm text-white/75 line-clamp-1">{event.venue_name}</p>
               </div>
             </div>
@@ -125,7 +127,7 @@ END:VCALENDAR`
             href={`/tickets`}
             className="flex-1 sm:flex-none px-6 py-3 bg-white text-brand-700 rounded-xl font-bold hover:bg-white/95 transition-all shadow-lg hover:shadow-xl text-center"
           >
-            View Ticket (QR)
+            {t('next_event_hero.view_ticket_qr')}
           </Link>
 
           {/* Secondary CTAs */}
@@ -135,8 +137,8 @@ END:VCALENDAR`
               className="flex-1 sm:flex-none px-4 py-3 bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white rounded-xl font-semibold hover:bg-white/20 transition-all flex items-center justify-center gap-2"
             >
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Add to Calendar</span>
-              <span className="sm:hidden">Calendar</span>
+              <span className="hidden sm:inline">{t('next_event_hero.add_to_calendar')}</span>
+              <span className="sm:hidden">{t('next_event_hero.calendar_short')}</span>
             </button>
 
             {/* Directions or Join Link */}
@@ -145,8 +147,8 @@ END:VCALENDAR`
                 className="flex-1 sm:flex-none px-4 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-all flex items-center justify-center gap-2"
               >
                 <Video className="w-4 h-4" />
-                <span className="hidden sm:inline">Join Event</span>
-                <span className="sm:hidden">Join</span>
+                <span className="hidden sm:inline">{t('next_event_hero.join_event')}</span>
+                <span className="sm:hidden">{t('next_event_hero.join_short')}</span>
               </button>
             ) : !isOnline ? (
               <a
@@ -156,8 +158,8 @@ END:VCALENDAR`
                 className="flex-1 sm:flex-none px-4 py-3 bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white rounded-xl font-semibold hover:bg-white/20 transition-all flex items-center justify-center gap-2"
               >
                 <Navigation className="w-4 h-4" />
-                <span className="hidden sm:inline">Directions</span>
-                <span className="sm:hidden">Map</span>
+                <span className="hidden sm:inline">{t('next_event_hero.directions')}</span>
+                <span className="sm:hidden">{t('next_event_hero.map_short')}</span>
               </a>
             ) : null}
           </div>
