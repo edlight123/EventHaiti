@@ -11,6 +11,7 @@ interface Event {
   description: string
   category: string
   city: string
+  venue_name?: string
   start_datetime: string
   ticket_price: number
   currency: string
@@ -178,12 +179,13 @@ export default function EventCard({ event, priority = false, index = 0 }: EventC
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span className="truncate">{format(new Date(event.start_datetime), 'MMM d, yyyy')}</span>
-              <span className="text-gray-300 mx-0.5">•</span>
+            </div>
+            <div className="flex items-center gap-1 text-[11px] sm:text-sm md:text-base text-gray-700 font-medium mt-1">
               <svg className="w-3 h-3 sm:w-4 sm:h-4 text-accent-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              <span className="truncate">{event.city}</span>
+              <span className="truncate">{event.venue_name || event.city}</span>
             </div>
           </div>
 
