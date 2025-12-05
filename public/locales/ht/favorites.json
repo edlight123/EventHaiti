@@ -1,0 +1,13 @@
+{
+  "title": "Favori Mwen",
+  "subtitle": "Evènman ou te sove",
+  "empty": {
+    "title": "Pa gen favori",
+    "description": "Eksplore evènman yo epi ajoute favori ou yo isit la",
+    "action": "Dekouvri"
+  },
+  "sign_in": {
+    "title": "Konekte pou wè favori ou yo",
+    "action": "Konekte"
+  }
+}

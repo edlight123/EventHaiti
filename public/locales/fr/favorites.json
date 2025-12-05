@@ -1,0 +1,13 @@
+{
+  "title": "Mes Favoris",
+  "subtitle": "Événements que vous avez sauvegardés",
+  "empty": {
+    "title": "Aucun favori",
+    "description": "Explorez les événements et ajoutez vos favoris ici",
+    "action": "Découvrir"
+  },
+  "sign_in": {
+    "title": "Connectez-vous pour voir vos favoris",
+    "action": "Se connecter"
+  }
+}

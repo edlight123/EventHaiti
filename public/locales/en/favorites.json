@@ -1,0 +1,13 @@
+{
+  "title": "My Favorites",
+  "subtitle": "Events you've saved for later",
+  "empty": {
+    "title": "No favorites yet",
+    "description": "Start exploring events and save your favorites to see them here",
+    "action": "Discover Events"
+  },
+  "sign_in": {
+    "title": "Please sign in to view your favorites",
+    "action": "Sign In"
+  }
+}

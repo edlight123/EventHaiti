@@ -43,6 +43,10 @@ import dashboardEn from '@/public/locales/en/dashboard.json'
 import dashboardFr from '@/public/locales/fr/dashboard.json'
 import dashboardHt from '@/public/locales/ht/dashboard.json'
 
+import favoritesEn from '@/public/locales/en/favorites.json'
+import favoritesFr from '@/public/locales/fr/favorites.json'
+import favoritesHt from '@/public/locales/ht/favorites.json'
+
 const resources = {
   en: {
     common: commonEn,
@@ -55,6 +59,7 @@ const resources = {
     organizer: organizerEn,
     settings: settingsEn,
     dashboard: dashboardEn,
+    favorites: favoritesEn,
   },
   fr: {
     common: commonFr,
@@ -67,6 +72,7 @@ const resources = {
     organizer: organizerFr,
     settings: settingsFr,
     dashboard: dashboardFr,
+    favorites: favoritesFr,
   },
   ht: {
     common: commonHt,
@@ -79,6 +85,7 @@ const resources = {
     organizer: organizerHt,
     settings: settingsHt,
     dashboard: dashboardHt,
+    favorites: favoritesHt,
   },
 }
 
@@ -90,7 +97,7 @@ i18n
     fallbackLng: 'en',
     supportedLngs: ['en', 'fr', 'ht'],
     defaultNS: 'common',
-    ns: ['common', 'auth', 'events', 'profile', 'admin', 'tickets', 'notifications', 'organizer', 'settings', 'dashboard'],
+    ns: ['common', 'auth', 'events', 'profile', 'admin', 'tickets', 'notifications', 'organizer', 'settings', 'dashboard', 'favorites'],
     
     // Enable debug mode in development
     debug: process.env.NODE_ENV === 'development',

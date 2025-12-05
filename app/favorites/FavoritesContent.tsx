@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import EventCard from '@/components/EventCard'
 import EventCardHorizontal from '@/components/EventCardHorizontal'
 import PullToRefresh from '@/components/PullToRefresh'
@@ -17,6 +18,7 @@ interface FavoritesContentProps {
 }
 
 export default function FavoritesContent({ userId }: FavoritesContentProps) {
+  const { t } = useTranslation('favorites')
   const [favoriteEvents, setFavoriteEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -86,8 +88,8 @@ export default function FavoritesContent({ userId }: FavoritesContentProps) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Favorites</h1>
-          <p className="text-gray-600 mt-2">Events you&apos;ve saved for later</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
+          <p className="text-gray-600 mt-2">{t('subtitle')}</p>
         </div>
         <LoadingSkeleton rows={8} animated />
       </div>
@@ -105,9 +107,9 @@ export default function FavoritesContent({ userId }: FavoritesContentProps) {
         {favoriteEvents.length === 0 ? (
           <EmptyState
             icon={Heart}
-            title="No favorites yet"
-            description="Start exploring events and save your favorites to see them here"
-            actionLabel="Discover Events"
+            title={t('empty.title')}
+            description={t('empty.description')}
+            actionLabel={t('empty.action')}
             actionHref="/"
             actionIcon={TrendingUp}
           />
