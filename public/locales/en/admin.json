@@ -102,6 +102,12 @@
     "quick_toggle_title": "Quick Verification Toggle",
     "quick_toggle_subtitle": "Manually manage verified status for organizers"
   },
+  "nav": {
+    "search_placeholder": "Search events, users, orders...",
+    "verify": "Verify",
+    "events": "Events",
+    "users": "Users"
+  },
   "stats": {
     "total_events": "Total Events",
     "pending_approval": "Pending Approval",

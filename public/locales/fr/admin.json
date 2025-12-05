@@ -59,6 +59,12 @@
     "active_users": "Utilisateurs actifs",
     "banned_users": "Utilisateurs bannis"
   },
+  "nav": {
+    "search_placeholder": "Rechercher événements, utilisateurs, commandes...",
+    "verify": "Vérifier",
+    "events": "Événements",
+    "users": "Utilisateurs"
+  },
   "stats": {
     "total_events": "Total d'événements",
     "pending_approval": "En attente d'approbation",

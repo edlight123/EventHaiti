@@ -59,6 +59,12 @@
     "active_users": "Itilizatè aktif",
     "banned_users": "Itilizatè bani"
   },
+  "nav": {
+    "search_placeholder": "Chèche evènman, itilizatè, kòmand...",
+    "verify": "Verifye",
+    "events": "Evènman",
+    "users": "Itilizatè"
+  },
   "stats": {
     "total_events": "Total evènman",
     "pending_approval": "K ap tann apwobasyon",

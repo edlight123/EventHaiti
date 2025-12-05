@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Search, Bell, Calendar, Users, ShieldCheck, Loader2, MapPin, DollarSign, User } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -24,6 +25,7 @@ interface SearchResult {
 }
 
 export function AdminCommandBar({ pendingVerifications }: AdminCommandBarProps) {
+  const { t } = useTranslation('admin')
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
@@ -86,7 +88,7 @@ export function AdminCommandBar({ pendingVerifications }: AdminCommandBarProps) 
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => searchQuery && setShowResults(true)}
                 onBlur={() => setTimeout(() => setShowResults(false), 200)}
-                placeholder="Search events, users, orders..."
+                placeholder={t('nav.search_placeholder')}
                 className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
               />
               {isSearching && (
@@ -180,21 +182,21 @@ export function AdminCommandBar({ pendingVerifications }: AdminCommandBarProps) 
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <ShieldCheck className="w-4 h-4" />
-              Verify
+              {t('nav.verify')}
             </Link>
             <Link
               href="/admin/events"
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <Calendar className="w-4 h-4" />
-              Events
+              {t('nav.events')}
             </Link>
             <Link
               href="/admin/users"
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <Users className="w-4 h-4" />
-              Users
+              {t('nav.users')}
             </Link>
           </div>
 
