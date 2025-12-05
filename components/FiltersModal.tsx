@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { EventFilters, DateFilter, EventTypeFilter, PriceFilter } from '@/lib/filters/types'
 import { CITIES, CATEGORIES, PRICE_FILTERS, getSubdivisions, getLocationTypeLabel, hasSubdivisions } from '@/lib/filters/config'
@@ -18,21 +19,6 @@ interface FiltersModalProps {
   onDraftChange: (filters: EventFilters) => void
 }
 
-const DATE_OPTIONS: { value: DateFilter; label: string }[] = [
-  { value: 'any', label: 'Any date' },
-  { value: 'today', label: 'Today' },
-  { value: 'tomorrow', label: 'Tomorrow' },
-  { value: 'this-week', label: 'This week' },
-  { value: 'this-weekend', label: 'This weekend' },
-  { value: 'pick-date', label: 'Pick a date' }
-]
-
-const EVENT_TYPE_OPTIONS: { value: EventTypeFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'in-person', label: 'In-person' },
-  { value: 'online', label: 'Online' }
-]
-
 export function FiltersModal({
   isOpen,
   draftFilters,
@@ -42,8 +28,24 @@ export function FiltersModal({
   onReset,
   onDraftChange
 }: FiltersModalProps) {
+  const { t } = useTranslation('common')
   const [mounted, setMounted] = useState(false)
   const [showDatePicker, setShowDatePicker] = useState(false)
+
+  const DATE_OPTIONS: { value: DateFilter; label: string }[] = [
+    { value: 'any', label: t('filters.any_date') },
+    { value: 'today', label: t('filters.today') },
+    { value: 'tomorrow', label: t('filters.tomorrow') },
+    { value: 'this-week', label: t('filters.this_week') },
+    { value: 'this-weekend', label: t('filters.this_weekend') },
+    { value: 'pick-date', label: t('filters.pick_date') }
+  ]
+
+  const EVENT_TYPE_OPTIONS: { value: EventTypeFilter; label: string }[] = [
+    { value: 'all', label: t('filters.all') },
+    { value: 'in-person', label: t('filters.in_person') },
+    { value: 'online', label: t('filters.online') }
+  ]
 
   useEffect(() => {
     setMounted(true)
@@ -116,9 +118,9 @@ export function FiltersModal({
           {/* Header */}
           <div className="flex items-center justify-between p-5 border-b bg-white sticky top-0 z-10">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold">Filters</h2>
+              <h2 className="text-xl font-semibold">{t('filters.filters')}</h2>
               {activeCount > 0 && (
-                <span className="text-sm text-gray-500">({activeCount} active)</span>
+                <span className="text-sm text-gray-500">({activeCount} {t('filters.active')})</span>
               )}
             </div>
             <button
@@ -133,7 +135,7 @@ export function FiltersModal({
           <div className="flex-1 overflow-y-auto p-5 space-y-6">
             {/* Date Filter */}
             <div className="space-y-3">
-              <label className="text-sm font-medium text-gray-700">Date</label>
+              <label className="text-sm font-medium text-gray-700">{t('filters.date')}</label>
               <div className="flex flex-wrap gap-2">
                 {DATE_OPTIONS.map(option => (
                   <FilterChip
@@ -156,7 +158,7 @@ export function FiltersModal({
 
             {/* Event Type - Segmented Control */}
             <div className="space-y-3">
-              <label className="text-sm font-medium text-gray-700">Event type</label>
+              <label className="text-sm font-medium text-gray-700">{t('filters.event_type')}</label>
               <div className="inline-flex rounded-lg border border-gray-200 p-1 bg-gray-50">
                 {EVENT_TYPE_OPTIONS.map(option => (
                   <button
@@ -176,7 +178,7 @@ export function FiltersModal({
 
             {/* Price Filter */}
             <div className="space-y-3">
-              <label className="text-sm font-medium text-gray-700">Price</label>
+              <label className="text-sm font-medium text-gray-700">{t('filters.price')}</label>
               <div className="flex flex-wrap gap-2">
                 {PRICE_FILTERS.map(option => (
                   <FilterChip
@@ -191,7 +193,7 @@ export function FiltersModal({
 
             {/* Category Filter */}
             <div className="space-y-3">
-              <label className="text-sm font-medium text-gray-700">Categories</label>
+              <label className="text-sm font-medium text-gray-700">{t('filters.categories')}</label>
               <div className="flex flex-wrap gap-2">
                 {CATEGORIES.map(category => (
                   <FilterChip
@@ -206,7 +208,7 @@ export function FiltersModal({
 
             {/* Location Filter */}
             <div className="space-y-3">
-              <label className="text-sm font-medium text-gray-700">Location</label>
+              <label className="text-sm font-medium text-gray-700">{t('filters.location')}</label>
               <div className="space-y-3">
                 {/* City Dropdown */}
                 <select
@@ -214,7 +216,7 @@ export function FiltersModal({
                   onChange={(e) => handleCityChange(e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white"
                 >
-                  <option value="">All cities</option>
+                  <option value="">{t('filters.all_cities')}</option>
                   {CITIES.map(city => (
                     <option key={city} value={city}>{city}</option>
                   ))}
@@ -229,7 +231,7 @@ export function FiltersModal({
                       onChange={(e) => handleCommuneChange(e.target.value)}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white"
                     >
-                      <option value="">All {locationLabel.toLowerCase()}s</option>
+                      <option value="">{t('filters.all_areas')} {locationLabel.toLowerCase()}s</option>
                       {subdivisions.map(subdivision => (
                         <option key={subdivision} value={subdivision}>{subdivision}</option>
                       ))}
@@ -246,7 +248,7 @@ export function FiltersModal({
               onClick={onReset}
               className="px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
             >
-              Reset
+              {t('filters.reset')}
             </button>
             <button
               onClick={onApply}
@@ -257,7 +259,7 @@ export function FiltersModal({
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 }`}
             >
-              Apply filters
+              {t('filters.apply_filters')}
             </button>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import { Search, MapPin, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { CITIES, getSubdivisions, getLocationTypeLabel, hasSubdivisions } from '@/lib/filters/config'
 import { countActiveFilters } from '@/lib/filters/utils'
@@ -13,6 +14,7 @@ interface DiscoverTopBarProps {
 }
 
 export function DiscoverTopBar({ filters, onOpenFilters }: DiscoverTopBarProps) {
+  const { t } = useTranslation('common')
   const router = useRouter()
   const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
@@ -83,7 +85,7 @@ export function DiscoverTopBar({ filters, onOpenFilters }: DiscoverTopBarProps) 
                 type="text"
                 value={searchQuery}
                 onChange={handleSearchChange}
-                placeholder="Search events, venues, artists…"
+                placeholder={t('filters.search_placeholder')}
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-sm"
               />
             </div>
@@ -98,7 +100,7 @@ export function DiscoverTopBar({ filters, onOpenFilters }: DiscoverTopBarProps) 
                 className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm font-medium text-gray-700 transition-colors"
               >
                 <MapPin className="w-4 h-4" />
-                {filters.city || 'All cities'}
+                {filters.city || t('filters.all_cities')}
                 <ChevronDown className="w-4 h-4" />
               </button>
 
@@ -113,7 +115,7 @@ export function DiscoverTopBar({ filters, onOpenFilters }: DiscoverTopBarProps) 
                       onClick={() => handleCitySelect('')}
                       className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
                     >
-                      All cities
+                      {t('filters.all_cities')}
                     </button>
                     {CITIES.map(city => (
                       <button
@@ -138,7 +140,7 @@ export function DiscoverTopBar({ filters, onOpenFilters }: DiscoverTopBarProps) 
                   onClick={() => setShowSubareaDropdown(!showSubareaDropdown)}
                   className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm font-medium text-gray-700 transition-colors"
                 >
-                  {filters.commune || `All ${locationLabel.toLowerCase()}s`}
+                  {filters.commune || `${t('filters.all_areas')} ${locationLabel.toLowerCase()}s`}
                   <ChevronDown className="w-4 h-4" />
                 </button>
 
@@ -153,7 +155,7 @@ export function DiscoverTopBar({ filters, onOpenFilters }: DiscoverTopBarProps) 
                         onClick={() => handleSubareaSelect('')}
                         className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
                       >
-                        All {locationLabel.toLowerCase()}s
+                        {t('filters.all_areas')} {locationLabel.toLowerCase()}s
                       </button>
                       {subdivisions.map(subarea => (
                         <button
@@ -179,7 +181,7 @@ export function DiscoverTopBar({ filters, onOpenFilters }: DiscoverTopBarProps) 
             className="flex items-center gap-2 px-4 py-2.5 bg-black text-white rounded-lg hover:bg-black/90 transition-colors text-sm font-medium whitespace-nowrap"
           >
             <SlidersHorizontal className="w-4 h-4" />
-            <span className="hidden sm:inline">Filters</span>
+            <span className="hidden sm:inline">{t('filters.filters')}</span>
             {activeFiltersCount > 0 && (
               <span className="bg-white text-black rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
                 {activeFiltersCount}
