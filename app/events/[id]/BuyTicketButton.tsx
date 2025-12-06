@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useRouter } from 'next/navigation'
 import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 import { isDemoMode } from '@/lib/demo'
@@ -21,6 +22,7 @@ interface BuyTicketButtonProps {
 }
 
 export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, eventTitle = 'Event', currency = 'HTG' }: BuyTicketButtonProps) {
+  const { t } = useTranslation('common')
   const router = useRouter()
   const { showToast } = useToast()
   const [showModal, setShowModal] = useState(false)
@@ -174,7 +176,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
         <div className="space-y-4">
           {/* Quantity Selector for Free Tickets */}
           <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-            <span className="text-sm font-medium text-gray-700">Quantity</span>
+            <span className="text-sm font-medium text-gray-700">{t('quantity')}</span>
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -203,7 +205,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             disabled={loading}
             className="block w-full bg-teal-700 hover:bg-teal-800 text-white text-center font-semibold py-2.5 px-5 rounded-lg transition-colors disabled:opacity-50 min-h-[44px]"
           >
-            {loading ? 'Processing...' : `Claim ${quantity} Free Ticket${quantity !== 1 ? 's' : ''}`}
+            {loading ? t('processing') : `${t('claim')} ${quantity} ${t('free_ticket')}${quantity !== 1 ? 's' : ''}`}
           </button>
         </div>
       ) : (
@@ -213,7 +215,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             disabled={loading}
             className="block w-full bg-teal-700 hover:bg-teal-800 text-white text-center font-semibold py-2.5 px-5 rounded-lg transition-colors disabled:opacity-50 min-h-[44px]"
           >
-            {loading ? 'Processing...' : 'Buy Ticket'}
+            {loading ? t('processing') : t('buy_ticket')}
           </button>
 
           {/* Tiered Ticket Selection Modal */}
@@ -221,7 +223,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             <BottomSheet 
               isOpen={showTieredModal} 
               onClose={() => setShowTieredModal(false)}
-              title="Select Tickets"
+              title={t('select_tickets')}
             >
               <TieredTicketSelector
                 eventId={eventId}
@@ -243,16 +245,16 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
         <BottomSheet 
           isOpen={showModal} 
           onClose={() => setShowModal(false)}
-          title="Choose Payment Method"
+          title={t('choose_payment_method')}
         >
           <div className="space-y-4">
             <p className="text-gray-700">
-              Select how you&apos;d like to pay for your {quantity} ticket{quantity !== 1 ? 's' : ''}
+              {t('select_payment_description', { count: quantity })}
             </p>
 
             {/* Quantity Selector */}
             <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-              <span className="text-sm font-medium text-gray-700">Quantity</span>
+              <span className="text-sm font-medium text-gray-700">{t('quantity')}</span>
               <div className="flex items-center space-x-3">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -278,7 +280,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
 
             <div className="bg-teal-50 rounded-lg p-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Total Amount:</span>
+                <span className="text-sm text-gray-600">{t('total_amount')}:</span>
                 <span className="text-xl font-bold text-teal-700">
                   {((selectedTierPrice || ticketPrice) * quantity).toLocaleString()} HTG
                 </span>
@@ -310,8 +312,8 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                     </svg>
                   </div>
                   <div className="text-left">
-                    <div className="font-semibold text-gray-900">Credit/Debit Card</div>
-                    <div className="text-sm text-gray-500">Visa, Mastercard, Amex</div>
+                    <div className="font-semibold text-gray-900">{t('credit_debit_card')}</div>
+                    <div className="text-sm text-gray-500">{t('visa_mastercard_amex')}</div>
                   </div>
                 </div>
                 <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -333,7 +335,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                   </div>
                   <div className="text-left">
                     <div className="font-semibold text-gray-900">MonCash</div>
-                    <div className="text-sm text-gray-500">Mobile money (Haiti)</div>
+                    <div className="text-sm text-gray-500">{t('mobile_money_haiti')}</div>
                   </div>
                 </div>
                 <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -347,7 +349,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               disabled={loading}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
             >
-              {loading ? 'Processing...' : 'Cancel'}
+              {loading ? t('processing') : t('cancel')}
             </button>
           </div>
         </BottomSheet>
