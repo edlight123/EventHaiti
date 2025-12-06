@@ -30,14 +30,33 @@
     "view_event": "Gade detay evènman an",
     "google_maps": "Google Maps",
     "apple_maps": "Apple Maps",
+    "status": {
+      "valid": "Valid",
+      "used": "Itilize"
+    },
     "how_to_use_title": "Kijan pou itilize",
     "how_to_use_subtitle": "Gid antre ou",
     "how_to_use_steps": {
-      "arrive": "Rive 15-30 minit anvan evènman an kòmanse",
-      "qr_code": "Prezante kòd QR ou nan antre a pou eskane",
-      "id": "Pote yon ID valid ki matche ak non ki sou tikè ou",
-      "offline": "Pran yon screenshot paj sa a nan ka ou pa gen entènèt nan kote a"
-    }
+      "show_qr": "Montre kòd QR nan antre a",
+      "save_wallet": "Anrejistre nan wallet pou aksè san entènèt",
+      "one_entry": "Chak tikè valid pou yon sèl antre",
+      "digital_print": "Dijital oswa enprime, tou de mache"
+    },
+    "save_ticket": "Anrejistre tikè",
+    "transfer_ticket": "Transfere tikè",
+    "transfer_title": "Transfere tikè",
+    "transfer_to_email": "Imel moun k ap resevwa a",
+    "transfer_message": "Mesaj (opsyonèl)",
+    "transfer_message_placeholder": "Ajoute yon mesaj pèsonèl...",
+    "transfer_send": "Voye transfè a",
+    "transfer_cancel": "Anile",
+    "transfer_success": "Demann transfè a voye! Moun k ap resevwa a ap resevwa yon imel.",
+    "transfer_error": "Transfè a echwe. Tanpri eseye ankò.",
+    "transfer_not_allowed": "Tikè sa a pa ka transfere",
+    "transfer_link_label": "Lyen transfè",
+    "transfer_copy_link": "Kopye lyen",
+    "transfer_link_copied": "Lyen kopye!",
+    "transfer_share": "Pataje lyen sa a ak moun k ap resevwa a pou konplete transfè a."
   },
   "event_tickets": {
     "ready": "Tikè ou yo pare pou itilize",

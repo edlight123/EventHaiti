@@ -30,14 +30,33 @@
     "view_event": "Voir les détails de l'événement",
     "google_maps": "Google Maps",
     "apple_maps": "Apple Plans",
+    "status": {
+      "valid": "Valide",
+      "used": "Utilisé"
+    },
     "how_to_use_title": "Comment utiliser",
     "how_to_use_subtitle": "Votre guide d'entrée",
     "how_to_use_steps": {
-      "arrive": "Arrivez 15-30 minutes avant le début de l'événement",
-      "qr_code": "Présentez votre code QR à l'entrée pour le scanner",
-      "id": "Apportez une pièce d'identité valide correspondant au nom sur votre billet",
-      "offline": "Capturez cette page au cas où vous seriez hors ligne sur le lieu"
-    }
+      "show_qr": "Montrez le code QR à l'entrée",
+      "save_wallet": "Enregistrez dans le portefeuille pour un accès hors ligne",
+      "one_entry": "Chaque billet valide pour une seule entrée",
+      "digital_print": "Numérique ou imprimé, les deux fonctionnent"
+    },
+    "save_ticket": "Enregistrer le billet",
+    "transfer_ticket": "Transférer le billet",
+    "transfer_title": "Transférer le billet",
+    "transfer_to_email": "Email du destinataire",
+    "transfer_message": "Message (optionnel)",
+    "transfer_message_placeholder": "Ajoutez un message personnel...",
+    "transfer_send": "Envoyer le transfert",
+    "transfer_cancel": "Annuler",
+    "transfer_success": "Demande de transfert envoyée! Le destinataire recevra un email.",
+    "transfer_error": "Le transfert a échoué. Veuillez réessayer.",
+    "transfer_not_allowed": "Ce billet ne peut pas être transféré",
+    "transfer_link_label": "Lien de transfert",
+    "transfer_copy_link": "Copier le lien",
+    "transfer_link_copied": "Lien copié!",
+    "transfer_share": "Partagez ce lien avec le destinataire pour compléter le transfert."
   },
   "event_tickets": {
     "ready": "Vos billets sont prêts à être utilisés",

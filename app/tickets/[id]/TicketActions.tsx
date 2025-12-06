@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Share2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface TicketActionsProps {
   ticketId: string
@@ -11,6 +12,7 @@ interface TicketActionsProps {
 }
 
 export default function TicketActions({ ticketId, ticketStatus, checkedIn, eventTitle }: TicketActionsProps) {
+  const { t } = useTranslation('tickets')
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -50,7 +52,7 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
         setShowTransferLink(true)
       }
 
-      setMessage({ type: 'success', text: 'Transfer request sent! The recipient will receive an email.' })
+      setMessage({ type: 'success', text: t('detail.transfer_success') })
       setTransferEmail('')
       setTransferMessage('')
       
@@ -62,7 +64,7 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
         }, 2000)
       }
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message })
+      setMessage({ type: 'error', text: error.message || t('detail.transfer_error') })
     } finally {
       setLoading(false)
     }
@@ -89,7 +91,7 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
           className="w-full px-4 py-3 bg-brand-600 text-white font-semibold rounded-lg hover:bg-brand-700 transition-colors flex items-center justify-center gap-2"
         >
           <Share2 className="w-4 h-4" />
-          Transfer Ticket
+          {t('detail.transfer_ticket')}
         </button>
       )}
 
@@ -97,7 +99,7 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
       {showTransferModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Transfer Ticket</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">{t('detail.transfer_title')}</h2>
             
             {!showTransferLink ? (
               <>
@@ -111,7 +113,7 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
                 <form onSubmit={handleTransfer} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Recipient Email
+                      {t('detail.transfer_to_email')}
                     </label>
                     <input
                       type="email"
@@ -125,12 +127,12 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Message (Optional)
+                      {t('detail.transfer_message')}
                     </label>
                     <textarea
                       value={transferMessage}
                       onChange={(e) => setTransferMessage(e.target.value)}
-                      placeholder="Hey! I'd like to give you my ticket for..."
+                      placeholder={t('detail.transfer_message_placeholder')}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       rows={3}
                       maxLength={500}
@@ -158,14 +160,14 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
                       className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50"
                       disabled={loading}
                     >
-                      Cancel
+                      {t('detail.transfer_cancel')}
                     </button>
                     <button
                       type="submit"
                       className="flex-1 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50"
                       disabled={loading || !transferEmail}
                     >
-                      {loading ? 'Sending...' : 'Send Transfer'}
+                      {loading ? 'Sending...' : t('detail.transfer_send')}
                     </button>
                   </div>
                 </form>
@@ -173,7 +175,7 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
             ) : (
               <>
                 <p className="text-gray-600 mb-4">
-                  ✅ Transfer request created! Share this link with the recipient:
+                  {t('detail.transfer_share')}
                 </p>
 
                 <div className="space-y-3 mb-6">
@@ -188,12 +190,12 @@ export default function TicketActions({ ticketId, ticketStatus, checkedIn, event
                     <button
                       onClick={async () => {
                         await navigator.clipboard.writeText(transferLink)
-                        setMessage({ type: 'success', text: 'Link copied!' })
+                        setMessage({ type: 'success', text: t('detail.transfer_link_copied') })
                         setTimeout(() => setMessage(null), 2000)
                       }}
                       className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
                     >
-                      📋 Copy
+                      📋 {t('detail.transfer_copy_link')}
                     </button>
                   </div>
 

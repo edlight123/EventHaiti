@@ -30,14 +30,33 @@
     "view_event": "View Event Details",
     "google_maps": "Google Maps",
     "apple_maps": "Apple Maps",
+    "status": {
+      "valid": "Valid",
+      "used": "Used"
+    },
     "how_to_use_title": "How to Use",
     "how_to_use_subtitle": "Your entry guide",
     "how_to_use_steps": {
-      "arrive": "Arrive 15-30 minutes before the event starts",
-      "qr_code": "Present your QR code at the entrance for scanning",
-      "id": "Bring valid ID matching the name on your ticket",
-      "offline": "Screenshot this page in case you're offline at the venue"
-    }
+      "show_qr": "Show QR code at entrance",
+      "save_wallet": "Save to wallet for offline access",
+      "one_entry": "Each ticket valid for one entry",
+      "digital_print": "Digital or printed both work"
+    },
+    "save_ticket": "Save Ticket",
+    "transfer_ticket": "Transfer Ticket",
+    "transfer_title": "Transfer Ticket",
+    "transfer_to_email": "Recipient's Email",
+    "transfer_message": "Message (optional)",
+    "transfer_message_placeholder": "Add a personal message...",
+    "transfer_send": "Send Transfer",
+    "transfer_cancel": "Cancel",
+    "transfer_success": "Transfer request sent! The recipient will receive an email.",
+    "transfer_error": "Transfer failed. Please try again.",
+    "transfer_not_allowed": "This ticket cannot be transferred",
+    "transfer_link_label": "Transfer Link",
+    "transfer_copy_link": "Copy Link",
+    "transfer_link_copied": "Link copied!",
+    "transfer_share": "Share this link with the recipient to complete the transfer."
   },
   "event_tickets": {
     "ready": "Your tickets are ready to use",
