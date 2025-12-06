@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslation } from 'react-i18next'
 import { Calendar, MapPin, DollarSign, Users } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -28,6 +29,8 @@ export default function MobileKeyFacts({
   remainingTickets,
   isSoldOut
 }: MobileKeyFactsProps) {
+  const { t } = useTranslation('common')
+  
   const handleOpenMaps = () => {
     const query = encodeURIComponent(address || `${venueName}, ${commune}, ${city}`)
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -46,7 +49,7 @@ export default function MobileKeyFacts({
             <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
               <Calendar className="w-4 h-4 text-orange-600" />
             </div>
-            <span className="text-xs font-semibold text-gray-500">Date</span>
+            <span className="text-xs font-semibold text-gray-500">{t('date')}</span>
           </div>
           <p className="text-sm font-bold text-gray-900 line-clamp-1">
             {format(new Date(startDate), 'MMM d, yyyy')}
@@ -62,7 +65,7 @@ export default function MobileKeyFacts({
             <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
               <MapPin className="w-4 h-4 text-blue-600" />
             </div>
-            <span className="text-xs font-semibold text-gray-500">Location</span>
+            <span className="text-xs font-semibold text-gray-500">{t('location')}</span>
           </div>
           <p className="text-sm font-bold text-gray-900 line-clamp-1 min-w-0 break-words">
             {venueName}
@@ -71,7 +74,7 @@ export default function MobileKeyFacts({
             onClick={handleOpenMaps}
             className="text-xs text-brand-600 font-medium hover:text-brand-700 mt-1"
           >
-            Open in Maps →
+            {t('open_in_maps')} →
           </button>
         </div>
 
@@ -81,18 +84,18 @@ export default function MobileKeyFacts({
             <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
               <DollarSign className="w-4 h-4 text-green-600" />
             </div>
-            <span className="text-xs font-semibold text-gray-500">Price</span>
+            <span className="text-xs font-semibold text-gray-500">{t('price')}</span>
           </div>
           {isFree ? (
             <p className="text-sm font-bold bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent">
-              FREE
+              {t('free').toUpperCase()}
             </p>
           ) : (
             <>
               <p className="text-sm font-bold text-gray-900">
                 {ticketPrice} {currency}
               </p>
-              <p className="text-xs text-gray-600">per ticket</p>
+              <p className="text-xs text-gray-600">{t('per_ticket')}</p>
             </>
           )}
         </div>
@@ -103,13 +106,13 @@ export default function MobileKeyFacts({
             <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
               <Users className="w-4 h-4 text-purple-600" />
             </div>
-            <span className="text-xs font-semibold text-gray-500">Tickets</span>
+            <span className="text-xs font-semibold text-gray-500">{t('ticket.tickets')}</span>
           </div>
           <p className={`text-sm font-bold ${isSoldOut ? 'text-red-600' : remainingTickets < 10 ? 'text-orange-600' : 'text-gray-900'}`}>
-            {isSoldOut ? 'Sold Out' : `${remainingTickets} left`}
+            {isSoldOut ? t('ticket.sold_out') : t('ticket.remaining', { count: remainingTickets })}
           </p>
           {!isSoldOut && remainingTickets < 10 && (
-            <p className="text-xs text-orange-600 font-medium">Almost gone!</p>
+            <p className="text-xs text-orange-600 font-medium">{t('ticket.almost_gone')}</p>
           )}
         </div>
       </div>

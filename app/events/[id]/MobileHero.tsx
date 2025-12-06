@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslation } from 'react-i18next'
 import Image from 'next/image'
 import Badge from '@/components/ui/Badge'
 import { Shield, Star, TrendingUp } from 'lucide-react'
@@ -29,6 +30,8 @@ export default function MobileHero({
   isSoldOut,
   selloutSoon
 }: MobileHeroProps) {
+  const { t } = useTranslation('common')
+  
   return (
     <div className="md:hidden">
       {/* Hero Image - 16:9 aspect ratio */}
@@ -55,22 +58,22 @@ export default function MobileHero({
         <div className="absolute top-3 right-3 flex flex-col gap-2">
           {isSoldOut && (
             <Badge variant="error" size="sm">
-              SOLD OUT
+              {t('sold_out').toUpperCase()}
             </Badge>
           )}
           {!isSoldOut && selloutSoon && (
             <Badge variant="warning" size="sm">
-              Almost Sold Out
+              {t('almost_sold_out')}
             </Badge>
           )}
           {isVIP && (
             <Badge variant="vip" size="sm" icon={<Star className="w-3 h-3" />}>
-              VIP
+              {t('vip_event')}
             </Badge>
           )}
           {isTrending && (
             <Badge variant="trending" size="sm" icon={<TrendingUp className="w-3 h-3" />}>
-              Trending
+              {t('trending')}
             </Badge>
           )}
         </div>

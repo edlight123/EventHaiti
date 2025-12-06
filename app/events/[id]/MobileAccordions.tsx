@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronDown, Sparkles, MapPin, Clock, User, Share2 } from 'lucide-react'
 import { format } from 'date-fns'
 import Badge from '@/components/ui/Badge'
@@ -67,11 +68,13 @@ export default function MobileAccordions({
   isVerified,
   shareButton
 }: MobileAccordionsProps) {
+  const { t } = useTranslation('common')
+  
   return (
     <div className="md:hidden space-y-3">
       {/* About */}
       <AccordionSection
-        title="About This Event"
+        title={t('about_event')}
         icon={<Sparkles className="w-5 h-5 text-brand-600" />}
         defaultOpen={true}
       >
@@ -80,7 +83,7 @@ export default function MobileAccordions({
         </p>
         {tags && tags.length > 0 && (
           <div className="pt-3 border-t border-gray-100">
-            <h4 className="text-xs font-semibold text-gray-500 mb-2">TAGS</h4>
+            <h4 className="text-xs font-semibold text-gray-500 mb-2">{t('tags').toUpperCase()}</h4>
             <div className="flex flex-wrap gap-2">
               {tags.map((tag: string) => (
                 <Badge key={tag} variant="neutral" size="sm">
@@ -94,16 +97,16 @@ export default function MobileAccordions({
 
       {/* Venue */}
       <AccordionSection
-        title="Venue & Directions"
+        title={t('venue_directions')}
         icon={<MapPin className="w-5 h-5 text-brand-600" />}
       >
         <div className="space-y-3">
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-1">VENUE</p>
+            <p className="text-xs font-semibold text-gray-500 mb-1">{t('venue').toUpperCase()}</p>
             <p className="text-sm font-semibold text-gray-900">{venueName}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-1">ADDRESS</p>
+            <p className="text-xs font-semibold text-gray-500 mb-1">{t('address').toUpperCase()}</p>
             <p className="text-sm text-gray-700 break-words">{address}</p>
             <p className="text-sm text-gray-700">{commune}, {city}</p>
           </div>
@@ -115,7 +118,7 @@ export default function MobileAccordions({
               className="text-sm text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1"
             >
               <MapPin className="w-4 h-4" />
-              Apple Maps
+              {t('apple_maps')}
             </a>
             <span className="text-gray-300">|</span>
             <a
@@ -125,7 +128,7 @@ export default function MobileAccordions({
               className="text-sm text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1"
             >
               <MapPin className="w-4 h-4" />
-              Google Maps
+              {t('google_maps')}
             </a>
           </div>
         </div>
@@ -133,12 +136,12 @@ export default function MobileAccordions({
 
       {/* Date & Time */}
       <AccordionSection
-        title="Date & Time"
+        title={t('date_time')}
         icon={<Clock className="w-5 h-5 text-brand-600" />}
       >
         <div className="space-y-3">
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-1">START</p>
+            <p className="text-xs font-semibold text-gray-500 mb-1">{t('start').toUpperCase()}</p>
             <p className="text-sm font-semibold text-gray-900">
               {format(new Date(startDatetime), 'EEEE, MMMM d, yyyy')}
             </p>
@@ -147,7 +150,7 @@ export default function MobileAccordions({
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-1">END</p>
+            <p className="text-xs font-semibold text-gray-500 mb-1">{t('end').toUpperCase()}</p>
             <p className="text-sm font-semibold text-gray-900">
               {format(new Date(endDatetime), 'EEEE, MMMM d, yyyy')}
             </p>
