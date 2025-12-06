@@ -70,9 +70,19 @@
     "tomorrow": "Demen",
     "in_days": "Nan {{count}} jou",
     "in_weeks": "Nan {{count}} semèn",
-    "no_upcoming_title": "Pa gen evènman k ap vini",
-    "no_upcoming_desc": "Kreye pwochen evènman ou pou wè l la a",
-    "create_event": "Kreye Evènman"
+    "no_upcoming_title": "Pa gen evènman kap vini",
+    "no_upcoming_desc": "Kreye pwochen evènman ou pou wè li isit la",
+    "create_event": "Kreye evènman",
+    "tickets_sold": "Tikè vann",
+    "of": "sou",
+    "revenue": "Revni",
+    "earned": "genyen",
+    "capacity": "Kapasite",
+    "filled": "ranpli",
+    "edit": "Modifye",
+    "attendees": "Patisipan",
+    "check_in": "Anrejistreman",
+    "share": "Pataje"
   },
   "events_page": {
     "search_placeholder": "Chèche evènman...",

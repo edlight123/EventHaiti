@@ -72,7 +72,17 @@
     "in_weeks": "In {{count}} weeks",
     "no_upcoming_title": "No upcoming events",
     "no_upcoming_desc": "Create your next event to see it here",
-    "create_event": "Create Event"
+    "create_event": "Create Event",
+    "tickets_sold": "Tickets Sold",
+    "of": "of",
+    "revenue": "Revenue",
+    "earned": "earned",
+    "capacity": "Capacity",
+    "filled": "filled",
+    "edit": "Edit",
+    "attendees": "Attendees",
+    "check_in": "Check-in",
+    "share": "Share"
   },
   "events_page": {
     "search_placeholder": "Search events by title, location, category...",

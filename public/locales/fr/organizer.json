@@ -66,13 +66,23 @@
   },
   "next_event": {
     "event_passed": "Événement passé",
-    "today": "Aujourd'hui!",
+    "today": "Aujourd'hui !",
     "tomorrow": "Demain",
     "in_days": "Dans {{count}} jours",
-    "in_weeks": "Dans {{count}} sem.",
+    "in_weeks": "Dans {{count}} semaines",
     "no_upcoming_title": "Aucun événement à venir",
     "no_upcoming_desc": "Créez votre prochain événement pour le voir ici",
-    "create_event": "Créer un événement"
+    "create_event": "Créer un événement",
+    "tickets_sold": "Billets vendus",
+    "of": "sur",
+    "revenue": "Revenus",
+    "earned": "gagnés",
+    "capacity": "Capacité",
+    "filled": "rempli",
+    "edit": "Modifier",
+    "attendees": "Participants",
+    "check_in": "Enregistrement",
+    "share": "Partager"
   },
   "events_page": {
     "search_placeholder": "Rechercher des événements...",
