@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Check, Clock, AlertCircle, User, CreditCard, Smartphone } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { PayoutConfig } from '@/lib/firestore/payout'
 import { IdentityVerificationModal } from './IdentityVerificationModal'
 import { BankVerificationModal } from './BankVerificationModal'
@@ -26,6 +27,7 @@ interface VerificationItem {
 }
 
 export function VerificationChecklist({ config }: VerificationChecklistProps) {
+  const { t } = useTranslation('organizer')
   const [showIdentityModal, setShowIdentityModal] = useState(false)
   const [showBankModal, setShowBankModal] = useState(false)
   const [showPhoneModal, setShowPhoneModal] = useState(false)
@@ -37,36 +39,36 @@ export function VerificationChecklist({ config }: VerificationChecklistProps) {
   const items: VerificationItem[] = [
     {
       id: 'identity',
-      label: 'Identity Verification',
+      label: t('settings.payout_settings.identity_verification'),
       description: identityStatus === 'verified' 
-        ? 'Already verified during organizer onboarding' 
-        : 'Government-issued ID and personal information',
+        ? t('settings.payout_settings.identity_verified_desc') 
+        : t('settings.payout_settings.identity_pending_desc'),
       status: identityStatus,
       icon: User,
       action: identityStatus === 'pending' ? {
-        label: 'Verify Identity',
+        label: t('settings.payout_settings.verify_identity'),
         onClick: () => setShowIdentityModal(true),
       } : undefined,
     },
     {
       id: 'bank',
-      label: 'Bank Account Verification',
-      description: 'Confirm your bank account ownership',
+      label: t('settings.payout_settings.bank_verification'),
+      description: t('settings.payout_settings.bank_verification_desc'),
       status: config?.method === 'bank_transfer' ? bankStatus : 'verified',
       icon: CreditCard,
       action: config?.method === 'bank_transfer' && bankStatus === 'pending' ? {
-        label: 'Verify Account',
+        label: t('settings.payout_settings.verify_account'),
         onClick: () => setShowBankModal(true),
       } : undefined,
     },
     {
       id: 'phone',
-      label: 'Phone Number Verification',
-      description: 'Verify your mobile money account',
+      label: t('settings.payout_settings.phone_verification'),
+      description: t('settings.payout_settings.phone_verification_desc'),
       status: config?.method === 'mobile_money' ? phoneStatus : 'verified',
       icon: Smartphone,
       action: config?.method === 'mobile_money' && phoneStatus === 'pending' ? {
-        label: 'Verify Phone',
+        label: t('settings.payout_settings.verify_phone'),
         onClick: () => setShowPhoneModal(true),
       } : undefined,
     },
@@ -91,19 +93,19 @@ export function VerificationChecklist({ config }: VerificationChecklistProps) {
       case 'verified':
         return (
           <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-            Verified
+            {t('settings.payout_settings.verified')}
           </span>
         )
       case 'failed':
         return (
           <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
-            Failed
+            {t('settings.payout_settings.failed')}
           </span>
         )
       default:
         return (
           <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">
-            Pending
+            {t('settings.payout_settings.pending')}
           </span>
         )
     }
@@ -123,11 +125,11 @@ export function VerificationChecklist({ config }: VerificationChecklistProps) {
   return (
     <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 md:p-8">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-gray-900">Verification Status</h3>
+        <h3 className="text-xl font-bold text-gray-900">{t('settings.payout_settings.verification_status')}</h3>
         {allVerified && (
           <div className="flex items-center gap-1 px-3 py-1.5 bg-green-100 rounded-full">
             <Check className="w-4 h-4 text-green-600" />
-            <span className="text-sm font-semibold text-green-700">All Verified</span>
+            <span className="text-sm font-semibold text-green-700">{t('settings.payout_settings.all_verified')}</span>
           </div>
         )}
       </div>
@@ -136,7 +138,7 @@ export function VerificationChecklist({ config }: VerificationChecklistProps) {
       {!allVerified && !hasFailures && (
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
           <p className="text-sm text-blue-900">
-            <strong>Action required:</strong> Complete verification steps below to activate payouts.
+            <strong>{t('settings.payout_settings.action_required')}</strong> {t('settings.payout_settings.complete_verification')}
           </p>
         </div>
       )}
@@ -145,8 +147,8 @@ export function VerificationChecklist({ config }: VerificationChecklistProps) {
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-red-900">
-            <p className="font-semibold mb-1">Verification Issues</p>
-            <p>Some verification steps failed. Please retry or contact support for assistance.</p>
+            <p className="font-semibold mb-1">{t('settings.payout_settings.verification_issues')}</p>
+            <p>{t('settings.payout_settings.verification_issues_desc')}</p>
           </div>
         </div>
       )}
@@ -213,8 +215,7 @@ export function VerificationChecklist({ config }: VerificationChecklistProps) {
       {/* Info Footer */}
       <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
         <p className="text-xs text-gray-600">
-          <strong>Why verification?</strong> We verify your identity and payment details to protect 
-          you and comply with financial regulations. All information is encrypted and secure.
+          <strong>{t('settings.payout_settings.why_verification')}</strong> {t('settings.payout_settings.why_verification_desc')}
         </p>
       </div>
 

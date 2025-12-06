@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { DollarSign, Clock, Calendar, ArrowDownToLine } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface BalanceRowProps {
   availableBalance: number
@@ -10,6 +11,7 @@ interface BalanceRowProps {
 }
 
 export function BalanceRow({ availableBalance, pendingBalance, nextPayoutDate }: BalanceRowProps) {
+  const { t } = useTranslation('organizer')
   const [requesting, setRequesting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -20,7 +22,7 @@ export function BalanceRow({ availableBalance, pendingBalance, nextPayoutDate }:
 
   const handleRequestPayout = async () => {
     if (availableBalance < 5000) {
-      setError('Minimum payout amount is $50.00')
+      setError(t('settings.payout_settings.min_payout_error'))
       return
     }
 
@@ -36,7 +38,7 @@ export function BalanceRow({ availableBalance, pendingBalance, nextPayoutDate }:
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Failed to request payout')
+        throw new Error(data.message || data.error || t('settings.payout_settings.failed_request'))
       }
 
       setSuccess(true)
@@ -66,7 +68,7 @@ export function BalanceRow({ availableBalance, pendingBalance, nextPayoutDate }:
       
       {success && (
         <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800">
-          Payout request submitted successfully! Refreshing...
+          {t('settings.payout_settings.request_success')}
         </div>
       )}
 
@@ -77,10 +79,10 @@ export function BalanceRow({ availableBalance, pendingBalance, nextPayoutDate }:
           <div className="w-10 h-10 bg-green-600 rounded-xl flex items-center justify-center">
             <DollarSign className="w-5 h-5 text-white" />
           </div>
-          <h3 className="text-sm font-semibold text-green-900 uppercase tracking-wide">Available</h3>
+          <h3 className="text-sm font-semibold text-green-900 uppercase tracking-wide">{t('settings.payout_settings.available_balance')}</h3>
         </div>
         <p className="text-3xl font-bold text-green-700">{formatCurrency(availableBalance)}</p>
-        <p className="text-sm text-green-600 mt-1">Ready to withdraw</p>
+        <p className="text-sm text-green-600 mt-1">{t('settings.payout_settings.ready_to_withdraw')}</p>
       </div>
 
       {/* Pending Balance */}
@@ -89,10 +91,10 @@ export function BalanceRow({ availableBalance, pendingBalance, nextPayoutDate }:
           <div className="w-10 h-10 bg-yellow-600 rounded-xl flex items-center justify-center">
             <Clock className="w-5 h-5 text-white" />
           </div>
-          <h3 className="text-sm font-semibold text-yellow-900 uppercase tracking-wide">Pending</h3>
+          <h3 className="text-sm font-semibold text-yellow-900 uppercase tracking-wide">{t('settings.payout_settings.pending_balance')}</h3>
         </div>
         <p className="text-3xl font-bold text-yellow-700">{formatCurrency(pendingBalance)}</p>
-        <p className="text-sm text-yellow-600 mt-1">Processing</p>
+        <p className="text-sm text-yellow-600 mt-1">{t('settings.payout_settings.processing')}</p>
       </div>
 
       {/* Next Payout */}
@@ -101,7 +103,7 @@ export function BalanceRow({ availableBalance, pendingBalance, nextPayoutDate }:
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
             <Calendar className="w-5 h-5 text-white" />
           </div>
-          <h3 className="text-sm font-semibold text-blue-900 uppercase tracking-wide">Next Payout</h3>
+          <h3 className="text-sm font-semibold text-blue-900 uppercase tracking-wide">{t('settings.payout_settings.next_payout')}</h3>
         </div>
         <p className="text-3xl font-bold text-blue-700">
           {nextPayoutDate ? formatDate(nextPayoutDate).split(',')[0] : '—'}
@@ -119,10 +121,10 @@ export function BalanceRow({ availableBalance, pendingBalance, nextPayoutDate }:
           className="w-full md:w-auto px-8 py-4 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all disabled:cursor-not-allowed flex items-center justify-center gap-3"
         >
           <ArrowDownToLine className="w-5 h-5" />
-          {requesting ? 'Requesting...' : 'Request Payout Now'}
+          {requesting ? t('settings.payout_settings.requesting') : t('settings.payout_settings.request_payout')}
         </button>
         <p className="text-sm text-gray-600 mt-2">
-          Your payout will be scheduled for the next Friday at 5:00 PM
+          {t('settings.payout_settings.payout_scheduled')}
         </p>
       </div>
     )}

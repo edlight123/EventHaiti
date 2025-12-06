@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import { Info } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export function FeesAndRulesCard() {
+  const { t } = useTranslation('organizer')
   const [currency, setCurrency] = useState<'USD' | 'HTG'>('USD')
   const [location, setLocation] = useState<'haiti' | 'abroad'>('haiti')
 
@@ -55,13 +57,13 @@ export function FeesAndRulesCard() {
     <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 md:p-8">
       <div className="flex items-center gap-2 mb-6">
         <Info className="w-6 h-6 text-teal-600" />
-        <h3 className="text-xl font-bold text-gray-900">Fees & Rules</h3>
+        <h3 className="text-xl font-bold text-gray-900">{t('settings.payout_settings.fees_rules')}</h3>
       </div>
 
       {/* Currency and Location Selector */}
       <div className="mb-6 space-y-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.payout_settings.currency')}</label>
           <div className="flex gap-2">
             <button
               onClick={() => setCurrency('USD')}
@@ -86,7 +88,7 @@ export function FeesAndRulesCard() {
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Account Location</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.payout_settings.account_location')}</label>
           <div className="flex gap-2">
             <button
               onClick={() => setLocation('haiti')}
@@ -96,7 +98,7 @@ export function FeesAndRulesCard() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Haiti
+              {t('settings.payout_settings.haiti')}
             </button>
             <button
               onClick={() => setLocation('abroad')}
@@ -106,7 +108,7 @@ export function FeesAndRulesCard() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Abroad
+              {t('settings.payout_settings.abroad')}
             </button>
           </div>
         </div>
@@ -116,69 +118,69 @@ export function FeesAndRulesCard() {
         {/* Platform Fee */}
         <div className="p-4 bg-teal-50 border border-teal-200 rounded-xl">
           <div className="flex items-baseline justify-between mb-2">
-            <h4 className="font-semibold text-teal-900">Platform Fee</h4>
+            <h4 className="font-semibold text-teal-900">{t('settings.payout_settings.platform_fee')}</h4>
             <span className="text-2xl font-bold text-teal-700">{fees.platformFee}</span>
           </div>
           <p className="text-sm text-teal-800">
             {location === 'abroad' 
-              ? 'Higher fee for international accounts. Includes payment processing, hosting, and platform features.'
-              : 'Charged on each ticket sale. Includes payment processing, hosting, and platform features.'}
+              ? t('settings.payout_settings.platform_fee_abroad')
+              : t('settings.payout_settings.platform_fee_haiti')}
           </p>
         </div>
 
         {/* Processing Fee */}
         <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
           <div className="flex items-baseline justify-between mb-2">
-            <h4 className="font-semibold text-gray-900">Payment Processing Fee</h4>
+            <h4 className="font-semibold text-gray-900">{t('settings.payout_settings.processing_fee')}</h4>
             <span className="text-lg font-bold text-gray-700">{fees.processingFee}</span>
           </div>
           <p className="text-sm text-gray-600">
-            Charged by payment processor on each transaction. Deducted before payout.
+            {t('settings.payout_settings.processing_fee_desc')}
           </p>
         </div>
 
         {/* Payout Rules */}
         <div>
-          <h4 className="font-semibold text-gray-900 mb-3">Payout Schedule</h4>
+          <h4 className="font-semibold text-gray-900 mb-3">{t('settings.payout_settings.payout_schedule')}</h4>
           <ul className="space-y-2">
             <li className="flex items-start gap-2 text-sm text-gray-700">
               <span className="text-teal-600 font-bold mt-0.5">•</span>
-              <span>Payouts are processed every <strong>Friday at 5:00 PM</strong></span>
+              <span>{t('settings.payout_settings.schedule_friday')} <strong>{t('settings.payout_settings.friday_5pm')}</strong></span>
             </li>
             <li className="flex items-start gap-2 text-sm text-gray-700">
               <span className="text-teal-600 font-bold mt-0.5">•</span>
-              <span>Minimum payout amount: <strong>{currency === 'USD' ? '$50.00' : '2,500 HTG'}</strong></span>
+              <span>{t('settings.payout_settings.minimum_payout')} <strong>{currency === 'USD' ? '$50.00' : '2,500 HTG'}</strong></span>
             </li>
             <li className="flex items-start gap-2 text-sm text-gray-700">
               <span className="text-teal-600 font-bold mt-0.5">•</span>
-              <span>Bank transfers take <strong>1-3 business days</strong> to arrive</span>
+              <span>{t('settings.payout_settings.bank_transfer_time')} <strong>{t('settings.payout_settings.bank_days')}</strong> {t('settings.payout_settings.bank_arrival')}</span>
             </li>
             <li className="flex items-start gap-2 text-sm text-gray-700">
               <span className="text-teal-600 font-bold mt-0.5">•</span>
-              <span>Mobile money payouts are typically <strong>instant to 24 hours</strong></span>
+              <span>{t('settings.payout_settings.mobile_money_time')} <strong>{t('settings.payout_settings.mobile_instant')}</strong></span>
             </li>
           </ul>
         </div>
 
         {/* Example Calculation */}
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-          <h4 className="font-semibold text-blue-900 mb-3">Example Calculation</h4>
+          <h4 className="font-semibold text-blue-900 mb-3">{t('settings.payout_settings.example_calc')}</h4>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between text-blue-800">
-              <span>Ticket price:</span>
+              <span>{t('settings.payout_settings.ticket_price')}</span>
               <span className="font-mono">{fees.ticketPrice}</span>
             </div>
             <div className="flex justify-between text-blue-700">
-              <span>Platform fee ({fees.platformFee}):</span>
+              <span>{t('settings.payout_settings.platform_fee')} ({fees.platformFee}):</span>
               <span className="font-mono">{fees.platformFeeAmount}</span>
             </div>
             <div className="flex justify-between text-blue-700">
-              <span>Processing fee ({fees.processingFee}):</span>
+              <span>{t('settings.payout_settings.processing_fee')} ({fees.processingFee}):</span>
               <span className="font-mono">{fees.processingFeeAmount}</span>
             </div>
             <div className="h-px bg-blue-300 my-2" />
             <div className="flex justify-between text-blue-900 font-bold">
-              <span>Your payout:</span>
+              <span>{t('settings.payout_settings.your_payout')}</span>
               <span className="font-mono">{fees.payout}</span>
             </div>
           </div>
@@ -187,9 +189,7 @@ export function FeesAndRulesCard() {
         {/* Additional Info */}
         <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
           <p className="text-xs text-gray-600 leading-relaxed">
-            <strong>Note:</strong> Fees vary based on payment method and location. International accounts 
-            have higher fees due to cross-border processing costs. Refunds are deducted from your next payout. 
-            Contact support for questions about specific transactions or fee structures.
+            <strong>{t('settings.payout_settings.note')}</strong> {t('settings.payout_settings.note_desc')}
           </p>
         </div>
       </div>

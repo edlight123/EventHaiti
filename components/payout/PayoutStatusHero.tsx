@@ -2,6 +2,7 @@
 
 import { CheckCircle, AlertCircle, Clock, XCircle } from 'lucide-react'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 import type { PayoutStatus } from '@/lib/firestore/payout'
 
 interface PayoutStatusHeroProps {
@@ -10,6 +11,8 @@ interface PayoutStatusHeroProps {
 }
 
 export function PayoutStatusHero({ status, reason }: PayoutStatusHeroProps) {
+  const { t } = useTranslation('organizer')
+  
   const getStatusConfig = () => {
     switch (status) {
       case 'not_setup':
@@ -19,8 +22,8 @@ export function PayoutStatusHero({ status, reason }: PayoutStatusHeroProps) {
           iconColor: 'text-orange-600',
           bg: 'from-orange-50 to-orange-100',
           border: 'border-orange-200',
-          title: 'Payouts Not Set Up',
-          description: 'Complete your payout setup to start receiving your earnings. This only takes a few minutes.',
+          title: t('settings.payout_settings.status_not_setup'),
+          description: t('settings.payout_settings.status_not_setup_desc'),
           showCta: false
         }
       case 'pending_verification':
@@ -30,10 +33,10 @@ export function PayoutStatusHero({ status, reason }: PayoutStatusHeroProps) {
           iconColor: 'text-blue-600',
           bg: 'from-blue-50 to-blue-100',
           border: 'border-blue-200',
-          title: 'Verification In Progress',
-          description: reason || 'We\'re reviewing your payout information. This usually takes 1-2 business days.',
+          title: t('settings.payout_settings.status_pending'),
+          description: reason || t('settings.payout_settings.status_pending_desc'),
           showCta: true,
-          ctaText: 'View Status',
+          ctaText: t('settings.payout_settings.view_status'),
           ctaHref: '#verification',
           ctaColor: 'bg-blue-600 hover:bg-blue-700'
         }
@@ -44,10 +47,10 @@ export function PayoutStatusHero({ status, reason }: PayoutStatusHeroProps) {
           iconColor: 'text-green-600',
           bg: 'from-green-50 to-green-100',
           border: 'border-green-200',
-          title: 'Payouts Active',
-          description: 'Your payout account is active and ready to receive payments.',
+          title: t('settings.payout_settings.status_active'),
+          description: t('settings.payout_settings.status_active_desc'),
           showCta: true,
-          ctaText: 'Manage Settings',
+          ctaText: t('settings.payout_settings.manage_settings'),
           ctaHref: '#method',
           ctaColor: 'bg-green-600 hover:bg-green-700'
         }
@@ -58,10 +61,10 @@ export function PayoutStatusHero({ status, reason }: PayoutStatusHeroProps) {
           iconColor: 'text-red-600',
           bg: 'from-red-50 to-red-100',
           border: 'border-red-200',
-          title: 'Payouts On Hold',
-          description: reason || 'There\'s an issue with your payout account. Please contact support to resolve this.',
+          title: t('settings.payout_settings.status_hold'),
+          description: reason || t('settings.payout_settings.status_hold_desc'),
           showCta: true,
-          ctaText: 'Contact Support',
+          ctaText: t('settings.payout_settings.contact_support'),
           ctaHref: 'mailto:support@eventhaiti.com',
           ctaColor: 'bg-red-600 hover:bg-red-700'
         }
