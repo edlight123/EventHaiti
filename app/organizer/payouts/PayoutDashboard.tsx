@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Payout } from '@/lib/firestore/payout'
 
 interface PayoutDashboardProps {
@@ -20,6 +21,7 @@ export default function PayoutDashboard({
   initialPayouts,
   organizerId,
 }: PayoutDashboardProps) {
+  const { t } = useTranslation('organizer')
   const [balance, setBalance] = useState(initialBalance)
   const [payouts, setPayouts] = useState(initialPayouts)
   const [isRequesting, setIsRequesting] = useState(false)
@@ -95,7 +97,7 @@ export default function PayoutDashboard({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {/* Available Balance */}
         <div className="bg-white rounded-lg shadow p-4 md:p-6 border-l-4 border-teal-600">
-          <div className="text-sm font-medium text-gray-600 mb-2">Available Balance</div>
+          <div className="text-sm font-medium text-gray-600 mb-2">{t('payouts_page.available_balance')}</div>
           <div className="text-2xl md:text-3xl font-bold text-gray-900">
             {formatCurrency(balance.available, balance.currency)}
           </div>
@@ -109,34 +111,34 @@ export default function PayoutDashboard({
                   : 'bg-teal-600 text-white hover:bg-teal-700'
               }`}
             >
-              {isRequesting ? 'Processing...' : 'Request Payout'}
+              {isRequesting ? t('payouts_page.processing') : t('payouts_page.request_payout')}
             </button>
             <p className="mt-2 text-xs text-gray-500 text-center">
-              Minimum {formatCurrency(5000, balance.currency)}
+              {t('payouts_page.minimum', { amount: formatCurrency(5000, balance.currency) })}
             </p>
           </div>
         </div>
 
         {/* Pending Balance */}
         <div className="bg-white rounded-lg shadow p-4 md:p-6">
-          <div className="text-sm font-medium text-gray-600 mb-2">Pending Balance</div>
+          <div className="text-sm font-medium text-gray-600 mb-2">{t('payouts_page.pending_balance')}</div>
           <div className="text-2xl md:text-3xl font-bold text-gray-900">
             {formatCurrency(balance.pending, balance.currency)}
           </div>
           <p className="mt-2 text-sm text-gray-500">
             {balance.nextPayoutDate
-              ? `Available ${new Date(balance.nextPayoutDate).toLocaleDateString()}`
-              : 'No pending funds'}
+              ? t('payouts_page.available_on', { date: new Date(balance.nextPayoutDate).toLocaleDateString() })
+              : t('payouts_page.no_pending')}
           </p>
         </div>
 
         {/* Total Earnings */}
         <div className="bg-white rounded-lg shadow p-4 md:p-6">
-          <div className="text-sm font-medium text-gray-600 mb-2">Total Earnings</div>
+          <div className="text-sm font-medium text-gray-600 mb-2">{t('payouts_page.total_earnings')}</div>
           <div className="text-2xl md:text-3xl font-bold text-gray-900">
             {formatCurrency(balance.totalEarnings, balance.currency)}
           </div>
-          <p className="mt-2 text-sm text-gray-500">All-time</p>
+          <p className="mt-2 text-sm text-gray-500">{t('payouts_page.all_time')}</p>
         </div>
       </div>
 
@@ -185,7 +187,7 @@ export default function PayoutDashboard({
       {/* Payout History Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="px-4 md:px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Payout History</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t('payouts_page.payout_history')}</h2>
         </div>
 
         {payouts.length === 0 ? (
@@ -203,8 +205,8 @@ export default function PayoutDashboard({
                 d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p className="mt-2 text-gray-500">No payout history yet</p>
-            <p className="text-sm text-gray-400">Request your first payout when funds are available</p>
+            <p className="mt-2 text-gray-500">{t('payouts_page.no_payouts')}</p>
+            <p className="text-sm text-gray-400">{t('payouts_page.no_payouts_desc')}</p>
           </div>
         ) : (
           <>
@@ -257,13 +259,13 @@ export default function PayoutDashboard({
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date Requested
+                      {t('payouts_page.date')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
+                      {t('payouts_page.amount')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Method
+                      {t('payouts_page.method')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status

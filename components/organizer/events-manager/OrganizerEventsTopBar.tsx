@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Search, Plus, List, Calendar, SlidersHorizontal } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface OrganizerEventsTopBarProps {
   searchQuery: string
@@ -21,6 +22,7 @@ export default function OrganizerEventsTopBar({
   onOpenFilters,
   activeFiltersCount
 }: OrganizerEventsTopBarProps) {
+  const { t } = useTranslation('organizer')
   const [localQuery, setLocalQuery] = useState(searchQuery)
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,7 +49,7 @@ export default function OrganizerEventsTopBar({
                 type="text"
                 value={localQuery}
                 onChange={handleSearchChange}
-                placeholder="Search events by title, location, category..."
+                placeholder={t('events_page.search_placeholder')}
                 className="w-full pl-10 pr-10 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
               />
               {localQuery && (
@@ -98,7 +100,7 @@ export default function OrganizerEventsTopBar({
               className="relative px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2"
             >
               <SlidersHorizontal className="w-4 h-4" />
-              <span>Filters</span>
+              <span>{t('events_page.filters')}</span>
               {activeFiltersCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-teal-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
                   {activeFiltersCount}
@@ -112,7 +114,7 @@ export default function OrganizerEventsTopBar({
               className="px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2"
             >
               <Plus className="w-5 h-5" />
-              <span>Create Event</span>
+              <span>{t('events_page.create_event')}</span>
             </Link>
           </div>
         </div>
@@ -126,7 +128,7 @@ export default function OrganizerEventsTopBar({
               type="text"
               value={localQuery}
               onChange={handleSearchChange}
-              placeholder="Search events..."
+              placeholder={t('events_page.search_placeholder_mobile')}
               className="w-full pl-10 pr-10 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
             />
             {localQuery && (
@@ -176,7 +178,7 @@ export default function OrganizerEventsTopBar({
               className="relative flex-1 px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
             >
               <SlidersHorizontal className="w-4 h-4" />
-              <span>Filters</span>
+              <span>{t('events_page.filters')}</span>
               {activeFiltersCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-teal-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
                   {activeFiltersCount}
@@ -190,7 +192,7 @@ export default function OrganizerEventsTopBar({
               className="px-4 py-2.5 bg-gradient-to-r from-teal-600 to-teal-700 text-white font-semibold rounded-xl shadow-md flex items-center justify-center gap-2"
             >
               <Plus className="w-5 h-5" />
-              <span>Create</span>
+              <span>{t('events_page.create_event')}</span>
             </Link>
           </div>
         </div>

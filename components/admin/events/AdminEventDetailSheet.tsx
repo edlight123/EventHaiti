@@ -4,6 +4,7 @@ import { X, ExternalLink, CheckCircle, XCircle, Trash2, AlertTriangle, User, Tic
 import { format } from 'date-fns'
 import { useState } from 'react'
 import Image from 'next/image'
+import { useTranslation } from 'react-i18next'
 
 interface Event {
   id: string
@@ -46,6 +47,7 @@ interface AdminEventDetailSheetProps {
 }
 
 export function AdminEventDetailSheet({ event, isOpen, onClose, onAction }: AdminEventDetailSheetProps) {
+  const { t } = useTranslation('common')
   const [reason, setReason] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
@@ -82,7 +84,7 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction }: Admi
       <div className="fixed inset-y-0 right-0 w-full sm:w-[600px] lg:w-[700px] bg-white shadow-xl z-50 flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-lg font-bold text-gray-900">Event Details</h3>
+          <h3 className="text-lg font-bold text-gray-900">{t('admin.event_details')}</h3>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-200 rounded-lg"
@@ -119,7 +121,7 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction }: Admi
                     ? 'bg-green-100 text-green-800'
                     : 'bg-yellow-100 text-yellow-800'
                 }`}>
-                  {event.is_published ? 'Published' : 'Draft'}
+                  {event.is_published ? t('admin.published') : t('admin.draft')}
                 </span>
               </div>
 
@@ -135,7 +137,7 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction }: Admi
               <div className="flex items-start gap-3">
                 <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
                 <div>
-                  <div className="text-xs text-gray-500 font-medium mb-1">Date & Time</div>
+                  <div className="text-xs text-gray-500 font-medium mb-1">{t('admin.date_time')}</div>
                   <div className="text-sm text-gray-900">
                     {format(new Date(event.start_datetime), 'MMM d, yyyy')}
                   </div>
@@ -148,7 +150,7 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction }: Admi
               <div className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
                 <div>
-                  <div className="text-xs text-gray-500 font-medium mb-1">Location</div>
+                  <div className="text-xs text-gray-500 font-medium mb-1">{t('admin.location')}</div>
                   <div className="text-sm text-gray-900">{event.venue_name || 'TBD'}</div>
                   <div className="text-xs text-gray-600">{event.city}</div>
                 </div>
@@ -157,9 +159,9 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction }: Admi
               <div className="flex items-start gap-3">
                 <Ticket className="w-5 h-5 text-gray-400 mt-0.5" />
                 <div>
-                  <div className="text-xs text-gray-500 font-medium mb-1">Capacity</div>
+                  <div className="text-xs text-gray-500 font-medium mb-1">{t('admin.max_capacity')}</div>
                   <div className="text-sm text-gray-900">
-                    {event.tickets_sold || 0} / {event.max_attendees} sold
+                    {event.tickets_sold || 0} / {event.max_attendees} {t('admin.tickets_sold').toLowerCase()}
                   </div>
                 </div>
               </div>
@@ -251,12 +253,12 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction }: Admi
           {!event.is_published || showDeleteConfirm ? (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Reason {showDeleteConfirm ? 'for deletion' : 'for action'}
+                {showDeleteConfirm ? t('admin.reason_for_deletion') : t('admin.reason_for_action')}
               </label>
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="Provide a detailed reason..."
+                placeholder={t('admin.reason_placeholder')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none"
                 rows={2}
               />
@@ -272,7 +274,7 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction }: Admi
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium text-sm"
                 >
                   <XCircle className="w-4 h-4" />
-                  Unpublish
+                  {t('admin.unpublish')}
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
@@ -287,13 +289,13 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction }: Admi
                   onClick={() => setShowDeleteConfirm(false)}
                   className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium text-sm"
                 >
-                  Cancel
+                  {t('admin.cancel')}
                 </button>
                 <button
                   onClick={handleDelete}
                   className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm"
                 >
-                  Confirm Delete
+                  {t('admin.confirm_delete')}
                 </button>
               </>
             ) : (
@@ -303,7 +305,7 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction }: Admi
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm"
                 >
                   <CheckCircle className="w-4 h-4" />
-                  Approve & Publish
+                  {t('admin.approve_publish')}
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
@@ -321,7 +323,7 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction }: Admi
             rel="noopener noreferrer"
             className="block text-center px-4 py-2 text-teal-600 hover:text-teal-700 font-medium text-sm"
           >
-            View Public Page →
+            {t('admin.view_public')} →
           </a>
         </div>
       </div>

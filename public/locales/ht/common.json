@@ -171,5 +171,35 @@
   },
   "footer": {
     "copyright": "© {{year}} EventHaiti. Tout dwa rezève."
+  },
+  "admin": {
+    "search_placeholder": "Chèche evènman...",
+    "verify": "Verifye",
+    "events": "Evènman",
+    "users": "Itilizatè",
+    "event_details": "Detay evènman",
+    "published": "Pibliye",
+    "draft": "Bwouyon",
+    "date_time": "Dat ak lè",
+    "location": "Kote",
+    "organizer": "Òganizatè",
+    "tickets_sold": "Tikè vann",
+    "max_capacity": "Kapasite maksimòm",
+    "reports": "Rapò",
+    "audit_log": "Jounal verifkasyon",
+    "no_reports": "Pa gen rapò",
+    "no_audit": "Pa gen antre verifkasyon",
+    "view_public": "Gade paj piblik",
+    "approve_publish": "Apwouve epi pibliye",
+    "unpublish": "Retire piblikasyon",
+    "delete": "Efase evènman",
+    "reason_label": "Rezon",
+    "reason_placeholder": "Antre rezon pou aksyon sa a...",
+    "reason_for_deletion": "Rezon pou efase",
+    "reason_for_action": "Rezon pou aksyon",
+    "cancel": "Anile",
+    "confirm_delete": "Konfime efasman",
+    "delete_selected": "Efase seleksyon"
   }
 }
+

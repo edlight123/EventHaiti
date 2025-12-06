@@ -172,5 +172,35 @@
   },
   "footer": {
     "copyright": "© {{year}} EventHaiti. Tous droits réservés."
+  },
+  "admin": {
+    "search_placeholder": "Rechercher des événements...",
+    "verify": "Vérifier",
+    "events": "Événements",
+    "users": "Utilisateurs",
+    "event_details": "Détails de l'événement",
+    "published": "Publié",
+    "draft": "Brouillon",
+    "date_time": "Date et heure",
+    "location": "Lieu",
+    "organizer": "Organisateur",
+    "tickets_sold": "Billets vendus",
+    "max_capacity": "Capacité maximale",
+    "reports": "Rapports",
+    "audit_log": "Journal d'audit",
+    "no_reports": "Aucun rapport",
+    "no_audit": "Aucune entrée d'audit",
+    "view_public": "Voir la page publique",
+    "approve_publish": "Approuver et publier",
+    "unpublish": "Dépublier",
+    "delete": "Supprimer l'événement",
+    "reason_label": "Raison",
+    "reason_placeholder": "Entrez la raison de cette action...",
+    "reason_for_deletion": "Raison de la suppression",
+    "reason_for_action": "Raison de l'action",
+    "cancel": "Annuler",
+    "confirm_delete": "Confirmer la suppression",
+    "delete_selected": "Supprimer la sélection"
   }
 }
+

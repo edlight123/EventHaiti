@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { format } from 'date-fns'
 import { MoreVertical, Eye, Edit, Copy, Trash2, AlertCircle, CheckCircle, Users } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface EventData {
   id: string
@@ -37,6 +38,7 @@ export default function OrganizerEventCard({
   onDuplicate,
   onDelete
 }: OrganizerEventCardProps) {
+  const { t } = useTranslation('organizer')
   const [showActionsMenu, setShowActionsMenu] = useState(false)
 
   const ticketsSold = event.tickets_sold || 0
@@ -82,13 +84,13 @@ export default function OrganizerEventCard({
         <div className="absolute top-3 right-3 flex flex-col gap-2">
           {isSoldOut && (
             <div className="bg-gradient-to-r from-red-600 to-red-700 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-              SOLD OUT
+              {t('event_card_detail.sold_out')}
             </div>
           )}
           {showNeedsAttention && needsAttention && (
             <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
               <AlertCircle className="w-3 h-3" />
-              <span>Needs Attention</span>
+              <span>{t('event_card_detail.needs_attention')}</span>
             </div>
           )}
         </div>
@@ -105,12 +107,12 @@ export default function OrganizerEventCard({
             {event.is_published ? (
               <>
                 <CheckCircle className="w-3 h-3" />
-                <span>Published</span>
+                <span>{t('event_card_detail.published')}</span>
               </>
             ) : (
               <>
                 <Edit className="w-3 h-3" />
-                <span>Draft</span>
+                <span>{t('event_card_detail.draft')}</span>
               </>
             )}
           </span>
@@ -165,7 +167,7 @@ export default function OrganizerEventCard({
         {/* Ticket Sales Progress */}
         <div className="mb-4">
           <div className="flex justify-between items-center mb-1.5">
-            <span className="text-xs font-medium text-gray-600">Ticket Sales</span>
+            <span className="text-xs font-medium text-gray-600">{t('event_card_detail.ticket_sales')}</span>
             <span className="text-xs font-bold text-gray-900">
               {ticketsSold} / {totalTickets}
             </span>
@@ -184,13 +186,13 @@ export default function OrganizerEventCard({
               style={{ width: `${Math.min(salesPercentage, 100)}%` }}
             />
           </div>
-          <p className="text-xs text-gray-500 mt-1">{salesPercentage.toFixed(0)}% sold</p>
+          <p className="text-xs text-gray-500 mt-1">{salesPercentage.toFixed(0)}% {t('event_card_detail.sold')}</p>
         </div>
 
         {/* Revenue & Check-ins */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 border border-green-200">
-            <p className="text-xs text-green-700 font-medium mb-0.5">Revenue</p>
+            <p className="text-xs text-green-700 font-medium mb-0.5">{t('event_card_detail.revenue')}</p>
             <p className="text-lg font-bold text-green-800">
               ${revenue.toLocaleString()}
             </p>
@@ -198,7 +200,7 @@ export default function OrganizerEventCard({
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 border border-blue-200">
             <div className="flex items-center gap-1 mb-0.5">
               <Users className="w-3 h-3 text-blue-700" />
-              <p className="text-xs text-blue-700 font-medium">Check-ins</p>
+              <p className="text-xs text-blue-700 font-medium">{t('event_card_detail.check_ins')}</p>
             </div>
             <p className="text-lg font-bold text-blue-800">{checkedIn}</p>
           </div>
@@ -223,14 +225,14 @@ export default function OrganizerEventCard({
             className="flex-1 px-4 py-2 rounded-lg text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition-all text-center flex items-center justify-center gap-1"
           >
             <Eye className="w-4 h-4" />
-            <span>View</span>
+            <span>{t('event_card_detail.view')}</span>
           </Link>
           <Link
             href={`/organizer/events/${event.id}/edit`}
             className="flex-1 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 shadow-md hover:shadow-lg transition-all text-center flex items-center justify-center gap-1"
           >
             <Edit className="w-4 h-4" />
-            <span>Edit</span>
+            <span>{t('event_card_detail.edit')}</span>
           </Link>
 
           {/* More Actions Dropdown */}
@@ -259,7 +261,7 @@ export default function OrganizerEventCard({
                       className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                     >
                       <Copy className="w-4 h-4" />
-                      <span>Duplicate</span>
+                      <span>{t('event_card_detail.duplicate')}</span>
                     </button>
                   )}
                   {onDelete && (
@@ -271,7 +273,7 @@ export default function OrganizerEventCard({
                       className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                     >
                       <Trash2 className="w-4 h-4" />
-                      <span>Delete</span>
+                      <span>{t('event_card_detail.delete')}</span>
                     </button>
                   )}
                 </div>
