@@ -8,9 +8,9 @@ import { PayoutMethodCard } from '@/components/payout/PayoutMethodCard'
 import { FeesAndRulesCard } from '@/components/payout/FeesAndRulesCard'
 import { VerificationChecklist } from '@/components/payout/VerificationChecklist'
 import { PayoutHistory } from '@/components/payout/PayoutHistory'
+import PayoutSettingsHeader from '@/components/organizer/settings/PayoutSettingsHeader'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
-import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -62,25 +62,7 @@ export default async function PayoutsSettingsPage() {
       <Navbar user={navbarUser} />
 
       {/* Header */}
-      <div className="bg-gradient-to-br from-teal-600 to-teal-700 border-b border-teal-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-4">
-            <Link href="/organizer/settings" className="inline-flex items-center gap-2 px-4 py-2 text-teal-100 hover:text-white hover:bg-teal-700 rounded-lg transition-colors text-sm font-medium">
-              <span>←</span>
-              <span>Back to Settings</span>
-            </Link>
-          </div>
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Payout Settings</h1>
-              <p className="text-teal-100 text-sm sm:text-base max-w-2xl">
-                Manage how you receive payments from your events. Set up your payout method, track your balance, and view transaction history.
-              </p>
-            </div>
-            <div className="hidden lg:block w-24 h-24 bg-teal-500/30 rounded-2xl flex-shrink-0" />
-          </div>
-        </div>
-      </div>
+      <PayoutSettingsHeader />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">

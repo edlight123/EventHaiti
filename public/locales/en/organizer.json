@@ -185,7 +185,29 @@
     "security": "Security",
     "security_desc": "Password, 2FA, and login history",
     "danger_zone": "Danger Zone",
-    "danger_zone_desc": "Account deactivation and data export"
+    "danger_zone_desc": "Account deactivation and data export",
+    "payout_settings": {
+      "back_to_settings": "Back to Settings",
+      "title": "Payout Settings",
+      "subtitle": "Manage how you receive payments from your events. Set up your payout method, track your balance, and view transaction history.",
+      "method_title": "Payout Method",
+      "edit": "Edit",
+      "no_method_title": "No payout method configured",
+      "no_method_desc": "Add your bank account or mobile money details to receive payouts from your events.",
+      "add_method": "Add Payout Method",
+      "bank_transfer": "Bank Transfer",
+      "mobile_money": "Mobile Money",
+      "active": "Active",
+      "available_balance": "Available Balance",
+      "pending_balance": "Pending Balance",
+      "next_payout": "Next Payout",
+      "verification_checklist": "Verification Checklist",
+      "fees_rules": "Fees and Rules",
+      "payout_history": "Payout History",
+      "no_history": "No payout history yet",
+      "no_history_desc": "Your payout history will appear here once you start receiving payments from your events."
+    }
   }
 }
+
 

@@ -185,7 +185,29 @@
     "security": "Sécurité",
     "security_desc": "Mot de passe, 2FA et historique de connexion",
     "danger_zone": "Zone dangereuse",
-    "danger_zone_desc": "Désactivation du compte et export de données"
+    "danger_zone_desc": "Désactivation du compte et export de données",
+    "payout_settings": {
+      "back_to_settings": "Retour aux paramètres",
+      "title": "Paramètres de paiement",
+      "subtitle": "Gérez comment vous recevez les paiements de vos événements. Configurez votre méthode de paiement, suivez votre solde et consultez l'historique des transactions.",
+      "method_title": "Méthode de paiement",
+      "edit": "Modifier",
+      "no_method_title": "Aucune méthode de paiement configurée",
+      "no_method_desc": "Ajoutez vos coordonnées bancaires ou de mobile money pour recevoir les paiements de vos événements.",
+      "add_method": "Ajouter une méthode de paiement",
+      "bank_transfer": "Virement bancaire",
+      "mobile_money": "Mobile Money",
+      "active": "Actif",
+      "available_balance": "Solde disponible",
+      "pending_balance": "Solde en attente",
+      "next_payout": "Prochain paiement",
+      "verification_checklist": "Liste de vérification",
+      "fees_rules": "Frais et règles",
+      "payout_history": "Historique des paiements",
+      "no_history": "Aucun historique de paiement",
+      "no_history_desc": "Votre historique de paiement apparaîtra ici une fois que vous commencerez à recevoir des paiements de vos événements."
+    }
   }
 }
+
 

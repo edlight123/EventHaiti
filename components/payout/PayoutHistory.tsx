@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { DollarSign, Check, X, Clock, RefreshCw, Download } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { Payout } from '@/lib/firestore/payout'
 
 interface PayoutHistoryProps {
@@ -11,6 +12,7 @@ interface PayoutHistoryProps {
 }
 
 export function PayoutHistory({ payouts, loading }: PayoutHistoryProps) {
+  const { t } = useTranslation('organizer')
   const [exporting, setExporting] = useState(false)
   const [retrying, setRetrying] = useState<string | null>(null)
 
@@ -103,7 +105,7 @@ export function PayoutHistory({ payouts, loading }: PayoutHistoryProps) {
   if (loading) {
     return (
       <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 md:p-8">
-        <h3 className="text-xl font-bold text-gray-900 mb-6">Payout History</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-6">{t('settings.payout_settings.payout_history')}</h3>
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="animate-pulse">
@@ -125,14 +127,14 @@ export function PayoutHistory({ payouts, loading }: PayoutHistoryProps) {
   if (!payouts || payouts.length === 0) {
     return (
       <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 md:p-8">
-        <h3 className="text-xl font-bold text-gray-900 mb-6">Payout History</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-6">{t('settings.payout_settings.payout_history')}</h3>
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <DollarSign className="w-8 h-8 text-gray-400" />
           </div>
-          <h4 className="text-lg font-semibold text-gray-900 mb-2">No payouts yet</h4>
+          <h4 className="text-lg font-semibold text-gray-900 mb-2">{t('settings.payout_settings.no_history')}</h4>
           <p className="text-gray-600 max-w-md mx-auto">
-            Your payout history will appear here once you start receiving payments from your events.
+            {t('settings.payout_settings.no_history_desc')}
           </p>
         </div>
       </div>
@@ -142,7 +144,7 @@ export function PayoutHistory({ payouts, loading }: PayoutHistoryProps) {
   return (
     <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 md:p-8">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-gray-900">Payout History</h3>
+        <h3 className="text-xl font-bold text-gray-900">{t('settings.payout_settings.payout_history')}</h3>
         <button 
           onClick={handleExport}
           disabled={exporting || !payouts || payouts.length === 0}

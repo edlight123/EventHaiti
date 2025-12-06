@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { CreditCard, Smartphone, Edit, Check } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { PayoutConfig } from '@/lib/firestore/payout'
 import { PayoutSetupStepper } from './PayoutSetupStepper'
 
@@ -11,6 +12,7 @@ interface PayoutMethodCardProps {
 }
 
 export function PayoutMethodCard({ config, onUpdate }: PayoutMethodCardProps) {
+  const { t } = useTranslation('organizer')
   const [showSetup, setShowSetup] = useState(false)
 
   const hasMethod = config?.method && (config.bankDetails || config.mobileMoneyDetails)
@@ -19,14 +21,14 @@ export function PayoutMethodCard({ config, onUpdate }: PayoutMethodCardProps) {
     <>
       <div id="method" className="bg-white rounded-2xl border-2 border-gray-200 p-6 md:p-8">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-gray-900">Payout Method</h3>
+          <h3 className="text-xl font-bold text-gray-900">{t('settings.payout_settings.method_title')}</h3>
           {hasMethod && (
             <button
               onClick={() => setShowSetup(true)}
               className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors"
             >
               <Edit className="w-4 h-4" />
-              Edit
+              {t('settings.payout_settings.edit')}
             </button>
           )}
         </div>
@@ -36,16 +38,16 @@ export function PayoutMethodCard({ config, onUpdate }: PayoutMethodCardProps) {
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CreditCard className="w-8 h-8 text-gray-400" />
             </div>
-            <h4 className="text-lg font-semibold text-gray-900 mb-2">No payout method configured</h4>
+            <h4 className="text-lg font-semibold text-gray-900 mb-2">{t('settings.payout_settings.no_method_title')}</h4>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              Add your bank account or mobile money details to receive payouts from your events.
+              {t('settings.payout_settings.no_method_desc')}
             </p>
             <button
               id="setup"
               onClick={() => setShowSetup(true)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
             >
-              Add Payout Method
+              {t('settings.payout_settings.add_method')}
             </button>
           </div>
         ) : (
@@ -57,10 +59,10 @@ export function PayoutMethodCard({ config, onUpdate }: PayoutMethodCardProps) {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-semibold text-gray-900">Bank Transfer</h4>
+                    <h4 className="font-semibold text-gray-900">{t('settings.payout_settings.bank_transfer')}</h4>
                     <div className="flex items-center gap-1 px-2 py-0.5 bg-green-100 rounded-full">
                       <Check className="w-3 h-3 text-green-600" />
-                      <span className="text-xs font-semibold text-green-700">Active</span>
+                      <span className="text-xs font-semibold text-green-700">{t('settings.payout_settings.active')}</span>
                     </div>
                   </div>
                   <p className="text-sm text-gray-600">{config.bankDetails.bankName}</p>
@@ -81,10 +83,10 @@ export function PayoutMethodCard({ config, onUpdate }: PayoutMethodCardProps) {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-semibold text-gray-900">Mobile Money</h4>
+                    <h4 className="font-semibold text-gray-900">{t('settings.payout_settings.mobile_money')}</h4>
                     <div className="flex items-center gap-1 px-2 py-0.5 bg-green-100 rounded-full">
                       <Check className="w-3 h-3 text-green-600" />
-                      <span className="text-xs font-semibold text-green-700">Active</span>
+                      <span className="text-xs font-semibold text-green-700">{t('settings.payout_settings.active')}</span>
                     </div>
                   </div>
                   <p className="text-sm text-gray-600 capitalize">{config.mobileMoneyDetails.provider}</p>

@@ -185,7 +185,29 @@
     "security": "Sekirite",
     "security_desc": "Mo de pas, 2FA ak istorik koneksyon",
     "danger_zone": "Zòn danje",
-    "danger_zone_desc": "Dezaktivation kont ak ekspò done"
+    "danger_zone_desc": "Dezaktivation kont ak ekspò done",
+    "payout_settings": {
+      "back_to_settings": "Retounen nan paramèt",
+      "title": "Paramèt peman",
+      "subtitle": "Jere kijan ou resevwa peman pou evènman ou yo. Konfigure metòd peman ou, swiv balans ou epi gade istorik tranzaksyon.",
+      "method_title": "Metòd peman",
+      "edit": "Modifye",
+      "no_method_title": "Pa gen metòd peman konfigure",
+      "no_method_desc": "Ajoute enfòmasyon kont bank ou oswa mobile money pou resevwa peman pou evènman ou yo.",
+      "add_method": "Ajoute metòd peman",
+      "bank_transfer": "Transfè bankè",
+      "mobile_money": "Mobile Money",
+      "active": "Aktif",
+      "available_balance": "Balans disponib",
+      "pending_balance": "Balans an atant",
+      "next_payout": "Pwochen peman",
+      "verification_checklist": "Lis verifikasyon",
+      "fees_rules": "Frè ak règ",
+      "payout_history": "Istorik peman",
+      "no_history": "Poko gen istorik peman",
+      "no_history_desc": "Istorik peman ou ap parèt la a yon fwa ou kòmanse resevwa peman pou evènman ou yo."
+    }
   }
 }
+
 
