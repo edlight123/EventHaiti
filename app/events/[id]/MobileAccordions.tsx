@@ -74,7 +74,7 @@ export default function MobileAccordions({
     <div className="md:hidden space-y-3">
       {/* About */}
       <AccordionSection
-        title={t('about_event')}
+        title={t('events.about_event')}
         icon={<Sparkles className="w-5 h-5 text-brand-600" />}
         defaultOpen={true}
       >
@@ -83,7 +83,7 @@ export default function MobileAccordions({
         </p>
         {tags && tags.length > 0 && (
           <div className="pt-3 border-t border-gray-100">
-            <h4 className="text-xs font-semibold text-gray-500 mb-2">{t('tags').toUpperCase()}</h4>
+            <h4 className="text-xs font-semibold text-gray-500 mb-2">{t('events.tags').toUpperCase()}</h4>
             <div className="flex flex-wrap gap-2">
               {tags.map((tag: string) => (
                 <Badge key={tag} variant="neutral" size="sm">
@@ -97,16 +97,16 @@ export default function MobileAccordions({
 
       {/* Venue */}
       <AccordionSection
-        title={t('venue_directions')}
+        title={t('events.venue_directions')}
         icon={<MapPin className="w-5 h-5 text-brand-600" />}
       >
         <div className="space-y-3">
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-1">{t('venue').toUpperCase()}</p>
+            <p className="text-xs font-semibold text-gray-500 mb-1">{t('events.venue_name').toUpperCase()}</p>
             <p className="text-sm font-semibold text-gray-900">{venueName}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-1">{t('address').toUpperCase()}</p>
+            <p className="text-xs font-semibold text-gray-500 mb-1">{t('events.address').toUpperCase()}</p>
             <p className="text-sm text-gray-700 break-words">{address}</p>
             <p className="text-sm text-gray-700">{commune}, {city}</p>
           </div>
@@ -118,7 +118,7 @@ export default function MobileAccordions({
               className="text-sm text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1"
             >
               <MapPin className="w-4 h-4" />
-              {t('apple_maps')}
+              {t('events.apple_maps')}
             </a>
             <span className="text-gray-300">|</span>
             <a
@@ -128,7 +128,7 @@ export default function MobileAccordions({
               className="text-sm text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1"
             >
               <MapPin className="w-4 h-4" />
-              {t('google_maps')}
+              {t('events.google_maps')}
             </a>
           </div>
         </div>
@@ -136,12 +136,12 @@ export default function MobileAccordions({
 
       {/* Date & Time */}
       <AccordionSection
-        title={t('date_time')}
+        title={t('events.date_time')}
         icon={<Clock className="w-5 h-5 text-brand-600" />}
       >
         <div className="space-y-3">
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-1">{t('start').toUpperCase()}</p>
+            <p className="text-xs font-semibold text-gray-500 mb-1">{t('events.start').toUpperCase()}</p>
             <p className="text-sm font-semibold text-gray-900">
               {format(new Date(startDatetime), 'EEEE, MMMM d, yyyy')}
             </p>
@@ -150,7 +150,7 @@ export default function MobileAccordions({
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-1">{t('end').toUpperCase()}</p>
+            <p className="text-xs font-semibold text-gray-500 mb-1">{t('events.end').toUpperCase()}</p>
             <p className="text-sm font-semibold text-gray-900">
               {format(new Date(endDatetime), 'EEEE, MMMM d, yyyy')}
             </p>
@@ -163,7 +163,7 @@ export default function MobileAccordions({
 
       {/* Organizer */}
       <AccordionSection
-        title="Hosted By"
+        title={t('events.organizer')}
         icon={<User className="w-5 h-5 text-brand-600" />}
       >
         <a 
@@ -182,7 +182,7 @@ export default function MobileAccordions({
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
-                <span className="font-medium">Verified Organizer</span>
+                <span className="font-medium">{t('events.verified_organizer')}</span>
               </div>
             )}
           </div>
@@ -191,7 +191,7 @@ export default function MobileAccordions({
 
       {/* Share */}
       <AccordionSection
-        title="Share Event"
+        title={t('events.share_event')}
         icon={<Share2 className="w-5 h-5 text-brand-600" />}
       >
         {shareButton}
