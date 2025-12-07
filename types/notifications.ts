@@ -9,14 +9,14 @@ export interface Notification {
   eventId?: string
   ticketId?: string
   isRead: boolean
-  createdAt: Date
-  readAt?: Date
+  createdAt: string
+  readAt?: string
 }
 
 export interface FCMToken {
   token: string
-  createdAt: Date
-  lastUsed: Date
+  createdAt: string
+  lastUsed: string
   deviceInfo?: {
     userAgent: string
     platform: string

@@ -123,8 +123,8 @@ export async function getUserNotifications(
       eventId: doc.data().eventId || undefined,
       ticketId: doc.data().ticketId || undefined,
       isRead: doc.data().isRead,
-      createdAt: doc.data().createdAt.toDate(),
-      readAt: doc.data().readAt?.toDate() || undefined
+      createdAt: doc.data().createdAt.toDate().toISOString(),
+      readAt: doc.data().readAt?.toDate()?.toISOString() || undefined
     }))
   } catch (error: any) {
     // Handle permission errors gracefully

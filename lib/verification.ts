@@ -70,12 +70,12 @@ export interface VerificationRequest {
     payoutSetup: VerificationStep
   }
   files: VerificationFiles
-  submittedAt?: Date
-  reviewedAt?: Date
+  submittedAt?: string
+  reviewedAt?: string
   reviewNotes?: string
   reasonCodes?: string[]
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string
+  updatedAt: string
 }
 
 // Helper: Get verification request for user
@@ -90,13 +90,13 @@ export async function getVerificationRequest(userId: string): Promise<Verificati
     
     const data = docSnap.data()
     
-    // Convert Firestore timestamps to Date objects
+    // Convert Firestore timestamps to ISO strings
     return {
       ...data,
-      createdAt: data.createdAt?.toDate?.() || new Date(),
-      updatedAt: data.updatedAt?.toDate?.() || new Date(),
-      submittedAt: data.submittedAt?.toDate?.() || undefined,
-      reviewedAt: data.reviewedAt?.toDate?.() || undefined,
+      createdAt: (data.createdAt?.toDate?.() || new Date()).toISOString(),
+      updatedAt: (data.updatedAt?.toDate?.() || new Date()).toISOString(),
+      submittedAt: data.submittedAt?.toDate?.()?.toISOString() || undefined,
+      reviewedAt: data.reviewedAt?.toDate?.()?.toISOString() || undefined,
     } as VerificationRequest
   } catch (error) {
     console.error('Error fetching verification request:', error)
@@ -154,8 +154,8 @@ export async function initializeVerificationRequest(userId: string): Promise<Ver
       }
     },
     files: {},
-    createdAt: new Date(),
-    updatedAt: new Date()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   }
   
   const docRef = doc(db, 'verification_requests', userId)

@@ -181,8 +181,8 @@ export async function getUserNotificationsServer(
       ticketId: doc.data().ticketId,
       metadata: doc.data().metadata,
       isRead: doc.data().isRead || false,
-      createdAt: doc.data().createdAt?.toDate?.() || new Date(),
-      readAt: doc.data().readAt?.toDate?.()
+      createdAt: (doc.data().createdAt?.toDate?.() || new Date()).toISOString(),
+      readAt: doc.data().readAt?.toDate?.()?.toISOString()
     }))
   } catch (error) {
     console.error('Error getting user notifications:', error)
