@@ -151,11 +151,12 @@ export async function POST(request: Request) {
     
     // Convert HTG to USD for Stripe if needed (Stripe doesn't support HTG directly)
     if (eventCurrency === 'HTG') {
-      const { convertCurrency, getExchangeRate } = await import('@/lib/currency')
-      stripeAmount = convertCurrency(finalPrice, 'HTG', 'USD')
+      const { fetchStripeHTGRate } = await import('@/lib/currency')
+      // Fetch live exchange rate from Stripe
+      exchangeRateUsed = await fetchStripeHTGRate()
+      stripeAmount = finalPrice * exchangeRateUsed
       stripeCurrency = 'usd'
-      exchangeRateUsed = getExchangeRate('HTG', 'USD')
-      console.log(`💱 Converting ${finalPrice} HTG to ${stripeAmount.toFixed(2)} USD (rate: ${exchangeRateUsed})`)
+      console.log(`💱 Converting ${finalPrice} HTG to ${stripeAmount.toFixed(2)} USD (Stripe rate: ${exchangeRateUsed})`)
     }
 
     // Create PaymentIntent
