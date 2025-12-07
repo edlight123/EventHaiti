@@ -103,7 +103,7 @@ export const getEventById = unstable_cache(
       return null
     }
   },
-  ['event-by-id'],
+  ['event-by-id-v2'],
   { revalidate: 60, tags: ['event'] }
 )
 
@@ -178,7 +178,7 @@ export const getDiscoverEvents = unstable_cache(
       return []
     }
   },
-  ['discover-events'],
+  ['discover-events-v2'],
   { revalidate: 30, tags: ['events', 'discover'] }
 )
 
