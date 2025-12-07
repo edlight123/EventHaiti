@@ -197,7 +197,7 @@ export default function EventCard({ event, priority = false, index = 0 }: EventC
                 <div className="flex items-baseline gap-1 flex-wrap">
                   <span className="text-xs sm:text-sm font-medium text-gray-600 whitespace-nowrap">{t('common.from')}</span>
                   <span className="text-2xl sm:text-2xl md:text-3xl font-bold text-gray-900 whitespace-nowrap">
-                    {event.ticket_price} <span className="text-sm sm:text-sm font-normal text-gray-600">{event.currency}</span>
+                    {event.ticket_price?.toLocaleString()} <span className="text-sm sm:text-sm font-normal text-gray-600">{event.currency}</span>
                   </span>
                 </div>
               )}
