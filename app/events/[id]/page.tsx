@@ -115,8 +115,26 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     console.log('Organizer query result:', { organizerData, organizerError, organizerId: eventData.organizer_id })
 
     // Handle case where organizer data might not exist
+    // Explicitly serialize all fields to prevent Timestamp leakage
     event = {
-      ...eventData,
+      id: eventData.id,
+      title: eventData.title,
+      description: eventData.description,
+      category: eventData.category,
+      venue_name: eventData.venue_name,
+      city: eventData.city,
+      commune: eventData.commune,
+      address: eventData.address,
+      start_datetime: eventData.start_datetime,
+      end_datetime: eventData.end_datetime,
+      ticket_price: eventData.ticket_price,
+      total_tickets: eventData.total_tickets,
+      tickets_sold: eventData.tickets_sold,
+      banner_image_url: eventData.banner_image_url,
+      is_published: eventData.is_published,
+      organizer_id: eventData.organizer_id,
+      created_at: eventData.created_at,
+      updated_at: eventData.updated_at,
       users: organizerData || {
         full_name: 'Event Organizer',
         is_verified: false
@@ -155,7 +173,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       id: r.id,
       rating: r.rating,
       comment: r.comment,
-      created_at: r.created_at,
+      created_at: typeof r.created_at === 'string' ? r.created_at : r.created_at?.toDate?.()?.toISOString() || new Date().toISOString(),
       user: {
         full_name: r.users?.full_name || 'Anonymous'
       }
