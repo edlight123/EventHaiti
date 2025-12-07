@@ -176,10 +176,18 @@ export default function EmbeddedStripePayment({
   promoCodeId,
   onClose
 }: EmbeddedStripePaymentProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Map i18next language codes to Stripe locale codes
+  const getStripeLocale = () => {
+    const lang = i18n.language
+    if (lang === 'fr') return 'fr'
+    if (lang === 'ht') return 'fr' // Stripe doesn't support Haitian Creole, use French as fallback
+    return 'en' // Default to English
+  }
 
   useEffect(() => {
     // Create PaymentIntent on component mount
@@ -258,7 +266,7 @@ export default function EmbeddedStripePayment({
               </button>
             </div>
           ) : clientSecret ? (
-            <Elements stripe={stripePromise} options={{ clientSecret, appearance }}>
+            <Elements stripe={stripePromise} options={{ clientSecret, appearance, locale: getStripeLocale() as any }}>
               <CheckoutForm
                 eventId={eventId}
                 eventTitle={eventTitle}
