@@ -34,8 +34,9 @@ export function formatEventDate(datetime: string): string {
 export function getPriceLabel(price: number, currency?: string): string {
   const curr = currency || 'HTG'
   if (!price || price === 0) return 'Free'
-  if (price <= 500) return `From ${price} ${curr}`
-  return `From ${price} ${curr}`
+  const formattedPrice = price.toLocaleString()
+  if (price <= 500) return `From ${formattedPrice} ${curr}`
+  return `From ${formattedPrice} ${curr}`
 }
 
 /**
