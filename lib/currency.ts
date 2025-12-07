@@ -82,46 +82,85 @@ export async function fetchExchangeRates(): Promise<Record<string, number>> {
 }
 
 /**
- * Fetch live HTG to USD exchange rate from Stripe
- * Stripe provides accurate, real-time exchange rates through their API
+ * Fetch live HTG to USD exchange rate with multiple fallback sources
+ * 
+ * Tries in order:
+ * 1. Stripe Exchange Rates API (if available)
+ * 2. ExchangeRate-API.com (free, no auth required)
+ * 3. Hardcoded fallback rate
  * 
  * @returns Promise<number> The current HTG to USD exchange rate
  */
 export async function fetchStripeHTGRate(): Promise<number> {
+  // Try 1: Stripe Exchange Rates API
   try {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      console.warn('STRIPE_SECRET_KEY not configured, using fallback rate')
-      return EXCHANGE_RATES.HTG_TO_USD
-    }
+    if (process.env.STRIPE_SECRET_KEY) {
+      const response = await fetch('https://api.stripe.com/v1/exchange_rates/HTG', {
+        headers: {
+          'Authorization': `Bearer ${process.env.STRIPE_SECRET_KEY}`
+        }
+      })
 
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
-    
-    // Use Stripe's Exchange Rates API to get current HTG to USD rate
-    // Note: Stripe may not support HTG directly, so we use a proxy currency approach
-    // Check if exchange rate data is available in Stripe's system
-    const response = await fetch('https://api.stripe.com/v1/exchange_rates/HTG', {
+      if (response.ok) {
+        const data = await response.json()
+        if (data.rates && data.rates.usd) {
+          console.log(`✅ Fetched live Stripe HTG→USD rate: ${data.rates.usd}`)
+          return data.rates.usd
+        }
+      }
+    }
+  } catch (error) {
+    console.log('ℹ️  Stripe exchange rate not available, trying alternative...')
+  }
+
+  // Try 2: ExchangeRate-API.com (free tier, no auth required)
+  try {
+    const response = await fetch('https://api.exchangerate-api.com/v4/latest/HTG', {
       headers: {
-        'Authorization': `Bearer ${process.env.STRIPE_SECRET_KEY}`
+        'Accept': 'application/json'
       }
     })
 
     if (response.ok) {
       const data = await response.json()
-      if (data.rates && data.rates.usd) {
-        console.log(`✅ Fetched live Stripe HTG→USD rate: ${data.rates.usd}`)
-        return data.rates.usd
+      if (data.rates && data.rates.USD) {
+        console.log(`✅ Fetched live ExchangeRate-API HTG→USD rate: ${data.rates.USD}`)
+        return data.rates.USD
       }
     }
-
-    // Fallback: use hardcoded rate if Stripe doesn't have HTG
-    console.log('ℹ️  Stripe does not support HTG rates, using fallback: ', EXCHANGE_RATES.HTG_TO_USD)
-    return EXCHANGE_RATES.HTG_TO_USD
-    
   } catch (error) {
-    console.error('Failed to fetch Stripe exchange rate:', error)
-    console.log('⚠️  Using fallback HTG rate:', EXCHANGE_RATES.HTG_TO_USD)
-    return EXCHANGE_RATES.HTG_TO_USD
+    console.log('ℹ️  ExchangeRate-API not available, using hardcoded fallback')
   }
+
+  // Try 3: Open Exchange Rates (if API key is configured)
+  if (process.env.OPEN_EXCHANGE_RATES_API_KEY) {
+    try {
+      const response = await fetch(
+        `https://openexchangerates.org/api/latest.json?app_id=${process.env.OPEN_EXCHANGE_RATES_API_KEY}&base=USD`,
+        {
+          headers: {
+            'Accept': 'application/json'
+          }
+        }
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.rates && data.rates.HTG) {
+          // Convert USD→HTG rate to HTG→USD
+          const htgToUsd = 1 / data.rates.HTG
+          console.log(`✅ Fetched live OpenExchangeRates HTG→USD rate: ${htgToUsd}`)
+          return htgToUsd
+        }
+      }
+    } catch (error) {
+      console.log('ℹ️  OpenExchangeRates not available')
+    }
+  }
+
+  // Fallback 4: Hardcoded rate
+  console.log('⚠️  Using hardcoded fallback HTG→USD rate:', EXCHANGE_RATES.HTG_TO_USD)
+  return EXCHANGE_RATES.HTG_TO_USD
 }
 
 // Parse currency from string (e.g., "$25.00 USD" -> { amount: 25, currency: 'USD' })
