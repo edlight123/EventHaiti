@@ -142,10 +142,26 @@ export async function POST(request: Request) {
       }
     }
 
+    // Handle currency conversion for Stripe
+    const eventCurrency = (event.currency?.toUpperCase() || 'USD') as 'USD' | 'HTG'
+    let stripeAmount = finalPrice
+    let stripeCurrency = eventCurrency.toLowerCase()
+    let exchangeRateUsed: number | null = null
+    let originalCurrency = eventCurrency
+    
+    // Convert HTG to USD for Stripe if needed (Stripe doesn't support HTG directly)
+    if (eventCurrency === 'HTG') {
+      const { convertCurrency, getExchangeRate } = await import('@/lib/currency')
+      stripeAmount = convertCurrency(finalPrice, 'HTG', 'USD')
+      stripeCurrency = 'usd'
+      exchangeRateUsed = getExchangeRate('HTG', 'USD')
+      console.log(`💱 Converting ${finalPrice} HTG to ${stripeAmount.toFixed(2)} USD (rate: ${exchangeRateUsed})`)
+    }
+
     // Create PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(finalPrice * quantity * 100), // Convert to cents
-      currency: event.currency?.toLowerCase() || 'usd',
+      amount: Math.round(stripeAmount * quantity * 100), // Convert to cents
+      currency: stripeCurrency,
       metadata: {
         eventId,
         userId: user.id,
@@ -156,6 +172,10 @@ export async function POST(request: Request) {
         promoCodeId: promoCodeId || '',
         originalPrice: event.ticket_price.toString(),
         finalPrice: finalPrice.toString(),
+        currency: stripeCurrency,
+        originalCurrency: originalCurrency,
+        exchangeRate: exchangeRateUsed?.toString() || '',
+        priceInOriginalCurrency: finalPrice.toString(),
       },
       description: `${quantity}x ${event.title} - ${tierName}`,
       receipt_email: user.email,
