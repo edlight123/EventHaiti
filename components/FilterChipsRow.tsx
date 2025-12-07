@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { EventFilters, DEFAULT_FILTERS } from '@/lib/filters/types'
 import { CATEGORIES, PRICE_FILTERS, CITY_CONFIG } from '@/lib/filters/config'
 import { FilterChip } from './FilterChip'
@@ -13,18 +14,19 @@ interface FilterChipsRowProps {
 }
 
 export function FilterChipsRow({ filters, onRemoveFilter, onClearAll }: FilterChipsRowProps) {
+  const { t } = useTranslation('common')
   const chips: Array<{ key: keyof EventFilters; label: string; value?: string }> = []
 
   // Date filter
   if (filters.date !== DEFAULT_FILTERS.date) {
     let dateLabel = ''
     switch (filters.date) {
-      case 'today': dateLabel = 'Today'; break
-      case 'tomorrow': dateLabel = 'Tomorrow'; break
-      case 'this-week': dateLabel = 'This week'; break
-      case 'this-weekend': dateLabel = 'This weekend'; break
+      case 'today': dateLabel = t('filters.today'); break
+      case 'tomorrow': dateLabel = t('filters.tomorrow'); break
+      case 'this-week': dateLabel = t('filters.this_week'); break
+      case 'this-weekend': dateLabel = t('filters.this_weekend'); break
       case 'pick-date': 
-        dateLabel = filters.pickedDate ? format(new Date(filters.pickedDate + 'T00:00:00'), 'MMM d, yyyy') : 'Pick a date'
+        dateLabel = filters.pickedDate ? format(new Date(filters.pickedDate + 'T00:00:00'), 'MMM d, yyyy') : t('filters.pick_date')
         break
     }
     if (dateLabel) {
@@ -39,7 +41,7 @@ export function FilterChipsRow({ filters, onRemoveFilter, onClearAll }: FilterCh
 
   // Commune filter
   if (filters.commune) {
-    const locationLabel = CITY_CONFIG[filters.city]?.type === 'commune' ? 'Commune' : 'Neighborhood'
+    const locationLabel = CITY_CONFIG[filters.city]?.type === 'commune' ? t('filters.commune') : t('filters.neighborhood')
     chips.push({ key: 'commune', label: `${locationLabel}: ${filters.commune}` })
   }
 
@@ -58,7 +60,7 @@ export function FilterChipsRow({ filters, onRemoveFilter, onClearAll }: FilterCh
 
   // Event type filter
   if (filters.eventType !== DEFAULT_FILTERS.eventType) {
-    const typeLabel = filters.eventType === 'in-person' ? 'In-person' : 'Online'
+    const typeLabel = filters.eventType === 'in-person' ? t('filters.in_person') : t('filters.online')
     chips.push({ key: 'eventType', label: typeLabel })
   }
 
@@ -66,7 +68,7 @@ export function FilterChipsRow({ filters, onRemoveFilter, onClearAll }: FilterCh
 
   return (
     <div className="flex flex-wrap items-center gap-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
-      <span className="text-sm font-medium text-gray-700">Active filters:</span>
+      <span className="text-sm font-medium text-gray-700">{t('filters.active_filters')}:</span>
       {chips.map((chip, index) => (
         <FilterChip
           key={`${chip.key}-${chip.value || index}`}
@@ -78,7 +80,7 @@ export function FilterChipsRow({ filters, onRemoveFilter, onClearAll }: FilterCh
         onClick={onClearAll}
         className="text-sm text-gray-600 hover:text-gray-900 underline ml-2"
       >
-        Clear all
+        {t('filters.clear_all')}
       </button>
     </div>
   )
