@@ -180,15 +180,15 @@ export async function getPendingVerifications(limit: number = 3) {
       // Handle both old and new formats for timestamps
       let createdAt
       if (data.submittedAt?._seconds) {
-        createdAt = new Date(data.submittedAt._seconds * 1000)
+        createdAt = new Date(data.submittedAt._seconds * 1000).toISOString()
       } else if (data.createdAt?._seconds) {
-        createdAt = new Date(data.createdAt._seconds * 1000)
+        createdAt = new Date(data.createdAt._seconds * 1000).toISOString()
       } else if (data.createdAt?.toDate) {
-        createdAt = data.createdAt.toDate()
+        createdAt = data.createdAt.toDate().toISOString()
       } else if (data.created_at?.toDate) {
-        createdAt = data.created_at.toDate()
+        createdAt = data.created_at.toDate().toISOString()
       } else {
-        createdAt = new Date(data.created_at || data.createdAt || Date.now())
+        createdAt = new Date(data.created_at || data.createdAt || Date.now()).toISOString()
       }
       
       // Extract business name from nested format or direct field
