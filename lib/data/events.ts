@@ -81,9 +81,23 @@ export const getEventById = unstable_cache(
       const data = eventDoc.data()
       return {
         id: eventDoc.id,
-        ...data,
+        organizer_id: data?.organizer_id,
+        title: data?.title,
+        description: data?.description,
+        category: data?.category,
+        venue_name: data?.venue_name,
+        city: data?.city,
+        commune: data?.commune,
+        address: data?.address,
         start_datetime: data?.start_datetime?.toDate?.()?.toISOString() || data?.start_datetime,
         end_datetime: data?.end_datetime?.toDate?.()?.toISOString() || data?.end_datetime,
+        banner_image_url: data?.banner_image_url,
+        ticket_price: data?.ticket_price,
+        currency: data?.currency,
+        total_tickets: data?.total_tickets,
+        tickets_sold: data?.tickets_sold,
+        is_published: data?.is_published,
+        tags: data?.tags,
         created_at: data?.created_at?.toDate?.()?.toISOString() || data?.created_at,
         updated_at: data?.updated_at?.toDate?.()?.toISOString() || data?.updated_at,
       } as Event
@@ -131,9 +145,23 @@ export const getDiscoverEvents = unstable_cache(
         const data = doc.data()
         return {
           id: doc.id,
-          ...data,
+          organizer_id: data.organizer_id,
+          title: data.title,
+          description: data.description,
+          category: data.category,
+          venue_name: data.venue_name,
+          city: data.city,
+          commune: data.commune,
+          address: data.address,
           start_datetime: data.start_datetime?.toDate?.()?.toISOString() || data.start_datetime,
           end_datetime: data.end_datetime?.toDate?.()?.toISOString() || data.end_datetime,
+          banner_image_url: data.banner_image_url,
+          ticket_price: data.ticket_price,
+          currency: data.currency,
+          total_tickets: data.total_tickets,
+          tickets_sold: data.tickets_sold,
+          is_published: data.is_published,
+          tags: data.tags,
           created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at,
           updated_at: data.updated_at?.toDate?.()?.toISOString() || data.updated_at,
         }
@@ -186,9 +214,23 @@ export async function getOrganizerEvents(
       const data = doc.data()
       return {
         id: doc.id,
-        ...data,
+        organizer_id: data.organizer_id,
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        venue_name: data.venue_name,
+        city: data.city,
+        commune: data.commune,
+        address: data.address,
         start_datetime: data.start_datetime?.toDate?.()?.toISOString() || data.start_datetime,
         end_datetime: data.end_datetime?.toDate?.()?.toISOString() || data.end_datetime,
+        banner_image_url: data.banner_image_url,
+        ticket_price: data.ticket_price,
+        currency: data.currency,
+        total_tickets: data.total_tickets,
+        tickets_sold: data.tickets_sold,
+        is_published: data.is_published,
+        tags: data.tags,
         created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at,
         updated_at: data.updated_at?.toDate?.()?.toISOString() || data.updated_at,
       }
@@ -286,9 +328,23 @@ export async function getAdminEvents(
       const data = doc.data()
       return {
         id: doc.id,
-        ...data,
+        organizer_id: data.organizer_id,
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        venue_name: data.venue_name,
+        city: data.city,
+        commune: data.commune,
+        address: data.address,
         start_datetime: data.start_datetime?.toDate?.()?.toISOString() || data.start_datetime,
         end_datetime: data.end_datetime?.toDate?.()?.toISOString() || data.end_datetime,
+        banner_image_url: data.banner_image_url,
+        ticket_price: data.ticket_price,
+        currency: data.currency,
+        total_tickets: data.total_tickets,
+        tickets_sold: data.tickets_sold,
+        is_published: data.is_published,
+        tags: data.tags,
         created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at,
         updated_at: data.updated_at?.toDate?.()?.toISOString() || data.updated_at,
       }
@@ -348,13 +404,27 @@ export async function getOrganizerEventsClient(
       const data = doc.data()
       return {
         id: doc.id,
-        ...data,
+        organizer_id: data.organizer_id,
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        venue_name: data.venue_name,
+        city: data.city,
+        commune: data.commune,
+        address: data.address,
         start_datetime: data.start_datetime instanceof Timestamp 
           ? data.start_datetime.toDate().toISOString() 
           : data.start_datetime,
         end_datetime: data.end_datetime instanceof Timestamp 
           ? data.end_datetime.toDate().toISOString() 
           : data.end_datetime,
+        banner_image_url: data.banner_image_url,
+        ticket_price: data.ticket_price,
+        currency: data.currency,
+        total_tickets: data.total_tickets,
+        tickets_sold: data.tickets_sold,
+        is_published: data.is_published,
+        tags: data.tags,
         created_at: data.created_at instanceof Timestamp 
           ? data.created_at.toDate().toISOString() 
           : data.created_at,
