@@ -87,32 +87,41 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
       // Fetch attendee user data
       let attendee = null
       if (ticketData.attendee_id) {
-        const userDoc = await adminDb.collection('users').doc(ticketData.attendee_id).get()
-        if (userDoc.exists) {
-          const userData = userDoc.data()
-          attendee = {
-            id: userDoc.id,
-            email: userData.email,
-            full_name: userData.full_name,
-            phone_number: userData.phone_number
+        try {
+          const userDoc = await adminDb.collection('users').doc(ticketData.attendee_id).get()
+          if (userDoc.exists) {
+            const userData = userDoc.data()
+            // Only include primitive fields from user data
+            attendee = {
+              id: userDoc.id,
+              email: userData.email || '',
+              full_name: userData.full_name || '',
+              phone_number: userData.phone_number || ''
+            }
           }
+        } catch (error) {
+          console.error('Error fetching attendee:', error)
         }
       }
 
+      // Explicitly map only the fields we need, ensuring all are serializable
       return {
         id: doc.id,
-        event_id: ticketData.event_id,
-        attendee_id: ticketData.attendee_id,
-        status: ticketData.status,
-        ticket_type: ticketData.ticket_type,
-        price_paid: ticketData.price_paid,
-        checked_in: ticketData.checked_in,
-        qr_code: ticketData.qr_code,
+        event_id: ticketData.event_id || '',
+        attendee_id: ticketData.attendee_id || '',
+        status: ticketData.status || 'confirmed',
+        ticket_type: ticketData.ticket_type || 'General Admission',
+        ticket_tier_id: ticketData.ticket_tier_id || '',
+        price_paid: ticketData.price_paid || 0,
+        quantity: ticketData.quantity || 1,
+        checked_in: ticketData.checked_in || false,
+        qr_code: ticketData.qr_code || ticketData.qr_code_data || '',
+        qr_code_data: ticketData.qr_code_data || ticketData.qr_code || '',
         attendee,
-        purchased_at: ticketData.purchased_at?.toDate?.()?.toISOString() || ticketData.purchased_at,
-        checked_in_at: ticketData.checked_in_at?.toDate?.()?.toISOString() || ticketData.checked_in_at,
-        created_at: ticketData.created_at?.toDate?.()?.toISOString() || ticketData.created_at,
-        updated_at: ticketData.updated_at?.toDate?.()?.toISOString() || ticketData.updated_at,
+        purchased_at: ticketData.purchased_at?.toDate?.()?.toISOString() || ticketData.purchased_at || new Date().toISOString(),
+        checked_in_at: ticketData.checked_in_at?.toDate?.()?.toISOString() || ticketData.checked_in_at || null,
+        created_at: ticketData.created_at?.toDate?.()?.toISOString() || ticketData.created_at || new Date().toISOString(),
+        updated_at: ticketData.updated_at?.toDate?.()?.toISOString() || ticketData.updated_at || new Date().toISOString(),
       }
     })
   )
