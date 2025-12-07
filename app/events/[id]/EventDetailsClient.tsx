@@ -80,7 +80,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
               </Badge>
               {isVIP && (
                 <Badge variant="vip" size="md" icon={<Star className="w-4 h-4" />}>
-                  {t('common.vip_event')}
+                  {t('events.vip_event')}
                 </Badge>
               )}
               {isTrending && (

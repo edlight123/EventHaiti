@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Share2, Copy, Check } from 'lucide-react'
 
 interface ShareButtonProps {
@@ -11,6 +12,7 @@ interface ShareButtonProps {
 }
 
 export default function ShareButton({ eventId, eventTitle, eventDate, eventVenue }: ShareButtonProps) {
+  const { t } = useTranslation('common')
   const [copied, setCopied] = useState(false)
 
   const eventUrl = typeof window !== 'undefined' ? `${window.location.origin}/events/${eventId}` : ''
@@ -55,9 +57,9 @@ export default function ShareButton({ eventId, eventTitle, eventDate, eventVenue
     <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-soft border border-gray-200 p-6">
       <div className="flex items-center gap-2 mb-2">
         <Share2 className="w-5 h-5 text-brand-600" />
-        <h3 className="text-lg font-bold text-gray-900">Share Event</h3>
+        <h3 className="text-lg font-bold text-gray-900">{t('events.share_event')}</h3>
       </div>
-      <p className="text-sm text-gray-600 mb-4">Spread the word with your friends</p>
+      <p className="text-sm text-gray-600 mb-4">{t('events.spread_word')}</p>
       
       <button
         onClick={handleShare}
@@ -66,12 +68,12 @@ export default function ShareButton({ eventId, eventTitle, eventDate, eventVenue
         {copied ? (
           <>
             <Check className="w-5 h-5" />
-            <span>Link Copied!</span>
+            <span>{t('events.link_copied')}</span>
           </>
         ) : (
           <>
             <Share2 className="w-5 h-5" />
-            <span>Share Event</span>
+            <span>{t('events.share_event')}</span>
           </>
         )}
       </button>

@@ -68,7 +68,7 @@ export default function MobileHero({
           )}
           {isVIP && (
             <Badge variant="vip" size="sm" icon={<Star className="w-3 h-3" />}>
-              {t('vip_event')}
+              {t('events.vip_event')}
             </Badge>
           )}
           {isTrending && (
