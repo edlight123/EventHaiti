@@ -49,7 +49,18 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
   }
 
   const transferDoc = transfersQuery.docs[0]
-  const transfer = { id: transferDoc.id, ...transferDoc.data() }
+  const transferData = transferDoc.data()
+  const transfer = {
+    id: transferDoc.id,
+    ticket_id: transferData.ticket_id,
+    from_user_id: transferData.from_user_id,
+    to_email: transferData.to_email,
+    status: transferData.status,
+    transfer_token: transferData.transfer_token,
+    expires_at: transferData.expires_at?.toDate?.()?.toISOString() || transferData.expires_at,
+    created_at: transferData.created_at?.toDate?.()?.toISOString() || transferData.created_at,
+    completed_at: transferData.completed_at?.toDate?.()?.toISOString() || transferData.completed_at
+  }
 
   // Check if transfer has expired
   if (transfer.expires_at && new Date(transfer.expires_at) < new Date()) {

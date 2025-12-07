@@ -33,7 +33,17 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
     notFound()
   }
 
-  const event = { id: eventDoc.id, ...eventDoc.data() }
+  const eventData = eventDoc.data()
+  const event = {
+    id: eventDoc.id,
+    title: eventData.title,
+    organizer_id: eventData.organizer_id,
+    start_datetime: eventData.start_datetime?.toDate?.()?.toISOString() || eventData.start_datetime,
+    end_datetime: eventData.end_datetime?.toDate?.()?.toISOString() || eventData.end_datetime,
+    venue_name: eventData.venue_name,
+    city: eventData.city,
+    entry_points: eventData.entry_points
+  }
 
   // Verify organizer
   if (event.organizer_id !== authUser.uid) {
@@ -56,13 +66,25 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
       if (ticketData.attendee_id) {
         const userDoc = await adminDb.collection('users').doc(ticketData.attendee_id).get()
         if (userDoc.exists) {
-          attendee = { id: userDoc.id, ...userDoc.data() }
+          const userData = userDoc.data()
+          attendee = {
+            id: userDoc.id,
+            email: userData.email,
+            full_name: userData.full_name,
+            phone_number: userData.phone_number
+          }
         }
       }
 
       return {
         id: doc.id,
-        ...ticketData,
+        event_id: ticketData.event_id,
+        attendee_id: ticketData.attendee_id,
+        status: ticketData.status,
+        ticket_type: ticketData.ticket_type,
+        price_paid: ticketData.price_paid,
+        checked_in: ticketData.checked_in,
+        qr_code: ticketData.qr_code,
         attendee,
         purchased_at: ticketData.purchased_at?.toDate?.()?.toISOString() || ticketData.purchased_at,
         checked_in_at: ticketData.checked_in_at?.toDate?.()?.toISOString() || ticketData.checked_in_at,
