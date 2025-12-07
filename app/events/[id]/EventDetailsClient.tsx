@@ -117,7 +117,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 {event.users?.is_verified && (
                   <div className="flex items-center gap-1 text-blue-300 text-xs md:text-sm">
                     <Shield className="w-3 h-3 md:w-4 md:h-4" />
-                    <span>{t('common.verified')}</span>
+                    <span>{t('events.verified')}</span>
                   </div>
                 )}
               </div>
@@ -131,7 +131,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   <Calendar className="w-4 h-4 md:w-5 md:h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-[11px] md:text-xs text-gray-300 mb-0.5">{t('common.date_time')}</p>
+                  <p className="text-[11px] md:text-xs text-gray-300 mb-0.5">{t('events.date_time')}</p>
                   <p className="text-white font-semibold text-[13px] md:text-sm">
                     {format(new Date(event.start_datetime), 'MMM d, yyyy')}
                   </p>
@@ -147,7 +147,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   <MapPin className="w-4 h-4 md:w-5 md:h-5 text-white" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] md:text-xs text-gray-300 mb-0.5">{t('common.location')}</p>
+                  <p className="text-[11px] md:text-xs text-gray-300 mb-0.5">{t('events.venue_name')}</p>
                   <p className="text-white font-semibold text-[13px] md:text-sm line-clamp-1">
                     {event.venue_name}
                   </p>
@@ -163,7 +163,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                   <Users className="w-4 h-4 md:w-5 md:h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-[11px] md:text-xs text-gray-300 mb-0.5">{t('common.availability')}</p>
+                  <p className="text-[11px] md:text-xs text-gray-300 mb-0.5">{t('events.availability')}</p>
                   <p className="text-white font-semibold text-[13px] md:text-sm">
                     {isSoldOut ? t('ticket.sold_out') : ticketsRemaining !== null ? t('ticket.remaining_short', { count: ticketsRemaining }) : t('ticket.available')}
                   </p>

@@ -205,7 +205,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             disabled={loading}
             className="block w-full bg-teal-700 hover:bg-teal-800 text-white text-center font-semibold py-2.5 px-5 rounded-lg transition-colors disabled:opacity-50 min-h-[44px]"
           >
-            {loading ? t('processing') : `${t('claim')} ${quantity} ${t('free_ticket')}${quantity !== 1 ? 's' : ''}`}
+            {loading ? t('events.processing') : `${t('events.claim')} ${quantity} ${t('events.free_ticket')}${quantity !== 1 ? 's' : ''}`}
           </button>
         </div>
       ) : (
@@ -215,7 +215,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             disabled={loading}
             className="block w-full bg-teal-700 hover:bg-teal-800 text-white text-center font-semibold py-2.5 px-5 rounded-lg transition-colors disabled:opacity-50 min-h-[44px]"
           >
-            {loading ? t('processing') : t('buy_ticket')}
+            {loading ? t('events.processing') : t('events.buy_ticket')}
           </button>
 
           {/* Tiered Ticket Selection Modal */}
