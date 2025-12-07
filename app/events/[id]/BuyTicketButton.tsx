@@ -223,7 +223,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             <BottomSheet 
               isOpen={showTieredModal} 
               onClose={() => setShowTieredModal(false)}
-              title={t('select_tickets')}
+              title={t('events.select_tickets')}
             >
               <TieredTicketSelector
                 eventId={eventId}
@@ -245,7 +245,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
         <BottomSheet 
           isOpen={showModal} 
           onClose={() => setShowModal(false)}
-          title={t('choose_payment_method')}
+          title={t('events.choose_payment_method')}
         >
           <div className="space-y-4">
             <p className="text-gray-700">
@@ -254,7 +254,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
 
             {/* Quantity Selector */}
             <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-              <span className="text-sm font-medium text-gray-700">{t('quantity')}</span>
+              <span className="text-sm font-medium text-gray-700">{t('events.quantity')}</span>
               <div className="flex items-center space-x-3">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}

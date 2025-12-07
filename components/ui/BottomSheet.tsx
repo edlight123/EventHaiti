@@ -65,14 +65,14 @@ export default function BottomSheet({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-[100] transition-opacity duration-300 md:hidden"
+        className="fixed inset-0 bg-black/50 z-[100] transition-opacity duration-300"
         onClick={onClose}
       />
 
       {/* Bottom Sheet */}
       <div
         ref={sheetRef}
-        className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-[101] max-h-[90vh] flex flex-col transition-transform duration-300 md:hidden"
+        className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-[101] max-h-[90vh] flex flex-col transition-transform duration-300"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -104,36 +104,6 @@ export default function BottomSheet({
           {children}
         </div>
       </div>
-
-      {/* Desktop: Regular Modal */}
-      {isOpen && (
-        <div className="hidden md:flex fixed inset-0 z-[100] items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col z-[101]">
-            {/* Desktop Header */}
-            {(title || showCloseButton) && (
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                {title && (
-                  <h3 className="text-xl font-bold text-gray-900">{title}</h3>
-                )}
-                {showCloseButton && (
-                  <button
-                    onClick={onClose}
-                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <X className="w-5 h-5 text-gray-500" />
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Desktop Content */}
-            <div className="flex-1 overflow-y-auto px-6 py-4">
-              {children}
-            </div>
-          </div>
-        </div>
-      )}
     </>
   )
 }
