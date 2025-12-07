@@ -54,11 +54,11 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
       </Link>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Left Column - QR & Actions */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* QR Code Card */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-8 flex flex-col items-center">
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 lg:p-8 flex flex-col items-center">
             <div className="flex items-center justify-between w-full mb-4">
               {getStatusBadge()}
             </div>
@@ -67,15 +67,17 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
               <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
                 {t('detail.ticket_code')}
               </p>
-              <QRCodeDisplay 
-                value={ticket.id} 
-                size={280}
-              />
+              <div className="flex justify-center">
+                <QRCodeDisplay 
+                  value={ticket.id} 
+                  size={280}
+                />
+              </div>
             </div>
 
             {ticket.checked_in_at && (
-              <div className="w-full bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                <p className="text-sm font-semibold text-green-700 text-center">
+              <div className="w-full bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 mb-4">
+                <p className="text-xs sm:text-sm font-semibold text-green-700 text-center">
                   {t('detail.checked_in')} {t('detail.checked_in_at', { 
                     time: format(new Date(ticket.checked_in_at), 'MMM d, yyyy • h:mm a') 
                   })}
@@ -101,11 +103,11 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
         </div>
 
         {/* Right Column - Event Details */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Event Banner Card */}
           <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
             {event.banner && (
-              <div className="relative w-full h-48">
+              <div className="relative w-full h-40 sm:h-48">
                 <img
                   src={event.banner}
                   alt={event.title}
@@ -114,8 +116,8 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
               </div>
             )}
             
-            <div className="p-6">
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">{event.title}</h1>
+            <div className="p-4 sm:p-6">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{event.title}</h1>
               <a
                 href={`/events/${event.id}`}
                 className="text-sm text-brand-600 hover:text-brand-700 font-medium inline-flex items-center gap-1"
@@ -210,19 +212,19 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
           </div>
 
           {/* Instructions Card */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-2xl p-6">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-5 h-5 text-white" />
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-2xl p-4 sm:p-6">
+            <div className="flex items-start gap-3 mb-3 sm:mb-4">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-blue-900 mb-1">
+                <h3 className="text-base sm:text-lg font-bold text-blue-900 mb-1">
                   {t('detail.how_to_use_title')}
                 </h3>
-                <p className="text-sm text-blue-700">{t('detail.how_to_use_subtitle')}</p>
+                <p className="text-xs sm:text-sm text-blue-700">{t('detail.how_to_use_subtitle')}</p>
               </div>
             </div>
-            <ul className="space-y-2 text-sm text-blue-800">
+            <ul className="space-y-2 text-xs sm:text-sm text-blue-800">
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-600" />
                 <span>{t('detail.how_to_use_steps.show_qr')}</span>

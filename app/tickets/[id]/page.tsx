@@ -109,10 +109,10 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
   const eventPassed = isPast(new Date(serializedEvent.end_datetime || serializedEvent.start_datetime || serializedEvent.date))
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 pb-mobile-nav">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 pb-20 sm:pb-24">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
         <TicketDetailContent 
           ticket={serializedTicket}
           event={serializedEvent}
@@ -121,7 +121,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
 
         {/* Review Form for Past Events */}
         {eventPassed && !isDemoMode() && (
-          <div className="mt-6">
+          <div className="mt-4 sm:mt-6">
             <ReviewForm 
               eventId={event.id} 
               ticketId={ticket.id}
