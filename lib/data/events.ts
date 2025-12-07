@@ -458,3 +458,40 @@ export async function getOrganizerEventsCountClient(organizerId: string): Promis
     return 0
   }
 }
+
+/**
+ * Check if a user has favorited an event (server-side)
+ */
+export async function checkIsFavorite(userId: string, eventId: string): Promise<boolean> {
+  try {
+    const snapshot = await adminDb.collection('event_favorites')
+      .where('user_id', '==', userId)
+      .where('event_id', '==', eventId)
+      .limit(1)
+      .get()
+    
+    return !snapshot.empty
+  } catch (error) {
+    console.error('Error checking favorite status:', error)
+    return false
+  }
+}
+
+/**
+ * Check if a user is following an organizer (server-side)
+ */
+export async function checkIsFollowing(userId: string, organizerId: string): Promise<boolean> {
+  try {
+    const snapshot = await adminDb.collection('organizer_follows')
+      .where('user_id', '==', userId)
+      .where('organizer_id', '==', organizerId)
+      .limit(1)
+      .get()
+    
+    return !snapshot.empty
+  } catch (error) {
+    console.error('Error checking following status:', error)
+    return false
+  }
+}
+

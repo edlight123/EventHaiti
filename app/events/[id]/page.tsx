@@ -1,6 +1,7 @@
-import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
+import { getEventById, checkIsFavorite, checkIsFollowing } from '@/lib/data/events'
+import { adminDb } from '@/lib/firebase/admin'
 import Navbar from '@/components/Navbar'
 import { notFound } from 'next/navigation'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
@@ -19,13 +20,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (isDemoMode()) {
     event = DEMO_EVENTS.find(e => e.id === id)
   } else {
-    const supabase = await createClient()
-    const { data } = await supabase
-      .from('events')
-      .select('*')
-      .eq('id', id)
-      .single()
-    event = data
+    event = await getEventById(id)
   }
 
   if (!event) {
@@ -83,71 +78,49 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       }
     }
   } else {
-    // Fetch from database
-    const supabase = await createClient()
-    
-    // First get the event
-    const { data: eventData, error: eventError } = await supabase
-      .from('events')
-      .select('*')
-      .eq('id', id)
-      .single()
+    // Fetch from Firestore
+    const eventData = await getEventById(id)
 
-    console.log('Event query result:', { eventData, eventError, id })
+    console.log('Event query result:', { eventData, id })
 
     if (!eventData) {
       console.log('Event not found, returning 404')
       notFound()
     }
 
-    if (!eventData.is_published && eventData.organizer_id !== user?.id) {
+    if (eventData.status !== 'published' && eventData.organizer_id !== user?.id) {
       console.log('Event not published and user is not organizer, returning 404')
       notFound()
     }
 
-    // Then get the organizer data separately
-    const { data: organizerData, error: organizerError } = await supabase
-      .from('users')
-      .select('full_name, is_verified')
-      .eq('id', eventData.organizer_id)
-      .single()
+    // Get the organizer data
+    const organizerDoc = await adminDb.collection('users').doc(eventData.organizer_id).get()
+    const organizerData = organizerDoc.exists ? organizerDoc.data() : null
 
-    console.log('Organizer query result:', { organizerData, organizerError, organizerId: eventData.organizer_id })
+    console.log('Organizer query result:', { organizerData, organizerId: eventData.organizer_id })
 
-    // Handle case where organizer data might not exist
-    // Explicitly serialize all fields to prevent Timestamp leakage
+    // Combine event and organizer data
     event = {
-      id: eventData.id,
-      title: eventData.title,
-      description: eventData.description,
-      category: eventData.category,
-      venue_name: eventData.venue_name,
-      city: eventData.city,
-      commune: eventData.commune,
-      address: eventData.address,
-      start_datetime: eventData.start_datetime,
-      end_datetime: eventData.end_datetime,
-      ticket_price: eventData.ticket_price,
-      total_tickets: eventData.total_tickets,
-      tickets_sold: eventData.tickets_sold,
-      banner_image_url: eventData.banner_image_url,
-      is_published: eventData.is_published,
-      organizer_id: eventData.organizer_id,
-      created_at: eventData.created_at,
-      updated_at: eventData.updated_at,
-      users: organizerData || {
+      ...eventData,
+      users: organizerData ? {
+        full_name: organizerData.full_name || 'Event Organizer',
+        is_verified: organizerData.is_verified ?? false
+      } : {
         full_name: 'Event Organizer',
         is_verified: false
       }
     }
     
     // Fetch ticket tiers to calculate accurate total capacity
-    const { data: tiersData } = await supabase
-      .from('ticket_tiers')
-      .select('quantity')
-      .eq('event_id', id)
+    const tiersSnapshot = await adminDb.collection('ticket_tiers')
+      .where('event_id', '==', id)
+      .get()
     
-    const totalFromTiers = tiersData?.reduce((sum: number, tier: any) => sum + (tier.quantity || 0), 0) || 0
+    const totalFromTiers = tiersSnapshot.docs.reduce((sum: number, doc: any) => {
+      const data = doc.data()
+      return sum + (data.quantity || 0)
+    }, 0)
+    
     event.total_tickets = totalFromTiers || event.total_tickets || 0
   }
 
@@ -163,38 +136,76 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   // Fetch reviews for this event
   let reviews: any[] = []
   if (!isDemoMode()) {
-    const supabase = await createClient()
-    const { data: reviewsData } = await supabase
-      .from('reviews')
-      .select('*, users!reviews_user_id_fkey(full_name)')
-      .eq('event_id', id)
+    const reviewsSnapshot = await adminDb.collection('reviews')
+      .where('event_id', '==', id)
+      .get()
     
-    reviews = reviewsData?.map((r: any) => ({
-      id: r.id,
-      rating: r.rating,
-      comment: r.comment,
-      created_at: typeof r.created_at === 'string' ? r.created_at : r.created_at?.toDate?.()?.toISOString() || new Date().toISOString(),
-      user: {
-        full_name: r.users?.full_name || 'Anonymous'
+    reviews = await Promise.all(reviewsSnapshot.docs.map(async (reviewDoc: any) => {
+      const reviewData = reviewDoc.data()
+      const userDoc = await adminDb.collection('users').doc(reviewData.user_id).get()
+      const userData = userDoc.exists ? userDoc.data() : null
+      
+      return {
+        id: reviewDoc.id,
+        rating: reviewData.rating,
+        comment: reviewData.comment,
+        created_at: reviewData.created_at?.toDate?.()?.toISOString() || new Date().toISOString(),
+        user: {
+          full_name: userData?.full_name || 'Anonymous'
+        }
       }
-    })) || []
+    }))
   }
   
   // Fetch related events (same category, exclude current event)
   let relatedEvents: any[] = []
   if (!isDemoMode()) {
-    const supabase = await createClient()
-    const now = new Date().toISOString()
-    const { data: relatedData } = await supabase
-      .from('events')
-      .select('*, users!events_organizer_id_fkey(full_name, is_verified)')
-      .eq('category', event.category)
-      .eq('is_published', true)
-      .gte('start_datetime', now)
-      .neq('id', id)
-      .limit(3)
+    const now = new Date()
+    const relatedSnapshot = await adminDb.collection('events')
+      .where('category', '==', event.category)
+      .where('is_published', '==', true)
+      .where('start_datetime', '>=', now)
+      .limit(4) // Get 4 to exclude current if needed
+      .get()
     
-    relatedEvents = relatedData || []
+    relatedEvents = await Promise.all(
+      relatedSnapshot.docs
+        .filter((doc: any) => doc.id !== id) // Exclude current event
+        .slice(0, 3) // Limit to 3
+        .map(async (doc: any) => {
+          const data = doc.data()
+          const organizerDoc = await adminDb.collection('users').doc(data.organizer_id).get()
+          const organizerData = organizerDoc.exists ? organizerDoc.data() : null
+          
+          return {
+            id: doc.id,
+            title: data.title,
+            description: data.description,
+            category: data.category,
+            venue_name: data.venue_name,
+            city: data.city,
+            commune: data.commune,
+            address: data.address,
+            start_datetime: data.start_datetime?.toDate?.()?.toISOString() || data.start_datetime,
+            end_datetime: data.end_datetime?.toDate?.()?.toISOString() || data.end_datetime,
+            ticket_price: data.ticket_price,
+            total_tickets: data.total_tickets,
+            tickets_sold: data.tickets_sold,
+            banner_image_url: data.banner_image_url || data.image_url,
+            image_url: data.image_url,
+            currency: data.currency || 'HTG',
+            organizer_id: data.organizer_id,
+            is_published: data.is_published,
+            users: organizerData ? {
+              full_name: organizerData.full_name || 'Event Organizer',
+              is_verified: organizerData.is_verified ?? false
+            } : {
+              full_name: 'Event Organizer',
+              is_verified: false
+            }
+          }
+        })
+    )
   } else {
     // Use demo events for related section
     relatedEvents = DEMO_EVENTS.filter(e => e.category === event.category && e.id !== id).slice(0, 3)
@@ -203,29 +214,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   // Check if user is following this organizer
   let isFollowing = false
   if (!isDemoMode() && user && event.organizer_id) {
-    const supabase = await createClient()
-    const { data: followData } = await supabase
-      .from('organizer_follows')
-      .select('id')
-      .eq('organizer_id', event.organizer_id)
-      .eq('user_id', user.id)
-      .single()
-    
-    isFollowing = !!followData
+    isFollowing = await checkIsFollowing(user.id, event.organizer_id)
   }
 
   // Check if user has favorited this event
   let isFavorite = false
   if (!isDemoMode() && user) {
-    const supabase = await createClient()
-    const { data: favoriteData } = await supabase
-      .from('event_favorites')
-      .select('id')
-      .eq('event_id', id)
-      .eq('user_id', user.id)
-      .single()
-    
-    isFavorite = !!favoriteData
+    isFavorite = await checkIsFavorite(user.id, id)
   }
 
   return (

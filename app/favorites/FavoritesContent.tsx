@@ -9,7 +9,8 @@ import EmptyState from '@/components/EmptyState'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import type { Database } from '@/types/database'
 import { Heart, TrendingUp } from 'lucide-react'
-import { firebaseDb } from '@/lib/firebase-db/client'
+import { db } from '@/lib/firebase/client'
+import { collection, query, where, getDocs, documentId } from 'firebase/firestore'
 
 type Event = Database['public']['Tables']['events']['Row']
 
@@ -29,45 +30,76 @@ export default function FavoritesContent({ userId }: FavoritesContentProps) {
       console.log('User ID:', userId)
       
       // First, get the event IDs from favorites
-      const { data: favorites, error: favError } = await firebaseDb
-        .from('event_favorites')
-        .select('event_id')
-        .eq('user_id', userId)
+      const favoritesRef = collection(db, 'event_favorites')
+      const favoritesQuery = query(favoritesRef, where('user_id', '==', userId))
+      const favoritesSnapshot = await getDocs(favoritesQuery)
       
-      console.log('Favorites query result:', { count: favorites?.length, error: favError })
-      if (favorites?.length) {
-        console.log('Favorite event IDs:', favorites.map((f: any) => f.event_id))
-      }
+      console.log('Favorites query result:', { count: favoritesSnapshot.size })
       
-      if (!favError && favorites && favorites.length > 0) {
-        const eventIds = favorites.map((f: any) => f.event_id)
+      if (!favoritesSnapshot.empty) {
+        const eventIds = favoritesSnapshot.docs.map(doc => doc.data().event_id)
+        console.log('Favorite event IDs:', eventIds)
         
         // Then fetch the actual events
-        const { data: events, error: eventsError } = await firebaseDb
-          .from('events')
-          .select('*')
-          .in('id', eventIds)
-          .eq('is_published', true)
+        const eventsRef = collection(db, 'events')
+        const eventsQuery = query(
+          eventsRef,
+          where(documentId(), 'in', eventIds),
+          where('is_published', '==', true)
+        )
+        const eventsSnapshot = await getDocs(eventsQuery)
         
-        console.log('Events query result:', { count: events?.length, error: eventsError })
+        console.log('Events query result:', { count: eventsSnapshot.size })
         
-        if (!eventsError && events) {
+        if (!eventsSnapshot.empty) {
           // Fetch organizer info for each event
           const eventsWithOrganizers = await Promise.all(
-            events.map(async (event: any) => {
-              const { data: organizerData } = await firebaseDb
-                .from('users')
-                .select('full_name, is_verified')
-                .eq('id', event.organizer_id)
-                .single()
+            eventsSnapshot.docs.map(async (eventDoc) => {
+              const eventData = eventDoc.data()
+              
+              // Fetch organizer info
+              const usersRef = collection(db, 'users')
+              const organizerQuery = query(usersRef, where(documentId(), '==', eventData.organizer_id))
+              const organizerSnapshot = await getDocs(organizerQuery)
+              
+              const organizerData = organizerSnapshot.empty
+                ? { full_name: 'Event Organizer', is_verified: false }
+                : organizerSnapshot.docs[0].data()
               
               return {
-                ...event,
-                users: organizerData || { full_name: 'Event Organizer', is_verified: false }
-              }
+                id: eventDoc.id,
+                title: eventData.title || '',
+                description: eventData.description || '',
+                start_datetime: eventData.start_datetime?.toDate?.().toISOString() || new Date().toISOString(),
+                end_datetime: eventData.end_datetime?.toDate?.().toISOString() || new Date().toISOString(),
+                venue_name: eventData.venue_name || '',
+                address: eventData.address || '',
+                city: eventData.city || '',
+                commune: eventData.commune || '',
+                department: eventData.department || '',
+                location: eventData.location || null,
+                category: eventData.category || 'other',
+                ticket_price: eventData.ticket_price || 0,
+                currency: eventData.currency || 'HTG',
+                total_tickets: eventData.total_tickets || 0,
+                tickets_sold: eventData.tickets_sold || 0,
+                image_url: eventData.image_url || null,
+                banner_image_url: eventData.banner_image_url || eventData.image_url || null,
+                organizer_id: eventData.organizer_id || '',
+                is_published: eventData.is_published ?? true,
+                tags: eventData.tags || [],
+                created_at: eventData.created_at?.toDate?.().toISOString() || new Date().toISOString(),
+                updated_at: eventData.updated_at?.toDate?.().toISOString() || new Date().toISOString(),
+                users: {
+                  full_name: organizerData.full_name || 'Event Organizer',
+                  is_verified: organizerData.is_verified ?? false
+                }
+              } as Event
             })
           )
           setFavoriteEvents(eventsWithOrganizers)
+        } else {
+          setFavoriteEvents([])
         }
       } else {
         setFavoriteEvents([])

@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
+import { adminDb } from '@/lib/firebase/admin'
 
 export async function POST(request: Request) {
   try {
@@ -15,32 +15,27 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Event ID required' }, { status: 400 })
     }
 
-    const supabase = await createClient()
-
     // Check if already favorited
-    const { data: existing } = await supabase
-      .from('event_favorites')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('event_id', eventId)
-      .single()
+    const favoritesRef = adminDb.collection('event_favorites')
+    const existingQuery = await favoritesRef
+      .where('user_id', '==', user.id)
+      .where('event_id', '==', eventId)
+      .limit(1)
+      .get()
 
-    if (existing) {
+    if (!existingQuery.empty) {
       // Remove favorite
-      await supabase
-        .from('event_favorites')
-        .delete()
-        .eq('id', existing.id)
+      const favoriteDoc = existingQuery.docs[0]
+      await favoriteDoc.ref.delete()
 
       return Response.json({ isFavorite: false })
     } else {
       // Add favorite
-      await supabase
-        .from('event_favorites')
-        .insert({
-          user_id: user.id,
-          event_id: eventId
-        })
+      await favoritesRef.add({
+        user_id: user.id,
+        event_id: eventId,
+        created_at: new Date()
+      })
 
       return Response.json({ isFavorite: true })
     }
