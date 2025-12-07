@@ -94,6 +94,10 @@ export async function getEventById(eventId: string): Promise<Event | null> {
         capacity: data?.capacity,
         ticket_price: data?.ticket_price,
         image_url: data?.banner_image_url || data?.image_url,
+        banner_image_url: data?.banner_image_url || data?.image_url,
+        currency: data?.currency || 'HTG',
+        total_tickets: data?.total_tickets || data?.capacity || 0,
+        tickets_sold: data?.tickets_sold || 0,
         created_at: data?.created_at?.toDate?.()?.toISOString() || data?.created_at,
         updated_at: data?.updated_at?.toDate?.()?.toISOString() || data?.updated_at,
       } as Event
@@ -151,6 +155,10 @@ export async function getDiscoverEvents(
           capacity: data.capacity,
           ticket_price: data.ticket_price,
           image_url: data.banner_image_url || data.image_url,
+          banner_image_url: data.banner_image_url || data.image_url,
+          currency: data.currency || 'HTG',
+          total_tickets: data.total_tickets || data.capacity || 0,
+          tickets_sold: data.tickets_sold || 0,
           created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at,
           updated_at: data.updated_at?.toDate?.()?.toISOString() || data.updated_at,
         }
@@ -214,6 +222,10 @@ export async function getOrganizerEvents(
         capacity: data.capacity,
         ticket_price: data.ticket_price,
         image_url: data.banner_image_url || data.image_url,
+        banner_image_url: data.banner_image_url || data.image_url,
+        currency: data.currency || 'HTG',
+        total_tickets: data.total_tickets || data.capacity || 0,
+        tickets_sold: data.tickets_sold || 0,
         created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at,
         updated_at: data.updated_at?.toDate?.()?.toISOString() || data.updated_at,
       }
@@ -325,6 +337,10 @@ export async function getAdminEvents(
         capacity: data.capacity,
         ticket_price: data.ticket_price,
         image_url: data.banner_image_url || data.image_url,
+        banner_image_url: data.banner_image_url || data.image_url,
+        currency: data.currency || 'HTG',
+        total_tickets: data.total_tickets || data.capacity || 0,
+        tickets_sold: data.tickets_sold || 0,
         created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at,
         updated_at: data.updated_at?.toDate?.()?.toISOString() || data.updated_at,
       }
@@ -402,6 +418,10 @@ export async function getOrganizerEventsClient(
         capacity: data.capacity,
         ticket_price: data.ticket_price,
         image_url: data.banner_image_url || data.image_url,
+        banner_image_url: data.banner_image_url || data.image_url,
+        currency: data.currency || 'HTG',
+        total_tickets: data.total_tickets || data.capacity || 0,
+        tickets_sold: data.tickets_sold || 0,
         created_at: data.created_at instanceof Timestamp 
           ? data.created_at.toDate().toISOString() 
           : data.created_at,
