@@ -280,7 +280,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
 
             <div className="bg-teal-50 rounded-lg p-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">{t('total_amount')}:</span>
+                <span className="text-sm text-gray-600">{t('events.total_amount')}:</span>
                 <span className="text-xl font-bold text-teal-700">
                   {((selectedTierPrice || ticketPrice) * quantity).toLocaleString()} HTG
                 </span>
@@ -312,8 +312,8 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                     </svg>
                   </div>
                   <div className="text-left">
-                    <div className="font-semibold text-gray-900">{t('credit_debit_card')}</div>
-                    <div className="text-sm text-gray-500">{t('visa_mastercard_amex')}</div>
+                    <div className="font-semibold text-gray-900">{t('events.credit_debit_card')}</div>
+                    <div className="text-sm text-gray-500">{t('events.visa_mastercard_amex')}</div>
                   </div>
                 </div>
                 <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -335,7 +335,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                   </div>
                   <div className="text-left">
                     <div className="font-semibold text-gray-900">MonCash</div>
-                    <div className="text-sm text-gray-500">{t('mobile_money_haiti')}</div>
+                    <div className="text-sm text-gray-500">{t('events.mobile_money_haiti')}</div>
                   </div>
                 </div>
                 <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -349,7 +349,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               disabled={loading}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
             >
-              {loading ? t('processing') : t('cancel')}
+              {loading ? t('events.processing') : t('common.cancel')}
             </button>
           </div>
         </BottomSheet>
