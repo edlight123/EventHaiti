@@ -56,7 +56,7 @@ export default async function HomePage({
       id: e.id,
       title: e.title,
       description: e.description,
-      date: new Date(e.start_datetime),
+      date: e.start_datetime, // Keep as ISO string, don't convert to Date
       imageUrl: e.banner_image_url || '/placeholder-event.jpg',
       location: `${e.venue_name}, ${e.city}`,
       category: e.category,

@@ -108,7 +108,7 @@ export default function FeaturedCarousel({
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-300" />
               <span className="font-medium">
-                {format(currentEvent.date, 'MMM d, yyyy')}
+                {format(new Date(currentEvent.date), 'MMM d, yyyy')}
               </span>
             </div>
             <span className="text-white/40">•</span>
