@@ -39,8 +39,8 @@ export async function logAdminAction({
       resourceId: resourceId || null,
       resourceType: resourceType || null,
       details,
-      timestamp: new Date(),
-      createdAt: new Date()
+      timestamp: new Date().toISOString(),
+      createdAt: new Date().toISOString()
     })
   } catch (error) {
     console.error('Error logging admin action:', error)
@@ -65,7 +65,7 @@ export async function getRecentAdminActivities(limit: number = 10) {
         id: doc.id,
         action: getActionDescription(data.action, data.details),
         user: data.adminEmail || 'Unknown Admin',
-        timestamp: data.timestamp?.toDate() || new Date(),
+        timestamp: (data.timestamp?.toDate() || new Date()).toISOString(),
         icon: getActionIcon(data.action)
       }
     })
