@@ -135,10 +135,10 @@ export async function getRecentEvents(limit: number = 8) {
       return {
         id: doc.id,
         title: data.title,
-        startDateTime: data.startDateTime?.toDate?.() || data.start_datetime?.toDate?.() || new Date(data.start_datetime || data.startDateTime),
+        startDateTime: (data.startDateTime?.toDate?.() || data.start_datetime?.toDate?.() || new Date(data.start_datetime || data.startDateTime)).toISOString(),
         ticketPrice: data.ticketPrice || data.ticket_price || data.price || 0,
         currency: data.currency || 'HTG',
-        createdAt: data.createdAt?.toDate?.() || data.created_at?.toDate?.() || new Date(data.created_at || data.createdAt || Date.now()),
+        createdAt: (data.createdAt?.toDate?.() || data.created_at?.toDate?.() || new Date(data.created_at || data.createdAt || Date.now())).toISOString(),
         isPublished: data.isPublished ?? data.is_published ?? data.status === 'published',
         city: data.city || '',
         commune: data.commune || '',
@@ -231,7 +231,21 @@ export async function globalSearch(query: string) {
       .get()
 
     const events = eventsSnapshot.docs
-      .map((doc: any) => ({ id: doc.id, ...doc.data() }))
+      .map((doc: any) => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          title: data.title,
+          startDateTime: data.startDateTime || data.start_datetime,
+          ticketPrice: data.ticketPrice || data.ticket_price || data.price,
+          currency: data.currency,
+          city: data.city,
+          commune: data.commune,
+          venueName: data.venueName || data.venue_name,
+          status: data.status,
+          isPublished: data.isPublished ?? data.is_published
+        }
+      })
       .filter((event: any) => 
         event.title?.toLowerCase().includes(searchTerm)
       )
@@ -245,7 +259,16 @@ export async function globalSearch(query: string) {
       .get()
 
     const users = usersSnapshot.docs
-      .map((doc: any) => ({ id: doc.id, ...doc.data() }))
+      .map((doc: any) => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          email: data.email,
+          full_name: data.full_name,
+          role: data.role,
+          is_verified: data.is_verified
+        }
+      })
       .filter((user: any) => 
         user.email?.toLowerCase().includes(searchTerm)
       )
