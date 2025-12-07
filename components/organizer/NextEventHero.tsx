@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslation } from 'react-i18next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Calendar, MapPin, Users, DollarSign, Edit, Eye, QrCode, Share2 } from 'lucide-react'
@@ -19,20 +20,22 @@ interface NextEventHeroProps {
 }
 
 export function NextEventHero({ event }: NextEventHeroProps) {
+  const { t } = useTranslation('common')
+  
   if (!event) {
     return (
       <div className="bg-gradient-to-br from-brand-50 to-accent-50 rounded-2xl border border-gray-200 p-8 text-center">
         <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
           <Calendar className="w-8 h-8 text-gray-400" />
         </div>
-        <h3 className="text-lg font-bold text-gray-900 mb-2">No Upcoming Events</h3>
-        <p className="text-gray-600 mb-6">Create your first event to get started</p>
+        <h3 className="text-lg font-bold text-gray-900 mb-2">{t('next_event.no_upcoming_title')}</h3>
+        <p className="text-gray-600 mb-6">{t('next_event.no_upcoming_desc')}</p>
         <Link
           href="/organizer/events/new"
           className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-brand-600 to-accent-600 text-white rounded-xl font-bold hover:shadow-glow transition-all"
         >
           <Calendar className="w-5 h-5" />
-          Create Event
+          {t('next_event.create_event')}
         </Link>
       </div>
     )
@@ -44,11 +47,11 @@ export function NextEventHero({ event }: NextEventHeroProps) {
   const progress = event.capacity > 0 ? (event.ticketsSold / event.capacity) * 100 : 0
 
   const getCountdownText = () => {
-    if (daysUntil < 0) return 'Event Passed'
-    if (daysUntil === 0) return 'Today!'
-    if (daysUntil === 1) return 'Tomorrow'
-    if (daysUntil <= 7) return `In ${daysUntil} days`
-    return `In ${Math.ceil(daysUntil / 7)} weeks`
+    if (daysUntil < 0) return t('next_event.event_passed')
+    if (daysUntil === 0) return t('next_event.today')
+    if (daysUntil === 1) return t('next_event.tomorrow')
+    if (daysUntil <= 7) return t('next_event.in_days', { count: daysUntil })
+    return t('next_event.in_weeks', { count: Math.ceil(daysUntil / 7) })
   }
 
   return (
@@ -106,28 +109,28 @@ export function NextEventHero({ event }: NextEventHeroProps) {
           <div className="bg-blue-50 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-1">
               <Users className="w-4 h-4 text-blue-600" />
-              <p className="text-xs font-medium text-blue-900">Tickets Sold</p>
+              <p className="text-xs font-medium text-blue-900">{t('next_event.tickets_sold')}</p>
             </div>
             <p className="text-2xl font-bold text-blue-700">{event.ticketsSold}</p>
-            <p className="text-xs text-blue-600">of {event.capacity}</p>
+            <p className="text-xs text-blue-600">{t('next_event.of')} {event.capacity}</p>
           </div>
 
           <div className="bg-purple-50 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-1">
               <DollarSign className="w-4 h-4 text-purple-600" />
-              <p className="text-xs font-medium text-purple-900">Revenue</p>
+              <p className="text-xs font-medium text-purple-900">{t('next_event.revenue')}</p>
             </div>
             <p className="text-2xl font-bold text-purple-700">${(event.revenue / 100).toFixed(0)}</p>
-            <p className="text-xs text-purple-600">earned</p>
+            <p className="text-xs text-purple-600">{t('next_event.earned')}</p>
           </div>
 
           <div className="bg-teal-50 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-1">
               <Calendar className="w-4 h-4 text-teal-600" />
-              <p className="text-xs font-medium text-teal-900">Capacity</p>
+              <p className="text-xs font-medium text-teal-900">{t('next_event.capacity')}</p>
             </div>
             <p className="text-2xl font-bold text-teal-700">{progress.toFixed(0)}%</p>
-            <p className="text-xs text-teal-600">filled</p>
+            <p className="text-xs text-teal-600">{t('next_event.filled')}</p>
           </div>
         </div>
 
@@ -148,7 +151,7 @@ export function NextEventHero({ event }: NextEventHeroProps) {
             className="flex items-center justify-center gap-2 px-4 py-3 bg-brand-600 text-white rounded-xl font-semibold hover:bg-brand-700 transition-colors text-sm"
           >
             <Edit className="w-4 h-4" />
-            <span className="hidden sm:inline">Edit</span>
+            <span className="hidden sm:inline">{t('next_event.edit')}</span>
           </Link>
           
           <Link
@@ -156,7 +159,7 @@ export function NextEventHero({ event }: NextEventHeroProps) {
             className="flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:border-brand-500 hover:text-brand-600 transition-colors text-sm"
           >
             <Eye className="w-4 h-4" />
-            <span className="hidden sm:inline">Attendees</span>
+            <span className="hidden sm:inline">{t('next_event.attendees')}</span>
           </Link>
           
           <Link
@@ -164,7 +167,7 @@ export function NextEventHero({ event }: NextEventHeroProps) {
             className="flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:border-purple-500 hover:text-purple-600 transition-colors text-sm"
           >
             <QrCode className="w-4 h-4" />
-            <span className="hidden sm:inline">Check-in</span>
+            <span className="hidden sm:inline">{t('next_event.check_in')}</span>
           </Link>
           
           <button
@@ -181,7 +184,7 @@ export function NextEventHero({ event }: NextEventHeroProps) {
             className="flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:border-teal-500 hover:text-teal-600 transition-colors text-sm"
           >
             <Share2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Share</span>
+            <span className="hidden sm:inline">{t('next_event.share')}</span>
           </button>
         </div>
       </div>

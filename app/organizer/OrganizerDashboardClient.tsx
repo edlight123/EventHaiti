@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslation } from 'react-i18next'
 import { NextEventHero } from '@/components/organizer/NextEventHero'
 import { ActionCenter } from '@/components/organizer/ActionCenter'
 import { SalesSnapshot } from '@/components/organizer/SalesSnapshot'
@@ -37,6 +38,8 @@ export default function OrganizerDashboardClient({
   events,
   tickets
 }: OrganizerDashboardClientProps) {
+  const { t } = useTranslation('common')
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
       {/* Next Event Hero */}
@@ -73,19 +76,19 @@ export default function OrganizerDashboardClient({
       <div>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900">Your Events</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900">{t('organizer.your_events')}</h2>
             <Link
               href="/organizer/events"
               className="text-sm text-teal-600 hover:text-teal-700 font-medium hover:underline"
             >
-              View all →
+              {t('organizer.view_all_events')} →
             </Link>
           </div>
           <a
             href="/organizer/events/new"
             className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors text-sm"
           >
-            + Create Event
+            + {t('organizer.create_event')}
           </a>
         </div>
 
@@ -114,15 +117,15 @@ export default function OrganizerDashboardClient({
             <div className="w-16 h-16 bg-gradient-to-br from-teal-50 to-purple-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-3xl">🎉</span>
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Create Your First Event</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">{t('organizer.no_events.title')}</h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              Get started by creating an event and start selling tickets today!
+              {t('organizer.no_events.description')}
             </p>
             <a
               href="/organizer/events/new"
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-600 to-purple-600 text-white rounded-xl font-bold hover:shadow-lg transition-all"
             >
-              + Create Your First Event
+              + {t('organizer.no_events.cta')}
             </a>
           </div>
         )}
