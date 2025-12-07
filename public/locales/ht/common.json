@@ -210,7 +210,12 @@
     "group_discount": "Rabè gwoup",
     "total": "Total",
     "sign_in_to_purchase": "Konekte pou achte",
-    "purchase": "Achte"
+    "purchase": "Achte",
+    "complete_payment": "Konplete peman",
+    "order_summary": "Rezime lòd",
+    "payment_details": "Detay peman",
+    "secure_payment_stripe": "Peman sekirize pa Stripe",
+    "pay": "Peye"
   },
   "ticket": {
     "ticket": "Tikè",

@@ -211,7 +211,12 @@
     "group_discount": "Réduction de groupe",
     "total": "Total",
     "sign_in_to_purchase": "Connectez-vous pour acheter",
-    "purchase": "Acheter"
+    "purchase": "Acheter",
+    "complete_payment": "Finaliser le paiement",
+    "order_summary": "Résumé de la commande",
+    "payment_details": "Détails du paiement",
+    "secure_payment_stripe": "Paiement sécurisé propulsé par Stripe",
+    "pay": "Payer"
   },
   "ticket": {
     "ticket": "Billet",

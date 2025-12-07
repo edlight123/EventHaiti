@@ -211,7 +211,12 @@
     "group_discount": "Group Discount",
     "total": "Total",
     "sign_in_to_purchase": "Sign in to purchase",
-    "purchase": "Purchase"
+    "purchase": "Purchase",
+    "complete_payment": "Complete Payment",
+    "order_summary": "Order Summary",
+    "payment_details": "Payment Details",
+    "secure_payment_stripe": "Secure payment powered by Stripe",
+    "pay": "Pay"
   },
   "favorites": {
     "title": "My Favorites",

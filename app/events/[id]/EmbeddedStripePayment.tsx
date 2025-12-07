@@ -6,9 +6,9 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 import { useRouter } from 'next/navigation'
 import { X, CreditCard, Lock } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
+import { useTranslation } from 'react-i18next'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
-
 interface CheckoutFormProps {
   eventId: string
   eventTitle: string
@@ -17,9 +17,10 @@ interface CheckoutFormProps {
   currency: string
   onClose: () => void
   clientSecret: string
+  t: any
 }
 
-function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, onClose, clientSecret }: CheckoutFormProps) {
+function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, onClose, clientSecret, t }: CheckoutFormProps) {
   const stripe = useStripe()
   const elements = useElements()
   const router = useRouter()
@@ -94,14 +95,14 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, on
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Order Summary */}
       <div className="bg-gray-50 rounded-lg p-4">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">Order Summary</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('events.order_summary')}</h3>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-gray-600">{eventTitle}</span>
             <span className="font-medium text-gray-900">x{quantity}</span>
           </div>
           <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-            <span className="font-semibold text-gray-900">Total</span>
+            <span className="font-semibold text-gray-900">{t('events.total')}</span>
             <span className="text-lg font-bold text-teal-700">
               {totalAmount.toLocaleString()} {currency}
             </span>
@@ -113,7 +114,7 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, on
       <div className="bg-white border border-gray-200 rounded-lg p-4">
         <div className="flex items-center gap-2 mb-4">
           <CreditCard className="w-5 h-5 text-gray-600" />
-          <h3 className="text-sm font-semibold text-gray-900">Payment Details</h3>
+          <h3 className="text-sm font-semibold text-gray-900">{t('events.payment_details')}</h3>
         </div>
         <PaymentElement />
       </div>
@@ -127,7 +128,7 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, on
       {/* Security Badge */}
       <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
         <Lock className="w-3 h-3" />
-        <span>Secure payment powered by Stripe</span>
+        <span>{t('events.secure_payment_stripe')}</span>
       </div>
 
       {/* Action Buttons */}
@@ -138,14 +139,14 @@ function CheckoutForm({ eventId, eventTitle, quantity, totalAmount, currency, on
           disabled={processing}
           className="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={!stripe || processing}
           className="flex-1 px-4 py-3 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
         >
-          {processing ? 'Processing...' : `Pay ${totalAmount.toLocaleString()} ${currency}`}
+          {processing ? t('events.processing') : `${t('events.pay')} ${totalAmount.toLocaleString()} ${currency}`}
         </button>
       </div>
     </form>
@@ -175,6 +176,7 @@ export default function EmbeddedStripePayment({
   promoCodeId,
   onClose
 }: EmbeddedStripePaymentProps) {
+  const { t } = useTranslation('common')
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -229,7 +231,7 @@ export default function EmbeddedStripePayment({
       <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Complete Payment</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t('events.complete_payment')}</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -252,7 +254,7 @@ export default function EmbeddedStripePayment({
                 onClick={onClose}
                 className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
-                Close
+                {t('common.close')}
               </button>
             </div>
           ) : clientSecret ? (
@@ -265,6 +267,7 @@ export default function EmbeddedStripePayment({
                 currency={currency}
                 onClose={onClose}
                 clientSecret={clientSecret}
+                t={t}
               />
             </Elements>
           ) : null}
