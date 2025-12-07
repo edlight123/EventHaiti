@@ -25,8 +25,8 @@ export interface UserProfile {
   role?: string
   isVerified?: boolean
   verificationStatus?: string
-  createdAt?: Date
-  updatedAt?: Date
+  createdAt?: string
+  updatedAt?: string
 }
 
 /**
@@ -60,8 +60,8 @@ export async function getUserProfileAdmin(uid: string): Promise<UserProfile | nu
       role: data.role || 'attendee',
       isVerified: data.is_verified || false,
       verificationStatus: data.verification_status || 'none',
-      createdAt: data.created_at?.toDate?.() || data.createdAt?.toDate?.() || new Date(),
-      updatedAt: data.updated_at?.toDate?.() || data.updatedAt?.toDate?.() || new Date()
+      createdAt: (data.created_at?.toDate?.() || data.createdAt?.toDate?.() || new Date()).toISOString(),
+      updatedAt: (data.updated_at?.toDate?.() || data.updatedAt?.toDate?.() || new Date()).toISOString()
     }
   } catch (error) {
     console.error('Error fetching user profile (admin):', error)
