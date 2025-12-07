@@ -30,7 +30,7 @@ interface SalesSnapshotProps {
 }
 
 export function SalesSnapshot({ data }: SalesSnapshotProps) {
-  const { t } = useTranslation('organizer')
+  const { t } = useTranslation('common')
   const [range, setRange] = useState<TimeRange>('7d')
   const metrics = data[range]
 

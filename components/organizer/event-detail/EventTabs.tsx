@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 
 type TabId = 'overview' | 'attendees' | 'check-in' | 'sales' | 'updates' | 'settings'
 
@@ -13,13 +14,15 @@ interface EventTabsProps {
 }
 
 export function EventTabs({ activeTab, onTabChange, eventId, ticketCount }: EventTabsProps) {
+  const { t } = useTranslation('common')
+  
   const tabs = [
-    { id: 'overview' as TabId, label: 'Overview', count: undefined, enabled: true },
-    { id: 'attendees' as TabId, label: 'Attendees', count: ticketCount, enabled: true, href: `/organizer/events/${eventId}/attendees` },
-    { id: 'check-in' as TabId, label: 'Check-in', count: undefined, enabled: true, href: `/organizer/scan/${eventId}` },
-    { id: 'sales' as TabId, label: 'Sales', count: undefined, enabled: false },
-    { id: 'updates' as TabId, label: 'Updates', count: undefined, enabled: false },
-    { id: 'settings' as TabId, label: 'Settings', count: undefined, enabled: false },
+    { id: 'overview' as TabId, label: t('organizer.overview'), count: undefined, enabled: true },
+    { id: 'attendees' as TabId, label: t('organizer.attendees'), count: ticketCount, enabled: true, href: `/organizer/events/${eventId}/attendees` },
+    { id: 'check-in' as TabId, label: t('organizer.check_in'), count: undefined, enabled: true, href: `/organizer/scan/${eventId}` },
+    { id: 'sales' as TabId, label: t('organizer.sales'), count: undefined, enabled: false },
+    { id: 'updates' as TabId, label: t('organizer.updates'), count: undefined, enabled: false },
+    { id: 'settings' as TabId, label: t('organizer_dashboard.settings'), count: undefined, enabled: false },
   ]
 
   return (
@@ -35,7 +38,7 @@ export function EventTabs({ activeTab, onTabChange, eventId, ticketCount }: Even
                   className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-400 cursor-not-allowed whitespace-nowrap"
                 >
                   {tab.label}
-                  <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">Soon</span>
+                  <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">{t('organizer.coming_soon')}</span>
                 </button>
               )
             }

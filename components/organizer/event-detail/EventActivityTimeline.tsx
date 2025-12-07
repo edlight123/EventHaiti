@@ -2,6 +2,7 @@
 
 import { Activity, UserPlus, DollarSign, Edit, Share2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { useTranslation } from 'react-i18next'
 
 interface ActivityEvent {
   id: string
@@ -16,6 +17,8 @@ interface EventActivityTimelineProps {
 }
 
 export function EventActivityTimeline({ activities }: EventActivityTimelineProps) {
+  const { t } = useTranslation('common')
+  
   if (!activities || activities.length === 0) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
@@ -23,11 +26,11 @@ export function EventActivityTimeline({ activities }: EventActivityTimelineProps
           <div className="p-2 bg-gray-50 rounded-lg">
             <Activity className="w-5 h-5 text-gray-600" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900">Recent Activity</h3>
+          <h3 className="text-lg font-bold text-gray-900">{t('organizer.recent_activity')}</h3>
         </div>
         <div className="text-center py-8">
           <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-sm text-gray-500">No activity yet</p>
+          <p className="text-sm text-gray-500">{t('organizer.no_activity_yet')}</p>
         </div>
       </div>
     )
@@ -65,7 +68,7 @@ export function EventActivityTimeline({ activities }: EventActivityTimelineProps
         <div className="p-2 bg-gray-50 rounded-lg">
           <Activity className="w-5 h-5 text-gray-600" />
         </div>
-        <h3 className="text-lg font-bold text-gray-900">Recent Activity</h3>
+        <h3 className="text-lg font-bold text-gray-900">{t('organizer.recent_activity')}</h3>
       </div>
 
       <div className="space-y-3">
@@ -86,7 +89,7 @@ export function EventActivityTimeline({ activities }: EventActivityTimelineProps
 
       {activities.length > 10 && (
         <button className="mt-4 text-sm text-teal-600 hover:text-teal-700 font-medium">
-          View all activity
+          {t('organizer.view_all_activity')}
         </button>
       )}
     </div>

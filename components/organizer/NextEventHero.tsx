@@ -20,7 +20,7 @@ interface NextEventHeroProps {
 }
 
 export function NextEventHero({ event }: NextEventHeroProps) {
-  const { t } = useTranslation('organizer')
+  const { t } = useTranslation('common')
   
   if (!event) {
     return (

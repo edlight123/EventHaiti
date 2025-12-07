@@ -18,7 +18,7 @@ interface PayoutsWidgetProps {
 }
 
 export function PayoutsWidget({ status, pendingBalance = 0, lastPayout, nextPayout }: PayoutsWidgetProps) {
-  const { t } = useTranslation('organizer')
+  const { t } = useTranslation('common')
   
   const getStatusInfo = () => {
     switch (status) {

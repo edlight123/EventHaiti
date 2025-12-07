@@ -21,7 +21,7 @@ interface OrganizerEventCardProps {
 }
 
 export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
-  const { t } = useTranslation('organizer')
+  const { t } = useTranslation('common')
   const progress = event.capacity > 0 ? (event.ticketsSold / event.capacity) * 100 : 0
   const startDate = new Date(event.start_datetime)
 

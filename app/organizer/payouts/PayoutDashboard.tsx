@@ -175,12 +175,12 @@ export default function PayoutDashboard({
 
       {/* Info Banner */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-blue-900 mb-2">How Payouts Work</h3>
+        <h3 className="text-sm font-medium text-blue-900 mb-2">{t('payouts_page.how_payouts_work')}</h3>
         <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-          <li>Funds become available 7 days after your event ends</li>
-          <li>Payouts are processed every Friday at 5:00 PM</li>
-          <li>10% platform fee is automatically deducted</li>
-          <li>Payment is sent to your configured payout method</li>
+          <li>{t('payouts_page.funds_available_7_days')}</li>
+          <li>{t('payouts_page.processed_friday_5pm')}</li>
+          <li>{t('payouts_page.platform_fee_10_percent')}</li>
+          <li>{t('payouts_page.payment_sent_to_method')}</li>
         </ul>
       </div>
 

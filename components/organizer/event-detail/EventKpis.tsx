@@ -1,6 +1,7 @@
 'use client'
 
 import { Ticket, DollarSign, Users, TrendingUp } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface EventKpisProps {
   stats: {
@@ -15,6 +16,7 @@ interface EventKpisProps {
 }
 
 export function EventKpis({ stats }: EventKpisProps) {
+  const { t } = useTranslation('common')
   const progress = stats.capacity > 0 ? (stats.ticketsSold / stats.capacity) * 100 : 0
   const checkInRate = stats.ticketsSold > 0 ? (stats.checkedIn / stats.ticketsSold) * 100 : 0
 
@@ -26,7 +28,7 @@ export function EventKpis({ stats }: EventKpisProps) {
           <div className="p-2 bg-blue-50 rounded-lg">
             <Ticket className="w-5 h-5 text-blue-600" />
           </div>
-          <span className="text-xs font-medium text-gray-500">SOLD / CAPACITY</span>
+          <span className="text-xs font-medium text-gray-500">{t('organizer.sold_capacity')}</span>
         </div>
         <div className="space-y-2">
           <div className="flex items-baseline gap-2">
@@ -39,7 +41,7 @@ export function EventKpis({ stats }: EventKpisProps) {
               style={{ width: `${Math.min(progress, 100)}%` }}
             />
           </div>
-          <p className="text-xs text-gray-600">{progress.toFixed(1)}% capacity</p>
+          <p className="text-xs text-gray-600">{t('organizer.capacity_percent', { percent: progress.toFixed(1) })}</p>
         </div>
       </div>
 
@@ -49,7 +51,7 @@ export function EventKpis({ stats }: EventKpisProps) {
           <div className="p-2 bg-green-50 rounded-lg">
             <DollarSign className="w-5 h-5 text-green-600" />
           </div>
-          <span className="text-xs font-medium text-gray-500">REVENUE</span>
+          <span className="text-xs font-medium text-gray-500">{t('organizer.revenue')}</span>
         </div>
         <div className="space-y-2">
           <div className="flex items-baseline gap-2">
@@ -72,7 +74,7 @@ export function EventKpis({ stats }: EventKpisProps) {
           <div className="p-2 bg-purple-50 rounded-lg">
             <Users className="w-5 h-5 text-purple-600" />
           </div>
-          <span className="text-xs font-medium text-gray-500">CHECK-INS</span>
+          <span className="text-xs font-medium text-gray-500">{t('organizer.check_ins')}</span>
         </div>
         <div className="space-y-2">
           <div className="flex items-baseline gap-2">
@@ -87,7 +89,7 @@ export function EventKpis({ stats }: EventKpisProps) {
                   style={{ width: `${Math.min(checkInRate, 100)}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-600">{checkInRate.toFixed(1)}% checked in</p>
+              <p className="text-xs text-gray-600">{t('organizer.checked_in_percent', { percent: checkInRate.toFixed(1) })}</p>
             </>
           )}
         </div>

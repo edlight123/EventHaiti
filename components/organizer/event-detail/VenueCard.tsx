@@ -2,6 +2,7 @@
 
 import { MapPin, Edit2, Globe } from 'lucide-react'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 
 interface VenueCardProps {
   eventId: string
@@ -16,6 +17,7 @@ interface VenueCardProps {
 }
 
 export function VenueCard({ eventId, venue }: VenueCardProps) {
+  const { t } = useTranslation('common')
   const hasVenue = venue.name || venue.address || venue.city || venue.is_online
 
   return (
@@ -30,7 +32,7 @@ export function VenueCard({ eventId, venue }: VenueCardProps) {
             )}
           </div>
           <h3 className="text-lg font-bold text-gray-900">
-            {venue.is_online ? 'Online Event' : 'Venue'}
+            {venue.is_online ? t('organizer.online_event') : t('organizer.venue')}
           </h3>
         </div>
         <Link
@@ -38,20 +40,20 @@ export function VenueCard({ eventId, venue }: VenueCardProps) {
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
         >
           <Edit2 className="w-4 h-4" />
-          Edit
+          {t('organizer.edit')}
         </Link>
       </div>
 
       {!hasVenue ? (
         <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
           <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-sm text-gray-600 mb-3">No venue information</p>
+          <p className="text-sm text-gray-600 mb-3">{t('organizer.no_venue_info')}</p>
           <Link
             href={`/organizer/events/${eventId}/edit#venue`}
             className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-lg transition-colors"
           >
             <Edit2 className="w-4 h-4" />
-            Add Venue Details
+            {t('organizer.add_venue_details')}
           </Link>
         </div>
       ) : venue.is_online ? (
@@ -59,7 +61,7 @@ export function VenueCard({ eventId, venue }: VenueCardProps) {
           <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
             <Globe className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-sm font-medium text-gray-900 mb-1">Virtual Event</p>
+              <p className="text-sm font-medium text-gray-900 mb-1">{t('organizer.virtual_event')}</p>
               {venue.meeting_url ? (
                 <a 
                   href={venue.meeting_url}
@@ -70,7 +72,7 @@ export function VenueCard({ eventId, venue }: VenueCardProps) {
                   {venue.meeting_url}
                 </a>
               ) : (
-                <p className="text-sm text-gray-600">Meeting link will be shared with attendees</p>
+                <p className="text-sm text-gray-600">{t('organizer.meeting_link_shared')}</p>
               )}
             </div>
           </div>

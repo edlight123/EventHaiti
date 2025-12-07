@@ -2,6 +2,7 @@
 
 import { Ticket, Plus, Edit2 } from 'lucide-react'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 
 interface TicketTier {
   id: string
@@ -18,6 +19,7 @@ interface TicketTiersCardProps {
 }
 
 export function TicketTiersCard({ eventId, tiers }: TicketTiersCardProps) {
+  const { t } = useTranslation('common')
   const hasTiers = tiers && tiers.length > 0
 
   return (
@@ -27,27 +29,27 @@ export function TicketTiersCard({ eventId, tiers }: TicketTiersCardProps) {
           <div className="p-2 bg-purple-50 rounded-lg">
             <Ticket className="w-5 h-5 text-purple-600" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900">Ticket Tiers</h3>
+          <h3 className="text-lg font-bold text-gray-900">{t('organizer.ticket_tiers')}</h3>
         </div>
         <Link
           href={`/organizer/events/${eventId}/edit#tickets`}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
         >
           {hasTiers ? <Edit2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          {hasTiers ? 'Edit' : 'Add Tiers'}
+          {hasTiers ? t('organizer.edit') : t('organizer.add_tiers')}
         </Link>
       </div>
 
       {!hasTiers ? (
         <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
           <Ticket className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-sm text-gray-600 mb-3">No ticket tiers configured</p>
+          <p className="text-sm text-gray-600 mb-3">{t('organizer.no_ticket_tiers_configured')}</p>
           <Link
             href={`/organizer/events/${eventId}/edit#tickets`}
             className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-lg transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Create Ticket Tiers
+            {t('organizer.create_ticket_tiers')}
           </Link>
         </div>
       ) : (
@@ -68,12 +70,12 @@ export function TicketTiersCard({ eventId, tiers }: TicketTiersCardProps) {
                       <h4 className="font-semibold text-gray-900">{tier.name}</h4>
                       {isSoldOut && (
                         <span className="text-xs font-medium px-2 py-0.5 bg-red-100 text-red-700 rounded-full">
-                          Sold Out
+                          {t('organizer.sold_out')}
                         </span>
                       )}
                       {isLowStock && !isSoldOut && (
                         <span className="text-xs font-medium px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
-                          Low Stock
+                          {t('organizer.low_stock')}
                         </span>
                       )}
                     </div>

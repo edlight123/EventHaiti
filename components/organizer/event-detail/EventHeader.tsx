@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Calendar, MapPin, Globe, Edit, Share2, Eye, MoreVertical, Copy, XCircle, Trash2 } from 'lucide-react'
 import { format, formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 
 interface EventHeaderProps {
   event: {
@@ -22,6 +23,7 @@ interface EventHeaderProps {
 }
 
 export function EventHeader({ event, onPublishToggle, isPublishing }: EventHeaderProps) {
+  const { t } = useTranslation('common')
   const [showMenu, setShowMenu] = useState(false)
   const startDate = new Date(event.start_datetime)
   const updatedDate = new Date(event.updated_at)
@@ -40,7 +42,7 @@ export function EventHeader({ event, onPublishToggle, isPublishing }: EventHeade
                     ? 'bg-green-100 text-green-800' 
                     : 'bg-gray-100 text-gray-800'
                 }`}>
-                  {event.is_published ? 'Published' : 'Draft'}
+                  {event.is_published ? t('organizer.published') : t('organizer.draft')}
                 </span>
               </div>
               <div className="flex items-center gap-4 text-sm text-gray-600">
@@ -51,7 +53,7 @@ export function EventHeader({ event, onPublishToggle, isPublishing }: EventHeade
                 {event.is_online ? (
                   <div className="flex items-center gap-1.5">
                     <Globe className="w-4 h-4" />
-                    <span>Online Event</span>
+                    <span>{t('organizer.online_event')}</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5">
@@ -60,7 +62,7 @@ export function EventHeader({ event, onPublishToggle, isPublishing }: EventHeade
                   </div>
                 )}
                 <span className="text-xs text-gray-500">
-                  Updated {formatDistanceToNow(updatedDate, { addSuffix: true })}
+                  {t('organizer.updated')} {formatDistanceToNow(updatedDate, { addSuffix: true })}
                 </span>
               </div>
             </div>
@@ -72,7 +74,7 @@ export function EventHeader({ event, onPublishToggle, isPublishing }: EventHeade
                 className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <Edit className="w-4 h-4" />
-                Edit
+                {t('organizer.edit')}
               </Link>
               <Link
                 href={`/events/${event.id}`}
@@ -80,7 +82,7 @@ export function EventHeader({ event, onPublishToggle, isPublishing }: EventHeade
                 className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <Eye className="w-4 h-4" />
-                Preview
+                {t('organizer.preview')}
               </Link>
               <button
                 onClick={() => {
@@ -96,7 +98,7 @@ export function EventHeader({ event, onPublishToggle, isPublishing }: EventHeade
                 className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <Share2 className="w-4 h-4" />
-                Share
+                {t('organizer.share')}
               </button>
               <button
                 onClick={onPublishToggle}
@@ -107,7 +109,7 @@ export function EventHeader({ event, onPublishToggle, isPublishing }: EventHeade
                     : 'bg-teal-600 hover:bg-teal-700 text-white'
                 }`}
               >
-                {isPublishing ? 'Processing...' : event.is_published ? 'Unpublish' : 'Publish'}
+                {isPublishing ? t('organizer.processing') : event.is_published ? t('organizer.unpublish') : t('organizer.publish')}
               </button>
               
               {/* Overflow Menu */}
@@ -122,15 +124,15 @@ export function EventHeader({ event, onPublishToggle, isPublishing }: EventHeade
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
                     <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                       <Copy className="w-4 h-4" />
-                      Duplicate
+                      {t('organizer.duplicate')}
                     </button>
                     <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                       <XCircle className="w-4 h-4" />
-                      Cancel Event
+                      {t('organizer.cancel_event')}
                     </button>
                     <button className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
                       <Trash2 className="w-4 h-4" />
-                      Delete
+                      {t('organizer.delete')}
                     </button>
                   </div>
                 )}
@@ -148,7 +150,7 @@ export function EventHeader({ event, onPublishToggle, isPublishing }: EventHeade
                 ? 'bg-green-100 text-green-800' 
                 : 'bg-gray-100 text-gray-800'
             }`}>
-              {event.is_published ? 'Published' : 'Draft'}
+              {event.is_published ? t('organizer.published') : t('organizer.draft')}
             </span>
           </div>
           <div className="flex flex-col gap-1 text-xs text-gray-600">
@@ -158,7 +160,7 @@ export function EventHeader({ event, onPublishToggle, isPublishing }: EventHeade
             </div>
             <div className="flex items-center gap-1.5">
               {event.is_online ? <Globe className="w-3.5 h-3.5" /> : <MapPin className="w-3.5 h-3.5" />}
-              <span>{event.is_online ? 'Online Event' : (event.venue_name || event.city || 'Location TBD')}</span>
+              <span>{event.is_online ? t('organizer.online_event') : (event.venue_name || event.city || 'Location TBD')}</span>
             </div>
           </div>
         </div>
@@ -172,7 +174,7 @@ export function EventHeader({ event, onPublishToggle, isPublishing }: EventHeade
             className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-gray-50"
           >
             <Edit className="w-5 h-5 text-gray-700" />
-            <span className="text-xs text-gray-700">Edit</span>
+            <span className="text-xs text-gray-700">{t('organizer.edit')}</span>
           </Link>
           <Link
             href={`/events/${event.id}`}
@@ -180,7 +182,7 @@ export function EventHeader({ event, onPublishToggle, isPublishing }: EventHeade
             className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-gray-50"
           >
             <Eye className="w-5 h-5 text-gray-700" />
-            <span className="text-xs text-gray-700">Preview</span>
+            <span className="text-xs text-gray-700">{t('organizer.preview')}</span>
           </Link>
           <button
             onClick={() => {
@@ -194,7 +196,7 @@ export function EventHeader({ event, onPublishToggle, isPublishing }: EventHeade
             className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-gray-50"
           >
             <Share2 className="w-5 h-5 text-gray-700" />
-            <span className="text-xs text-gray-700">Share</span>
+            <span className="text-xs text-gray-700">{t('organizer.share')}</span>
           </button>
           <button
             onClick={onPublishToggle}
@@ -205,7 +207,7 @@ export function EventHeader({ event, onPublishToggle, isPublishing }: EventHeade
           >
             <div className={`w-5 h-5 rounded-full ${event.is_published ? 'bg-gray-600' : 'bg-teal-600'}`} />
             <span className={`text-xs font-medium ${event.is_published ? 'text-gray-700' : 'text-teal-700'}`}>
-              {event.is_published ? 'Live' : 'Publish'}
+              {event.is_published ? t('organizer.live') : t('organizer.publish')}
             </span>
           </button>
         </div>

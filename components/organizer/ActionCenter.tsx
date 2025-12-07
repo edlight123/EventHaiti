@@ -18,7 +18,7 @@ interface ActionCenterProps {
 }
 
 export function ActionCenter({ alerts }: ActionCenterProps) {
-  const { t } = useTranslation('organizer')
+  const { t } = useTranslation('common')
   
   if (alerts.length === 0) {
     return (
