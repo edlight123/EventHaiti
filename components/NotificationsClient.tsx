@@ -208,7 +208,7 @@ export function NotificationsClient({
 
                     <div className="flex items-center gap-4 text-xs text-gray-500">
                       <span>
-                        {notification.createdAt.toLocaleDateString('en-US', {
+                        {new Date(notification.createdAt).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
                           hour: 'numeric',
