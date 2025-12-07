@@ -177,9 +177,9 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         </div>
       </div>
 
-      <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
+      <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-2">
         {user && <FavoriteButton eventId={event.id} userId={user.id} initialIsFavorite={isFavorite} />}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           {user ? (
             <BuyTicketButton 
               eventId={event.id} 
@@ -195,7 +195,9 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
             </a>
           )}
         </div>
-        <ShareButton eventId={event.id} eventTitle={event.title} />
+        <div className="flex-shrink-0">
+          <ShareButton eventId={event.id} eventTitle={event.title} />
+        </div>
       </div>
 
       <MobileKeyFacts

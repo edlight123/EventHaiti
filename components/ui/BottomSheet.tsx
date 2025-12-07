@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, ReactNode } from 'react'
+import { useEffect, ReactNode } from 'react'
 import { X } from 'lucide-react'
 
 interface BottomSheetProps {
@@ -18,10 +18,6 @@ export default function BottomSheet({
   children,
   showCloseButton = true,
 }: BottomSheetProps) {
-  const sheetRef = useRef<HTMLDivElement>(null)
-  const startY = useRef(0)
-  const currentY = useRef(0)
-
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
@@ -34,31 +30,6 @@ export default function BottomSheet({
     }
   }, [isOpen])
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    startY.current = e.touches[0].clientY
-  }
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    currentY.current = e.touches[0].clientY
-    const diff = currentY.current - startY.current
-
-    if (diff > 0 && sheetRef.current) {
-      sheetRef.current.style.transform = `translateY(${diff}px)`
-    }
-  }
-
-  const handleTouchEnd = () => {
-    const diff = currentY.current - startY.current
-
-    if (diff > 100) {
-      onClose()
-    }
-
-    if (sheetRef.current) {
-      sheetRef.current.style.transform = 'translateY(0)'
-    }
-  }
-
   if (!isOpen) return null
 
   return (
@@ -69,39 +40,33 @@ export default function BottomSheet({
         onClick={onClose}
       />
 
-      {/* Bottom Sheet */}
+      {/* Modal Container */}
       <div
-        ref={sheetRef}
-        className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-[101] max-h-[90vh] flex flex-col transition-transform duration-300"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        className="fixed inset-0 z-[101] flex items-center justify-center p-4"
+        onClick={(e) => e.target === e.currentTarget && onClose()}
       >
-        {/* Drag Handle */}
-        <div className="flex justify-center py-3 cursor-grab active:cursor-grabbing">
-          <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
-        </div>
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+          {/* Header */}
+          {(title || showCloseButton) && (
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 flex-shrink-0">
+              {title && (
+                <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+              )}
+              {showCloseButton && (
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors ml-auto"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              )}
+            </div>
+          )}
 
-        {/* Header */}
-        {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-6 pb-4 border-b border-gray-100">
-            {title && (
-              <h3 className="text-lg font-bold text-gray-900">{title}</h3>
-            )}
-            {showCloseButton && (
-              <button
-                onClick={onClose}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors ml-auto"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            )}
+          {/* Content */}
+          <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4">
+            {children}
           </div>
-        )}
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          {children}
         </div>
       </div>
     </>

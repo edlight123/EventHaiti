@@ -249,7 +249,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
         >
           <div className="space-y-4">
             <p className="text-gray-700">
-              {t('select_payment_description', { count: quantity })}
+              {quantity === 1 ? t('events.select_payment_description', { count: quantity }) : t('events.select_payment_description_plural', { count: quantity })}
             </p>
 
             {/* Quantity Selector */}
