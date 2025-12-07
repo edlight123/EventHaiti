@@ -38,7 +38,7 @@ export function NotificationsClient({
       // Update local state
       setNotifications(prev => 
         prev.map(n => 
-          n.id === notificationId ? { ...n, isRead: true, readAt: new Date() } : n
+          n.id === notificationId ? { ...n, isRead: true, readAt: new Date().toISOString() } : n
         )
       )
       setUnreadCount(prev => Math.max(0, prev - 1))
@@ -54,7 +54,7 @@ export function NotificationsClient({
       
       // Update local state
       setNotifications(prev => 
-        prev.map(n => ({ ...n, isRead: true, readAt: new Date() }))
+        prev.map(n => ({ ...n, isRead: true, readAt: new Date().toISOString() }))
       )
       setUnreadCount(0)
     } catch (error) {
