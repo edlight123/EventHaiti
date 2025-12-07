@@ -233,10 +233,11 @@ export async function globalSearch(query: string) {
     const events = eventsSnapshot.docs
       .map((doc: any) => {
         const data = doc.data()
+        const startDateTime = data.startDateTime || data.start_datetime
         return {
           id: doc.id,
           title: data.title,
-          startDateTime: data.startDateTime || data.start_datetime,
+          startDateTime: startDateTime?.toDate ? startDateTime.toDate().toISOString() : startDateTime,
           ticketPrice: data.ticketPrice || data.ticket_price || data.price,
           currency: data.currency,
           city: data.city,
