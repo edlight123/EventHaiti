@@ -30,8 +30,8 @@ export async function getUserProfileServer(uid: string): Promise<UserProfile | n
         updates: data.notify?.updates ?? true,
         promos: data.notify?.promos ?? false
       },
-      createdAt: data.created_at?.toDate?.() || data.createdAt?.toDate?.() || new Date(),
-      updatedAt: data.updated_at?.toDate?.() || data.updatedAt?.toDate?.() || new Date()
+      createdAt: (data.created_at?.toDate?.() || data.createdAt?.toDate?.() || new Date()).toISOString(),
+      updatedAt: (data.updated_at?.toDate?.() || data.updatedAt?.toDate?.() || new Date()).toISOString()
     }
   } catch (error) {
     console.error('Error fetching user profile (server):', error)
