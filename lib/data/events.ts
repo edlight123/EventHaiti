@@ -69,8 +69,7 @@ export interface PaginatedResult<T> {
  * Get a single event by ID (server-side)
  * Cached for 60 seconds
  */
-export const getEventById = unstable_cache(
-  async (eventId: string): Promise<Event | null> => {
+export async function getEventById(eventId: string): Promise<Event | null> {
     try {
       const eventDoc = await adminDb.collection('events').doc(eventId).get()
       
@@ -102,20 +101,16 @@ export const getEventById = unstable_cache(
       console.error('Error fetching event:', error)
       return null
     }
-  },
-  ['event-by-id-v2'],
-  { revalidate: 60, tags: ['event'] }
-)
+}
 
 /**
  * Get events for discover page with filters and pagination (server-side)
  * Cached for 30 seconds
  */
-export const getDiscoverEvents = unstable_cache(
-  async (
-    filters: EventFilters = {},
-    pageSize: number = 20
-  ): Promise<Event[]> => {
+export async function getDiscoverEvents(
+  filters: EventFilters = {},
+  pageSize: number = 20
+): Promise<Event[]> {
     try {
       let queryRef = adminDb.collection('events')
         .where('is_published', '==', true)
@@ -177,10 +172,7 @@ export const getDiscoverEvents = unstable_cache(
       console.error('Error fetching discover events:', error)
       return []
     }
-  },
-  ['discover-events-v2'],
-  { revalidate: 30, tags: ['events', 'discover'] }
-)
+}
 
 /**
  * Get organizer's events with pagination (server-side)
