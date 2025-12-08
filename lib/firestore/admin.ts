@@ -132,13 +132,28 @@ export async function getRecentEvents(limit: number = 8) {
 
     return eventsSnapshot.docs.map((doc: any) => {
       const data = doc.data()
+      
+      // Safe date conversion helper
+      const toISOSafe = (dateValue: any): string => {
+        try {
+          if (!dateValue) return new Date().toISOString()
+          if (dateValue.toDate) return dateValue.toDate().toISOString()
+          if (typeof dateValue === 'string') return new Date(dateValue).toISOString()
+          if (dateValue instanceof Date) return dateValue.toISOString()
+          return new Date().toISOString()
+        } catch (error) {
+          console.error('Date conversion error:', error, dateValue)
+          return new Date().toISOString()
+        }
+      }
+      
       return {
         id: doc.id,
-        title: data.title,
-        startDateTime: (data.startDateTime?.toDate?.() || data.start_datetime?.toDate?.() || new Date(data.start_datetime || data.startDateTime)).toISOString(),
+        title: data.title || 'Untitled Event',
+        startDateTime: toISOSafe(data.startDateTime || data.start_datetime),
         ticketPrice: data.ticketPrice || data.ticket_price || data.price || 0,
         currency: data.currency || 'HTG',
-        createdAt: (data.createdAt?.toDate?.() || data.created_at?.toDate?.() || new Date(data.created_at || data.createdAt || Date.now())).toISOString(),
+        createdAt: toISOSafe(data.createdAt || data.created_at),
         isPublished: data.isPublished ?? data.is_published ?? data.status === 'published',
         city: data.city || '',
         commune: data.commune || '',

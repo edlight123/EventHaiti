@@ -81,13 +81,17 @@ export default async function AdminAnalyticsPage() {
           <p className="text-[13px] sm:text-base text-gray-600 mt-1 sm:mt-2">Platform insights and performance metrics</p>
         </div>
 
-        {/* Multi-Currency Revenue Analytics */}
+        {/* Multi-Currency Revenue Analytics - Client Component */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Revenue Analytics (Multi-Currency)</h2>
           <AdminRevenueAnalytics />
         </div>
 
         <div className="border-t border-gray-200 my-8"></div>
+
+        <div className="mb-6 sm:mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Platform Overview</h2>
+        </div>
 
         {/* Key Metrics */}
         <div className="flex overflow-x-auto gap-3 sm:gap-6 mb-6 sm:mb-8 pb-2 snap-x snap-mandatory lg:grid lg:grid-cols-4 scrollbar-hide">

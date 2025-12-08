@@ -5,7 +5,8 @@ import { AdminDashboardHeader } from '@/components/admin/AdminDashboardHeader'
 import { AdminKpiGrid } from '@/components/admin/AdminKpiGrid'
 import { WorkQueueCard } from '@/components/admin/WorkQueueCard'
 import { RecentActivityTimeline } from '@/components/admin/RecentActivityTimeline'
-import { ShieldCheck, AlertCircle, Calendar } from 'lucide-react'
+import { ShieldCheck, AlertCircle, Calendar, BarChart3 } from 'lucide-react'
+import Link from 'next/link'
 
 interface AdminDashboardClientProps {
   usersCount: number
@@ -49,6 +50,20 @@ export function AdminDashboardClient({
         refundsAmount7d={refundsAmount7d}
         pendingCount={pendingCount}
       />
+
+      {/* Quick Actions */}
+      <div className="mb-6 sm:mb-8">
+        <Link
+          href="/admin/analytics"
+          className="inline-flex items-center gap-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-3 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+        >
+          <BarChart3 className="w-5 h-5" />
+          <span className="font-semibold">View Revenue Analytics</span>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+      </div>
 
       {/* Work Queues */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
