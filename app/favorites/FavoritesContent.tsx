@@ -40,21 +40,22 @@ export default function FavoritesContent({ userId }: FavoritesContentProps) {
         const eventIds = favoritesSnapshot.docs.map(doc => doc.data().event_id)
         console.log('Favorite event IDs:', eventIds)
         
-        // Then fetch the actual events
+        // Then fetch the actual events (without status filter in query to avoid permission issues)
         const eventsRef = collection(db, 'events')
         const eventsQuery = query(
           eventsRef,
-          where(documentId(), 'in', eventIds),
-          where('status', '==', 'published')
+          where(documentId(), 'in', eventIds)
         )
         const eventsSnapshot = await getDocs(eventsQuery)
         
         console.log('Events query result:', { count: eventsSnapshot.size })
         
         if (!eventsSnapshot.empty) {
-          // Fetch organizer info for each event
+          // Fetch organizer info for each event and filter by status in JavaScript
           const eventsWithOrganizers = await Promise.all(
-            eventsSnapshot.docs.map(async (eventDoc) => {
+            eventsSnapshot.docs
+              .filter(doc => doc.data().status === 'published') // Filter published events in JS
+              .map(async (eventDoc) => {
               const eventData = eventDoc.data()
               
               // Fetch organizer info
