@@ -97,6 +97,28 @@ export default async function DiscoverPage({
                           filters.eventType !== 'all' ||
                           (!!searchQuery && searchQuery.trim() !== '')
 
+  // Serialize all event data before passing to client component
+  const serializeData = (obj: any): any => {
+    if (!obj || typeof obj !== 'object') return obj
+    if (obj.toDate && typeof obj.toDate === 'function') return obj.toDate().toISOString()
+    if (Array.isArray(obj)) return obj.map(serializeData)
+    
+    const serialized: any = {}
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        serialized[key] = serializeData(obj[key])
+      }
+    }
+    return serialized
+  }
+
+  const serializedFeaturedEvents = serializeData(featuredEvents)
+  const serializedUpcomingEvents = serializeData(upcomingEvents)
+  const serializedNearYouEvents = serializeData(nearYouEvents)
+  const serializedBudgetEvents = serializeData(budgetEvents)
+  const serializedOnlineEvents = serializeData(onlineEvents)
+  const serializedFilteredEvents = serializeData(filteredEvents)
+
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
@@ -113,12 +135,12 @@ export default async function DiscoverPage({
             currentDate={filters.date}
             selectedCategories={filters.categories}
             hasActiveFilters={hasActiveFilters}
-            featuredEvents={featuredEvents}
-            upcomingEvents={upcomingEvents}
-            nearYouEvents={nearYouEvents}
-            budgetEvents={budgetEvents}
-            onlineEvents={onlineEvents}
-            filteredEvents={filteredEvents}
+            featuredEvents={serializedFeaturedEvents}
+            upcomingEvents={serializedUpcomingEvents}
+            nearYouEvents={serializedNearYouEvents}
+            budgetEvents={serializedBudgetEvents}
+            onlineEvents={serializedOnlineEvents}
+            filteredEvents={serializedFilteredEvents}
             city={filters.city}
             commune={filters.commune}
           />
