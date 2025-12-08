@@ -129,7 +129,7 @@ export default function FeaturedCarousel({
             </Link>
             <Link href={`/events/${currentEvent.id}`}>
               <button className="px-5 py-2.5 sm:px-7 sm:py-3 bg-white/15 backdrop-blur-sm text-white text-sm sm:text-base font-semibold rounded-xl border border-white/30 hover:bg-white/25 transition-all duration-300">
-                {t('payout_banner.view_details')}
+                {t('details')}
               </button>
             </Link>
           </div>
