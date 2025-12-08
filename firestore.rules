@@ -74,6 +74,13 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && resource.data.user_id == request.auth.uid;
     }
     
+    // Event Favorites - users can read their own favorites and create new ones
+    match /event_favorites/{favoriteId} {
+      allow read: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.user_id == request.auth.uid;
+    }
+    
     // Reviews - authenticated users can create, authors can update/delete
     match /reviews/{reviewId} {
       allow read: if true;
