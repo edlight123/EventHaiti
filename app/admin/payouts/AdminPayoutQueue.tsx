@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import PayoutReceiptUpload from '@/components/admin/PayoutReceiptUpload'
 
 interface Payout {
   id: string
@@ -36,6 +37,7 @@ export default function AdminPayoutQueue({ initialPayouts }: AdminPayoutQueuePro
   const [declineReason, setDeclineReason] = useState('')
   const [paymentNotes, setPaymentNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
 
   const formatCurrency = (cents: number, currency: string = 'HTG') => {
     const symbol = currency === 'HTG' ? 'G ' : '$'
@@ -50,6 +52,7 @@ export default function AdminPayoutQueue({ initialPayouts }: AdminPayoutQueuePro
     setPaymentRef('')
     setDeclineReason('')
     setPaymentNotes('')
+    setReceiptUrl(null)
   }
 
   const closeModal = () => {
@@ -59,6 +62,7 @@ export default function AdminPayoutQueue({ initialPayouts }: AdminPayoutQueuePro
     setDeclineReason('')
     setPaymentNotes('')
     setError(null)
+    setReceiptUrl(null)
   }
 
   const handleApprove = async () => {
@@ -131,6 +135,11 @@ export default function AdminPayoutQueue({ initialPayouts }: AdminPayoutQueuePro
   const handleMarkPaid = async () => {
     if (!selectedPayout || !paymentRef.trim()) {
       setError('Payment reference ID is required')
+      return
+    }
+
+    if (!receiptUrl) {
+      setError('Please upload a payment receipt before marking as paid')
       return
     }
 
@@ -289,8 +298,8 @@ export default function AdminPayoutQueue({ initialPayouts }: AdminPayoutQueuePro
 
       {/* Modal */}
       {showModal && selectedPayout && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-lg w-full p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-2xl w-full p-6 my-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               {modalMode === 'approve' && 'Approve Payout'}
               {modalMode === 'decline' && 'Decline Payout'}
@@ -354,6 +363,15 @@ export default function AdminPayoutQueue({ initialPayouts }: AdminPayoutQueuePro
                     rows={2}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2"
                     placeholder="Additional notes about this payment..."
+                  />
+                </div>
+                
+                {/* Receipt Upload */}
+                <div className="mb-4">
+                  <PayoutReceiptUpload
+                    payoutId={selectedPayout.id}
+                    organizerId={selectedPayout.organizerId}
+                    onUploadComplete={(url) => setReceiptUrl(url)}
                   />
                 </div>
               </>

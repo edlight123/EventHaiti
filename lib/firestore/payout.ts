@@ -56,6 +56,11 @@ export interface Payout {
   paymentReferenceId?: string   // Admin enters after bank/MonCash transfer
   paymentMethod?: 'moncash' | 'natcash' | 'bank_transfer'  // Actual method used
   paymentNotes?: string         // Admin notes
+  
+  // NEW: Receipt confirmation (required for completed payouts)
+  receiptUrl?: string           // Firebase Storage URL to receipt image
+  receiptUploadedBy?: string    // Admin userId who uploaded receipt
+  receiptUploadedAt?: string    // Timestamp of receipt upload
 }
 
 const hasBankMethod = (config?: PayoutConfig | null) =>
