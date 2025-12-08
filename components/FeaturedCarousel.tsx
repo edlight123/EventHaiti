@@ -124,12 +124,12 @@ export default function FeaturedCarousel({
           <div className="flex items-center gap-2 sm:gap-3 pt-1 sm:pt-2">
             <Link href={`/events/${currentEvent.id}`}>
               <button className="px-5 py-2.5 sm:px-7 sm:py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white text-sm sm:text-base font-bold rounded-xl shadow-lg hover:shadow-xl hover:from-brand-600 hover:to-brand-700 transition-all duration-300 hover:scale-105 active:scale-95">
-                {t('get_tickets')}
+                {t('ticket.get_tickets')}
               </button>
             </Link>
             <Link href={`/events/${currentEvent.id}`}>
               <button className="px-5 py-2.5 sm:px-7 sm:py-3 bg-white/15 backdrop-blur-sm text-white text-sm sm:text-base font-semibold rounded-xl border border-white/30 hover:bg-white/25 transition-all duration-300">
-                {t('view_details')}
+                {t('payout_banner.view_details')}
               </button>
             </Link>
           </div>
