@@ -223,15 +223,33 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     isFavorite = await checkIsFavorite(user.id, id)
   }
 
+  // Serialize all data before passing to client component
+  const serializeData = (obj: any): any => {
+    if (!obj || typeof obj !== 'object') return obj
+    if (obj.toDate && typeof obj.toDate === 'function') return obj.toDate().toISOString()
+    if (Array.isArray(obj)) return obj.map(serializeData)
+    
+    const serialized: any = {}
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        serialized[key] = serializeData(obj[key])
+      }
+    }
+    return serialized
+  }
+
+  const serializedEvent = serializeData(event)
+  const serializedRelatedEvents = serializeData(relatedEvents)
+
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav md:pb-8">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
       <EventDetailsClient 
-        event={event}
+        event={serializedEvent}
         user={user}
         isFavorite={isFavorite}
         isFollowing={isFollowing}
-        relatedEvents={relatedEvents}
+        relatedEvents={serializedRelatedEvents}
       />
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
     </div>

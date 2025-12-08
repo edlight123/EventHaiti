@@ -77,6 +77,26 @@ export default async function HomePage({
                           filters.price !== 'any' || 
                           filters.eventType !== 'all'
 
+  // Serialize all data before passing to client components
+  const serializeData = (obj: any): any => {
+    if (!obj || typeof obj !== 'object') return obj
+    if (obj.toDate && typeof obj.toDate === 'function') return obj.toDate().toISOString()
+    if (Array.isArray(obj)) return obj.map(serializeData)
+    
+    const serialized: any = {}
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        serialized[key] = serializeData(obj[key])
+      }
+    }
+    return serialized
+  }
+
+  const serializedEvents = serializeData(events)
+  const serializedFeaturedEvents = serializeData(featuredEvents)
+  const serializedTrendingEvents = serializeData(trendingEvents)
+  const serializedUpcomingThisWeek = serializeData(upcomingThisWeek)
+
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
@@ -98,7 +118,7 @@ export default async function HomePage({
       {/* HERO: Featured Carousel OR Search Hero */}
       <HeroSection 
         hasActiveFilters={hasActiveFilters}
-        featuredEvents={featuredEvents}
+        featuredEvents={serializedFeaturedEvents}
         brandTagline={BRAND.tagline}
       />
 
@@ -113,9 +133,9 @@ export default async function HomePage({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
         <HomePageContent 
             hasActiveFilters={hasActiveFilters}
-            events={events}
-            trendingEvents={trendingEvents}
-            upcomingThisWeek={upcomingThisWeek}
+            events={serializedEvents}
+            trendingEvents={serializedTrendingEvents}
+            upcomingThisWeek={serializedUpcomingThisWeek}
           />
         </div>
       
