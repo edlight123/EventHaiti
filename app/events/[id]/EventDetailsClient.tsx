@@ -411,7 +411,6 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                         <FavoriteButton eventId={event.id} userId={user.id} initialIsFavorite={isFavorite} />
                       </div>
                       <div className="mt-3 pt-3 border-t border-gray-100">
-                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Share Event</h3>
                         <ShareButton eventId={event.id} eventTitle={event.title} />
                       </div>
                       {user.id !== event.organizer_id && (
