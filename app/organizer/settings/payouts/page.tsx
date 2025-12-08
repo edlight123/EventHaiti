@@ -2,6 +2,7 @@ import { adminAuth } from '@/lib/firebase/admin'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { getPayoutConfig, getPayoutHistory, getOrganizerBalance } from '@/lib/firestore/payout'
+import { serializeData } from '@/lib/utils/serialize'
 import { PayoutStatusHero } from '@/components/payout/PayoutStatusHero'
 import { BalanceRow } from '@/components/payout/BalanceRow'
 import { PayoutMethodCard } from '@/components/payout/PayoutMethodCard'
@@ -57,6 +58,10 @@ export default async function PayoutsSettingsPage() {
     role: 'organizer' as const,
   }
 
+  // Serialize data before passing to client components
+  const serializedConfig = serializeData(config)
+  const serializedPayouts = serializeData(payouts)
+
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={navbarUser} />
@@ -84,13 +89,13 @@ export default async function PayoutsSettingsPage() {
             {/* Left Column - Payout Method & Verification */}
             <div className="lg:col-span-2 space-y-8">
               <PayoutMethodCard
-                config={config}
+                config={serializedConfig}
                 onUpdate={refreshData}
               />
 
-              {hasMethod && <VerificationChecklist config={config} />}
+              {hasMethod && <VerificationChecklist config={serializedConfig} />}
 
-              {hasMethod && <PayoutHistory payouts={payouts} />}
+              {hasMethod && <PayoutHistory payouts={serializedPayouts} />}
             </div>
 
             {/* Right Column - Fees & Rules */}
