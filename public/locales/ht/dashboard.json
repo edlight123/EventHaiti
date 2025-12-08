@@ -7,9 +7,9 @@
     "favorites": "Favori",
     "next_event": "Pwochen: {{date}}",
     "no_upcoming": "Pa gen evènman k ap vini",
-    "active_tickets": "{{count}} {{count, plural, one {tikè aktif} other {tikè aktif}}}",
+    "active_tickets": "{{count}} tikè aktif",
     "no_tickets": "Poko gen tikè",
-    "saved_events": "{{count}} {{count, plural, one {evènman anrejistre} other {evènman anrejistre}}}",
+    "saved_events": "{{count}} evènman anrejistre",
     "no_favorites": "Poko gen favori"
   },
   "sections": {

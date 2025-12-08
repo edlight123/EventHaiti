@@ -7,9 +7,9 @@
     "favorites": "Favorites",
     "next_event": "Next: {{date}}",
     "no_upcoming": "No upcoming events",
-    "active_tickets": "{{count}} active {{count, plural, one {ticket} other {tickets}}}",
+    "active_tickets": "{{count}} active tickets",
     "no_tickets": "No tickets yet",
-    "saved_events": "{{count}} saved {{count, plural, one {event} other {events}}}",
+    "saved_events": "{{count}} saved events",
     "no_favorites": "No favorites yet"
   },
   "sections": {
