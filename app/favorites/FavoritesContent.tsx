@@ -45,7 +45,7 @@ export default function FavoritesContent({ userId }: FavoritesContentProps) {
         const eventsQuery = query(
           eventsRef,
           where(documentId(), 'in', eventIds),
-          where('is_published', '==', true)
+          where('status', '==', 'published')
         )
         const eventsSnapshot = await getDocs(eventsQuery)
         
