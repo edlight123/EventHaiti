@@ -12,6 +12,7 @@ import {
   getCategoryPopularity,
   getOrganizerRankings,
 } from '@/lib/admin-analytics'
+import { AdminRevenueAnalytics } from '@/components/admin/AdminRevenueAnalytics'
 
 export const revalidate = 120 // Cache for 2 minutes
 
@@ -79,6 +80,14 @@ export default async function AdminAnalyticsPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Analytics</h1>
           <p className="text-[13px] sm:text-base text-gray-600 mt-1 sm:mt-2">Platform insights and performance metrics</p>
         </div>
+
+        {/* Multi-Currency Revenue Analytics */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Revenue Analytics (Multi-Currency)</h2>
+          <AdminRevenueAnalytics />
+        </div>
+
+        <div className="border-t border-gray-200 my-8"></div>
 
         {/* Key Metrics */}
         <div className="flex overflow-x-auto gap-3 sm:gap-6 mb-6 sm:mb-8 pb-2 snap-x snap-mandatory lg:grid lg:grid-cols-4 scrollbar-hide">
