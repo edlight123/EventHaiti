@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Calendar, MapPin, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import Badge from './ui/Badge';
 
 interface Event {
@@ -29,6 +30,7 @@ export default function FeaturedCarousel({
   events, 
   autoPlayInterval = 5000 
 }: FeaturedCarouselProps) {
+  const { t } = useTranslation('common');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
@@ -122,12 +124,12 @@ export default function FeaturedCarousel({
           <div className="flex items-center gap-2 sm:gap-3 pt-1 sm:pt-2">
             <Link href={`/events/${currentEvent.id}`}>
               <button className="px-5 py-2.5 sm:px-7 sm:py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white text-sm sm:text-base font-bold rounded-xl shadow-lg hover:shadow-xl hover:from-brand-600 hover:to-brand-700 transition-all duration-300 hover:scale-105 active:scale-95">
-                Get Tickets
+                {t('get_tickets')}
               </button>
             </Link>
             <Link href={`/events/${currentEvent.id}`}>
               <button className="px-5 py-2.5 sm:px-7 sm:py-3 bg-white/15 backdrop-blur-sm text-white text-sm sm:text-base font-semibold rounded-xl border border-white/30 hover:bg-white/25 transition-all duration-300">
-                Details
+                {t('view_details')}
               </button>
             </Link>
           </div>
