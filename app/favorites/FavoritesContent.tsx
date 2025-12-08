@@ -40,29 +40,38 @@ export default function FavoritesContent({ userId }: FavoritesContentProps) {
         const eventIds = favoritesSnapshot.docs.map(doc => doc.data().event_id)
         console.log('Favorite event IDs:', eventIds)
         
-        // Then fetch the actual events (without status filter in query to avoid permission issues)
-        const eventsRef = collection(db, 'events')
-        const eventsQuery = query(
-          eventsRef,
-          where(documentId(), 'in', eventIds)
-        )
-        const eventsSnapshot = await getDocs(eventsQuery)
+        if (eventIds.length === 0) {
+          setFavoriteEvents([])
+          return
+        }
         
-        console.log('Events query result:', { count: eventsSnapshot.size })
-        console.log('Raw events data:', eventsSnapshot.docs.map(doc => ({ id: doc.id, data: doc.data() })))
+        // Firestore 'in' queries support up to 10 items, but let's batch to be safe
+        // Also, some events might not exist anymore, so we handle that gracefully
+        const batchSize = 10
+        const eventBatches = []
+        for (let i = 0; i < eventIds.length; i += batchSize) {
+          eventBatches.push(eventIds.slice(i, i + batchSize))
+        }
         
-        if (!eventsSnapshot.empty) {
-          // Fetch organizer info for each event and filter by status in JavaScript
-          const publishedDocs = eventsSnapshot.docs.filter(doc => {
-            const status = doc.data().status
-            console.log(`Event ${doc.id} status:`, status)
-            return status === 'published'
-          })
-          
-          console.log('Published events count:', publishedDocs.length)
-          
+        const allEvents = []
+        for (const batch of eventBatches) {
+          const eventsRef = collection(db, 'events')
+          const eventsQuery = query(
+            eventsRef,
+            where(documentId(), 'in', batch)
+          )
+          const eventsSnapshot = await getDocs(eventsQuery)
+          allEvents.push(...eventsSnapshot.docs)
+        }
+        
+        console.log('Events query result:', { count: allEvents.length })
+        console.log('Raw events data:', allEvents.map(doc => ({ id: doc.id, status: doc.data().status, is_published: doc.data().is_published })))
+        
+        if (allEvents.length > 0) {
+          // Fetch organizer info for each event
+          // Note: Not filtering by status since events may use is_published instead
           const eventsWithOrganizers = await Promise.all(
-            publishedDocs.map(async (eventDoc) => {
+            allEvents.map(async (eventDoc) => {
               const eventData = eventDoc.data()
               
               // Fetch organizer info
@@ -108,6 +117,7 @@ export default function FavoritesContent({ userId }: FavoritesContentProps) {
           console.log('Final events with organizers:', eventsWithOrganizers.length)
           setFavoriteEvents(eventsWithOrganizers)
         } else {
+          console.log('No events found for favorite IDs')
           setFavoriteEvents([])
         }
       } else {
