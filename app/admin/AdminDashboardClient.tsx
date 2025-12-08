@@ -58,7 +58,7 @@ export function AdminDashboardClient({
           className="inline-flex items-center gap-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-3 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
         >
           <BarChart3 className="w-5 h-5" />
-          <span className="font-semibold">View Revenue Analytics</span>
+          <span className="font-semibold">{t('disbursements.view_revenue_analytics')}</span>
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
@@ -69,7 +69,7 @@ export function AdminDashboardClient({
           className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
         >
           <Calendar className="w-5 h-5" />
-          <span className="font-semibold">Event Disbursements</span>
+          <span className="font-semibold">{t('disbursements.event_disbursements')}</span>
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
