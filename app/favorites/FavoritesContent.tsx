@@ -49,13 +49,20 @@ export default function FavoritesContent({ userId }: FavoritesContentProps) {
         const eventsSnapshot = await getDocs(eventsQuery)
         
         console.log('Events query result:', { count: eventsSnapshot.size })
+        console.log('Raw events data:', eventsSnapshot.docs.map(doc => ({ id: doc.id, data: doc.data() })))
         
         if (!eventsSnapshot.empty) {
           // Fetch organizer info for each event and filter by status in JavaScript
+          const publishedDocs = eventsSnapshot.docs.filter(doc => {
+            const status = doc.data().status
+            console.log(`Event ${doc.id} status:`, status)
+            return status === 'published'
+          })
+          
+          console.log('Published events count:', publishedDocs.length)
+          
           const eventsWithOrganizers = await Promise.all(
-            eventsSnapshot.docs
-              .filter(doc => doc.data().status === 'published') // Filter published events in JS
-              .map(async (eventDoc) => {
+            publishedDocs.map(async (eventDoc) => {
               const eventData = eventDoc.data()
               
               // Fetch organizer info
@@ -98,6 +105,7 @@ export default function FavoritesContent({ userId }: FavoritesContentProps) {
               } as Event
             })
           )
+          console.log('Final events with organizers:', eventsWithOrganizers.length)
           setFavoriteEvents(eventsWithOrganizers)
         } else {
           setFavoriteEvents([])
