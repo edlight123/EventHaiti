@@ -129,9 +129,9 @@ export default function FilterPanel({
           <div className="flex items-center gap-3">
             <SlidersHorizontal className="w-5 h-5 text-gray-700" />
             <div>
-              <h2 className="text-lg font-bold text-gray-900">{t('filters')}</h2>
+              <h2 className="text-lg font-bold text-gray-900">{t('filters.filters')}</h2>
               {activeCount > 0 && (
-                <p className="text-xs text-gray-500">{activeCount} {t('active')} {t('filter')}{activeCount !== 1 ? 's' : ''}</p>
+                <p className="text-xs text-gray-500">{activeCount} {t('filters.active')} {t('filter')}{activeCount !== 1 ? 's' : ''}</p>
               )}
             </div>
           </div>
@@ -323,14 +323,14 @@ export default function FilterPanel({
             disabled={!hasChanges && activeCount === 0}
             className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {t('reset')}
+            {t('filters.reset')}
           </button>
           <button
             onClick={onApply}
             disabled={!hasChanges}
             className="flex-1 px-4 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white font-semibold rounded-xl hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
           >
-            {t('apply_filters')}
+            {t('filters.apply_filters')}
           </button>
         </div>
       </div>

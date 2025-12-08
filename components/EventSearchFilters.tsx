@@ -21,7 +21,7 @@ export default function EventSearchFilters({ filters, onOpenFilters }: EventSear
         className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 hover:border-brand-300 rounded-xl transition-all shadow-sm hover:shadow-md font-medium text-gray-700 hover:text-brand-700"
       >
         <SlidersHorizontal className="w-5 h-5" />
-        <span>{t('filters')}</span>
+        <span>{t('filters.filters')}</span>
         {activeCount > 0 && (
           <span className="ml-1 px-2 py-0.5 bg-brand-500 text-white text-xs font-bold rounded-full">
             {activeCount}
