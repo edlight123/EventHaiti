@@ -13,6 +13,7 @@ import SignupScreen from '../screens/auth/SignupScreen';
 // Main Screens
 import HomeScreen from '../screens/HomeScreen';
 import DiscoverScreen from '../screens/DiscoverScreen';
+import FavoritesScreen from '../screens/FavoritesScreen';
 import TicketsScreen from '../screens/TicketsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
@@ -35,6 +36,7 @@ export type AuthStackParamList = {
 export type MainTabParamList = {
   Home: undefined;
   Discover: undefined;
+  Favorites: undefined;
   Tickets: undefined;
   Profile: undefined;
 };
@@ -63,6 +65,8 @@ function MainTabNavigator() {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Discover') {
             iconName = focused ? 'search' : 'search-outline';
+          } else if (route.name === 'Favorites') {
+            iconName = focused ? 'heart' : 'heart-outline';
           } else if (route.name === 'Tickets') {
             iconName = focused ? 'ticket' : 'ticket-outline';
           } else if (route.name === 'Profile') {
@@ -78,6 +82,7 @@ function MainTabNavigator() {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Discover" component={DiscoverScreen} />
+      <Tab.Screen name="Favorites" component={FavoritesScreen} />
       <Tab.Screen name="Tickets" component={TicketsScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>

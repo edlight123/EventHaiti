@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Alert
 } from 'react-native';
-import { doc, getDoc, collection, addDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, Timestamp, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { COLORS } from '../config/brand';
@@ -21,9 +21,12 @@ export default function EventDetailScreen({ route, navigation }: any) {
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
 
   useEffect(() => {
     fetchEventDetails();
+    checkFavoriteStatus();
   }, [eventId]);
 
   const fetchEventDetails = async () => {
@@ -37,6 +40,61 @@ export default function EventDetailScreen({ route, navigation }: any) {
       Alert.alert('Error', 'Failed to load event details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkFavoriteStatus = async () => {
+    if (!user) return;
+    
+    try {
+      const q = query(
+        collection(db, 'event_favorites'),
+        where('user_id', '==', user.uid),
+        where('event_id', '==', eventId)
+      );
+      const snapshot = await getDocs(q);
+      setIsFavorite(!snapshot.empty);
+    } catch (error) {
+      console.error('Error checking favorite status:', error);
+    }
+  };
+
+  const toggleFavorite = async () => {
+    if (!user) {
+      Alert.alert('Login Required', 'Please login to save favorites');
+      return;
+    }
+
+    setFavoriteLoading(true);
+    try {
+      if (isFavorite) {
+        // Remove from favorites
+        const q = query(
+          collection(db, 'event_favorites'),
+          where('user_id', '==', user.uid),
+          where('event_id', '==', eventId)
+        );
+        const snapshot = await getDocs(q);
+        snapshot.docs.forEach(async (docSnapshot) => {
+          await deleteDoc(doc(db, 'event_favorites', docSnapshot.id));
+        });
+        setIsFavorite(false);
+        Alert.alert('Removed', 'Event removed from favorites');
+      } else {
+        // Add to favorites
+        await addDoc(collection(db, 'event_favorites'), {
+          user_id: user.uid,
+          event_id: eventId,
+          created_at: Timestamp.now()
+        });
+        setIsFavorite(true);
+        Alert.alert('Saved!', 'Event added to favorites');
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      Alert.alert('Error', 'Failed to update favorites');
+    } finally {
+      setFavoriteLoading(false);
     }
   };
 
@@ -117,7 +175,16 @@ export default function EventDetailScreen({ route, navigation }: any) {
       )}
 
       <View style={styles.content}>
-        <Text style={styles.title}>{event.title}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>{event.title}</Text>
+          <TouchableOpacity
+            style={styles.favoriteButton}
+            onPress={toggleFavorite}
+            disabled={favoriteLoading}
+          >
+            <Text style={styles.favoriteIcon}>{isFavorite ? '❤️' : '🤍'}</Text>
+          </TouchableOpacity>
+        </View>
         
         <View style={styles.infoSection}>
           <Text style={styles.infoLabel}>📅 Date & Time</Text>
@@ -204,11 +271,36 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: 20,
+    flex: 1,
+    marginRight: 12,
+  },
+  favoriteButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  favoriteIcon: {
+    fontSize: 24,
   },
   infoSection: {
     marginBottom: 24,
