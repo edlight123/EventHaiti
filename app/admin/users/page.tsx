@@ -38,8 +38,22 @@ export default async function AdminUsersPage() {
 
   const allUsers = usersResult.data
   
+  // Serialize all data to ensure no Firestore objects are passed to client
+  const serializedUsers = allUsers.map((u: any) => ({
+    id: u.id || '',
+    email: u.email || '',
+    full_name: u.full_name || '',
+    phone_number: u.phone_number || '',
+    role: u.role || 'attendee',
+    is_verified: Boolean(u.is_verified),
+    verification_status: u.verification_status || 'none',
+    is_organizer: Boolean(u.is_organizer),
+    created_at: typeof u.created_at === 'string' ? u.created_at : u.created_at?.toISOString?.() || new Date().toISOString(),
+    updated_at: typeof u.updated_at === 'string' ? u.updated_at : u.updated_at?.toISOString?.() || new Date().toISOString(),
+  }))
+  
   // Pre-compute admin status for each user to avoid issues with module-level constants
-  const usersWithAdminFlag = allUsers.map((u: any) => ({
+  const usersWithAdminFlag = serializedUsers.map((u: any) => ({
     ...u,
     isAdminUser: ADMIN_EMAILS.includes(u.email || '')
   }))
