@@ -12,6 +12,7 @@ import {
   hasSubdivisions 
 } from '@/lib/filters/config'
 import { countActiveFilters, filtersEqual } from '@/lib/filters/utils'
+import { useTranslation } from 'react-i18next'
 
 interface FilterPanelProps {
   isOpen: boolean
@@ -32,6 +33,7 @@ export default function FilterPanel({
   onApply,
   onReset
 }: FilterPanelProps) {
+  const { t } = useTranslation('common')
   const [showDatePicker, setShowDatePicker] = useState(draftFilters.date === 'pick-date')
   
   useEffect(() => {
@@ -127,9 +129,9 @@ export default function FilterPanel({
           <div className="flex items-center gap-3">
             <SlidersHorizontal className="w-5 h-5 text-gray-700" />
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Filters</h2>
+              <h2 className="text-lg font-bold text-gray-900">{t('filters')}</h2>
               {activeCount > 0 && (
-                <p className="text-xs text-gray-500">{activeCount} active filter{activeCount !== 1 ? 's' : ''}</p>
+                <p className="text-xs text-gray-500">{activeCount} {t('active')} {t('filter')}{activeCount !== 1 ? 's' : ''}</p>
               )}
             </div>
           </div>
@@ -148,16 +150,16 @@ export default function FilterPanel({
           {/* Date Filter */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-3">
-              Date
+              {t('filters.date')}
             </label>
             <div className="space-y-2">
               {[
-                { value: 'any', label: 'Any date' },
-                { value: 'today', label: 'Today' },
-                { value: 'tomorrow', label: 'Tomorrow' },
-                { value: 'this-week', label: 'This week' },
-                { value: 'this-weekend', label: 'This weekend' },
-                { value: 'pick-date', label: 'Pick a date' }
+                { value: 'any', label: t('filters.any_date') },
+                { value: 'today', label: t('filters.today') },
+                { value: 'tomorrow', label: t('filters.tomorrow') },
+                { value: 'this-week', label: t('filters.this_week') },
+                { value: 'this-weekend', label: t('filters.this_weekend') },
+                { value: 'pick-date', label: t('filters.pick_date') }
               ].map(option => (
                 <label key={option.value} className="flex items-center gap-3 cursor-pointer">
                   <input
@@ -186,14 +188,14 @@ export default function FilterPanel({
           {/* Location Filter */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-3">
-              Location
+              {t('filters.location')}
             </label>
             <select
               value={draftFilters.city}
               onChange={(e) => handleFieldChange('city', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
             >
-              <option value="">All cities</option>
+              <option value="">{t('filters.all_cities')}</option>
               {CITIES.map(city => (
                 <option key={city} value={city}>{city}</option>
               ))}
@@ -205,7 +207,7 @@ export default function FilterPanel({
                 onChange={(e) => handleFieldChange('commune', e.target.value || undefined)}
                 className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
               >
-                <option value="">All {locationLabel.toLowerCase()}s</option>
+                <option value="">{t('filters.all_areas')}</option>
                 {subdivisions.map(sub => (
                   <option key={sub} value={sub}>{sub}</option>
                 ))}
@@ -216,7 +218,7 @@ export default function FilterPanel({
           {/* Category Filter */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-3">
-              Category
+              {t('filters.categories')}
             </label>
             <div className="grid grid-cols-2 gap-2">
               {CATEGORIES.map(category => {
@@ -243,7 +245,7 @@ export default function FilterPanel({
           {/* Price Filter */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-3">
-              Ticket price
+              {t('filters.price')}
             </label>
             <div className="space-y-2">
               {PRICE_FILTERS.map(option => (
@@ -265,13 +267,13 @@ export default function FilterPanel({
           {/* Event Type Filter */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-3">
-              Event type
+              {t('filters.event_type')}
             </label>
             <div className="space-y-2">
               {[
-                { value: 'all', label: 'All events' },
-                { value: 'in-person', label: 'In-person only' },
-                { value: 'online', label: 'Online only' }
+                { value: 'all', label: t('filters.all') },
+                { value: 'in-person', label: t('filters.in_person') },
+                { value: 'online', label: t('filters.online') }
               ].map(option => (
                 <label key={option.value} className="flex items-center gap-3 cursor-pointer">
                   <input
@@ -291,7 +293,7 @@ export default function FilterPanel({
           {/* Sort Filter */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-3">
-              Sort by
+              {t('sort')}
             </label>
             <div className="space-y-2">
               {[
@@ -321,14 +323,14 @@ export default function FilterPanel({
             disabled={!hasChanges && activeCount === 0}
             className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            Reset
+            {t('reset')}
           </button>
           <button
             onClick={onApply}
             disabled={!hasChanges}
             className="flex-1 px-4 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white font-semibold rounded-xl hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
           >
-            Apply Filters
+            {t('apply_filters')}
           </button>
         </div>
       </div>
