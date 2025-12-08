@@ -97,6 +97,30 @@ service cloud.firestore {
       allow delete: if false; // Only allow deletion server-side via Admin SDK
     }
     
+    // Organizers collection - organizers can read/write their own data
+    match /organizers/{organizerId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(organizerId);
+      
+      // Payout config subcollection
+      match /payoutConfig/{configId} {
+        allow read: if isOwner(organizerId);
+        allow write: if isOwner(organizerId);
+      }
+      
+      // Verification documents subcollection
+      match /verificationDocuments/{docId} {
+        allow read: if isOwner(organizerId);
+        allow write: if isOwner(organizerId);
+      }
+    }
+    
+    // Admin actions log - read-only for admins (writes via server)
+    match /admin_actions/{actionId} {
+      allow read: if false; // Admin reads via server SDK only
+      allow write: if false; // Only server-side writes
+    }
+    
     // Default deny for everything else
     match /{document=**} {
       allow read, write: if false;

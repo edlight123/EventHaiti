@@ -64,7 +64,13 @@ export default function AdminUsersClient({ counts, usersWithAdminFlag, promoteTo
                   <div key={u.id} className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="min-w-0">
-                        <div className="text-sm font-medium text-gray-900 truncate">{u.full_name || 'No name'}</div>
+                        {u.role === 'organizer' ? (
+                          <Link href={`/admin/organizers/${u.id}`} className="text-sm font-medium text-teal-600 hover:text-teal-700 truncate block">
+                            {u.full_name || 'No name'}
+                          </Link>
+                        ) : (
+                          <div className="text-sm font-medium text-gray-900 truncate">{u.full_name || 'No name'}</div>
+                        )}
                         <div className="text-[13px] text-gray-500 truncate">{u.email}</div>
                         {u.isAdminUser && (
                           <div className="text-[11px] text-orange-600 font-semibold mt-0.5">{t('users.admin')}</div>
@@ -131,7 +137,13 @@ export default function AdminUsersClient({ counts, usersWithAdminFlag, promoteTo
                       <tr key={u.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
                           <div className="min-w-0">
-                            <div className="text-sm font-medium text-gray-900 truncate">{u.full_name || 'No name'}</div>
+                            {u.role === 'organizer' ? (
+                              <Link href={`/admin/organizers/${u.id}`} className="text-sm font-medium text-teal-600 hover:text-teal-700 truncate block">
+                                {u.full_name || 'No name'}
+                              </Link>
+                            ) : (
+                              <div className="text-sm font-medium text-gray-900 truncate">{u.full_name || 'No name'}</div>
+                            )}
                             <div className="text-[13px] text-gray-500 truncate">{u.email}</div>
                             {u.isAdminUser && (
                               <div className="text-[11px] text-orange-600 font-semibold mt-0.5">{t('users.admin')}</div>
