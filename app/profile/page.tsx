@@ -47,13 +47,30 @@ export default async function ProfilePage() {
 
   const isVerifiedOrganizer = profile.verificationStatus === 'approved'
 
+  // Serialize all data before passing to client component
+  const serializeData = (obj: any): any => {
+    if (!obj || typeof obj !== 'object') return obj
+    if (obj.toDate && typeof obj.toDate === 'function') return obj.toDate().toISOString()
+    if (Array.isArray(obj)) return obj.map(serializeData)
+    
+    const serialized: any = {}
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        serialized[key] = serializeData(obj[key])
+      }
+    }
+    return serialized
+  }
+
+  const serializedProfile = serializeData(profile)
+
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
       <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6 md:py-8">
         <ProfileClient 
-          initialProfile={profile} 
+          initialProfile={serializedProfile} 
           userId={user.id}
           isVerifiedOrganizer={isVerifiedOrganizer}
         />

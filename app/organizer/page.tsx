@@ -130,19 +130,38 @@ export default async function OrganizerDashboard() {
     }
   }
 
+  // Serialize all data before passing to client component
+  const serializeData = (obj: any): any => {
+    if (!obj || typeof obj !== 'object') return obj
+    if (obj.toDate && typeof obj.toDate === 'function') return obj.toDate().toISOString()
+    if (Array.isArray(obj)) return obj.map(serializeData)
+    
+    const serialized: any = {}
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        serialized[key] = serializeData(obj[key])
+      }
+    }
+    return serialized
+  }
+
+  const serializedNextEvent = serializeData(nextEvent)
+  const serializedEvents = serializeData(currentStats.events)
+  const serializedTickets = serializeData(currentStats.tickets)
+
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
       <OrganizerDashboardClient
-        nextEvent={nextEvent}
+        nextEvent={serializedNextEvent}
         alerts={alerts}
         hasPayoutSetup={hasPayoutSetup}
         payoutWidgetStatus={payoutWidgetStatus}
         pendingBalance={balanceData.pending}
         salesData={salesData}
-        events={currentStats.events}
-        tickets={currentStats.tickets}
+        events={serializedEvents}
+        tickets={serializedTickets}
       />
 
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />

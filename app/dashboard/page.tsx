@@ -91,17 +91,37 @@ export default async function DashboardPage() {
     })
   }
 
+  // Serialize all data before passing to client component
+  const serializeData = (obj: any): any => {
+    if (!obj || typeof obj !== 'object') return obj
+    if (obj.toDate && typeof obj.toDate === 'function') return obj.toDate().toISOString()
+    if (Array.isArray(obj)) return obj.map(serializeData)
+    
+    const serialized: any = {}
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        serialized[key] = serializeData(obj[key])
+      }
+    }
+    return serialized
+  }
+
+  const serializedNextEvent = serializeData(nextEvent)
+  const serializedAllUpcomingEvents = serializeData(allUpcomingEvents)
+  const serializedTicketPreviews = serializeData(ticketPreviews)
+  const serializedFavoriteEvents = serializeData(favoriteEvents)
+
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
       <DashboardClient
         userName={user.full_name?.split(' ')[0] || 'there'}
-        nextEvent={nextEvent}
-        allUpcomingEvents={allUpcomingEvents}
+        nextEvent={serializedNextEvent}
+        allUpcomingEvents={serializedAllUpcomingEvents}
         totalTickets={totalTickets}
-        ticketPreviews={ticketPreviews}
-        favoriteEvents={favoriteEvents}
+        ticketPreviews={serializedTicketPreviews}
+        favoriteEvents={serializedFavoriteEvents}
       />
 
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />

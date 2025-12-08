@@ -47,6 +47,25 @@ export default async function AdminDashboard() {
   const { usersCount, eventsCount, ticketsCount, pendingVerifications: pendingCount } = platformCounts
   const { gmv7d, tickets7d, refunds7d, refundsAmount7d } = metrics7d
 
+  // Serialize all data before passing to client component
+  const serializeData = (obj: any): any => {
+    if (!obj || typeof obj !== 'object') return obj
+    if (obj.toDate && typeof obj.toDate === 'function') return obj.toDate().toISOString()
+    if (Array.isArray(obj)) return obj.map(serializeData)
+    
+    const serialized: any = {}
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        serialized[key] = serializeData(obj[key])
+      }
+    }
+    return serialized
+  }
+
+  const serializedPendingVerifications = serializeData(pendingVerifications)
+  const serializedRecentEvents = serializeData(recentEvents)
+  const serializedRecentActivities = serializeData(recentActivities)
+
   return (
     
       <div className="min-h-screen bg-gray-50 pb-mobile-nav">
@@ -63,9 +82,9 @@ export default async function AdminDashboard() {
           refunds7d={refunds7d}
           refundsAmount7d={refundsAmount7d}
           pendingCount={pendingCount}
-          pendingVerifications={pendingVerifications}
-          recentEvents={recentEvents}
-          recentActivities={recentActivities}
+          pendingVerifications={serializedPendingVerifications}
+          recentEvents={serializedRecentEvents}
+          recentActivities={serializedRecentActivities}
         />
       
       <MobileNavWrapper user={user} isAdmin={true} />
