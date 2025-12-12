@@ -53,7 +53,6 @@ async function getAccessToken(): Promise<string> {
     headers: {
       'Authorization': `Basic ${credentials}`,
       'Content-Type': 'application/x-www-form-urlencoded',
-      'Accept': 'application/json',
     },
     body: 'scope=read,write&grant_type=client_credentials',
   })
@@ -107,7 +106,6 @@ export async function createMonCashPayment({
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
       },
       body: JSON.stringify({
         amount: amount.toFixed(2),
