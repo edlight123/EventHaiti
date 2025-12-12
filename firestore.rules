@@ -34,7 +34,13 @@ service cloud.firestore {
     match /events/{eventId} {
       allow read: if true; // Public events are readable by everyone
       allow create: if isSignedIn();
-      allow update, delete: if isSignedIn() && resource.data.organizer_id == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.organizer_id == request.auth.uid ||
+        // Allow updating only tickets_sold field for ticket purchases
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tickets_sold']) &&
+         request.resource.data.tickets_sold > resource.data.tickets_sold)
+      );
+      allow delete: if isSignedIn() && resource.data.organizer_id == request.auth.uid;
       
       // Event updates subcollection
       match /updates/{updateId} {
@@ -47,17 +53,26 @@ service cloud.firestore {
     match /tickets/{ticketId} {
       allow read: if isSignedIn() && (
         resource.data.attendee_id == request.auth.uid ||
+        resource.data.user_id == request.auth.uid ||
         get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid
       );
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (
         resource.data.attendee_id == request.auth.uid ||
+        resource.data.user_id == request.auth.uid ||
         get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid
       );
     }
     
     // Ticket tiers - public read, organizers can manage their event's tiers
     match /ticket_tiers/{tierId} {
+      allow read: if true; // Public read for event browsing
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid;
+    }
+    
+    // Group discounts - public read, organizers can manage their event's discounts
+    match /group_discounts/{discountId} {
       allow read: if true; // Public read for event browsing
       allow create: if isSignedIn();
       allow update, delete: if isSignedIn() && get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid;
@@ -113,6 +128,13 @@ service cloud.firestore {
         allow read: if isOwner(organizerId);
         allow write: if isOwner(organizerId);
       }
+    }
+    
+    // Organizer followers - users can read all, authenticated users can follow/unfollow
+    match /organizer_followers/{followId} {
+      allow read: if true; // Anyone can see follower counts
+      allow create: if isSignedIn() && request.resource.data.follower_id == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.follower_id == request.auth.uid;
     }
     
     // Admin actions log - read-only for admins (writes via server)
