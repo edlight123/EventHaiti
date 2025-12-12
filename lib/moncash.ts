@@ -141,9 +141,8 @@ export async function createMonCashPayment({
     }
 
     // Construct redirect URL: GATEWAY_BASE + /Payment/Redirect?token=<payment-token>
-    const gatewayBaseUrl = baseUrl.replace('sandbox.moncashbutton', 'sandbox.moncash')
-                                  .replace('moncashbutton', 'moncash')
-    const paymentUrl = `${gatewayBaseUrl}/Payment/Redirect?token=${data.payment_token.token}`
+    // Gateway uses the same base URL as the API
+    const paymentUrl = `${baseUrl}/Payment/Redirect?token=${data.payment_token.token}`
 
     console.log('[MonCash] Payment created successfully:', { 
       token: data.payment_token.token.substring(0, 20) + '...',
