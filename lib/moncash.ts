@@ -100,6 +100,13 @@ export async function createMonCashPayment({
     const baseUrl = getMonCashBaseUrl()
 
     console.log('[MonCash] Creating payment:', { amount, orderId, baseUrl })
+    console.log('[MonCash] Token (first 20 chars):', token.substring(0, 20) + '...')
+
+    const payload = {
+      amount: parseInt(amount.toFixed(2)),
+      orderId,
+    }
+    console.log('[MonCash] Payment payload:', JSON.stringify(payload))
 
     const response = await fetch(`${baseUrl}/Api/v1/CreatePayment`, {
       method: 'POST',
@@ -107,13 +114,11 @@ export async function createMonCashPayment({
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        amount: amount.toFixed(2),
-        orderId,
-      }),
+      body: JSON.stringify(payload),
     })
 
     console.log('[MonCash] Payment response status:', response.status)
+    console.log('[MonCash] Payment response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())))
 
     if (!response.ok) {
       const error = await response.text()
