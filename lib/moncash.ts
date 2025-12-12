@@ -84,10 +84,15 @@ interface CreatePaymentParams {
 }
 
 interface MonCashPaymentResponse {
-  payment_token: string
+  payment_token: {
+    token: string
+    created: string
+    expired: string
+  }
   mode: string
   path: string
-  status: string
+  status: number
+  timestamp: number
 }
 
 export async function createMonCashPayment({ 
@@ -108,9 +113,10 @@ export async function createMonCashPayment({
     }
     console.log('[MonCash] Payment payload:', JSON.stringify(payload))
 
-    const response = await fetch(`${baseUrl}/Api/v1/CreatePayment`, {
+    const response = await fetch(`${baseUrl}/v1/CreatePayment`, {
       method: 'POST',
       headers: {
+        'Accept': 'application/json',
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
@@ -126,12 +132,27 @@ export async function createMonCashPayment({
       throw new Error(`MonCash payment creation failed: ${error}`)
     }
 
-    const data: MonCashPaymentResponse = await response.json()
-    console.log('[MonCash] Payment created:', { transactionId: data.payment_token })
+    const data = await response.json()
+    console.log('[MonCash] Payment response:', JSON.stringify(data))
+
+    // Check if status is 202 (accepted) as per documentation
+    if (data.status !== 202) {
+      throw new Error(`MonCash returned unexpected status: ${data.status}`)
+    }
+
+    // Construct redirect URL: GATEWAY_BASE + /Payment/Redirect?token=<payment-token>
+    const gatewayBaseUrl = baseUrl.replace('sandbox.moncashbutton', 'sandbox.moncash')
+                                  .replace('moncashbutton', 'moncash')
+    const paymentUrl = `${gatewayBaseUrl}/Payment/Redirect?token=${data.payment_token.token}`
+
+    console.log('[MonCash] Payment created successfully:', { 
+      token: data.payment_token.token.substring(0, 20) + '...',
+      paymentUrl 
+    })
 
     return {
-      paymentUrl: `${baseUrl}${data.path}`,
-      transactionId: data.payment_token,
+      paymentUrl,
+      transactionId: data.payment_token.token,
     }
   } catch (error: any) {
     console.error('MonCash payment error:', error)
@@ -155,13 +176,15 @@ export async function getTransactionDetails(
     const baseUrl = getMonCashBaseUrl()
 
     const response = await fetch(
-      `${baseUrl}/Api/v1/RetrieveTransactionPayment?transactionId=${transactionId}`,
+      `${baseUrl}/v1/RetrieveTransactionPayment`,
       {
-        method: 'GET',
+        method: 'POST',
         headers: {
+          'Accept': 'application/json',
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ transactionId }),
       }
     )
 
@@ -170,8 +193,8 @@ export async function getTransactionDetails(
       throw new Error(`Failed to retrieve transaction: ${error}`)
     }
 
-    const data: MonCashTransactionDetails = await response.json()
-    return data
+    const data = await response.json()
+    return data.payment
   } catch (error: any) {
     console.error('MonCash transaction retrieval error:', error)
     throw error
