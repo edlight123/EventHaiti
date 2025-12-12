@@ -134,21 +134,31 @@ export async function createMonCashPayment({
 
     const data = await response.json()
     console.log('[MonCash] Payment response:', JSON.stringify(data))
+    console.log('[MonCash] Full response data:', { 
+      path: data.path,
+      status: data.status,
+      mode: data.mode,
+      timestamp: data.timestamp,
+      payment_token: data.payment_token 
+    })
 
     // Check if status is 202 (accepted) as per documentation
     if (data.status !== 202) {
       throw new Error(`MonCash returned unexpected status: ${data.status}`)
     }
 
-    // Construct redirect URL: GATEWAY_BASE + /Payment/Redirect?token=<payment-token>
-    // Try /Api/Payment/Redirect since all API endpoints use /Api prefix
-    const paymentUrl = `${baseUrl}/Api/Payment/Redirect?token=${data.payment_token.token}`
+    // According to MonCash docs: "The redirect URL to load the Payment Gateway will be:
+    // GATEWAY_BASE+/Payment/Redirect?token=<payment-token>"
+    // Note: Gateway is a public page, not an API endpoint (no /Api prefix)
+    // For sandbox, the gateway might be at a different domain than the API
+    let gatewayUrl = baseUrl
+    
+    // Try the standard gateway path first
+    const paymentUrl = `${gatewayUrl}/Payment/Redirect?token=${data.payment_token.token}`
 
-    console.log('[MonCash] Payment created successfully:', { 
-      token: data.payment_token.token.substring(0, 20) + '...',
-      paymentUrl,
-      fullResponse: data
-    })
+    console.log('[MonCash] Payment URL constructed:', paymentUrl)
+    console.log('[MonCash] If gateway 404s, the sandbox gateway may not be available.')
+    console.log('[MonCash] You may need to contact MonCash for the correct sandbox gateway URL.')
 
     return {
       paymentUrl,
