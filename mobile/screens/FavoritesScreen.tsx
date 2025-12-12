@@ -7,8 +7,11 @@ import {
   TouchableOpacity, 
   RefreshControl,
   ActivityIndicator,
-  Alert 
+  Alert,
+  Image,
+  Share
 } from 'react-native';
+import { Calendar, MapPin, Heart, Share2, Ticket } from 'lucide-react-native';
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc, getDocs as getDocsFirestore } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
@@ -43,7 +46,7 @@ export default function FavoritesScreen({ navigation }: any) {
       const eventIds = favoritesSnapshot.docs.map(doc => doc.data().event_id);
 
       // Get events (batch by 10 for Firestore 'in' query limit)
-      const allEvents = [];
+      const allEvents: any[] = [];
       for (let i = 0; i < eventIds.length; i += 10) {
         const batch = eventIds.slice(i, i + 10);
         const eventsQuery = query(
@@ -52,9 +55,12 @@ export default function FavoritesScreen({ navigation }: any) {
         );
         const eventsSnapshot = await getDocs(eventsQuery);
         eventsSnapshot.docs.forEach(doc => {
+          const data = doc.data();
           allEvents.push({
             id: doc.id,
-            ...doc.data()
+            ...data,
+            start_datetime: data.start_datetime?.toDate ? data.start_datetime.toDate() : data.start_datetime ? new Date(data.start_datetime) : null,
+            end_datetime: data.end_datetime?.toDate ? data.end_datetime.toDate() : data.end_datetime ? new Date(data.end_datetime) : null
           });
         });
       }
@@ -114,10 +120,21 @@ export default function FavoritesScreen({ navigation }: any) {
     );
   };
 
+  const handleShare = async (event: any) => {
+    try {
+      await Share.share({
+        message: `Check out ${event.title}!\n\nDate: ${event.start_datetime && format(event.start_datetime, 'EEEE, MMMM dd, yyyy')}\nVenue: ${event.venue_name}`,
+        title: event.title,
+      });
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
+  };
+
   if (!user) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>❤️</Text>
+        <Heart size={64} color={COLORS.textSecondary} />
         <Text style={styles.emptyTitle}>Login Required</Text>
         <Text style={styles.emptyText}>Please login to view your favorite events</Text>
       </View>
@@ -149,7 +166,7 @@ export default function FavoritesScreen({ navigation }: any) {
       >
         {favoriteEvents.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>❤️</Text>
+            <Heart size={64} color={COLORS.textSecondary} />
             <Text style={styles.emptyTitle}>No Favorites Yet</Text>
             <Text style={styles.emptyText}>
               Save events you're interested in and they'll appear here
@@ -163,32 +180,90 @@ export default function FavoritesScreen({ navigation }: any) {
           </View>
         ) : (
           favoriteEvents.map(event => (
-            <View key={event.id} style={styles.eventCard}>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
-                style={styles.eventContent}
-              >
-                <Text style={styles.eventTitle}>{event.title}</Text>
-                <Text style={styles.eventDate}>
-                  📅 {event.start_datetime && format(event.start_datetime.toDate(), 'MMM dd, yyyy • h:mm a')}
-                </Text>
-                <Text style={styles.eventLocation}>
-                  📍 {event.venue_name}, {event.city}
-                </Text>
-                {event.ticket_price > 0 && (
-                  <Text style={styles.eventPrice}>
-                    {event.currency || 'HTG'} {event.ticket_price}
-                  </Text>
-                )}
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => removeFavorite(event.id)}
-              >
-                <Text style={styles.removeButtonText}>Remove</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              key={event.id}
+              style={styles.eventCard}
+              onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
+            >
+              {/* Event Image */}
+              {(event.banner_image_url || event.cover_image_url) && (
+                <Image
+                  source={{ uri: event.banner_image_url || event.cover_image_url }}
+                  style={styles.eventImage}
+                  resizeMode="cover"
+                />
+              )}
+
+              {/* Category Badge */}
+              {event.category && (
+                <View style={styles.categoryBadgeOverlay}>
+                  <Text style={styles.categoryBadgeText}>{event.category}</Text>
+                </View>
+              )}
+
+              <View style={styles.eventContent}>
+                <View style={styles.eventHeader}>
+                  <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
+                </View>
+
+                <View style={styles.eventDetails}>
+                  <View style={styles.eventDetailRow}>
+                    <Calendar size={16} color={COLORS.primary} />
+                    <Text style={styles.eventDetailText}>
+                      {event.start_datetime && format(event.start_datetime, 'MMM dd, yyyy • h:mm a')}
+                    </Text>
+                  </View>
+                  <View style={styles.eventDetailRow}>
+                    <MapPin size={16} color={COLORS.primary} />
+                    <Text style={styles.eventDetailText} numberOfLines={1}>
+                      {event.venue_name}, {event.city}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.eventFooter}>
+                  <View style={styles.priceSection}>
+                    {event.ticket_price > 0 ? (
+                      <>
+                        <Text style={styles.eventPrice}>
+                          {event.currency || 'HTG'} {event.ticket_price}
+                        </Text>
+                        {event.tickets_sold > 0 && (
+                          <Text style={styles.ticketsSold}>
+                            {event.tickets_sold} sold
+                          </Text>
+                        )}
+                      </>
+                    ) : (
+                      <View style={styles.freeBadge}>
+                        <Text style={styles.freeBadgeText}>Free</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={styles.shareButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleShare(event);
+                      }}
+                    >
+                      <Share2 size={18} color={COLORS.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.favoriteButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        removeFavorite(event.id);
+                      }}
+                    >
+                      <Heart size={18} color={COLORS.error} fill={COLORS.error} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
           ))
         )}
       </ScrollView>
@@ -209,71 +284,135 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingTop: 60,
+    backgroundColor: COLORS.primary,
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.text,
+    fontWeight: '700',
+    color: COLORS.surface,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: COLORS.surface,
     marginTop: 4,
+    opacity: 0.9,
   },
   content: {
     flex: 1,
   },
   eventCard: {
     backgroundColor: COLORS.surface,
-    margin: 16,
-    padding: 16,
-    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: COLORS.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
+  eventImage: {
+    width: '100%',
+    height: 180,
+    backgroundColor: COLORS.borderLight,
+  },
+  categoryBadgeOverlay: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    zIndex: 1,
+  },
+  categoryBadgeText: {
+    color: COLORS.surface,
+    fontSize: 12,
+    fontWeight: '600',
+  },
   eventContent: {
+    padding: 16,
+  },
+  eventHeader: {
     marginBottom: 12,
   },
   eventTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.text,
-    marginBottom: 8,
+    lineHeight: 24,
   },
-  eventDate: {
-    fontSize: 14,
-    color: COLORS.text,
-    marginBottom: 4,
+  eventDetails: {
+    gap: 8,
+    marginBottom: 16,
   },
-  eventLocation: {
+  eventDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  eventDetailText: {
     fontSize: 14,
     color: COLORS.textSecondary,
-    marginBottom: 8,
+    flex: 1,
+  },
+  eventFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+  },
+  priceSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   eventPrice: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: COLORS.primary,
   },
-  removeButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: '#EF4444',
-    borderRadius: 8,
-    alignSelf: 'flex-start',
+  ticketsSold: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
   },
-  removeButtonText: {
-    color: '#FFFFFF',
+  freeBadge: {
+    backgroundColor: COLORS.secondary + '20',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  freeBadgeText: {
+    color: COLORS.secondary,
     fontSize: 14,
     fontWeight: '600',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  shareButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.primaryLight + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  favoriteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.error + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyContainer: {
     flex: 1,
@@ -289,31 +428,34 @@ const styles = StyleSheet.create({
     padding: 40,
     marginTop: 60,
   },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 22,
+    fontWeight: '700',
     color: COLORS.text,
+    marginTop: 24,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 16,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
+    lineHeight: 24,
   },
   exploreButton: {
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
     borderRadius: 12,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   exploreButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.surface,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

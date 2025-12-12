@@ -29,33 +29,45 @@ let cachedToken: { token: string; expiresAt: number } | null = null
 async function getAccessToken(): Promise<string> {
   // Return cached token if still valid
   if (cachedToken && cachedToken.expiresAt > Date.now()) {
+    console.log('[MonCash] Using cached token')
     return cachedToken.token
   }
 
   const clientId = process.env.MONCASH_CLIENT_ID
   const secretKey = process.env.MONCASH_SECRET_KEY
+  const mode = process.env.MONCASH_MODE || 'sandbox'
+
+  console.log('[MonCash] Getting new token:', { mode, clientId: clientId?.substring(0, 8) + '...' })
 
   if (!clientId || !secretKey) {
     throw new Error('MonCash credentials not configured')
   }
 
   const credentials = Buffer.from(`${clientId}:${secretKey}`).toString('base64')
+  const baseUrl = getMonCashBaseUrl()
 
-  const response = await fetch(`${getMonCashBaseUrl()}/Api/oauth/token`, {
+  console.log('[MonCash] Token request URL:', `${baseUrl}/Api/oauth/token`)
+
+  const response = await fetch(`${baseUrl}/Api/oauth/token`, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${credentials}`,
       'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json',
     },
     body: 'scope=read,write&grant_type=client_credentials',
   })
 
+  console.log('[MonCash] Token response status:', response.status)
+
   if (!response.ok) {
     const error = await response.text()
+    console.error('[MonCash] Token error response:', error)
     throw new Error(`Failed to get MonCash token: ${error}`)
   }
 
   const data: MonCashTokenResponse = await response.json()
+  console.log('[MonCash] Token received, expires in:', data.expires_in)
 
   // Cache token (expires in 3600 seconds, cache for 3500 to be safe)
   cachedToken = {
@@ -88,25 +100,31 @@ export async function createMonCashPayment({
     const token = await getAccessToken()
     const baseUrl = getMonCashBaseUrl()
 
+    console.log('[MonCash] Creating payment:', { amount, orderId, baseUrl })
+
     const response = await fetch(`${baseUrl}/Api/v1/CreatePayment`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: JSON.stringify({
         amount: amount.toFixed(2),
         orderId,
-        description,
       }),
     })
 
+    console.log('[MonCash] Payment response status:', response.status)
+
     if (!response.ok) {
       const error = await response.text()
+      console.error('[MonCash] Payment error response:', error)
       throw new Error(`MonCash payment creation failed: ${error}`)
     }
 
     const data: MonCashPaymentResponse = await response.json()
+    console.log('[MonCash] Payment created:', { transactionId: data.payment_token })
 
     return {
       paymentUrl: `${baseUrl}${data.path}`,

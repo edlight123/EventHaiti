@@ -19,13 +19,19 @@ import ProfileScreen from '../screens/ProfileScreen';
 
 // Detail Screens
 import EventDetailScreen from '../screens/EventDetailScreen';
+import EventTicketsScreen from '../screens/EventTicketsScreen';
 import TicketDetailScreen from '../screens/TicketDetailScreen';
+import OrganizerProfileScreen from '../screens/OrganizerProfileScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
   EventDetail: { eventId: string };
+  EventTickets: { eventId: string };
   TicketDetail: { ticketId: string };
+  OrganizerProfile: { organizerId: string };
+  Notifications: { userId: string };
 };
 
 export type AuthStackParamList = {
@@ -105,7 +111,10 @@ export default function AppNavigator() {
           <>
             <Stack.Screen name="Main" component={MainTabNavigator} />
             <Stack.Screen name="EventDetail" component={EventDetailScreen} />
+            <Stack.Screen name="EventTickets" component={EventTicketsScreen} />
             <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
+            <Stack.Screen name="OrganizerProfile" component={OrganizerProfileScreen} />
+            <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: true, headerTitle: 'Notifications' }} />
           </>
         )}
       </Stack.Navigator>

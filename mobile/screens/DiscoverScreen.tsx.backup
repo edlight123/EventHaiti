@@ -1,0 +1,453 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  StyleSheet, 
+  TouchableOpacity,
+  ActivityIndicator,
+  Dimensions
+} from 'react-native';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../config/firebase';
+import { COLORS } from '../config/brand';
+import FeaturedCarousel from '../components/FeaturedCarousel';
+
+const { width } = Dimensions.get('window');
+
+const DATE_FILTERS = [
+  { id: 'any', label: 'Any Time' },
+  { id: 'today', label: 'Today' },
+  { id: 'tomorrow', label: 'Tomorrow' },
+  { id: 'this-week', label: 'This Week' },
+  { id: 'this-weekend', label: 'Weekend' },
+  { id: 'next-week', label: 'Next Week' },
+];
+
+const CATEGORIES = [
+  'All',
+  'Music',
+  'Sports',
+  'Business',
+  'Arts & Culture',
+  'Food & Drink',
+  'Community',
+  'Education',
+];
+
+export default function DiscoverScreen({ navigation }: any) {
+  const [events, setEvents] = useState<any[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<any[]>([]);
+  const [featuredEvents, setFeaturedEvents] = useState<any[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+  const [freeEvents, setFreeEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  useEffect(() => {
+    filterEvents();
+  }, [searchQuery, selectedCategory, events]);
+
+  const fetchEvents = async () => {
+    try {
+      const q = query(
+        collection(db, 'events'),
+        where('is_published', '==', true),
+        orderBy('start_datetime', 'asc')
+      );
+      
+      const snapshot = await getDocs(q);
+      const eventsData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          start_datetime: data.start_datetime?.toDate ? data.start_datetime.toDate() : data.start_datetime ? new Date(data.start_datetime) : null,
+          end_datetime: data.end_datetime?.toDate ? data.end_datetime.toDate() : data.end_datetime ? new Date(data.end_datetime) : null
+        };
+      });
+      
+      setEvents(eventsData);
+      
+      // Organize events into sections
+      const featured = [...eventsData]
+        .sort((a, b) => (b.tickets_sold || 0) - (a.tickets_sold || 0))
+        .slice(0, 6);
+      setFeaturedEvents(featured);
+      
+      const upcoming = eventsData.slice(0, 8);
+      setUpcomingEvents(upcoming);
+      
+      const free = eventsData.filter(e => !e.ticket_price || e.ticket_price === 0).slice(0, 6);
+      setFreeEvents(free);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filterEvents = () => {
+    let filtered = [...events];
+
+    // Filter by category
+    if (selectedCategory !== 'All') {
+      filtered = filtered.filter(event => event.category === selectedCategory);
+    }
+
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(event =>
+        event.title?.toLowerCase().includes(query) ||
+        event.description?.toLowerCase().includes(query) ||
+        event.city?.toLowerCase().includes(query) ||
+        event.venue_name?.toLowerCase().includes(query)
+      );
+    }
+
+    setFilteredEvents(filtered);
+  };
+
+  const handleShare = async (event: any) => {
+    try {
+      await Share.share({
+        message: `Check out ${event.title}! ${event.description || ''}`,
+        title: event.title,
+      });
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
+  };
+
+  const renderEventCard = (event: any) => (
+    <TouchableOpacity
+      key={event.id}
+      style={styles.eventCard}
+      onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
+      activeOpacity={0.9}
+    >
+      {event.banner_image_url && (
+        <Image 
+          source={{ uri: event.banner_image_url }} 
+          style={styles.eventImage}
+          resizeMode="cover"
+        />
+      )}
+      
+      <View style={styles.categoryBadge}>
+        <Text style={styles.categoryBadgeText}>{event.category}</Text>
+      </View>
+
+      <View style={styles.eventCardContent}>
+        <View style={styles.eventCardHeader}>
+          <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
+          <TouchableOpacity 
+            style={styles.shareButton}
+            onPress={() => handleShare(event)}
+          >
+            <Share2 size={18} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+        </View>
+        
+        <Text style={styles.eventDate}>
+          📅 {event.start_datetime && format(event.start_datetime, 'MMM dd, yyyy')}
+        </Text>
+        <Text style={styles.eventLocation} numberOfLines={1}>
+          📍 {event.venue_name}, {event.city}
+        </Text>
+        
+        <View style={styles.eventFooter}>
+          {event.ticket_price > 0 ? (
+            <Text style={styles.eventPrice}>
+              {event.currency || 'HTG'} {event.ticket_price.toLocaleString()}
+            </Text>
+          ) : (
+            <Text style={styles.eventFree}>FREE</Text>
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const hasActiveFilters = searchQuery.trim() !== '' || selectedCategory !== 'All';
+
+  return (
+    <View style={styles.container}>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
+          <Search size={20} color={COLORS.textSecondary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search events..."
+            placeholderTextColor={COLORS.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery !== '' && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <X size={20} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* Category Filters */}
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        style={styles.categoriesContainer}
+        contentContainerStyle={styles.categoriesContent}
+      >
+        {CATEGORIES.map(category => (
+          <TouchableOpacity
+            key={category}
+            style={[
+              styles.categoryChip,
+              selectedCategory === category && styles.categoryChipActive
+            ]}
+            onPress={() => setSelectedCategory(category)}
+          >
+            <Text style={[
+              styles.categoryText,
+              selectedCategory === category && styles.categoryTextActive
+            ]}>
+              {category}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* Results */}
+      <ScrollView style={styles.content}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
+        ) : hasActiveFilters ? (
+          <>
+            <View style={styles.resultsHeader}>
+              <Text style={styles.resultsTitle}>Search Results</Text>
+              <Text style={styles.resultsText}>
+                {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found
+              </Text>
+            </View>
+            
+            {filteredEvents.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyIcon}>🔍</Text>
+                <Text style={styles.emptyTitle}>No events found</Text>
+                <Text style={styles.emptyText}>
+                  Try adjusting your search or filters
+                </Text>
+              </View>
+            ) : (
+              filteredEvents.map(renderEventCard)
+            )}
+          </>
+        ) : (
+          <>
+            {/* Featured Section */}
+            {featuredEvents.length > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>🔥 Featured Events</Text>
+                  <Text style={styles.sectionSubtitle}>Most popular right now</Text>
+                </View>
+                {featuredEvents.map(renderEventCard)}
+              </View>
+            )}
+
+            {/* Upcoming Section */}
+            {upcomingEvents.length > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>📅 Coming Up</Text>
+                  <Text style={styles.sectionSubtitle}>Don't miss these events</Text>
+                </View>
+                {upcomingEvents.map(renderEventCard)}
+              </View>
+            )}
+
+            {/* Free Events Section */}
+            {freeEvents.length > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>🎉 Free Events</Text>
+                  <Text style={styles.sectionSubtitle}>Enjoy without spending</Text>
+                </View>
+                {freeEvents.map(renderEventCard)}
+              </View>
+            )}
+
+            {/* All Events */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>All Events</Text>
+                <Text style={styles.sectionSubtitle}>
+                  {events.length} event{events.length !== 1 ? 's' : ''} available
+                </Text>
+              </View>
+              {events.map(renderEventCard)}
+            </View>
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  searchContainer: {
+    padding: 16,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  categoriesContainer: {
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  categoryChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginHorizontal: 6,
+    marginVertical: 8,
+    borderRadius: 20,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  categoryChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  categoryText: {
+    fontSize: 14,
+    color: COLORS.text,
+    fontWeight: '500',
+  },
+  categoryTextActive: {
+    color: '#FFFFFF',
+  },
+  content: {
+    flex: 1,
+  },
+  resultsHeader: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  resultsText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+    marginTop: 60,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+  },
+  eventCard: {
+    backgroundColor: COLORS.surface,
+    margin: 16,
+    marginTop: 8,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  eventTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  eventDate: {
+    fontSize: 14,
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  eventLocation: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: 12,
+  },
+  eventFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  badge: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  eventPrice: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+});

@@ -7,7 +7,7 @@ export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -20,6 +20,17 @@ export default function LoginScreen({ navigation }: any) {
       await signIn(email, password);
     } catch (error: any) {
       Alert.alert('Login Failed', error.message || 'Invalid credentials');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (error: any) {
+      Alert.alert('Google Sign-In', error.message || 'Google Sign-In requires additional configuration. Please use email/password login.');
     } finally {
       setLoading(false);
     }
@@ -58,6 +69,22 @@ export default function LoginScreen({ navigation }: any) {
           >
             <Text style={styles.buttonText}>
               {loading ? 'Signing in...' : 'Sign In'}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.googleButton, loading && styles.buttonDisabled]}
+            onPress={handleGoogleSignIn}
+            disabled={loading}
+          >
+            <Text style={styles.googleButtonText}>
+              Continue with Google
             </Text>
           </TouchableOpacity>
 
@@ -134,6 +161,34 @@ const styles = StyleSheet.create({
   },
   linkTextBold: {
     color: COLORS.primary,
+    fontWeight: '600',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    color: COLORS.textSecondary,
+    fontSize: 14,
+  },
+  googleButton: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  googleButtonText: {
+    color: COLORS.text,
+    fontSize: 16,
     fontWeight: '600',
   },
 });

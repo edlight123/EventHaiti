@@ -20,6 +20,10 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  // Check for redirect parameter (from mobile app)
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+  const redirectTo = searchParams?.get('redirect') || '/'
+
   async function handleLogin(e: FormEvent) {
     e.preventDefault()
     setError(null)
@@ -91,8 +95,8 @@ export default function LoginPage() {
         body: JSON.stringify({ idToken }),
       })
 
-      // Force full page reload
-      window.location.href = '/'
+      // Redirect to specified page or home
+      window.location.href = redirectTo
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') {
         setError(t('errors.signin_cancelled'))
