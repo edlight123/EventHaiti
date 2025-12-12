@@ -113,7 +113,7 @@ export async function createMonCashPayment({
     }
     console.log('[MonCash] Payment payload:', JSON.stringify(payload))
 
-    const response = await fetch(`${baseUrl}/v1/CreatePayment`, {
+    const response = await fetch(`${baseUrl}/Api/v1/CreatePayment`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -176,7 +176,7 @@ export async function getTransactionDetails(
     const baseUrl = getMonCashBaseUrl()
 
     const response = await fetch(
-      `${baseUrl}/v1/RetrieveTransactionPayment`,
+      `${baseUrl}/Api/v1/RetrieveTransactionPayment`,
       {
         method: 'POST',
         headers: {
