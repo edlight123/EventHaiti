@@ -79,44 +79,52 @@ async function getAccessToken(): Promise<string> {
 
 interface CreatePaymentParams {
   amount: number
-  orderId: string
-  description?: string
+  reference: string // Order ID / reference
+  account: string // Customer's MonCash phone number (e.g., "50938662809")
 }
 
-interface MonCashPaymentResponse {
-  payment_token: {
-    token: string
-    created: string
-    expired: string
-  }
+interface MonCashMerchantPaymentResponse {
   mode: string
+  reference: string
   path: string
-  status: number
+  amount: number
+  transactionId: string
+  account: string
   timestamp: number
+  status: number
 }
 
+/**
+ * Initiate a MonCash payment using MerchantApi
+ * Customer will receive a payment request on their MonCash mobile app
+ * 
+ * @param amount - Amount in HTG
+ * @param reference - Unique order/payment reference
+ * @param account - Customer's MonCash phone number (e.g., "50938662809")
+ * @returns Transaction ID and payment status
+ */
 export async function createMonCashPayment({ 
   amount, 
-  orderId, 
-  description = 'Event Ticket Purchase' 
-}: CreatePaymentParams): Promise<{ paymentUrl: string; transactionId: string }> {
+  reference,
+  account,
+}: CreatePaymentParams): Promise<{ transactionId: string; status: string }> {
   try {
     const token = await getAccessToken()
     const baseUrl = getMonCashBaseUrl()
 
-    console.log('[MonCash] Creating payment:', { amount, orderId, baseUrl })
-    console.log('[MonCash] Token (first 20 chars):', token.substring(0, 20) + '...')
+    console.log('[MonCash] Creating payment with MerchantApi:', { amount, reference, account, baseUrl })
 
     const payload = {
-      amount: parseInt(amount.toFixed(2)),
-      orderId,
+      reference,
+      account,
+      amount: parseFloat(amount.toFixed(2)),
     }
     console.log('[MonCash] Payment payload:', JSON.stringify(payload))
 
-    const response = await fetch(`${baseUrl}/Api/v1/CreatePayment`, {
+    // Use /MerchantApi/V1/Payment which waits for payment completion (up to 2 min)
+    const response = await fetch(`${baseUrl}/MerchantApi/V1/Payment`, {
       method: 'POST',
       headers: {
-        'Accept': 'application/json',
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
@@ -124,7 +132,6 @@ export async function createMonCashPayment({
     })
 
     console.log('[MonCash] Payment response status:', response.status)
-    console.log('[MonCash] Payment response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())))
 
     if (!response.ok) {
       const error = await response.text()
@@ -132,37 +139,12 @@ export async function createMonCashPayment({
       throw new Error(`MonCash payment creation failed: ${error}`)
     }
 
-    const data = await response.json()
+    const data: MonCashMerchantPaymentResponse = await response.json()
     console.log('[MonCash] Payment response:', JSON.stringify(data))
-    console.log('[MonCash] Full response data:', { 
-      path: data.path,
-      status: data.status,
-      mode: data.mode,
-      timestamp: data.timestamp,
-      payment_token: data.payment_token 
-    })
-
-    // Check if status is 202 (accepted) as per documentation
-    if (data.status !== 202) {
-      throw new Error(`MonCash returned unexpected status: ${data.status}`)
-    }
-
-    // According to MonCash docs: "The redirect URL to load the Payment Gateway will be:
-    // GATEWAY_BASE+/Payment/Redirect?token=<payment-token>"
-    // Note: Gateway is a public page, not an API endpoint (no /Api prefix)
-    // For sandbox, the gateway might be at a different domain than the API
-    let gatewayUrl = baseUrl
-    
-    // Try the standard gateway path first
-    const paymentUrl = `${gatewayUrl}/Payment/Redirect?token=${data.payment_token.token}`
-
-    console.log('[MonCash] Payment URL constructed:', paymentUrl)
-    console.log('[MonCash] If gateway 404s, the sandbox gateway may not be available.')
-    console.log('[MonCash] You may need to contact MonCash for the correct sandbox gateway URL.')
 
     return {
-      paymentUrl,
-      transactionId: data.payment_token.token,
+      transactionId: data.transactionId,
+      status: data.status === 200 ? 'successful' : 'pending',
     }
   } catch (error: any) {
     console.error('MonCash payment error:', error)
@@ -170,43 +152,100 @@ export async function createMonCashPayment({
   }
 }
 
-interface MonCashTransactionDetails {
-  reference: string
-  transaction_id: string
-  cost: number
-  message: string
-  payer: string
-}
-
-export async function getTransactionDetails(
-  transactionId: string
-): Promise<MonCashTransactionDetails> {
+/**
+ * Initiate a MonCash payment without waiting for completion
+ * Returns immediately with pending status
+ * Use checkPaymentStatus() to poll for completion
+ */
+export async function initiateMonCashPayment({ 
+  amount, 
+  reference,
+  account,
+}: CreatePaymentParams): Promise<{ reference: string; status: string }> {
   try {
     const token = await getAccessToken()
     const baseUrl = getMonCashBaseUrl()
 
-    const response = await fetch(
-      `${baseUrl}/Api/v1/RetrieveTransactionPayment`,
-      {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ transactionId }),
-      }
-    )
+    console.log('[MonCash] Initiating payment:', { amount, reference, account })
+
+    const payload = {
+      reference,
+      account,
+      amount: parseFloat(amount.toFixed(2)),
+    }
+
+    const response = await fetch(`${baseUrl}/MerchantApi/V1/InitiatePayment`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
 
     if (!response.ok) {
       const error = await response.text()
-      throw new Error(`Failed to retrieve transaction: ${error}`)
+      throw new Error(`MonCash payment initiation failed: ${error}`)
     }
 
     const data = await response.json()
-    return data.payment
+    console.log('[MonCash] Payment initiated:', JSON.stringify(data))
+
+    return {
+      reference: data.reference,
+      status: data.message, // "pending"
+    }
   } catch (error: any) {
-    console.error('MonCash transaction retrieval error:', error)
+    console.error('MonCash initiate payment error:', error)
+    throw error
+  }
+}
+
+interface CheckPaymentResponse {
+  reference: string
+  mode: string
+  path: string
+  amount: number
+  message: string // "successful" or "pending" or "failed"
+  transactionId: string
+  account: string
+  timestamp: number
+  status: number
+}
+
+/**
+ * Check the status of a MonCash payment
+ * Can be called with either transactionId or reference
+ */
+export async function checkPaymentStatus(
+  params: { transactionId: string } | { reference: string }
+): Promise<CheckPaymentResponse> {
+  try {
+    const token = await getAccessToken()
+    const baseUrl = getMonCashBaseUrl()
+
+    console.log('[MonCash] Checking payment status:', params)
+
+    const response = await fetch(`${baseUrl}/MerchantApi/V1/CheckPayment`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(params),
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(`Failed to check payment status: ${error}`)
+    }
+
+    const data: CheckPaymentResponse = await response.json()
+    console.log('[MonCash] Payment status:', JSON.stringify(data))
+    
+    return data
+  } catch (error: any) {
+    console.error('MonCash check payment error:', error)
     throw error
   }
 }

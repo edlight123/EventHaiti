@@ -11,10 +11,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { eventId, quantity = 1 } = await request.json()
+    const { eventId, quantity = 1, phoneNumber } = await request.json()
 
     if (!eventId) {
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 })
+    }
+
+    if (!phoneNumber) {
+      return NextResponse.json({ error: 'MonCash phone number is required' }, { status: 400 })
     }
 
     const supabase = await createClient()
@@ -33,32 +37,40 @@ export async function POST(request: Request) {
     // Calculate total amount
     const totalAmount = event.ticket_price * quantity
 
-    // Create order ID
-    const orderId = `${eventId}-${user.id}-${Date.now()}`
+    // Create reference ID (order ID)
+    const reference = `${eventId}-${user.id}-${Date.now()}`
 
-    // Create MonCash payment
-    const { paymentUrl, transactionId } = await createMonCashPayment({
+    console.log('[API] Creating MonCash payment:', { eventId, quantity, totalAmount, phoneNumber: phoneNumber.substring(0, 5) + '...' })
+
+    // Create MonCash payment using MerchantApi
+    // This will send a payment request to the customer's MonCash app
+    const { transactionId, status } = await createMonCashPayment({
       amount: totalAmount,
-      orderId,
-      description: `${quantity}x ${event.title}`,
+      reference,
+      account: phoneNumber, // Customer's MonCash phone number
     })
+
+    console.log('[API] MonCash payment response:', { transactionId, status })
 
     // Store pending transaction
     await supabase.from('pending_transactions').insert({
       transaction_id: transactionId,
-      order_id: orderId,
+      order_id: reference,
       user_id: user.id,
       event_id: eventId,
       quantity,
       amount: totalAmount,
       payment_method: 'moncash',
-      status: 'pending',
+      status: status === 'successful' ? 'completed' : 'pending',
     })
 
     return NextResponse.json({ 
-      paymentUrl,
       transactionId,
-      orderId,
+      reference,
+      status,
+      message: status === 'successful' 
+        ? 'Payment completed successfully' 
+        : 'Payment request sent to your MonCash app. Please approve to complete.',
     })
   } catch (error: any) {
     console.error('MonCash initiate error:', error)

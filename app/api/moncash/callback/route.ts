@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
-import { getTransactionDetails } from '@/lib/moncash'
+import { checkPaymentStatus } from '@/lib/moncash'
 import { sendEmail, getTicketConfirmationEmail } from '@/lib/email'
 import { sendWhatsAppMessage, getTicketConfirmationWhatsApp } from '@/lib/whatsapp'
 import { generateTicketQRCode } from '@/lib/qrcode'
@@ -31,10 +31,10 @@ export async function GET(request: Request) {
       )
     }
 
-    // Verify payment with MonCash
-    const transactionDetails = await getTransactionDetails(transactionId)
+    // Verify payment with MonCash MerchantApi
+    const paymentStatus = await checkPaymentStatus({ transactionId })
 
-    if (transactionDetails.message !== 'successful') {
+    if (paymentStatus.message !== 'successful') {
       // Update transaction status
       await supabase
         .from('pending_transactions')
