@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 import { useRouter } from 'next/navigation'
@@ -45,8 +46,15 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-14 sm:h-16">
           <div className="flex items-center">
-            <Link href="/" className="flex items-center">
-              <span className="text-2xl font-bold" style={{ color: BRAND.primaryColor }}>
+            <Link href="/" className="flex items-center gap-2 group">
+              <Image 
+                src="/logo_color.png" 
+                alt="EventHaiti" 
+                width={40} 
+                height={40}
+                className="transition-transform duration-200 group-hover:scale-105"
+              />
+              <span className="text-xl sm:text-2xl font-bold transition-colors duration-200 group-hover:opacity-80" style={{ color: BRAND.primaryColor }}>
                 {BRAND.logoText}
               </span>
             </Link>

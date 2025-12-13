@@ -113,6 +113,15 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 to-orange-50 px-4 py-8">
       <div className="max-w-md w-full space-y-6 bg-white p-6 md:p-8 rounded-2xl shadow-lg">
         <div className="text-center">
+          <div className="flex justify-center mb-4">
+            <Image 
+              src="/logo_color.png" 
+              alt="EventHaiti" 
+              width={80} 
+              height={80}
+              className="drop-shadow-md"
+            />
+          </div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900" style={{ color: BRAND.primaryColor }}>
             {BRAND.logoText}
           </h1>
