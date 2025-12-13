@@ -1,0 +1,249 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Minus, Plus } from 'lucide-react'
+
+interface TicketTier {
+  id: string
+  name: string
+  description: string | null
+  price: number
+  total_quantity: number
+  sold_quantity: number
+  sales_start: string | null
+  sales_end: string | null
+}
+
+interface TierQuantity {
+  [tierId: string]: number
+}
+
+interface EventbriteStyleTicketSelectorProps {
+  eventId: string
+  userId: string | null
+  onPurchase: (selections: { tierId: string; quantity: number; price: number }[]) => void
+}
+
+export default function EventbriteStyleTicketSelector({ 
+  eventId, 
+  userId, 
+  onPurchase 
+}: EventbriteStyleTicketSelectorProps) {
+  const { t } = useTranslation('common')
+  const [tiers, setTiers] = useState<TicketTier[]>([])
+  const [quantities, setQuantities] = useState<TierQuantity>({})
+  const [loading, setLoading] = useState(true)
+
+  const fetchTiers = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/ticket-tiers?eventId=${eventId}`)
+      if (!response.ok) throw new Error('Failed to fetch tiers')
+      const data = await response.json()
+      setTiers(data.tiers || [])
+      
+      // Initialize quantities to 0
+      const initialQuantities: TierQuantity = {}
+      data.tiers?.forEach((tier: TicketTier) => {
+        initialQuantities[tier.id] = 0
+      })
+      setQuantities(initialQuantities)
+    } catch (error) {
+      console.error('Error fetching tiers:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [eventId])
+
+  useEffect(() => {
+    fetchTiers()
+  }, [fetchTiers])
+
+  const isTierAvailable = (tier: TicketTier): boolean => {
+    const now = new Date()
+    
+    if (tier.sales_start && new Date(tier.sales_start) > now) {
+      return false
+    }
+    
+    if (tier.sales_end && new Date(tier.sales_end) < now) {
+      return false
+    }
+    
+    return (tier.total_quantity - (tier.sold_quantity || 0)) > 0
+  }
+
+  const getAvailableQuantity = (tier: TicketTier): number => {
+    return tier.total_quantity - (tier.sold_quantity || 0)
+  }
+
+  const updateQuantity = (tierId: string, delta: number) => {
+    const tier = tiers.find(t => t.id === tierId)
+    if (!tier) return
+
+    const maxAvailable = getAvailableQuantity(tier)
+    const newQuantity = Math.max(0, Math.min(maxAvailable, (quantities[tierId] || 0) + delta))
+    
+    setQuantities(prev => ({
+      ...prev,
+      [tierId]: newQuantity
+    }))
+  }
+
+  const getTotalTickets = (): number => {
+    return Object.values(quantities).reduce((sum, qty) => sum + qty, 0)
+  }
+
+  const getTotalPrice = (): number => {
+    return tiers.reduce((sum, tier) => {
+      const qty = quantities[tier.id] || 0
+      return sum + (tier.price * qty)
+    }, 0)
+  }
+
+  const handlePurchase = () => {
+    if (!userId) return
+
+    const selections = tiers
+      .filter(tier => quantities[tier.id] > 0)
+      .map(tier => ({
+        tierId: tier.id,
+        quantity: quantities[tier.id],
+        price: tier.price
+      }))
+
+    if (selections.length === 0) return
+
+    onPurchase(selections)
+  }
+
+  if (loading) {
+    return <p className="text-gray-600">{t('events.loading_ticket_options')}</p>
+  }
+
+  if (tiers.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-600 mb-4">{t('events.no_ticket_tiers')}</p>
+        <p className="text-sm text-gray-500">{t('events.no_ticket_tiers_desc')}</p>
+      </div>
+    )
+  }
+
+  const totalTickets = getTotalTickets()
+  const totalPrice = getTotalPrice()
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold text-gray-900">{t('events.select_tickets')}</h3>
+
+      {/* Tier List with Quantity Selectors */}
+      <div className="space-y-3">
+        {tiers.map((tier) => {
+          const available = getAvailableQuantity(tier)
+          const isAvailable = isTierAvailable(tier)
+          const quantity = quantities[tier.id] || 0
+
+          return (
+            <div
+              key={tier.id}
+              className={`border rounded-lg p-4 transition-all ${
+                quantity > 0
+                  ? 'border-teal-600 bg-teal-50'
+                  : isAvailable
+                  ? 'border-gray-200 hover:border-gray-300'
+                  : 'border-gray-200 opacity-50'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-4">
+                {/* Tier Info */}
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-gray-900">{tier.name}</h4>
+                  {tier.description && (
+                    <p className="text-sm text-gray-600 mt-1">{tier.description}</p>
+                  )}
+                  <div className="flex items-center gap-3 mt-2 text-sm">
+                    <span className="font-medium text-teal-600">
+                      {tier.price.toFixed(2)} HTG
+                    </span>
+                    <span className={available > 0 ? 'text-gray-600' : 'text-red-600'}>
+                      {available > 0 ? `${available} ${t('ticket.available')}` : t('ticket.sold_out')}
+                    </span>
+                  </div>
+                  {!isAvailable && available > 0 && (
+                    <p className="text-xs text-orange-600 mt-1">
+                      {tier.sales_start && new Date(tier.sales_start) > new Date()
+                        ? `${t('events.sales_start')} ${new Date(tier.sales_start).toLocaleDateString()}`
+                        : `${t('events.sales_ended')} ${new Date(tier.sales_end!).toLocaleDateString()}`}
+                    </p>
+                  )}
+                </div>
+
+                {/* Quantity Selector */}
+                {isAvailable && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => updateQuantity(tier.id, -1)}
+                      disabled={quantity === 0}
+                      className="w-9 h-9 flex items-center justify-center rounded-lg border-2 border-gray-300 hover:border-teal-600 hover:bg-teal-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                    >
+                      <Minus className="w-4 h-4 text-gray-600" />
+                    </button>
+                    <span className="w-12 text-center font-semibold text-gray-900 text-lg">
+                      {quantity}
+                    </span>
+                    <button
+                      onClick={() => updateQuantity(tier.id, 1)}
+                      disabled={quantity >= available}
+                      className="w-9 h-9 flex items-center justify-center rounded-lg border-2 border-gray-300 hover:border-teal-600 hover:bg-teal-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                    >
+                      <Plus className="w-4 h-4 text-gray-600" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Total Summary */}
+      {totalTickets > 0 && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="space-y-2">
+            {tiers
+              .filter(tier => quantities[tier.id] > 0)
+              .map(tier => (
+                <div key={tier.id} className="flex justify-between text-sm">
+                  <span className="text-gray-600">
+                    {quantities[tier.id]}× {tier.name}
+                  </span>
+                  <span className="text-gray-900">
+                    {(tier.price * quantities[tier.id]).toFixed(2)} HTG
+                  </span>
+                </div>
+              ))}
+            <div className="border-t border-gray-300 pt-2 flex justify-between font-semibold text-lg">
+              <span>{t('events.total')} ({totalTickets} {t('ticket.ticket')}{totalTickets !== 1 ? 's' : ''})</span>
+              <span className="text-teal-600">{totalPrice.toFixed(2)} HTG</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Purchase Button */}
+      <button
+        onClick={handlePurchase}
+        disabled={!userId || totalTickets === 0}
+        className="w-full bg-teal-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+      >
+        {!userId 
+          ? t('events.sign_in_to_purchase') 
+          : totalTickets === 0
+          ? t('events.select_tickets')
+          : `${t('events.checkout')} - ${totalPrice.toFixed(2)} HTG`
+        }
+      </button>
+    </div>
+  )
+}

@@ -45,6 +45,10 @@ interface TieredTicketSelectorProps {
   onPurchase: (tierId: string, finalPrice: number, quantity: number, promoCode?: string) => void;
 }
 
+interface TierQuantity {
+  [tierId: string]: number;
+}
+
 const COLORS = {
   primary: '#000000',
   secondary: '#666666',
@@ -66,8 +70,8 @@ export default function TieredTicketSelector({
   const [groupDiscounts, setGroupDiscounts] = useState<GroupDiscount[]>([]);
   const [loading, setLoading] = useState(true);
   
-  const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState(1);
+  // Store quantity per tier
+  const [tierQuantities, setTierQuantities] = useState<TierQuantity>({});
   const [promoCode, setPromoCode] = useState('');
   const [promoValidation, setPromoValidation] = useState<PromoCodeValidation | null>(null);
   const [validatingPromo, setValidatingPromo] = useState(false);
@@ -191,55 +195,72 @@ export default function TieredTicketSelector({
     return applicable[0] || null;
   };
 
-  const calculateFinalPrice = (): number => {
-    const selectedTier = tiers.find(t => t.id === selectedTierId);
-    if (!selectedTier) return 0;
-    
-    let basePrice = selectedTier.price * quantity;
-    
-    // Apply promo code discount first
-    if (promoValidation?.valid) {
-      if (promoValidation.discount_percentage) {
-        basePrice = basePrice * (1 - promoValidation.discount_percentage / 100);
-      } else if (promoValidation.discount_amount) {
-        basePrice = Math.max(0, basePrice - promoValidation.discount_amount);
-      }
-    }
-    // Apply group discount if no promo
-    else {
-      const groupDiscount = getApplicableGroupDiscount();
-      if (groupDiscount) {
-        basePrice = basePrice * (1 - groupDiscount.discount_percentage / 100);
-      }
-    }
-    
-    return Math.round(basePrice * 100) / 100;
+  const getTotalQuantity = (): number => {
+    return Object.values(tierQuantities).reduce((sum, qty) => sum + qty, 0);
   };
 
-  const handleQuantityChange = (delta: number) => {
-    const selectedTier = tiers.find(t => t.id === selectedTierId);
-    if (!selectedTier) return;
+  const getTotalPrice = (): number => {
+    let total = 0;
+    tiers.forEach(tier => {
+      const qty = tierQuantities[tier.id] || 0;
+      if (qty > 0) {
+        total += tier.price * qty;
+      }
+    });
+
+    // Apply promo code discount
+    if (promoValidation?.valid) {
+      if (promoValidation.discount_percentage) {
+        total = total * (1 - promoValidation.discount_percentage / 100);
+      } else if (promoValidation.discount_amount) {
+        total = Math.max(0, total - promoValidation.discount_amount);
+      }
+    }
+    // Apply group discount
+    else {
+      const totalQty = getTotalQuantity();
+      const groupDiscount = groupDiscounts
+        .filter(d => d.min_quantity <= totalQty && d.is_active)
+        .sort((a, b) => b.discount_percentage - a.discount_percentage)[0];
+      
+      if (groupDiscount) {
+        total = total * (1 - groupDiscount.discount_percentage / 100);
+      }
+    }
     
-    const available = getAvailableQuantity(selectedTier);
-    const newQuantity = Math.max(1, Math.min(quantity + delta, available, 10));
-    setQuantity(newQuantity);
+    return Math.round(total * 100) / 100;
+  };
+
+  const updateTierQuantity = (tierId: string, delta: number) => {
+    const tier = tiers.find(t => t.id === tierId);
+    if (!tier) return;
+    
+    const currentQty = tierQuantities[tierId] || 0;
+    const available = getAvailableQuantity(tier);
+    const newQty = Math.max(0, Math.min(currentQty + delta, available, 10));
+    
+    setTierQuantities(prev => ({
+      ...prev,
+      [tierId]: newQty
+    }));
   };
 
   const handlePurchase = () => {
-    if (!selectedTierId) return;
+    // For now, purchase the first tier with quantity
+    // In future, we can support multi-tier purchases
+    const firstTierWithQty = tiers.find(t => (tierQuantities[t.id] || 0) > 0);
+    if (!firstTierWithQty) return;
     
-    const finalPrice = calculateFinalPrice();
-    onPurchase(selectedTierId, finalPrice, quantity, promoCode || undefined);
+    const quantity = tierQuantities[firstTierWithQty.id] || 0;
+    const finalPrice = getTotalPrice();
+    
+    onPurchase(firstTierWithQty.id, finalPrice, quantity, promoCode || undefined);
     
     // Reset state
-    setSelectedTierId(null);
-    setQuantity(1);
+    setTierQuantities({});
     setPromoCode('');
     setPromoValidation(null);
   };
-
-  const selectedTier = tiers.find(t => t.id === selectedTierId);
-  const groupDiscount = getApplicableGroupDiscount();
 
   return (
     <Modal
@@ -263,106 +284,85 @@ export default function TieredTicketSelector({
           </View>
         ) : (
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Tier Selection */}
+            {/* Tier Selection with Quantities */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Choose Tier</Text>
+              <Text style={styles.sectionTitle}>Choose Tickets</Text>
               {tiers.map(tier => {
                 const available = getAvailableQuantity(tier);
                 const isAvailable = isTierAvailable(tier);
-                const isSelected = selectedTierId === tier.id;
+                const quantity = tierQuantities[tier.id] || 0;
                 
                 return (
-                  <TouchableOpacity
+                  <View
                     key={tier.id}
                     style={[
                       styles.tierCard,
-                      isSelected && styles.tierCardSelected,
                       !isAvailable && styles.tierCardDisabled,
                     ]}
-                    onPress={() => isAvailable && setSelectedTierId(tier.id)}
-                    disabled={!isAvailable}
                   >
-                    <View style={styles.tierHeader}>
-                      <View style={styles.tierTitleRow}>
+                    <View style={styles.tierInfo}>
+                      <View style={styles.tierHeader}>
                         <Text style={[
                           styles.tierName,
                           !isAvailable && styles.tierNameDisabled
                         ]}>
                           {tier.name}
                         </Text>
-                        {isSelected && (
-                          <View style={styles.checkIcon}>
-                            <Check size={16} color={COLORS.white} />
-                          </View>
-                        )}
+                        <Text style={styles.tierPrice}>
+                          {tier.price.toLocaleString()} HTG
+                        </Text>
                       </View>
-                      <Text style={styles.tierPrice}>
-                        {tier.price === 0 ? 'FREE' : `${tier.price} HTG`}
-                      </Text>
-                    </View>
-                    
-                    {tier.description && (
-                      <Text style={styles.tierDescription}>{tier.description}</Text>
-                    )}
-                    
-                    <View style={styles.tierFooter}>
+                      
+                      {tier.description && (
+                        <Text style={styles.tierDescription}>{tier.description}</Text>
+                      )}
+                      
                       <Text style={[
                         styles.tierAvailability,
-                        available < 10 && styles.tierAvailabilityLow
+                        !isAvailable && styles.tierSoldOut
                       ]}>
                         {isAvailable 
-                          ? `${available} tickets available`
-                          : 'Sold out'
+                          ? `${available} tickets available` 
+                          : 'Sold Out'
                         }
                       </Text>
                     </View>
-                  </TouchableOpacity>
+                    
+                    {/* Quantity Selector */}
+                    {isAvailable && (
+                      <View style={styles.quantitySelector}>
+                        <TouchableOpacity
+                          onPress={() => updateTierQuantity(tier.id, -1)}
+                          disabled={quantity === 0}
+                          style={[
+                            styles.quantityButton,
+                            quantity === 0 && styles.quantityButtonDisabled
+                          ]}
+                        >
+                          <Minus size={20} color={quantity === 0 ? COLORS.secondary : COLORS.primary} />
+                        </TouchableOpacity>
+                        
+                        <Text style={styles.quantityText}>{quantity}</Text>
+                        
+                        <TouchableOpacity
+                          onPress={() => updateTierQuantity(tier.id, 1)}
+                          disabled={quantity >= available || quantity >= 10}
+                          style={[
+                            styles.quantityButton,
+                            (quantity >= available || quantity >= 10) && styles.quantityButtonDisabled
+                          ]}
+                        >
+                          <Plus size={20} color={(quantity >= available || quantity >= 10) ? COLORS.secondary : COLORS.primary} />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
                 );
               })}
             </View>
 
-            {/* Quantity Selector */}
-            {selectedTier && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Quantity</Text>
-                <View style={styles.quantityContainer}>
-                  <TouchableOpacity
-                    style={[styles.quantityButton, quantity === 1 && styles.quantityButtonDisabled]}
-                    onPress={() => handleQuantityChange(-1)}
-                    disabled={quantity === 1}
-                  >
-                    <Minus size={20} color={quantity === 1 ? COLORS.border : COLORS.primary} />
-                  </TouchableOpacity>
-                  
-                  <Text style={styles.quantityText}>{quantity}</Text>
-                  
-                  <TouchableOpacity
-                    style={[
-                      styles.quantityButton,
-                      (quantity >= getAvailableQuantity(selectedTier) || quantity >= 10) && 
-                        styles.quantityButtonDisabled
-                    ]}
-                    onPress={() => handleQuantityChange(1)}
-                    disabled={quantity >= getAvailableQuantity(selectedTier) || quantity >= 10}
-                  >
-                    <Plus size={20} color={
-                      (quantity >= getAvailableQuantity(selectedTier) || quantity >= 10)
-                        ? COLORS.border 
-                        : COLORS.primary
-                    } />
-                  </TouchableOpacity>
-                </View>
-                
-                {groupDiscount && !promoValidation?.valid && (
-                  <Text style={styles.discountNote}>
-                    🎉 {groupDiscount.discount_percentage}% group discount applied!
-                  </Text>
-                )}
-              </View>
-            )}
-
             {/* Promo Code */}
-            {selectedTier && (
+            {getTotalQuantity() > 0 && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Promo Code (Optional)</Text>
                 <View style={styles.promoContainer}>
@@ -412,18 +412,22 @@ export default function TieredTicketSelector({
         )}
 
         {/* Footer with Purchase Button */}
-        {selectedTier && !loading && (
+        {getTotalQuantity() > 0 && !loading && (
           <View style={styles.footer}>
             <View style={styles.totalContainer}>
-              <Text style={styles.totalLabel}>Total</Text>
               <View>
-                {(promoValidation?.valid || groupDiscount) && (
-                  <Text style={styles.originalPrice}>
-                    {selectedTier.price * quantity} HTG
+                <Text style={styles.totalLabel}>
+                  {getTotalQuantity()} ticket{getTotalQuantity() !== 1 ? 's' : ''}
+                </Text>
+                {(promoValidation?.valid) && (
+                  <Text style={styles.discountLabel}>
+                    Promo code applied
                   </Text>
                 )}
+              </View>
+              <View style={styles.priceContainer}>
                 <Text style={styles.totalPrice}>
-                  {calculateFinalPrice()} HTG
+                  {getTotalPrice().toLocaleString()} HTG
                 </Text>
               </View>
             </View>
@@ -484,70 +488,83 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   tierCard: {
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     backgroundColor: COLORS.white,
-  },
-  tierCardSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '05',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   tierCardDisabled: {
     opacity: 0.5,
     backgroundColor: COLORS.background,
   },
-  tierHeader: {
-    marginBottom: 8,
+  tierInfo: {
+    flex: 1,
+    marginRight: 12,
   },
-  tierTitleRow: {
+  tierHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 4,
   },
   tierName: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
     color: COLORS.primary,
   },
   tierNameDisabled: {
     color: COLORS.secondary,
   },
-  checkIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   tierPrice: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
     color: COLORS.primary,
   },
   tierDescription: {
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.secondary,
-    marginBottom: 8,
-  },
-  tierFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    marginTop: 4,
+    marginBottom: 4,
   },
   tierAvailability: {
     fontSize: 12,
     color: COLORS.success,
+    fontWeight: '500',
+  },
+  tierSoldOut: {
+    color: COLORS.error,
+  },
+  quantitySelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderRadius: 8,
+    padding: 4,
+  },
+  quantityButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityButtonDisabled: {
+    opacity: 0.3,
+  },
+  quantityText: {
+    fontSize: 16,
     fontWeight: '600',
+    color: COLORS.primary,
+    marginHorizontal: 16,
+    minWidth: 24,
+    textAlign: 'center',
   },
-  tierAvailabilityLow: {
-    color: COLORS.warning,
-  },
-  quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -636,19 +653,21 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 16,
-    color: COLORS.secondary,
+    fontWeight: '600',
+    color: COLORS.primary,
   },
-  originalPrice: {
-    fontSize: 14,
-    color: COLORS.secondary,
-    textDecorationLine: 'line-through',
-    textAlign: 'right',
+  discountLabel: {
+    fontSize: 12,
+    color: COLORS.success,
+    marginTop: 2,
+  },
+  priceContainer: {
+    alignItems: 'flex-end',
   },
   totalPrice: {
     fontSize: 24,
     fontWeight: 'bold',
     color: COLORS.primary,
-    textAlign: 'right',
   },
   purchaseButton: {
     backgroundColor: COLORS.primary,

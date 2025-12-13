@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useRouter } from 'next/navigation'
 import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 import { isDemoMode } from '@/lib/demo'
-import TieredTicketSelector from '@/components/TieredTicketSelector'
+import EventbriteStyleTicketSelector from '@/components/EventbriteStyleTicketSelector'
 import BottomSheet from '@/components/ui/BottomSheet'
 import { useToast } from '@/components/ui/Toast'
 import dynamic from 'next/dynamic'
@@ -239,11 +239,17 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
     checkStatus()
   }
 
-  const handleTieredPurchase = (tierId: string, tierPrice: number, qty: number, promo?: string) => {
-    setSelectedTierId(tierId)
-    setSelectedTierPrice(tierPrice)
-    setQuantity(qty)
-    setPromoCode(promo)
+  const handleTieredPurchase = (selections: { tierId: string; quantity: number; price: number }[]) => {
+    // For now, use the first selection (can be enhanced for multi-tier later)
+    const firstSelection = selections[0]
+    if (!firstSelection) return
+
+    const totalQuantity = selections.reduce((sum, s) => sum + s.quantity, 0)
+    const totalPrice = selections.reduce((sum, s) => sum + (s.price * s.quantity), 0)
+
+    setSelectedTierId(firstSelection.tierId)
+    setSelectedTierPrice(firstSelection.price)
+    setQuantity(totalQuantity)
     setShowTieredModal(false)
     setShowModal(true)
   }
@@ -303,7 +309,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               onClose={() => setShowTieredModal(false)}
               title={t('events.select_tickets')}
             >
-              <TieredTicketSelector
+              <EventbriteStyleTicketSelector
                 eventId={eventId}
                 userId={userId}
                 onPurchase={handleTieredPurchase}
