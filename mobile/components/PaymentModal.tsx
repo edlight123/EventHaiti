@@ -10,6 +10,7 @@ import {
   Alert,
   Linking,
   Platform,
+  TextInput,
 } from 'react-native';
 import { X, CreditCard, Lock, Smartphone, AlertCircle } from 'lucide-react-native';
 import { COLORS } from '../config/brand';
@@ -73,6 +74,7 @@ function PaymentForm({
     isExpoGo || !StripeProvider ? 'moncash' : 'stripe'
   );
   const [cardComplete, setCardComplete] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
 
   // Stripe Payment
   const handleStripePayment = async () => {
@@ -120,8 +122,13 @@ function PaymentForm({
     }
   };
 
-  // MonCash Payment (Haiti Mobile Money)
+  // MonCash Payment (Haiti Mobile Money) - MerchantApi
   const handleMonCashPayment = async () => {
+    if (!phoneNumber || phoneNumber.length < 8) {
+      setError('Please enter a valid MonCash phone number');
+      return;
+    }
+
     setProcessing(true);
     setError(null);
 
@@ -132,6 +139,7 @@ function PaymentForm({
         body: JSON.stringify({
           eventId,
           quantity,
+          phoneNumber,
           tierId,
           tierPrice: totalAmount,
           promoCode: promoCodeId,
@@ -144,37 +152,93 @@ function PaymentForm({
         throw new Error(data.error || 'Failed to initiate MonCash payment');
       }
 
-      // Open MonCash payment page
-      if (data.paymentUrl) {
-        const canOpen = await Linking.canOpenURL(data.paymentUrl);
-        if (canOpen) {
-          await Linking.openURL(data.paymentUrl);
-          Alert.alert(
-            'MonCash Payment',
-            'Complete your payment in the MonCash app. Your tickets will be created after successful payment.',
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  onClose();
-                  // In production, you'd want to poll for payment status or use deep linking to come back
-                },
-              },
-            ]
-          );
-        } else {
-          throw new Error('Cannot open MonCash payment page');
-        }
+      // Payment request sent to phone
+      if (data.status === 'successful') {
+        // Payment completed immediately
+        Alert.alert(
+          'Payment Successful! 🎉',
+          'Your tickets have been created.',
+          [{ text: 'OK', onPress: () => {
+            onSuccess('moncash', data.transactionId);
+            onClose();
+          }}]
+        );
+      } else {
+        // Payment pending - show waiting message
+        Alert.alert(
+          'Payment Request Sent',
+          `A payment request has been sent to ${phoneNumber}. Please approve it in your MonCash app.`,
+          [
+            {
+              text: 'Check Status',
+              onPress: () => pollPaymentStatus(data.transactionId, data.reference),
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => setProcessing(false),
+            },
+          ]
+        );
       }
     } catch (err: any) {
       setError(err.message || 'MonCash payment failed');
-    } finally {
       setProcessing(false);
     }
   };
 
-  // NatCash Payment (same as MonCash - they use the same backend)
+  // Poll for payment status
+  const pollPaymentStatus = async (transactionId: string, reference: string) => {
+    let attempts = 0;
+    const maxAttempts = 24; // 2 minutes (5s intervals)
+
+    const checkStatus = async (): Promise<boolean> => {
+      try {
+        const response = await fetch(`${API_URL}/api/moncash/check-status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transactionId }),
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'successful') {
+          Alert.alert(
+            'Payment Successful! 🎉',
+            'Your tickets have been created.',
+            [{ text: 'OK', onPress: () => {
+              onSuccess('moncash', transactionId);
+              onClose();
+            }}]
+          );
+          return true;
+        }
+
+        attempts++;
+        if (attempts >= maxAttempts) {
+          throw new Error('Payment timeout - please check your tickets later');
+        }
+
+        // Wait 5 seconds before next check
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        return checkStatus();
+      } catch (err: any) {
+        setError(err.message || 'Failed to verify payment');
+        setProcessing(false);
+        return false;
+      }
+    };
+
+    await checkStatus();
+  };
+
+  // NatCash Payment (same backend as MonCash MerchantApi)
   const handleNatCashPayment = async () => {
+    if (!phoneNumber || phoneNumber.length < 8) {
+      setError('Please enter a valid NatCash phone number');
+      return;
+    }
+
     setProcessing(true);
     setError(null);
 
@@ -185,6 +249,7 @@ function PaymentForm({
         body: JSON.stringify({
           eventId,
           quantity,
+          phoneNumber,
           tierId,
           tierPrice: totalAmount,
           promoCode: promoCodeId,
@@ -197,30 +262,35 @@ function PaymentForm({
         throw new Error(data.error || 'Failed to initiate NatCash payment');
       }
 
-      // Open NatCash/MonCash payment page
-      if (data.paymentUrl) {
-        const canOpen = await Linking.canOpenURL(data.paymentUrl);
-        if (canOpen) {
-          await Linking.openURL(data.paymentUrl);
-          Alert.alert(
-            'NatCash Payment',
-            'Complete your payment in the NatCash app. Your tickets will be created after successful payment.',
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  onClose();
-                },
-              },
-            ]
-          );
-        } else {
-          throw new Error('Cannot open NatCash payment page');
-        }
+      // Handle same as MonCash
+      if (data.status === 'successful') {
+        Alert.alert(
+          'Payment Successful! 🎉',
+          'Your tickets have been created.',
+          [{ text: 'OK', onPress: () => {
+            onSuccess('natcash', data.transactionId);
+            onClose();
+          }}]
+        );
+      } else {
+        Alert.alert(
+          'Payment Request Sent',
+          `A payment request has been sent to ${phoneNumber}. Please approve it in your NatCash app.`,
+          [
+            {
+              text: 'Check Status',
+              onPress: () => pollPaymentStatus(data.transactionId, data.reference),
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => setProcessing(false),
+            },
+          ]
+        );
       }
     } catch (err: any) {
       setError(err.message || 'NatCash payment failed');
-    } finally {
       setProcessing(false);
     }
   };
@@ -343,14 +413,28 @@ function PaymentForm({
           </View>
         )}
 
-        {/* Payment Info for Mobile Money */}
+        {/* Phone Number Input for Mobile Money */}
         {(paymentMethod === 'moncash' || paymentMethod === 'natcash') && (
           <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              {paymentMethod === 'moncash' ? 'MonCash' : 'NatCash'} Phone Number
+            </Text>
+            <TextInput
+              style={styles.phoneInput}
+              placeholder="e.g., 50938662809"
+              placeholderTextColor={COLORS.textSecondary}
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              keyboardType="phone-pad"
+              maxLength={11}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
             <View style={styles.infoBox}>
               <AlertCircle size={18} color={COLORS.primary} />
               <Text style={styles.infoText}>
-                You will be redirected to {paymentMethod === 'moncash' ? 'MonCash' : 'NatCash'} to
-                complete your payment securely.
+                A payment request will be sent to your {paymentMethod === 'moncash' ? 'MonCash' : 'NatCash'} phone.
+                Please approve it to complete your purchase.
               </Text>
             </View>
           </View>
@@ -550,6 +634,17 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     borderWidth: 1,
     borderRadius: 8,
+  },
+  phoneInput: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: COLORS.text,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 12,
   },
   testCardHint: {
     flexDirection: 'row',
