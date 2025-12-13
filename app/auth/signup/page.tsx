@@ -7,6 +7,7 @@ import { auth, db } from '@/lib/firebase/client'
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import Link from 'next/link'
+import Image from 'next/image'
 import { BRAND } from '@/config/brand'
 import type { UserRole } from '@/types/database'
 
