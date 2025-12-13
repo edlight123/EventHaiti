@@ -440,7 +440,6 @@ export default function TieredTicketSelector({
               </Text>
             </TouchableOpacity>
           </View>
-        )}
       </View>
     </Modal>
   );
