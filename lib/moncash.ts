@@ -121,8 +121,8 @@ export async function createMonCashPayment({
     }
     console.log('[MonCash] Payment payload:', JSON.stringify(payload))
 
-    // Use /MerchantApi/V1/Payment which waits for payment completion (up to 2 min)
-    const response = await fetch(`${baseUrl}/MerchantApi/V1/Payment`, {
+    // Use /MerChantApi/V1/Payment (note: MerChantApi with capital C and H as per docs)
+    const response = await fetch(`${baseUrl}/MerChantApi/V1/Payment`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -174,7 +174,7 @@ export async function initiateMonCashPayment({
       amount: parseFloat(amount.toFixed(2)),
     }
 
-    const response = await fetch(`${baseUrl}/MerchantApi/V1/InitiatePayment`, {
+    const response = await fetch(`${baseUrl}/MerChantApi/V1/InitiatePayment`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -226,7 +226,7 @@ export async function checkPaymentStatus(
 
     console.log('[MonCash] Checking payment status:', params)
 
-    const response = await fetch(`${baseUrl}/MerchantApi/V1/CheckPayment`, {
+    const response = await fetch(`${baseUrl}/MerChantApi/V1/CheckPayment`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
