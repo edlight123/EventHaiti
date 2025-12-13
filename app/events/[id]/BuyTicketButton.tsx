@@ -28,6 +28,8 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   const [showModal, setShowModal] = useState(false)
   const [showTieredModal, setShowTieredModal] = useState(false)
   const [showEmbeddedPayment, setShowEmbeddedPayment] = useState(false)
+  const [showPhoneModal, setShowPhoneModal] = useState(false)
+  const [phoneNumber, setPhoneNumber] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'moncash'>('stripe')
@@ -119,35 +121,10 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
         setShowEmbeddedPayment(true)
         setLoading(false)
       } else {
-        // Create MonCash payment
-        const response = await fetch('/api/moncash/initiate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            eventId, 
-            quantity,
-            tierId: selectedTierId,
-            tierPrice: selectedTierPrice,
-            promoCode,
-          }),
-        })
-
-        const data = await response.json()
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to initiate MonCash payment')
-        }
-
-        // Redirect to MonCash payment page
-        if (data.paymentUrl) {
-          showToast({
-            type: 'info',
-            title: 'Redirecting to payment...',
-            message: 'You will be redirected to MonCash',
-            duration: 3000
-          })
-          window.location.href = data.paymentUrl
-        }
+        // Show phone number modal for MonCash
+        setShowModal(false)
+        setShowPhoneModal(true)
+        setLoading(false)
       }
     } catch (err: any) {
       setError(err.message || 'Failed to purchase ticket')
@@ -159,6 +136,107 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
       })
       setLoading(false)
     }
+  }
+
+  async function handleMonCashPaymentWithPhone() {
+    if (!phoneNumber || phoneNumber.length < 8) {
+      setError('Please enter a valid MonCash phone number')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/moncash/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          eventId, 
+          quantity,
+          phoneNumber,
+          tierId: selectedTierId,
+          tierPrice: selectedTierPrice,
+          promoCode,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to initiate MonCash payment')
+      }
+
+      setShowPhoneModal(false)
+
+      if (data.status === 'successful') {
+        showToast({
+          type: 'success',
+          title: 'Payment Successful!',
+          message: 'Your tickets have been created',
+          duration: 4000
+        })
+        router.push('/tickets')
+        router.refresh()
+      } else {
+        showToast({
+          type: 'info',
+          title: 'Payment Request Sent',
+          message: `Check your MonCash app (${phoneNumber}) to approve the payment`,
+          duration: 6000
+        })
+        // Poll for payment status
+        pollMonCashPayment(data.transactionId)
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to initiate MonCash payment')
+      showToast({
+        type: 'error',
+        title: 'Payment failed',
+        message: err.message || 'Please try again later',
+        duration: 4000
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function pollMonCashPayment(transactionId: string) {
+    let attempts = 0
+    const maxAttempts = 24 // 2 minutes
+
+    const checkStatus = async () => {
+      try {
+        const response = await fetch('/api/moncash/check-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transactionId }),
+        })
+
+        const data = await response.json()
+
+        if (data.status === 'successful') {
+          showToast({
+            type: 'success',
+            title: 'Payment Successful!',
+            message: 'Your tickets have been created',
+            duration: 4000
+          })
+          router.push('/tickets')
+          router.refresh()
+          return
+        }
+
+        attempts++
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, 5000)
+        }
+      } catch (err) {
+        console.error('Failed to check payment status:', err)
+      }
+    }
+
+    checkStatus()
   }
 
   const handleTieredPurchase = (tierId: string, tierPrice: number, qty: number, promo?: string) => {
@@ -375,6 +453,78 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             setPromoCode(undefined)
           }}
         />
+      )}
+
+      {/* MonCash Phone Number Modal */}
+      {showPhoneModal && (
+        <BottomSheet 
+          isOpen={showPhoneModal} 
+          onClose={() => {
+            setShowPhoneModal(false)
+            setPhoneNumber('')
+            setError(null)
+          }}
+          title="Enter MonCash Phone Number"
+        >
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                MonCash Phone Number
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                placeholder="e.g., 50938662809"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                maxLength={11}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
+              />
+              <p className="mt-2 text-sm text-gray-500">
+                A payment request will be sent to this number. Please approve it in your MonCash app.
+              </p>
+            </div>
+
+            <div className="bg-teal-50 rounded-lg p-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Total Amount:</span>
+                <span className="text-xl font-bold text-teal-700">
+                  {((selectedTierPrice || ticketPrice) * quantity).toLocaleString()} HTG
+                </span>
+              </div>
+              <div className="mt-1 text-sm text-gray-600">
+                {quantity} ticket{quantity !== 1 ? 's' : ''}
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowPhoneModal(false)
+                  setPhoneNumber('')
+                  setError(null)
+                }}
+                disabled={loading}
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleMonCashPaymentWithPhone}
+                disabled={loading || !phoneNumber || phoneNumber.length < 8}
+                className="flex-1 px-4 py-3 bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Processing...' : 'Send Payment Request'}
+              </button>
+            </div>
+          </div>
+        </BottomSheet>
       )}
     </>
   )
