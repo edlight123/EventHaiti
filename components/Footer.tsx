@@ -11,7 +11,7 @@ export default function Footer() {
           <div className="col-span-1 md:col-span-2">
             <Link href="/" className="flex items-center gap-3 mb-4 group w-fit">
               <Image 
-                src="/logo_white.png" 
+                src="/event_haiti_logo_white.png" 
                 alt="EventHaiti" 
                 width={50} 
                 height={50}

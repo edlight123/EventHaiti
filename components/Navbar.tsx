@@ -48,7 +48,7 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
           <div className="flex items-center">
             <Link href="/" className="flex items-center gap-2 group">
               <Image 
-                src="/logo_color.png" 
+                src="/event_haiti_logo_color.png" 
                 alt="EventHaiti" 
                 width={40} 
                 height={40}

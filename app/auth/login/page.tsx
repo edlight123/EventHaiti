@@ -115,7 +115,7 @@ export default function LoginPage() {
         <div className="text-center">
           <div className="flex justify-center mb-4">
             <Image 
-              src="/logo_color.png" 
+              src="/event_haiti_logo_color.png" 
               alt="EventHaiti" 
               width={80} 
               height={80}
