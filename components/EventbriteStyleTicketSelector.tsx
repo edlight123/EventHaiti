@@ -19,10 +19,21 @@ interface TierQuantity {
   [tierId: string]: number
 }
 
+interface PromoCodeValidation {
+  valid: boolean
+  promoCode?: {
+    id: string
+    code: string
+    description: string
+    discountType: 'percentage' | 'fixed'
+    discountValue: number
+  }
+}
+
 interface EventbriteStyleTicketSelectorProps {
   eventId: string
   userId: string | null
-  onPurchase: (selections: { tierId: string; quantity: number; price: number }[]) => void
+  onPurchase: (selections: { tierId: string; quantity: number; price: number }[], promoCodeId?: string) => void
 }
 
 export default function EventbriteStyleTicketSelector({ 
@@ -34,6 +45,9 @@ export default function EventbriteStyleTicketSelector({
   const [tiers, setTiers] = useState<TicketTier[]>([])
   const [quantities, setQuantities] = useState<TierQuantity>({})
   const [loading, setLoading] = useState(true)
+  const [promoCode, setPromoCode] = useState('')
+  const [promoValidation, setPromoValidation] = useState<PromoCodeValidation | null>(null)
+  const [validatingPromo, setValidatingPromo] = useState(false)
 
   const fetchTiers = useCallback(async () => {
     try {
@@ -95,10 +109,49 @@ export default function EventbriteStyleTicketSelector({
   }
 
   const getTotalPrice = (): number => {
-    return tiers.reduce((sum, tier) => {
+    let total = tiers.reduce((sum, tier) => {
       const qty = quantities[tier.id] || 0
       return sum + (tier.price * qty)
     }, 0)
+
+    // Apply promo code discount
+    if (promoValidation?.valid && promoValidation.promoCode) {
+      const { discountType, discountValue } = promoValidation.promoCode
+      if (discountType === 'percentage') {
+        total = total * (1 - discountValue / 100)
+      } else {
+        total = Math.max(0, total - discountValue)
+      }
+    }
+
+    return total
+  }
+
+  const validatePromoCode = async () => {
+    if (!promoCode.trim() || !userId) return
+
+    setValidatingPromo(true)
+    try {
+      const response = await fetch('/api/promo-codes/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: promoCode, eventId }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.valid) {
+        setPromoValidation(data)
+      } else {
+        alert(data.error || 'Invalid promo code')
+        setPromoValidation(null)
+      }
+    } catch (error) {
+      console.error('Error validating promo:', error)
+      alert('Failed to validate promo code')
+    } finally {
+      setValidatingPromo(false)
+    }
   }
 
   const handlePurchase = () => {
@@ -114,7 +167,7 @@ export default function EventbriteStyleTicketSelector({
 
     if (selections.length === 0) return
 
-    onPurchase(selections)
+    onPurchase(selections, promoValidation?.promoCode?.id)
   }
 
   if (loading) {
@@ -207,6 +260,34 @@ export default function EventbriteStyleTicketSelector({
         })}
       </div>
 
+      {/* Promo Code Section */}
+      <div className="border border-gray-200 rounded-lg p-4">
+        <h4 className="font-medium text-gray-900 mb-3">{t('events.promo_code')}</h4>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={promoCode}
+            onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+            placeholder={t('events.enter_promo_code')}
+            disabled={!userId || validatingPromo}
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-100"
+          />
+          <button
+            onClick={validatePromoCode}
+            disabled={!userId || !promoCode.trim() || validatingPromo}
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed min-w-[80px]"
+          >
+            {validatingPromo ? '...' : t('events.apply')}
+          </button>
+        </div>
+        {promoValidation?.valid && (
+          <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
+            <span>✓</span>
+            <span>{promoValidation.promoCode?.description || 'Promo code applied'}</span>
+          </div>
+        )}
+      </div>
+
       {/* Total Summary */}
       {totalTickets > 0 && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -223,6 +304,18 @@ export default function EventbriteStyleTicketSelector({
                   </span>
                 </div>
               ))}
+            {promoValidation?.valid && promoValidation.promoCode && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span>
+                  {t('events.discount')} ({promoValidation.promoCode.code})
+                </span>
+                <span>
+                  -{promoValidation.promoCode.discountType === 'percentage' 
+                    ? `${promoValidation.promoCode.discountValue}%` 
+                    : `${promoValidation.promoCode.discountValue.toFixed(2)} HTG`}
+                </span>
+              </div>
+            )}
             <div className="border-t border-gray-300 pt-2 flex justify-between font-semibold text-lg">
               <span>{t('events.total')} ({totalTickets} {t('ticket.ticket')}{totalTickets !== 1 ? 's' : ''})</span>
               <span className="text-teal-600">{totalPrice.toFixed(2)} HTG</span>

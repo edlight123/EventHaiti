@@ -102,6 +102,12 @@ export default function TieredTicketSelector({
       
       console.log('[TieredTicketSelector] Fetched tiers:', tiersData.length);
       setTiers(tiersData);
+      
+      // Auto-select first available tier
+      const availableTier = tiersData.find((t: TicketTier) => isTierAvailable(t));
+      if (availableTier) {
+        setSelectedTierId(availableTier.id);
+      }
     } catch (error) {
       console.error('[TieredTicketSelector] Error fetching tiers:', error);
       // Set empty tiers on error so modal still shows
@@ -438,7 +444,7 @@ export default function TieredTicketSelector({
       </View>
     </Modal>
   );
-}
+
 
 const styles = StyleSheet.create({
   container: {
@@ -557,6 +563,30 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     marginHorizontal: 16,
     minWidth: 24,
+    textAlign: 'center',
+  },
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 20,
+  },
+  quantityButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityButtonDisabled: {
+    borderColor: COLORS.border,
+  },
+  quantityText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+    minWidth: 40,
     textAlign: 'center',
   },
   discountNote: {

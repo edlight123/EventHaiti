@@ -42,7 +42,14 @@ export default function LoginScreen({ navigation }: any) {
       style={styles.container}
     >
       <View style={styles.content}>
-        <Text style={styles.logo}>{BRAND.logoText}</Text>
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('../../assets/event_haiti_logo_primary.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.logoText}>EventHaiti</Text>
+        </View>
         <Text style={styles.tagline}>{BRAND.tagline}</Text>
 
         <View style={styles.form}>
@@ -112,12 +119,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
   logo: {
-    fontSize: 40,
+    width: 40,
+    height: 40,
+  },
+  logoText: {
+    fontSize: 32,
     fontWeight: 'bold',
     color: COLORS.primary,
-    textAlign: 'center',
-    marginBottom: 8,
+    marginLeft: 12,
   },
   tagline: {
     fontSize: 16,

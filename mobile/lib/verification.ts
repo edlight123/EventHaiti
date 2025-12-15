@@ -1,0 +1,392 @@
+/**
+ * Mobile Verification System - Firebase Integration
+ * Handles organizer verification requests and document uploads
+ */
+
+import { db, storage, auth } from '../config/firebase';
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+} from 'firebase/storage';
+import * as ImagePicker from 'expo-image-picker';
+
+// Types
+export type VerificationStatus =
+  | 'not_started'
+  | 'in_progress'
+  | 'pending'
+  | 'in_review'
+  | 'approved'
+  | 'changes_requested'
+  | 'rejected';
+
+export type StepStatus = 'incomplete' | 'complete' | 'needs_attention';
+
+export interface VerificationStep {
+  id: string;
+  title: string;
+  description: string;
+  status: StepStatus;
+  required: boolean;
+  fields: Record<string, any>;
+  missingFields?: string[];
+  errorMessage?: string;
+}
+
+export interface VerificationFiles {
+  governmentId?: {
+    front?: string;
+    back?: string;
+    uploadedAt?: Date;
+  };
+  selfie?: {
+    path?: string;
+    uploadedAt?: Date;
+  };
+}
+
+export interface VerificationRequest {
+  userId: string;
+  status: VerificationStatus;
+  steps: {
+    organizerInfo: VerificationStep;
+    governmentId: VerificationStep;
+    selfie: VerificationStep;
+    businessDetails: VerificationStep;
+    payoutSetup: VerificationStep;
+  };
+  files: VerificationFiles;
+  submittedAt?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+  reasonCodes?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Get verification request for user
+ */
+export async function getVerificationRequest(
+  userId: string
+): Promise<VerificationRequest | null> {
+  try {
+    const docRef = doc(db, 'verification_requests', userId);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      return null;
+    }
+
+    const data = docSnap.data();
+
+    return {
+      ...data,
+      createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+      updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+      submittedAt: data.submittedAt?.toDate?.()?.toISOString() || undefined,
+      reviewedAt: data.reviewedAt?.toDate?.()?.toISOString() || undefined,
+    } as VerificationRequest;
+  } catch (error) {
+    console.error('Error fetching verification request:', error);
+    return null;
+  }
+}
+
+/**
+ * Initialize new verification request
+ */
+export async function initializeVerificationRequest(
+  userId: string
+): Promise<VerificationRequest> {
+  const initialRequest: VerificationRequest = {
+    userId,
+    status: 'in_progress',
+    steps: {
+      organizerInfo: {
+        id: 'organizerInfo',
+        title: 'Organizer Information',
+        description: 'Basic information about you and your organization',
+        status: 'incomplete',
+        required: true,
+        fields: {},
+        missingFields: ['full_name', 'phone', 'organization_name'],
+      },
+      governmentId: {
+        id: 'governmentId',
+        title: 'Government ID Upload',
+        description: 'Upload a valid government-issued ID (front and back)',
+        status: 'incomplete',
+        required: true,
+        fields: {},
+        missingFields: ['id_front', 'id_back'],
+      },
+      selfie: {
+        id: 'selfie',
+        title: 'Identity Verification',
+        description: 'Take a selfie holding your ID for verification',
+        status: 'incomplete',
+        required: true,
+        fields: {},
+      },
+      businessDetails: {
+        id: 'businessDetails',
+        title: 'Business Details',
+        description: 'Optional business registration and tax information',
+        status: 'incomplete',
+        required: false,
+        fields: {},
+      },
+      payoutSetup: {
+        id: 'payoutSetup',
+        title: 'Payout Setup',
+        description: 'Configure how you receive payments (can be set up later)',
+        status: 'incomplete',
+        required: false,
+        fields: {},
+      },
+    },
+    files: {},
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const docRef = doc(db, 'verification_requests', userId);
+  await setDoc(docRef, {
+    ...initialRequest,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  return initialRequest;
+}
+
+/**
+ * Update verification step
+ */
+export async function updateVerificationStep(
+  userId: string,
+  stepId: keyof VerificationRequest['steps'],
+  stepData: Partial<VerificationStep>
+): Promise<void> {
+  try {
+    const docRef = doc(db, 'verification_requests', userId);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      throw new Error('Verification request not found');
+    }
+
+    const currentData = docSnap.data() as VerificationRequest;
+    const updatedSteps = {
+      ...currentData.steps,
+      [stepId]: {
+        ...currentData.steps[stepId],
+        ...stepData,
+      },
+    };
+
+    await updateDoc(docRef, {
+      steps: updatedSteps,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error updating verification step:', error);
+    throw error;
+  }
+}
+
+/**
+ * Pick and upload image from camera or library
+ */
+export async function pickAndUploadImage(
+  userId: string,
+  documentType: 'id_front' | 'id_back' | 'selfie',
+  useCamera: boolean = false,
+  useFrontCamera: boolean = false
+): Promise<string> {
+  // Request permissions
+  if (useCamera) {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      throw new Error('Camera permission is required');
+    }
+  } else {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      throw new Error('Photo library permission is required');
+    }
+  }
+
+  // Launch picker
+  const result = useCamera
+    ? await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [3, 4],
+        quality: 0.9,
+        cameraType: useFrontCamera 
+          ? ImagePicker.CameraType.front 
+          : ImagePicker.CameraType.back,
+      })
+    : await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [3, 4],
+        quality: 0.9,
+      });
+
+  if (result.canceled) {
+    throw new Error('Image selection cancelled');
+  }
+
+  // Upload to Firebase Storage
+  const uri = result.assets[0].uri;
+  return await uploadImageToStorage(userId, uri, documentType);
+}
+
+/**
+ * Upload image blob to Firebase Storage
+ */
+async function uploadImageToStorage(
+  userId: string,
+  uri: string,
+  documentType: string
+): Promise<string> {
+  try {
+    // Check authentication
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      throw new Error('You must be logged in to upload documents');
+    }
+    
+    if (currentUser.uid !== userId) {
+      throw new Error('User ID mismatch');
+    }
+
+    console.log(`[Upload] Starting upload for ${documentType}`, {
+      userId,
+      authUserId: currentUser.uid,
+      uri: uri.substring(0, 50) + '...',
+    });
+
+    // Fetch the image as blob
+    const response = await fetch(uri);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.statusText}`);
+    }
+    const blob = await response.blob();
+
+    if (!blob || blob.size === 0) {
+      throw new Error('Invalid image file');
+    }
+
+    // Create storage reference
+    const timestamp = Date.now();
+    const extension = uri.split('.').pop()?.toLowerCase() || 'jpg';
+    const fileName = `${documentType}_${timestamp}.${extension}`;
+    const storagePath = `verification/${userId}/${fileName}`;
+    const storageRef = ref(storage, storagePath);
+
+    console.log(`[Upload] Uploading to: ${storagePath}, Size: ${blob.size} bytes`);
+
+    // Upload with metadata
+    const metadata = {
+      contentType: `image/${extension === 'jpg' ? 'jpeg' : extension}`,
+      customMetadata: {
+        uploadedAt: new Date().toISOString(),
+        documentType,
+      },
+    };
+
+    await uploadBytes(storageRef, blob, metadata);
+    console.log(`[Upload] Success: ${storagePath}`);
+
+    // Return storage path
+    return storagePath;
+  } catch (error: any) {
+    console.error('Error uploading image:', error);
+    throw new Error(error?.message || 'Failed to upload image to storage');
+  }
+}
+
+/**
+ * Update verification files in Firestore
+ */
+export async function updateVerificationFiles(
+  userId: string,
+  filesData: Partial<VerificationFiles>
+): Promise<void> {
+  try {
+    const docRef = doc(db, 'verification_requests', userId);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      console.warn('[Verification] Document does not exist, initializing...');
+      await initializeVerificationRequest(userId);
+    }
+
+    const currentData = docSnap.exists() ? docSnap.data() as VerificationRequest : null;
+    const updatedFiles = {
+      ...(currentData?.files || {}),
+      ...filesData,
+    };
+
+    console.log(`[Verification] Updating files for user: ${userId}`);
+    await updateDoc(docRef, {
+      files: updatedFiles,
+      updatedAt: serverTimestamp(),
+    });
+    console.log('[Verification] Files updated successfully');
+  } catch (error: any) {
+    console.error('[Verification] Error updating files:', error);
+    throw new Error(error?.message || 'Failed to update verification files');
+  }
+}
+
+/**
+ * Submit verification for review
+ */
+export async function submitVerificationForReview(userId: string): Promise<void> {
+  try {
+    const docRef = doc(db, 'verification_requests', userId);
+    await updateDoc(docRef, {
+      status: 'pending',
+      submittedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error submitting verification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Calculate completion percentage
+ */
+export function calculateCompletionPercentage(request: VerificationRequest): number {
+  const requiredSteps = Object.values(request.steps).filter((s) => s.required);
+  const completedSteps = requiredSteps.filter((s) => s.status === 'complete');
+  return Math.round((completedSteps.length / requiredSteps.length) * 100);
+}
+
+/**
+ * Get download URL for document (for preview)
+ */
+export async function getDocumentDownloadURL(storagePath: string): Promise<string> {
+  try {
+    const storageRef = ref(storage, storagePath);
+    return await getDownloadURL(storageRef);
+  } catch (error) {
+    console.error('Error getting document download URL:', error);
+    throw error;
+  }
+}

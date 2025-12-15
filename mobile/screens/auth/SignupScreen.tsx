@@ -44,7 +44,14 @@ export default function SignupScreen({ navigation }: any) {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
-          <Text style={styles.logo}>{BRAND.logoText}</Text>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../../assets/event_haiti_logo_primary.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.logoText}>EventHaiti</Text>
+          </View>
           <Text style={styles.title}>Create Account</Text>
 
           <View style={styles.form}>
@@ -115,12 +122,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
   logo: {
-    fontSize: 40,
+    width: 40,
+    height: 40,
+  },
+  logoText: {
+    fontSize: 32,
     fontWeight: 'bold',
     color: COLORS.primary,
-    textAlign: 'center',
-    marginBottom: 8,
+    marginLeft: 12,
   },
   title: {
     fontSize: 24,

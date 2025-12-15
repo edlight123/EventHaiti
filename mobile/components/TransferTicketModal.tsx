@@ -20,6 +20,7 @@ interface TransferTicketModalProps {
   ticketId: string;
   eventTitle: string;
   transferCount?: number;
+  onTransferSuccess?: () => void;
 }
 
 export default function TransferTicketModal({
@@ -28,6 +29,7 @@ export default function TransferTicketModal({
   ticketId,
   eventTitle,
   transferCount = 0,
+  onTransferSuccess,
 }: TransferTicketModalProps) {
   const [toEmail, setToEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -35,10 +37,30 @@ export default function TransferTicketModal({
   const [error, setError] = useState('');
   const [transferLink, setTransferLink] = useState('');
   const [showLink, setShowLink] = useState(false);
+  const [emailError, setEmailError] = useState('');
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) {
+      setEmailError('');
+      return false;
+    }
+    if (!emailRegex.test(email)) {
+      setEmailError('Please enter a valid email address');
+      return false;
+    }
+    setEmailError('');
+    return true;
+  };
 
   const handleTransfer = async () => {
     if (!toEmail.trim()) {
       setError('Please enter recipient email');
+      return;
+    }
+
+    if (!validateEmail(toEmail)) {
+      setError('Please enter a valid email address');
       return;
     }
 
@@ -69,6 +91,11 @@ export default function TransferTicketModal({
         const link = `https://eventhaiti.com/tickets/transfer/${data.transfer.transferToken}`;
         setTransferLink(link);
         setShowLink(true);
+        
+        // Notify parent to refresh
+        if (onTransferSuccess) {
+          onTransferSuccess();
+        }
       } else {
         Alert.alert(
           'Transfer Sent!',
@@ -80,6 +107,11 @@ export default function TransferTicketModal({
                 onClose();
                 setToEmail('');
                 setMessage('');
+                
+                // Notify parent to refresh
+                if (onTransferSuccess) {
+                  onTransferSuccess();
+                }
               },
             },
           ]
@@ -162,15 +194,25 @@ export default function TransferTicketModal({
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Recipient Email *</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[
+                      styles.input,
+                      emailError && styles.inputError
+                    ]}
                     placeholder="friend@example.com"
                     placeholderTextColor={COLORS.textSecondary}
                     value={toEmail}
-                    onChangeText={setToEmail}
+                    onChangeText={(text) => {
+                      setToEmail(text);
+                      validateEmail(text);
+                    }}
+                    onBlur={() => validateEmail(toEmail)}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     editable={canTransfer}
                   />
+                  {emailError && (
+                    <Text style={styles.inputErrorText}>{emailError}</Text>
+                  )}
                 </View>
 
                 {/* Message Input */}
@@ -264,6 +306,11 @@ export default function TransferTicketModal({
                     setMessage('');
                     setShowLink(false);
                     setTransferLink('');
+                    
+                    // Notify parent to refresh
+                    if (onTransferSuccess) {
+                      onTransferSuccess();
+                    }
                   }}
                 >
                   <Text style={styles.doneButtonText}>Done</Text>
@@ -366,6 +413,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: COLORS.text,
+  },
+  inputError: {
+    borderColor: '#DC2626',
+  },
+  inputErrorText: {
+    fontSize: 12,
+    color: '#DC2626',
+    marginTop: 6,
   },
   textArea: {
     height: 80,

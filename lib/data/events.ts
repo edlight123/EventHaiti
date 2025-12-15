@@ -78,6 +78,9 @@ export async function getEventById(eventId: string): Promise<Event | null> {
       }
 
       const data = eventDoc.data()
+      
+      // Explicitly construct event object to exclude problematic fields like ticket_tiers
+      // (ticket_tiers array in event doc can cause React render errors if passed to client)
       return {
         id: eventDoc.id,
         organizer_id: data?.organizer_id,
@@ -88,6 +91,8 @@ export async function getEventById(eventId: string): Promise<Event | null> {
         city: data?.city,
         commune: data?.commune,
         address: data?.address,
+        location: data?.location,
+        timezone: data?.timezone,
         status: data?.status || 'draft',
         start_datetime: data?.start_datetime?.toDate?.()?.toISOString() || data?.start_datetime,
         end_datetime: data?.end_datetime?.toDate?.()?.toISOString() || data?.end_datetime,
@@ -98,8 +103,13 @@ export async function getEventById(eventId: string): Promise<Event | null> {
         currency: data?.currency || 'HTG',
         total_tickets: data?.total_tickets || data?.capacity || 0,
         tickets_sold: data?.tickets_sold || 0,
+        tickets_available: data?.tickets_available,
+        is_published: data?.is_published,
+        tags: data?.tags && Array.isArray(data.tags) ? data.tags.filter((tag: any) => typeof tag === 'string') : undefined,
         created_at: data?.created_at?.toDate?.()?.toISOString() || data?.created_at,
         updated_at: data?.updated_at?.toDate?.()?.toISOString() || data?.updated_at,
+        // Note: ticket_tiers array is intentionally excluded to prevent React render errors
+        // Ticket tiers are fetched separately from ticket_tiers collection
       } as Event
     } catch (error) {
       console.error('Error fetching event:', error)

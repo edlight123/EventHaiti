@@ -5,10 +5,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
-  Share,
   Linking,
 } from 'react-native';
-import { Calendar, MapPin, User, Wallet, Share2, ExternalLink } from 'lucide-react-native';
+import { Calendar, MapPin, User, Wallet, Send, ExternalLink } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { COLORS } from '../config/brand';
 import { format } from 'date-fns';
@@ -20,6 +19,7 @@ interface TicketPassCardProps {
   ticketNumber: number;
   onQRPress: () => void;
   onViewEvent: () => void;
+  onTransferPress?: () => void;
 }
 
 export default function TicketPassCard({
@@ -29,20 +29,10 @@ export default function TicketPassCard({
   ticketNumber,
   onQRPress,
   onViewEvent,
+  onTransferPress,
 }: TicketPassCardProps) {
   const isUsed = !!ticket.checked_in_at;
   const orderNumber = `EH-${ticket.id?.slice(0, 8).toUpperCase() || 'XXXXXXXX'}`;
-
-  const handleShare = async () => {
-    try {
-      await Share.share({
-        message: `My ticket for ${event.title}\nOrder: ${orderNumber}`,
-        title: 'Event Ticket',
-      });
-    } catch (error) {
-      console.error('Error sharing ticket:', error);
-    }
-  };
 
   const handleAddToWallet = () => {
     // Stub for now - could integrate Apple Wallet / Google Pay
@@ -87,6 +77,10 @@ export default function TicketPassCard({
             value={ticket.id || 'no-ticket-id'}
             size={200}
             backgroundColor="#FFF"
+            logo={require('../assets/event_haiti_logo_color.png')}
+            logoSize={45}
+            logoBackgroundColor="white"
+            logoBorderRadius={5}
           />
         </View>
         
@@ -123,14 +117,16 @@ export default function TicketPassCard({
         </TouchableOpacity>
 
         <View style={styles.secondaryActions}>
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={handleShare}
-            activeOpacity={0.8}
-          >
-            <Share2 size={18} color={COLORS.primary} />
-            <Text style={styles.secondaryButtonText}>Share</Text>
-          </TouchableOpacity>
+          {onTransferPress && !isUsed && (
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={onTransferPress}
+              activeOpacity={0.8}
+            >
+              <Send size={18} color={COLORS.primary} />
+              <Text style={styles.secondaryButtonText}>Transfer</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.secondaryButton}

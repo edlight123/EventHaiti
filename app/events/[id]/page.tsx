@@ -78,50 +78,61 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       }
     }
   } else {
-    // Fetch from Firestore
-    const eventData = await getEventById(id)
+    try {
+      // Fetch from Firestore with timeout handling
+      const eventData = await getEventById(id)
 
-    console.log('Event query result:', { eventData, id })
+      console.log('Event query result:', { eventData, id })
 
-    if (!eventData) {
-      console.log('Event not found, returning 404')
-      notFound()
-    }
-
-    if (eventData.status !== 'published' && eventData.organizer_id !== user?.id) {
-      console.log('Event not published and user is not organizer, returning 404')
-      notFound()
-    }
-
-    // Get the organizer data
-    const organizerDoc = await adminDb.collection('users').doc(eventData.organizer_id).get()
-    const organizerData = organizerDoc.exists ? organizerDoc.data() : null
-
-    console.log('Organizer query result:', { organizerData, organizerId: eventData.organizer_id })
-
-    // Combine event and organizer data
-    event = {
-      ...eventData,
-      users: organizerData ? {
-        full_name: organizerData.full_name || 'Event Organizer',
-        is_verified: organizerData.is_verified ?? false
-      } : {
-        full_name: 'Event Organizer',
-        is_verified: false
+      if (!eventData) {
+        console.log('Event not found, returning 404')
+        notFound()
       }
+
+      if (eventData.status !== 'published' && eventData.organizer_id !== user?.id) {
+        console.log('Event not published and user is not organizer, returning 404')
+        notFound()
+      }
+
+      // Get the organizer data
+      const organizerDoc = await adminDb.collection('users').doc(eventData.organizer_id).get()
+      const organizerData = organizerDoc.exists ? organizerDoc.data() : null
+
+      console.log('Organizer query result:', { organizerData, organizerId: eventData.organizer_id })
+
+      // Combine event and organizer data
+      event = {
+        ...eventData,
+        users: organizerData ? {
+          full_name: organizerData.full_name || 'Event Organizer',
+          is_verified: organizerData.is_verified ?? false
+        } : {
+          full_name: 'Event Organizer',
+          is_verified: false
+        }
+      }
+      
+      // Fetch ticket tiers to calculate accurate total capacity
+      try {
+        const tiersSnapshot = await adminDb.collection('ticket_tiers')
+          .where('event_id', '==', id)
+          .get()
+        
+        const totalFromTiers = tiersSnapshot.docs.reduce((sum: number, doc: any) => {
+          const data = doc.data()
+          return sum + (data.quantity || 0)
+        }, 0)
+        
+        event.total_tickets = totalFromTiers || event.total_tickets || 0
+      } catch (tierError) {
+        console.error('Error fetching ticket tiers:', tierError)
+        // Use the event's total_tickets if tier fetch fails
+        event.total_tickets = event.total_tickets || 0
+      }
+    } catch (error) {
+      console.error('Error fetching event:', error)
+      notFound()
     }
-    
-    // Fetch ticket tiers to calculate accurate total capacity
-    const tiersSnapshot = await adminDb.collection('ticket_tiers')
-      .where('event_id', '==', id)
-      .get()
-    
-    const totalFromTiers = tiersSnapshot.docs.reduce((sum: number, doc: any) => {
-      const data = doc.data()
-      return sum + (data.quantity || 0)
-    }, 0)
-    
-    event.total_tickets = totalFromTiers || event.total_tickets || 0
   }
 
   const remainingTickets = (event.total_tickets || 0) - (event.tickets_sold || 0)

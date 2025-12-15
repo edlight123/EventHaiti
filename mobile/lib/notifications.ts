@@ -20,9 +20,9 @@ export async function getUserNotifications(
   limitCount: number = 50
 ): Promise<Notification[]> {
   try {
+    const notificationsRef = collection(db, 'users', userId, 'notifications');
     const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', userId),
+      notificationsRef,
       orderBy('createdAt', 'desc'),
       limit(limitCount)
     );
@@ -34,7 +34,7 @@ export async function getUserNotifications(
       const data = doc.data();
       notifications.push({
         id: doc.id,
-        userId: data.userId,
+        userId,
         type: data.type,
         title: data.title,
         message: data.message,
@@ -58,9 +58,9 @@ export async function getUserNotifications(
  */
 export async function getUnreadCount(userId: string): Promise<number> {
   try {
+    const notificationsRef = collection(db, 'users', userId, 'notifications');
     const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', userId),
+      notificationsRef,
       where('isRead', '==', false)
     );
 
@@ -77,7 +77,7 @@ export async function getUnreadCount(userId: string): Promise<number> {
  */
 export async function markAsRead(userId: string, notificationId: string): Promise<void> {
   try {
-    const notificationRef = doc(db, 'notifications', notificationId);
+    const notificationRef = doc(db, 'users', userId, 'notifications', notificationId);
     await updateDoc(notificationRef, {
       isRead: true,
       readAt: new Date().toISOString(),
@@ -93,9 +93,9 @@ export async function markAsRead(userId: string, notificationId: string): Promis
  */
 export async function markAllAsRead(userId: string): Promise<void> {
   try {
+    const notificationsRef = collection(db, 'users', userId, 'notifications');
     const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', userId),
+      notificationsRef,
       where('isRead', '==', false)
     );
 

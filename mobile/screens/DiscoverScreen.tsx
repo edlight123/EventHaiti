@@ -602,6 +602,14 @@ export default function DiscoverScreen({ navigation, route }: any) {
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
         )}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
+        }
       >
         {/* When Chips - Between search and featured */}
         <View style={styles.chipsSection}>

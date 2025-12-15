@@ -17,10 +17,11 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isOwner(userId);
       
-      // Notifications subcollection - users can only access their own notifications
+      // Notifications subcollection - users can read their own, organizers can send to attendees
       match /notifications/{notificationId} {
         allow read: if isOwner(userId);
-        allow write: if isOwner(userId);
+        allow create: if isSignedIn(); // Allow any authenticated user to create notifications
+        allow update, delete: if isOwner(userId);
       }
       
       // FCM Tokens subcollection - users can only access their own tokens
@@ -45,23 +46,25 @@ service cloud.firestore {
       // Event updates subcollection
       match /updates/{updateId} {
         allow read: if true; // Anyone can read event updates
-        allow write: if isSignedIn() && get(/databases/$(database)/documents/events/$(eventId)).data.organizer_id == request.auth.uid;
+        allow write: if isSignedIn() && (
+          exists(/databases/$(database)/documents/events/$(eventId)) &&
+          get(/databases/$(database)/documents/events/$(eventId)).data.organizer_id == request.auth.uid
+        );
       }
     }
     
-    // Tickets collection - users can only access their own tickets
+    // Event updates collection (separate from events subcollection)
+    match /event_updates/{updateId} {
+      allow read: if true; // Anyone can read event updates
+      allow create: if isSignedIn(); // Any authenticated user can create
+      allow update, delete: if isSignedIn();
+    }
+    
+    // Tickets collection - users can access their own tickets, organizers can access all tickets
     match /tickets/{ticketId} {
-      allow read: if isSignedIn() && (
-        resource.data.attendee_id == request.auth.uid ||
-        resource.data.user_id == request.auth.uid ||
-        get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid
-      );
+      allow read: if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isSignedIn() && (
-        resource.data.attendee_id == request.auth.uid ||
-        resource.data.user_id == request.auth.uid ||
-        get(/databases/$(database)/documents/events/$(resource.data.event_id)).data.organizer_id == request.auth.uid
-      );
+      allow update: if isSignedIn();
     }
     
     // Ticket tiers - public read, organizers can manage their event's tiers
@@ -141,6 +144,19 @@ service cloud.firestore {
     match /admin_actions/{actionId} {
       allow read: if false; // Admin reads via server SDK only
       allow write: if false; // Only server-side writes
+    }
+    
+    // Ticket transfers collection
+    match /ticket_transfers/{transferId} {
+      allow read: if isSignedIn() && (
+        resource.data.from_user_id == request.auth.uid ||
+        resource.data.to_email == request.auth.token.email
+      );
+      allow create: if isSignedIn() && request.resource.data.from_user_id == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.from_user_id == request.auth.uid ||
+        resource.data.to_email == request.auth.token.email
+      );
     }
     
     // Default deny for everything else

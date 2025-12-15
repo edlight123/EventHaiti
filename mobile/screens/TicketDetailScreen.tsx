@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Share, Platform } from 'react-native';
-import { Calendar, MapPin, User as UserIcon, Ticket as TicketIcon, Share2, Send } from 'lucide-react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Platform } from 'react-native';
+import { Calendar, MapPin, User as UserIcon, Ticket as TicketIcon, Send } from 'lucide-react-native';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { COLORS } from '../config/brand';
@@ -14,9 +14,11 @@ export default function TicketDetailScreen({ route }: any) {
   const [ticket, setTicket] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [pendingTransfer, setPendingTransfer] = useState<any>(null);
 
   useEffect(() => {
     fetchTicketDetails();
+    fetchPendingTransfer();
   }, [ticketId]);
 
   const fetchTicketDetails = async () => {
@@ -39,16 +41,61 @@ export default function TicketDetailScreen({ route }: any) {
     }
   };
 
-  const handleShare = async () => {
+  const fetchPendingTransfer = async () => {
     try {
-      await Share.share({
-        message: `My ticket for ${ticket.event_title}\nDate: ${ticket.event_date && format(ticket.event_date, 'EEEE, MMMM dd, yyyy')}\nVenue: ${ticket.venue_name}`,
-        title: `Ticket: ${ticket.event_title}`,
-      });
+      const { getDocs, collection, query, where } = await import('firebase/firestore');
+      const transfersQuery = query(
+        collection(db, 'ticket_transfers'),
+        where('ticket_id', '==', ticketId),
+        where('status', '==', 'pending')
+      );
+      const transfersSnapshot = await getDocs(transfersQuery);
+      
+      if (!transfersSnapshot.empty) {
+        const transferDoc = transfersSnapshot.docs[0];
+        const data = transferDoc.data();
+        setPendingTransfer({
+          id: transferDoc.id,
+          ...data,
+          expires_at: data.expires_at?.toDate ? data.expires_at.toDate() : data.expires_at ? new Date(data.expires_at) : null,
+        });
+      }
     } catch (error) {
-      console.error('Error sharing:', error);
+      console.error('Error fetching pending transfer:', error);
     }
   };
+
+  const handleCancelTransfer = async () => {
+    if (!pendingTransfer) return;
+
+    Alert.alert(
+      'Cancel Transfer',
+      'Are you sure you want to cancel this transfer?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { updateDoc, doc } = await import('firebase/firestore');
+              await updateDoc(doc(db, 'ticket_transfers', pendingTransfer.id), {
+                status: 'cancelled',
+                updated_at: new Date().toISOString()
+              });
+              setPendingTransfer(null);
+              Alert.alert('Success', 'Transfer cancelled successfully');
+            } catch (error) {
+              console.error('Error cancelling transfer:', error);
+              Alert.alert('Error', 'Failed to cancel transfer');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+
 
   if (loading) {
     return (
@@ -66,41 +113,101 @@ export default function TicketDetailScreen({ route }: any) {
     );
   }
 
+  // Check if event has ended (ticket expired)
+  const now = new Date();
+  const eventEnd = new Date(ticket.end_datetime || ticket.event_date || ticket.start_datetime);
+  const isExpired = now > eventEnd;
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
-          {/* Header with Title and Actions */}
+          {/* Header with Title */}
           <View style={styles.header}>
             <Text style={styles.eventTitle}>{ticket.event_title}</Text>
-            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-              <Share2 size={20} color={COLORS.primary} />
-            </TouchableOpacity>
           </View>
 
           {/* Status Badge */}
           <View style={[
             styles.statusBadge,
-            ticket.status === 'confirmed' && styles.statusConfirmed,
-            ticket.status === 'used' && styles.statusUsed,
+            isExpired && styles.statusExpired,
+            !isExpired && ticket.status === 'confirmed' && styles.statusConfirmed,
+            !isExpired && ticket.status === 'used' && styles.statusUsed,
           ]}>
-            <Text style={styles.statusText}>{ticket.status?.toUpperCase()}</Text>
+            <Text style={styles.statusText}>
+              {isExpired ? 'EXPIRED' : ticket.status?.toUpperCase()}
+            </Text>
           </View>
 
           {/* QR Code Section */}
           <View style={styles.qrSection}>
-            <View style={styles.qrContainer}>
+            <View style={[styles.qrContainer, isExpired && styles.qrContainerDimmed]}>
               <QRCode
                 value={ticket.qr_code || ticketId}
                 size={220}
                 backgroundColor="white"
                 color={COLORS.primary}
+                logo={require('../assets/event_haiti_logo_color.png')}
+                logoSize={48}
+                logoBackgroundColor="white"
+                logoBorderRadius={6}
               />
             </View>
             <Text style={styles.qrInstruction}>
-              Show this QR code at the event entrance
+              {isExpired 
+                ? 'This ticket is for a past event and can no longer be used.'
+                : 'Show this QR code at the event entrance'
+              }
             </Text>
           </View>
+
+          {/* Transfer Button */}
+          {(ticket.status === 'confirmed' || ticket.status === 'active') && (
+            <>
+              {/* Pending Transfer Status */}
+              {pendingTransfer && (
+                <View style={styles.pendingTransferCard}>
+                  <View style={styles.pendingTransferHeader}>
+                    <View style={styles.pendingTransferBadge}>
+                      <Text style={styles.pendingTransferBadgeText}>⏳ Transfer Pending</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.pendingTransferEmail}>
+                    Sent to: <Text style={styles.pendingTransferEmailBold}>{pendingTransfer.to_email}</Text>
+                  </Text>
+                  {pendingTransfer.expires_at && (
+                    <Text style={styles.pendingTransferExpiry}>
+                      Expires: {format(pendingTransfer.expires_at, 'MMM dd, yyyy h:mm a')}
+                    </Text>
+                  )}
+                  <TouchableOpacity
+                    style={styles.cancelTransferButton}
+                    onPress={handleCancelTransfer}
+                  >
+                    <Text style={styles.cancelTransferButtonText}>Cancel Transfer</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Transfer Button - Only show if no pending transfer */}
+              {!pendingTransfer && (
+                <TouchableOpacity
+                  style={styles.transferButton}
+                  onPress={() => setShowTransferModal(true)}
+                >
+                  <View style={styles.transferButtonContent}>
+                    <View style={styles.transferButtonIcon}>
+                      <Send size={22} color="#FFF" />
+                    </View>
+                    <View style={styles.transferButtonTextContainer}>
+                      <Text style={styles.transferButtonTitle}>Transfer Ticket</Text>
+                      <Text style={styles.transferButtonSubtitle}>Send this ticket to someone else</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
 
           {/* Key Info Cards */}
           <View style={styles.infoCards}>
@@ -189,16 +296,7 @@ export default function TicketDetailScreen({ route }: any) {
             </View>
           )}
 
-          {/* Transfer Button */}
-          {(ticket.status === 'confirmed' || ticket.status === 'active') && (
-            <TouchableOpacity
-              style={styles.transferButton}
-              onPress={() => setShowTransferModal(true)}
-            >
-              <Send size={20} color="#FFF" />
-              <Text style={styles.transferButtonText}>Transfer Ticket</Text>
-            </TouchableOpacity>
-          )}
+
 
           {/* Footer Note */}
           <View style={styles.footer}>
@@ -217,6 +315,10 @@ export default function TicketDetailScreen({ route }: any) {
         ticketId={ticketId}
         eventTitle={ticket.event_title}
         transferCount={ticket.transfer_count || 0}
+        onTransferSuccess={() => {
+          fetchPendingTransfer();
+          setShowTransferModal(false);
+        }}
       />
     </View>
   );
@@ -249,24 +351,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: COLORS.text,
-    flex: 1,
-    marginRight: 12,
     lineHeight: 30,
-  },
-  shareButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
   },
   statusBadge: {
     paddingHorizontal: 16,
@@ -281,6 +366,9 @@ const styles = StyleSheet.create({
   },
   statusUsed: {
     backgroundColor: COLORS.textSecondary,
+  },
+  statusExpired: {
+    backgroundColor: '#FF8C00', // Orange color for expired
   },
   statusText: {
     color: COLORS.surface,
@@ -304,6 +392,9 @@ const styles = StyleSheet.create({
     elevation: 6,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  qrContainerDimmed: {
+    opacity: 0.5, // Dim the QR code for expired tickets
   },
   qrInstruction: {
     fontSize: 15,
@@ -433,25 +524,96 @@ const styles = StyleSheet.create({
   walletSection: {
     marginBottom: 24,
   },
-  transferButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.primary,
+  pendingTransferCard: {
+    backgroundColor: '#FEF3C7',
     padding: 16,
     borderRadius: 12,
     marginBottom: 24,
-    gap: 8,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    borderWidth: 2,
+    borderColor: '#F59E0B',
   },
-  transferButtonText: {
-    fontSize: 16,
+  pendingTransferHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  pendingTransferBadge: {
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  pendingTransferBadgeText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  pendingTransferEmail: {
+    fontSize: 14,
+    color: '#92400E',
+    marginBottom: 6,
+  },
+  pendingTransferEmailBold: {
+    fontWeight: '700',
+  },
+  pendingTransferExpiry: {
+    fontSize: 13,
+    color: '#B45309',
+    marginBottom: 12,
+  },
+  cancelTransferButton: {
+    backgroundColor: '#FFF',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    alignItems: 'center',
+  },
+  cancelTransferButtonText: {
+    color: '#F59E0B',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  transferButton: {
+    backgroundColor: COLORS.primary,
+    padding: 18,
+    borderRadius: 16,
+    marginBottom: 32,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 0,
+  },
+  transferButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  transferButtonIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  transferButtonTextContainer: {
+    flex: 1,
+  },
+  transferButtonTitle: {
+    fontSize: 18,
     fontWeight: '700',
     color: '#FFF',
+    marginBottom: 3,
+  },
+  transferButtonSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontWeight: '500',
   },
   errorText: {
     fontSize: 16,

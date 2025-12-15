@@ -10,6 +10,7 @@ import {
   Platform,
   StatusBar,
   Share,
+  Image,
 } from 'react-native';
 import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -159,7 +160,12 @@ export default function HomeScreen({ navigation }: any) {
       {/* Compact Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.logo}>{BRAND.logoText}</Text>
+          <Image
+            source={require('../assets/event_haiti_logo_white.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.logoText}>EventHaiti</Text>
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity 
@@ -287,7 +293,8 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   headerRight: {
     flexDirection: 'row',
@@ -303,9 +310,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    fontSize: 22,
+    width: 32,
+    height: 32,
+  },
+  logoText: {
+    fontSize: 20,
     fontWeight: '800',
     color: 'white',
+    marginLeft: 8,
     letterSpacing: 0.5,
   },
   greeting: {

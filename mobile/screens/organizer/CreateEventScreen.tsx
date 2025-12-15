@@ -1,0 +1,1842 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Modal,
+} from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'expo-image';
+import { useNavigation } from '@react-navigation/native';
+import { COLORS } from '../../config/brand';
+import { useAuth } from '../../contexts/AuthContext';
+
+const STEPS = [
+  { id: 1, title: 'Basics', icon: 'document-text-outline' },
+  { id: 2, title: 'Location', icon: 'location-outline' },
+  { id: 3, title: 'Schedule', icon: 'time-outline' },
+  { id: 4, title: 'Tickets', icon: 'ticket-outline' },
+  { id: 5, title: 'Details', icon: 'image-outline' },
+];
+
+const CATEGORIES = ['Concert', 'Party', 'Conference', 'Festival', 'Workshop', 'Sports', 'Theater', 'Other'];
+const CITIES = ['Port-au-Prince', 'Cap-Haïtien', 'Gonaïves', 'Les Cayes', 'Jacmel', 'Port-de-Paix', 'Jérémie', 'Saint-Marc'];
+
+export default function CreateEventScreen() {
+  const navigation = useNavigation();
+  const { userProfile } = useAuth();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [saving, setSaving] = useState(false);
+
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    category: 'Concert',
+    venue_name: '',
+    city: 'Port-au-Prince',
+    commune: '',
+    address: '',
+    start_date: '',
+    start_time: '',
+    end_date: '',
+    end_time: '',
+    ticket_tiers: [{ name: 'General Admission', price: '', quantity: '' }] as Array<{name: string, price: string, quantity: string}>,
+    currency: 'USD',
+    banner_image_url: '',
+    tags: [] as string[],
+  });
+
+  const updateField = (field: string, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const getCurrencySymbol = () => {
+    return formData.currency === 'HTG' ? 'HTG' : '$';
+  };
+
+  const validateStep = (step: number): boolean => {
+    switch (step) {
+      case 1:
+        if (!formData.title.trim()) {
+          Alert.alert('Required', 'Please enter an event title');
+          return false;
+        }
+        if (!formData.description.trim()) {
+          Alert.alert('Required', 'Please enter an event description');
+          return false;
+        }
+        return true;
+      case 2:
+        if (!formData.venue_name.trim()) {
+          Alert.alert('Required', 'Please enter a venue name');
+          return false;
+        }
+        if (!formData.address.trim()) {
+          Alert.alert('Required', 'Please enter an address');
+          return false;
+        }
+        return true;
+      case 3:
+        if (!formData.start_date || !formData.start_time) {
+          Alert.alert('Required', 'Please select start date and time');
+          return false;
+        }
+        if (!formData.end_date || !formData.end_time) {
+          Alert.alert('Required', 'Please select end date and time');
+          return false;
+        }
+        return true;
+      case 4:
+        if (formData.ticket_tiers.length === 0) {
+          Alert.alert('Required', 'Please add at least one ticket tier');
+          return false;
+        }
+        for (let tier of formData.ticket_tiers) {
+          if (!tier.name.trim()) {
+            Alert.alert('Required', 'Please enter a name for all ticket tiers');
+            return false;
+          }
+          if (!tier.price || parseFloat(tier.price) < 0) {
+            Alert.alert('Required', 'Please enter a valid price for all ticket tiers');
+            return false;
+          }
+          if (!tier.quantity || parseInt(tier.quantity) <= 0) {
+            Alert.alert('Required', 'Please enter quantity for all ticket tiers');
+            return false;
+          }
+        }
+        return true;
+      default:
+        return true;
+    }
+  };
+
+  const checkEventDuration = () => {
+    if (!formData.start_date || !formData.start_time || !formData.end_date || !formData.end_time) {
+      return true;
+    }
+
+    // Parse times (handle AM/PM format)
+    const parseTime = (timeStr: string) => {
+      const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!match) return { hours: 0, minutes: 0 };
+      let hours = parseInt(match[1]);
+      const minutes = parseInt(match[2]);
+      const period = match[3].toUpperCase();
+      if (period === 'PM' && hours !== 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+      return { hours, minutes };
+    };
+
+    const startTime = parseTime(formData.start_time);
+    const endTime = parseTime(formData.end_time);
+
+    const startDate = new Date(formData.start_date + 'T00:00:00');
+    startDate.setHours(startTime.hours, startTime.minutes);
+
+    const endDate = new Date(formData.end_date + 'T00:00:00');
+    endDate.setHours(endTime.hours, endTime.minutes);
+
+    const diffHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+
+    if (diffHours > 8) {
+      return new Promise<boolean>((resolve) => {
+        Alert.alert(
+          'Long Event Duration',
+          `Your event is ${Math.round(diffHours)} hours long. Most events are under 8 hours. Do you want to continue?`,
+          [
+            { text: 'Review Dates', style: 'cancel', onPress: () => resolve(false) },
+            { text: 'Continue Anyway', onPress: () => resolve(true) },
+          ]
+        );
+      });
+    }
+    return true;
+  };
+
+  const nextStep = async () => {
+    // Only validate on the last step before submitting
+    if (currentStep === 5) {
+      // Validate all steps before final submit
+      for (let i = 1; i <= 4; i++) {
+        if (!validateStep(i)) {
+          setCurrentStep(i); // Go back to the invalid step
+          return;
+        }
+      }
+      // Check duration warning
+      const canProceed = await checkEventDuration();
+      if (!canProceed) {
+        setCurrentStep(3); // Go back to schedule step
+        return;
+      }
+      handleSubmit();
+    } else {
+      // Just move to next step without validation
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const previousStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleSubmit = async () => {
+    setSaving(true);
+    try {
+      // TODO: Implement Firebase event creation
+      Alert.alert('Success', 'Event created successfully!', [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to create event');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const renderProgressBar = () => (
+    <View style={styles.progressContainer}>
+      {STEPS.map((step, index) => (
+        <React.Fragment key={step.id}>
+          <TouchableOpacity 
+            style={styles.stepItem}
+            onPress={() => setCurrentStep(step.id)}
+          >
+            <View
+              style={[
+                styles.stepCircle,
+                currentStep >= step.id && styles.stepCircleActive,
+                currentStep > step.id && styles.stepCircleComplete,
+              ]}
+            >
+              {currentStep > step.id ? (
+                <Ionicons name="checkmark" size={16} color={COLORS.white} />
+              ) : (
+                <Text
+                  style={[
+                    styles.stepNumber,
+                    currentStep >= step.id && styles.stepNumberActive,
+                  ]}
+                >
+                  {step.id}
+                </Text>
+              )}
+            </View>
+            <Text
+              style={[
+                styles.stepLabel,
+                currentStep >= step.id && styles.stepLabelActive,
+              ]}
+            >
+              {step.title}
+            </Text>
+          </TouchableOpacity>
+          {index < STEPS.length - 1 && (
+            <View
+              style={[
+                styles.progressLine,
+                currentStep > step.id && styles.progressLineActive,
+              ]}
+            />
+          )}
+        </React.Fragment>
+      ))}
+    </View>
+  );
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return <Step1Basics formData={formData} updateField={updateField} />;
+      case 2:
+        return <Step2Location formData={formData} updateField={updateField} />;
+      case 3:
+        return <Step3Schedule formData={formData} updateField={updateField} />;
+      case 4:
+        return <Step4Tickets formData={formData} updateField={updateField} />;
+      case 5:
+        return <Step5Details formData={formData} updateField={updateField} />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
+    >
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() =>
+            Alert.alert('Discard Changes?', 'Are you sure you want to leave? Your changes will be lost.', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Leave', style: 'destructive', onPress: () => navigation.goBack() },
+            ])
+          }
+        >
+          <Ionicons name="close" size={24} color={COLORS.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Create Event</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      {/* Progress Bar */}
+      <View style={styles.progressWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.progressScroll}
+        >
+          {renderProgressBar()}
+        </ScrollView>
+      </View>
+
+      {/* Step Content */}
+      <ScrollView 
+        style={styles.content} 
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {renderStepContent()}
+      </ScrollView>
+
+      {/* Footer Buttons */}
+      <View style={styles.footer}>
+        {currentStep > 1 && (
+          <TouchableOpacity
+            style={[styles.button, styles.buttonSecondary]}
+            onPress={previousStep}
+          >
+            <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
+            <Text style={styles.buttonSecondaryText}>Back</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[styles.button, styles.buttonPrimary, currentStep === 1 && styles.buttonFull]}
+          onPress={nextStep}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color={COLORS.white} />
+          ) : (
+            <>
+              <Text style={styles.buttonPrimaryText}>
+                {currentStep === 5 ? 'Create Event' : 'Continue'}
+              </Text>
+              {currentStep < 5 && <Ionicons name="arrow-forward" size={20} color={COLORS.white} />}
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+// Step 1: Basics
+function Step1Basics({ formData, updateField }: any) {
+  const pickImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (!permissionResult.granted) {
+      Alert.alert('Permission Required', 'Please allow access to your photo library');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      updateField('banner_image_url', result.assets[0].uri);
+    }
+  };
+
+  return (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepTitle}>Let's start with the basics</Text>
+      <Text style={styles.stepSubtitle}>Tell attendees what your event is about</Text>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Event Banner Image</Text>
+        <TouchableOpacity style={styles.imageUploadButton} onPress={pickImage}>
+          {formData.banner_image_url ? (
+            <View style={styles.imagePreviewContainer}>
+              <Image source={{ uri: formData.banner_image_url }} style={styles.imagePreview} />
+              <View style={styles.imageOverlay}>
+                <Ionicons name="camera-outline" size={32} color={COLORS.white} />
+                <Text style={styles.imageOverlayText}>Change Image</Text>
+              </View>
+            </View>
+          ) : (
+            <>
+              <Ionicons name="image-outline" size={40} color={COLORS.primary} />
+              <Text style={styles.imageUploadText}>Upload Event Banner</Text>
+              <Text style={styles.imageUploadSubtext}>Recommended: 1200x628px</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>
+          Event Title <Text style={styles.required}>*</Text>
+        </Text>
+        <TextInput
+          style={styles.input}
+          value={formData.title}
+          onChangeText={(text) => updateField('title', text)}
+          placeholder="e.g. Summer Music Festival 2025"
+          placeholderTextColor={COLORS.textSecondary}
+        />
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>
+          Description <Text style={styles.required}>*</Text>
+        </Text>
+        <TextInput
+          style={[styles.input, styles.textarea]}
+          value={formData.description}
+          onChangeText={(text) => updateField('description', text)}
+          placeholder="Describe what makes your event special..."
+          placeholderTextColor={COLORS.textSecondary}
+          multiline
+          numberOfLines={6}
+          textAlignVertical="top"
+        />
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Category</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
+          {CATEGORIES.map((category) => (
+            <TouchableOpacity
+              key={category}
+              style={[
+                styles.categoryChip,
+                formData.category === category && styles.categoryChipActive,
+              ]}
+              onPress={() => updateField('category', category)}
+            >
+              <Text
+                style={[
+                  styles.categoryChipText,
+                  formData.category === category && styles.categoryChipTextActive,
+                ]}
+              >
+                {category}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+// Step 2: Location
+function Step2Location({ formData, updateField }: any) {
+  return (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepTitle}>Where is it happening?</Text>
+      <Text style={styles.stepSubtitle}>Help attendees find your event</Text>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>
+          Venue Name <Text style={styles.required}>*</Text>
+        </Text>
+        <TextInput
+          style={styles.input}
+          value={formData.venue_name}
+          onChangeText={(text) => updateField('venue_name', text)}
+          placeholder="e.g. National Stadium"
+          placeholderTextColor={COLORS.textSecondary}
+        />
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>City</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
+          {CITIES.map((city) => (
+            <TouchableOpacity
+              key={city}
+              style={[
+                styles.categoryChip,
+                formData.city === city && styles.categoryChipActive,
+              ]}
+              onPress={() => updateField('city', city)}
+            >
+              <Text
+                style={[
+                  styles.categoryChipText,
+                  formData.city === city && styles.categoryChipTextActive,
+                ]}
+              >
+                {city}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Commune / Neighborhood</Text>
+        <TextInput
+          style={styles.input}
+          value={formData.commune}
+          onChangeText={(text) => updateField('commune', text)}
+          placeholder="e.g. Pétion-Ville"
+          placeholderTextColor={COLORS.textSecondary}
+        />
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>
+          Street Address <Text style={styles.required}>*</Text>
+        </Text>
+        <TextInput
+          style={styles.input}
+          value={formData.address}
+          onChangeText={(text) => updateField('address', text)}
+          placeholder="e.g. 123 Rue Example"
+          placeholderTextColor={COLORS.textSecondary}
+        />
+      </View>
+    </View>
+  );
+}
+
+// Step 3: Schedule
+function Step3Schedule({ formData, updateField }: any) {
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+
+  const closeAllPickers = () => {
+    setShowStartDatePicker(false);
+    setShowStartTimePicker(false);
+    setShowEndDatePicker(false);
+    setShowEndTimePicker(false);
+  };
+
+  const handleStartDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      closeAllPickers();
+    }
+    if (selectedDate && event.type !== 'dismissed') {
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+      updateField('start_date', formattedDate);
+    }
+  };
+
+  const handleStartTimeChange = (event: any, selectedTime?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowStartTimePicker(false);
+    }
+    if (selectedTime) {
+      const hours = selectedTime.getHours();
+      const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const displayHours = hours % 12 || 12;
+      updateField('start_time', `${displayHours}:${minutes} ${ampm}`);
+    }
+  };
+
+  const handleEndDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      closeAllPickers();
+    }
+    if (selectedDate && event.type !== 'dismissed') {
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+      updateField('end_date', formattedDate);
+    }
+  };
+
+  const handleEndTimeChange = (event: any, selectedTime?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowEndTimePicker(false);
+    }
+    if (selectedTime) {
+      const hours = selectedTime.getHours();
+      const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const displayHours = hours % 12 || 12;
+      updateField('end_time', `${displayHours}:${minutes} ${ampm}`);
+    }
+  };
+
+  const getDateValue = (dateString: string) => {
+    return dateString ? new Date(dateString + 'T00:00:00') : new Date();
+  };
+
+  const getTimeValue = (timeString: string) => {
+    if (timeString) {
+      const [hours, minutes] = timeString.split(':');
+      const date = new Date();
+      date.setHours(parseInt(hours), parseInt(minutes));
+      return date;
+    }
+    return new Date();
+  };
+
+  return (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepTitle}>When does it happen?</Text>
+      <Text style={styles.stepSubtitle}>Set the date and time for your event</Text>
+
+      <View style={styles.formRow}>
+        <View style={[styles.formGroup, styles.formGroupHalf]}>
+          <Text style={styles.label}>
+            Start Date <Text style={styles.required}>*</Text>
+          </Text>
+          <TouchableOpacity 
+            style={styles.dateButton}
+            onPress={() => {
+              closeAllPickers();
+              setShowStartDatePicker(true);
+            }}
+          >
+            <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
+            <Text style={styles.dateButtonText}>
+              {formData.start_date || 'Select date'}
+            </Text>
+          </TouchableOpacity>
+          {showStartDatePicker && (
+            <DateTimePicker
+              value={getDateValue(formData.start_date)}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleStartDateChange}
+              minimumDate={new Date()}
+            />
+          )}
+        </View>
+
+        <View style={[styles.formGroup, styles.formGroupHalf]}>
+          <Text style={styles.label}>
+            Start Time <Text style={styles.required}>*</Text>
+          </Text>
+          <TouchableOpacity 
+            style={styles.dateButton}
+            onPress={() => {
+              closeAllPickers();
+              setShowStartTimePicker(true);
+            }}
+          >
+            <Ionicons name="time-outline" size={20} color={COLORS.primary} />
+            <Text style={styles.dateButtonText}>
+              {formData.start_time || 'Select time'}
+            </Text>
+          </TouchableOpacity>
+          {showStartTimePicker && Platform.OS === 'ios' && (
+            <Modal
+              visible={showStartTimePicker}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setShowStartTimePicker(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <TouchableOpacity onPress={() => setShowStartTimePicker(false)}>
+                      <Text style={styles.modalButton}>Cancel</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.modalTitle}>Start Time</Text>
+                    <TouchableOpacity onPress={() => setShowStartTimePicker(false)}>
+                      <Text style={[styles.modalButton, styles.modalButtonDone]}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={getTimeValue(formData.start_time)}
+                    mode="time"
+                    is24Hour={false}
+                    display="spinner"
+                    onChange={handleStartTimeChange}
+                    style={styles.timePicker}
+                  />
+                </View>
+              </View>
+            </Modal>
+          )}
+          {showStartTimePicker && Platform.OS === 'android' && (
+            <DateTimePicker
+              value={getTimeValue(formData.start_time)}
+              mode="time"
+              is24Hour={false}
+              display="default"
+              onChange={handleStartTimeChange}
+            />
+          )}
+        </View>
+      </View>
+
+      <View style={styles.formRow}>
+        <View style={[styles.formGroup, styles.formGroupHalf]}>
+          <Text style={styles.label}>
+            End Date <Text style={styles.required}>*</Text>
+          </Text>
+          <TouchableOpacity 
+            style={styles.dateButton}
+            onPress={() => {
+              closeAllPickers();
+              setShowEndDatePicker(true);
+            }}
+          >
+            <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
+            <Text style={styles.dateButtonText}>
+              {formData.end_date || 'Select date'}
+            </Text>
+          </TouchableOpacity>
+          {showEndDatePicker && (
+            <DateTimePicker
+              value={getDateValue(formData.end_date)}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleEndDateChange}
+              minimumDate={formData.start_date ? new Date(formData.start_date) : new Date()}
+            />
+          )}
+        </View>
+
+        <View style={[styles.formGroup, styles.formGroupHalf]}>
+          <Text style={styles.label}>
+            End Time <Text style={styles.required}>*</Text>
+          </Text>
+          <TouchableOpacity 
+            style={styles.dateButton}
+            onPress={() => {
+              closeAllPickers();
+              setShowEndTimePicker(true);
+            }}
+          >
+            <Ionicons name="time-outline" size={20} color={COLORS.primary} />
+            <Text style={styles.dateButtonText}>
+              {formData.end_time || 'Select time'}
+            </Text>
+          </TouchableOpacity>
+          {showEndTimePicker && Platform.OS === 'ios' && (
+            <Modal
+              visible={showEndTimePicker}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setShowEndTimePicker(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <TouchableOpacity onPress={() => setShowEndTimePicker(false)}>
+                      <Text style={styles.modalButton}>Cancel</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.modalTitle}>End Time</Text>
+                    <TouchableOpacity onPress={() => setShowEndTimePicker(false)}>
+                      <Text style={[styles.modalButton, styles.modalButtonDone]}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={getTimeValue(formData.end_time)}
+                    mode="time"
+                    is24Hour={false}
+                    display="spinner"
+                    onChange={handleEndTimeChange}
+                    style={styles.timePicker}
+                  />
+                </View>
+              </View>
+            </Modal>
+          )}
+          {showEndTimePicker && Platform.OS === 'android' && (
+            <DateTimePicker
+              value={getTimeValue(formData.end_time)}
+              mode="time"
+              is24Hour={false}
+              display="default"
+              onChange={handleEndTimeChange}
+            />
+          )}
+        </View>
+      </View>
+
+      <View style={styles.helpCard}>
+        <Ionicons name="information-circle-outline" size={20} color={COLORS.primary} />
+        <Text style={styles.helpText}>
+          Make sure to set your local Haiti timezone
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// Step 4: Tickets
+function Step4Tickets({ formData, updateField }: any) {
+  const getCurrencySymbol = () => {
+    return formData.currency === 'HTG' ? 'HTG' : '$';
+  };
+
+  const addTier = () => {
+    const newTiers = [...formData.ticket_tiers, { name: '', price: '', quantity: '' }];
+    updateField('ticket_tiers', newTiers);
+  };
+
+  const removeTier = (index: number) => {
+    if (formData.ticket_tiers.length > 1) {
+      const newTiers = formData.ticket_tiers.filter((_: any, i: number) => i !== index);
+      updateField('ticket_tiers', newTiers);
+    }
+  };
+
+  const updateTier = (index: number, field: string, value: string) => {
+    const newTiers = [...formData.ticket_tiers];
+    newTiers[index] = { ...newTiers[index], [field]: value };
+    updateField('ticket_tiers', newTiers);
+  };
+
+  return (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepTitle}>Set your ticket pricing</Text>
+      <Text style={styles.stepSubtitle}>Create ticket tiers for your event</Text>
+
+      {formData.ticket_tiers.map((tier: any, index: number) => (
+        <View key={index} style={styles.tierCard}>
+          <View style={styles.tierHeader}>
+            <Text style={styles.tierTitle}>Tier {index + 1}</Text>
+            {formData.ticket_tiers.length > 1 && (
+              <TouchableOpacity onPress={() => removeTier(index)}>
+                <Ionicons name="trash-outline" size={20} color={COLORS.error} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>
+              Tier Name <Text style={styles.required}>*</Text>
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={tier.name}
+              onChangeText={(text) => updateTier(index, 'name', text)}
+              placeholder="e.g. VIP, Early Bird, General"
+              placeholderTextColor={COLORS.textSecondary}
+            />
+          </View>
+
+          <View style={styles.formRow}>
+            <View style={[styles.formGroup, styles.formGroupHalf]}>
+              <Text style={styles.label}>
+                Price <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.priceInput}>
+                <Text style={styles.currencySymbol}>{getCurrencySymbol()}</Text>
+                <TextInput
+                  style={styles.priceField}
+                  value={tier.price}
+                  onChangeText={(text) => updateTier(index, 'price', text)}
+                  placeholder="0.00"
+                  keyboardType="decimal-pad"
+                  placeholderTextColor={COLORS.textSecondary}
+                />
+              </View>
+            </View>
+
+            <View style={[styles.formGroup, styles.formGroupHalf]}>
+              <Text style={styles.label}>
+                Quantity <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={tier.quantity}
+                onChangeText={(text) => updateTier(index, 'quantity', text)}
+                placeholder="100"
+                keyboardType="number-pad"
+                placeholderTextColor={COLORS.textSecondary}
+              />
+            </View>
+          </View>
+        </View>
+      ))}
+
+      <TouchableOpacity style={styles.addTierButton} onPress={addTier}>
+        <Ionicons name="add-circle-outline" size={24} color={COLORS.primary} />
+        <Text style={styles.addTierText}>Add Another Tier</Text>
+      </TouchableOpacity>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Currency</Text>
+        <View style={styles.currencyButtons}>
+          {['USD', 'HTG'].map((currency) => (
+            <TouchableOpacity
+              key={currency}
+              style={[
+                styles.currencyButton,
+                formData.currency === currency && styles.currencyButtonActive,
+              ]}
+              onPress={() => updateField('currency', currency)}
+            >
+              <Text
+                style={[
+                  styles.currencyButtonText,
+                  formData.currency === currency && styles.currencyButtonTextActive,
+                ]}
+              >
+                {currency}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.helpCard}>
+        <Ionicons name="bulb-outline" size={20} color={COLORS.warning} />
+        <Text style={styles.helpText}>
+          Set price to $0 for free events. Add multiple tiers for VIP, Early Bird, etc.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// Step 5: Preview & Publish
+function Step5Details({ formData, updateField }: any) {
+  const [viewMode, setViewMode] = useState<'card' | 'page'>('page');
+  
+  const totalTickets = formData.ticket_tiers.reduce((sum: number, tier: any) => 
+    sum + (parseInt(tier.quantity) || 0), 0
+  );
+
+  const getCurrencySymbol = () => {
+    return formData.currency === 'HTG' ? 'HTG' : '$';
+  };
+
+  const pickImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (!permissionResult.granted) {
+      Alert.alert('Permission Required', 'Please allow access to your photo library');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      updateField('banner_image_url', result.assets[0].uri);
+    }
+  };
+
+  if (viewMode === 'card') {
+    return (
+      <View style={styles.stepContainer}>
+        <View style={styles.viewToggle}>
+          <TouchableOpacity 
+            style={[styles.toggleButton, styles.toggleButtonActive]}
+            onPress={() => setViewMode('card')}
+          >
+            <Ionicons name="card-outline" size={20} color={COLORS.white} />
+            <Text style={styles.toggleButtonTextActive}>Card View</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.toggleButton}
+            onPress={() => setViewMode('page')}
+          >
+            <Ionicons name="document-text-outline" size={20} color={COLORS.text} />
+            <Text style={styles.toggleButtonText}>Page View</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.eventCard}>
+          {formData.banner_image_url ? (
+            <Image source={{ uri: formData.banner_image_url }} style={styles.cardImage} />
+          ) : (
+            <View style={styles.cardImagePlaceholder}>
+              <Ionicons name="image-outline" size={40} color={COLORS.textSecondary} />
+            </View>
+          )}
+          <View style={styles.cardContent}>
+            <View style={styles.cardCategory}>
+              <Text style={styles.cardCategoryText}>{formData.category}</Text>
+            </View>
+            <Text style={styles.cardTitle} numberOfLines={2}>{formData.title}</Text>
+            <View style={styles.cardInfo}>
+              <Ionicons name="calendar-outline" size={14} color={COLORS.textSecondary} />
+              <Text style={styles.cardInfoText}>{formData.start_date}</Text>
+            </View>
+            <View style={styles.cardInfo}>
+              <Ionicons name="location-outline" size={14} color={COLORS.textSecondary} />
+              <Text style={styles.cardInfoText}>{formData.city}</Text>
+            </View>
+            <View style={styles.cardFooter}>
+              <Text style={styles.cardPrice}>{getCurrencySymbol()} {formData.ticket_tiers[0]?.price || '0'}</Text>
+              <Text style={styles.cardTickets}>{totalTickets} tickets</Text>
+            </View>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.changeImageButton} onPress={pickImage}>
+          <Ionicons name="camera-outline" size={20} color={COLORS.primary} />
+          <Text style={styles.changeImageText}>Change Event Image</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.stepContainer} showsVerticalScrollIndicator={false}>
+      <View style={styles.viewToggle}>
+        <TouchableOpacity 
+          style={styles.toggleButton}
+          onPress={() => setViewMode('card')}
+        >
+          <Ionicons name="card-outline" size={20} color={COLORS.text} />
+          <Text style={styles.toggleButtonText}>Card View</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.toggleButton, styles.toggleButtonActive]}
+          onPress={() => setViewMode('page')}
+        >
+          <Ionicons name="document-text-outline" size={20} color={COLORS.white} />
+          <Text style={styles.toggleButtonTextActive}>Page View</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Hero Section */}
+      <View style={styles.eventPageHero}>
+        {formData.banner_image_url ? (
+          <Image source={{ uri: formData.banner_image_url }} style={styles.pageHeroImage} />
+        ) : (
+          <View style={styles.pageHeroPlaceholder}>
+            <Ionicons name="image-outline" size={60} color={COLORS.textSecondary} />
+            <Text style={styles.placeholderText}>No image selected</Text>
+          </View>
+        )}
+        <TouchableOpacity style={styles.editImageButton} onPress={pickImage}>
+          <Ionicons name="camera" size={20} color={COLORS.white} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Event Details */}
+      <View style={styles.eventPageContent}>
+        <View style={styles.pageCategory}>
+          <Text style={styles.pageCategoryText}>{formData.category}</Text>
+        </View>
+        
+        <Text style={styles.pageTitle}>{formData.title}</Text>
+        
+        <View style={styles.pageInfoRow}>
+          <View style={styles.pageInfoItem}>
+            <Ionicons name="calendar" size={20} color={COLORS.primary} />
+            <View style={styles.pageInfoTextContainer}>
+              <Text style={styles.pageInfoLabel}>Date</Text>
+              <Text style={styles.pageInfoValue}>{formData.start_date}</Text>
+            </View>
+          </View>
+          <View style={styles.pageInfoItem}>
+            <Ionicons name="time" size={20} color={COLORS.primary} />
+            <View style={styles.pageInfoTextContainer}>
+              <Text style={styles.pageInfoLabel}>Time</Text>
+              <Text style={styles.pageInfoValue}>{formData.start_time}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.pageInfoRow}>
+          <View style={styles.pageInfoItem}>
+            <Ionicons name="location" size={20} color={COLORS.primary} />
+            <View style={styles.pageInfoTextContainer}>
+              <Text style={styles.pageInfoLabel}>Location</Text>
+              <Text style={styles.pageInfoValue}>{formData.venue_name}</Text>
+              <Text style={styles.pageInfoSubtext}>{formData.city}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.pageDivider} />
+
+        <Text style={styles.pageSectionTitle}>About This Event</Text>
+        <Text style={styles.pageDescription}>{formData.description}</Text>
+
+        <View style={styles.pageDivider} />
+
+        <Text style={styles.pageSectionTitle}>Ticket Options</Text>
+        {formData.ticket_tiers.map((tier: any, index: number) => (
+          <View key={index} style={styles.pageTicketTier}>
+            <View style={styles.pageTicketInfo}>
+              <Text style={styles.pageTicketName}>{tier.name}</Text>
+              <Text style={styles.pageTicketAvailable}>{tier.quantity} available</Text>
+            </View>
+            <Text style={styles.pageTicketPrice}>{getCurrencySymbol()} {tier.price}</Text>
+          </View>
+        ))}
+
+        <View style={styles.helpCard}>
+          <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+          <Text style={styles.helpText}>
+            This is how your event will appear to attendees. Ready to publish?
+          </Text>
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 8,
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    zIndex: 10,
+  },
+  progressWrapper: {
+    backgroundColor: COLORS.white,
+    zIndex: 9,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  progressScroll: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  stepItem: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  stepCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepCircleActive: {
+    backgroundColor: COLORS.primary,
+  },
+  stepCircleComplete: {
+    backgroundColor: COLORS.success,
+  },
+  stepNumber: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  stepNumberActive: {
+    color: COLORS.white,
+  },
+  stepLabel: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  stepLabelActive: {
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  progressLine: {
+    width: 24,
+    height: 2,
+    backgroundColor: COLORS.border,
+    marginHorizontal: 8,
+  },
+  progressLineActive: {
+    backgroundColor: COLORS.success,
+  },
+  content: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 24,
+  },
+  stepContainer: {
+    gap: 8,
+  },
+  stepTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 0,
+  },
+  stepSubtitle: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: 8,
+  },
+  formGroup: {
+    marginBottom: 4,
+  },
+  formGroupHalf: {
+    flex: 1,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 4,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  required: {
+    color: COLORS.error,
+  },
+  input: {
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 15,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  textarea: {
+    height: 100,
+    paddingTop: 16,
+  },
+  categoryScroll: {
+    flexGrow: 0,
+    marginBottom: 4,
+  },
+  categoryChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginRight: 8,
+  },
+  categoryChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  categoryChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  categoryChipTextActive: {
+    color: COLORS.white,
+  },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  dateButtonText: {
+    fontSize: 15,
+    color: COLORS.text,
+  },
+  priceInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 16,
+  },
+  currencySymbol: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginRight: 8,
+  },
+  priceField: {
+    flex: 1,
+    padding: 16,
+    paddingLeft: 0,
+    fontSize: 15,
+    color: COLORS.text,
+  },
+  currencyButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  currencyButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+  },
+  currencyButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  currencyButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  currencyButtonTextActive: {
+    color: COLORS.white,
+  },
+  helpCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORS.primary + '10',
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  helpText: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.text,
+    lineHeight: 18,
+  },
+  imageUploadButton: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+  },
+  imagePreviewContainer: {
+    width: '100%',
+    height: 200,
+    position: 'relative',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
+  imageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  imageOverlayText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 8,
+  },
+  imageUploadText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  imageUploadSubtext: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
+  summaryCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    marginTop: 8,
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  summaryText: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.text,
+    lineHeight: 20,
+  },
+  tierCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  tierHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  tierTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  addTierButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary + '10',
+    marginBottom: 12,
+  },
+  addTierText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  previewCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    gap: 8,
+  },
+  previewSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  previewRow: {
+    flexDirection: 'row',
+    paddingVertical: 4,
+  },
+  previewLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    width: 100,
+  },
+  previewValue: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  tierPreview: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  tierPreviewName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  tierPreviewDetails: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  modalButton: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+  },
+  modalButtonDone: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  timePicker: {
+    height: 200,
+    width: '100%',
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  toggleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: COLORS.white,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+  },
+  toggleButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  toggleButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  toggleButtonTextActive: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.white,
+  },
+  eventCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardImage: {
+    width: '100%',
+    height: 200,
+    backgroundColor: COLORS.border,
+  },
+  cardImagePlaceholder: {
+    width: '100%',
+    height: 200,
+    backgroundColor: COLORS.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardContent: {
+    padding: 16,
+  },
+  cardCategory: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.primary + '20',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  cardCategoryText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
+    textTransform: 'uppercase',
+  },
+  cardTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 12,
+  },
+  cardInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  cardInfoText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  cardPrice: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  cardTickets: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  changeImageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary + '10',
+  },
+  changeImageText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  eventPageHero: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  pageHeroImage: {
+    width: '100%',
+    height: 250,
+    backgroundColor: COLORS.border,
+  },
+  pageHeroPlaceholder: {
+    width: '100%',
+    height: 250,
+    backgroundColor: COLORS.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginTop: 8,
+  },
+  editImageButton: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  eventPageContent: {
+    padding: 16,
+  },
+  pageCategory: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.primary + '20',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  pageCategoryText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 20,
+    lineHeight: 34,
+  },
+  pageInfoRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  pageInfoItem: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 12,
+    backgroundColor: COLORS.white,
+    padding: 16,
+    borderRadius: 12,
+  },
+  pageInfoTextContainer: {
+    flex: 1,
+  },
+  pageInfoLabel: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+  },
+  pageInfoValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  pageInfoSubtext: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  pageDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 20,
+  },
+  pageSectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 16,
+  },
+  pageDescription: {
+    fontSize: 15,
+    color: COLORS.text,
+    lineHeight: 24,
+  },
+  pageTicketTier: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  pageTicketInfo: {
+    flex: 1,
+  },
+  pageTicketName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  pageTicketAvailable: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
+  pageTicketPrice: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  footer: {
+    flexDirection: 'row',
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+    gap: 12,
+    backgroundColor: COLORS.white,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  button: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 12,
+  },
+  buttonFull: {
+    flex: 1,
+  },
+  buttonSecondary: {
+    backgroundColor: COLORS.white,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  buttonSecondaryText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  buttonPrimary: {
+    backgroundColor: COLORS.primary,
+  },
+  buttonPrimaryText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.white,
+  },
+});

@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bell, Check, CheckCheck, Trash2, ExternalLink } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../config/brand';
+import { useAuth } from '../contexts/AuthContext';
 import {
   getUserNotifications,
   markAsRead,
@@ -21,12 +22,9 @@ import {
 } from '../lib/notifications';
 import type { Notification } from '../types/notifications';
 
-interface NotificationsScreenProps {
-  userId: string;
-}
-
-export default function NotificationsScreen({ userId }: NotificationsScreenProps) {
+export default function NotificationsScreen() {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,11 +32,13 @@ export default function NotificationsScreen({ userId }: NotificationsScreenProps
   const [isClearing, setIsClearing] = useState(false);
 
   const loadNotifications = async (showLoader = true) => {
+    if (!user?.uid) return;
+    
     if (showLoader) setIsLoading(true);
     try {
       const [notificationsData, unreadCountData] = await Promise.all([
-        getUserNotifications(userId, 50),
-        getUnreadCount(userId),
+        getUserNotifications(user.uid, 50),
+        getUnreadCount(user.uid),
       ]);
       setNotifications(notificationsData);
       setUnreadCount(unreadCountData);
@@ -53,7 +53,7 @@ export default function NotificationsScreen({ userId }: NotificationsScreenProps
   useFocusEffect(
     useCallback(() => {
       loadNotifications();
-    }, [userId])
+    }, [user?.uid])
   );
 
   const handleRefresh = () => {
@@ -62,8 +62,10 @@ export default function NotificationsScreen({ userId }: NotificationsScreenProps
   };
 
   const handleMarkAsRead = async (notificationId: string) => {
+    if (!user?.uid) return;
+    
     try {
-      await markAsRead(userId, notificationId);
+      await markAsRead(user.uid, notificationId);
 
       setNotifications((prev) =>
         prev.map((n) =>
@@ -79,8 +81,10 @@ export default function NotificationsScreen({ userId }: NotificationsScreenProps
   };
 
   const handleMarkAllAsRead = async () => {
+    if (!user?.uid) return;
+    
     try {
-      await markAllAsRead(userId);
+      await markAllAsRead(user.uid);
 
       setNotifications((prev) =>
         prev.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() }))
@@ -167,9 +171,6 @@ export default function NotificationsScreen({ userId }: NotificationsScreenProps
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Notifications</Text>
-        </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
@@ -179,7 +180,25 @@ export default function NotificationsScreen({ userId }: NotificationsScreenProps
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Notifications List */}
+      {/* Clear All button (top right) - no duplicate title */}
+      {notifications.length > 0 && (
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={handleClearAll}
+            disabled={isClearing}
+            style={styles.clearAllButton}
+            activeOpacity={0.7}
+          >
+            {isClearing ? (
+              <ActivityIndicator size="small" color={COLORS.error} />
+            ) : (
+              <Text style={styles.clearAllText}>Clear all</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Notifications List - minimal top spacing */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -280,18 +299,24 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end', // Clear all button aligned right
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 12, // Reduced from 16 for minimal spacing
     backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.text,
+  clearAllButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: COLORS.errorLight || COLORS.background,
+  },
+  clearAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.error,
   },
   headerSubtitle: {
     fontSize: 14,
@@ -319,7 +344,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    flexGrow: 1,
   },
   emptyContainer: {
     flex: 1,
@@ -341,7 +366,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   notificationsList: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16, // 16px gap below header
+    paddingBottom: 16,
     gap: 8,
   },
   notificationCard: {

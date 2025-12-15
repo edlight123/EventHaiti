@@ -13,8 +13,9 @@ interface UserProfile {
   id: string;
   email: string;
   full_name: string;
-  role: 'attendee' | 'organizer';
+  role: 'attendee' | 'organizer' | 'admin';
   phone_number?: string;
+  default_city?: string;
   is_verified?: boolean;
 }
 

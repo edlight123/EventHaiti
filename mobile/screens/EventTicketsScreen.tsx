@@ -21,6 +21,7 @@ import { COLORS } from '../config/brand';
 import { ArrowLeft } from 'lucide-react-native';
 import TicketPassCard from '../components/TicketPassCard';
 import QRCodeModal from '../components/QRCodeModal';
+import TransferTicketModal from '../components/TransferTicketModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -33,6 +34,8 @@ export default function EventTicketsScreen({ route, navigation }: any) {
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [transferModalVisible, setTransferModalVisible] = useState(false);
+  const [ticketToTransfer, setTicketToTransfer] = useState<any>(null);
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -138,6 +141,11 @@ export default function EventTicketsScreen({ route, navigation }: any) {
     navigation.navigate('EventDetail', { eventId: event.id });
   };
 
+  const handleTransferPress = (ticket: any) => {
+    setTicketToTransfer(ticket);
+    setTransferModalVisible(true);
+  };
+
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
     const index = Math.round(offsetX / SCREEN_WIDTH);
@@ -153,6 +161,7 @@ export default function EventTicketsScreen({ route, navigation }: any) {
         ticketNumber={index + 1}
         onQRPress={() => handleQRPress(item)}
         onViewEvent={handleViewEvent}
+        onTransferPress={() => handleTransferPress(item)}
       />
     </View>
   );
@@ -234,6 +243,21 @@ export default function EventTicketsScreen({ route, navigation }: any) {
           onClose={() => setQrModalVisible(false)}
           ticketId={selectedTicket.id}
           ticketNumber={`Ticket #${tickets.indexOf(selectedTicket) + 1}`}
+        />
+      )}
+
+      {/* Transfer Modal */}
+      {ticketToTransfer && (
+        <TransferTicketModal
+          visible={transferModalVisible}
+          onClose={() => setTransferModalVisible(false)}
+          ticketId={ticketToTransfer.id}
+          eventTitle={event.title}
+          transferCount={ticketToTransfer.transfer_count || 0}
+          onTransferSuccess={() => {
+            setTransferModalVisible(false);
+            fetchEventAndTickets();
+          }}
         />
       )}
     </View>
