@@ -56,17 +56,35 @@ export default function TicketScannerScreen() {
     try {
       const ticketId = data;
 
+      // DEBUG: Log scan details
+      console.log('=== TICKET SCAN DEBUG ===');
+      console.log('QR Code Data:', ticketId);
+      console.log('Looking in collection: tickets');
+      console.log('Event ID:', eventId);
+      console.log('Firestore Config:', {
+        projectId: db.app.options.projectId,
+        databaseId: db.app.options.databaseId || '(default)',
+      });
+
       // Get ticket from Firestore
       const ticketRef = doc(db, 'tickets', ticketId);
+      console.log('Ticket Ref Path:', ticketRef.path);
+      
       const ticketSnap = await getDoc(ticketRef);
+      console.log('Document exists:', ticketSnap.exists());
 
       if (!ticketSnap.exists()) {
+        console.log('Ticket not found in Firestore');
         setScanResult({
           status: 'NOT_FOUND',
           message: 'This ticket does not exist.',
         });
         return;
       }
+
+      const ticketData = ticketSnap.data();
+      console.log('Ticket Data:', JSON.stringify(ticketData, null, 2));
+      console.log('=== END DEBUG ===');
 
       const ticketData = ticketSnap.data();
 

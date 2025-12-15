@@ -102,8 +102,15 @@ export async function POST(request: Request) {
       
       const createdTicket = insertResult.data?.[0]
       if (createdTicket) {
+        console.log('=== TICKET CREATION DEBUG ===')
+        console.log('Created Ticket ID:', createdTicket.id)
+        console.log('Event ID:', createdTicket.event_id)
+        console.log('Attendee Name:', createdTicket.attendee_name)
+        console.log('Has start_datetime:', !!createdTicket.start_datetime)
+        console.log('Has venue_name:', !!createdTicket.venue_name)
+        console.log('Full Ticket Data:', JSON.stringify(createdTicket, null, 2))
+        console.log('=== END DEBUG ===')
         createdTickets.push(createdTicket)
-        console.log('✅ Created ticket:', createdTicket.id)
       }
     }
 
@@ -160,7 +167,11 @@ export async function POST(request: Request) {
 
       if (attendee) {
         const firstTicket = createdTickets[0]
+        console.log('=== QR CODE GENERATION DEBUG ===')
+        console.log('Generating QR for Ticket ID:', firstTicket.id)
         const qrCodeDataURL = await generateTicketQRCode(firstTicket.id)
+        console.log('QR Code Generated - Length:', qrCodeDataURL.length)
+        console.log('=== END DEBUG ===')
 
         await sendEmail({
           to: attendee.email,
