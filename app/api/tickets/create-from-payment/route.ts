@@ -56,12 +56,21 @@ export async function POST(request: Request) {
     const quantity = parseInt(paymentIntent.metadata.quantity || '1', 10)
     const pricePerTicket = paymentIntent.amount / 100 / quantity
 
+    // Fetch event details to include in tickets
+    const eventQuery = await supabase.from('events').select('*')
+    const eventDetails = eventQuery.data?.find((e: any) => e.id === paymentIntent.metadata.eventId)
+    
+    // Fetch attendee details for attendee_name
+    const attendeeQuery = await supabase.from('users').select('*')
+    const attendee = attendeeQuery.data?.find((u: any) => u.id === paymentIntent.metadata.userId)
+
     const createdTickets = []
     for (let i = 0; i < quantity; i++) {
       const qrCodeData = `ticket-${paymentIntent.metadata.eventId}-${paymentIntent.metadata.userId}-${Date.now()}-${i}`
       const ticketData = {
         event_id: paymentIntent.metadata.eventId,
         attendee_id: paymentIntent.metadata.userId,
+        attendee_name: attendee?.full_name || attendee?.email || 'Guest',
         price_paid: pricePerTicket,
         currency: paymentIntent.metadata.currency || paymentIntent.currency || 'usd',
         original_currency: paymentIntent.metadata.originalCurrency || paymentIntent.metadata.currency || paymentIntent.currency || 'usd',
@@ -73,6 +82,12 @@ export async function POST(request: Request) {
         purchased_at: new Date().toISOString(),
         tier_id: paymentIntent.metadata.tierId || null,
         tier_name: paymentIntent.metadata.tierName || 'General Admission',
+        // Include event date fields for scanner
+        start_datetime: eventDetails?.start_datetime || null,
+        end_datetime: eventDetails?.end_datetime || null,
+        event_date: eventDetails?.start_datetime || null,
+        venue_name: eventDetails?.venue_name || null,
+        city: eventDetails?.city || null,
       }
       
       const insertResult = await supabase

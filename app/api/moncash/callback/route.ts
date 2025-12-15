@@ -46,6 +46,14 @@ export async function GET(request: Request) {
       )
     }
 
+    // Fetch event details first
+    const eventQuery = await supabase.from('events').select('*')
+    const eventDetails = eventQuery.data?.find((e: any) => e.id === pendingTx.event_id)
+    
+    // Fetch attendee details
+    const attendeeQuery = await supabase.from('users').select('*')
+    const attendee = attendeeQuery.data?.find((u: any) => u.id === pendingTx.user_id)
+
     // Create tickets one at a time to ensure each gets unique ID
     const quantity = pendingTx.quantity || 1
     const pricePerTicket = pendingTx.amount / quantity
@@ -56,6 +64,7 @@ export async function GET(request: Request) {
       const ticketData = {
         event_id: pendingTx.event_id,
         attendee_id: pendingTx.user_id,
+        attendee_name: attendee?.full_name || attendee?.email || 'Guest',
         price_paid: pricePerTicket,
         currency: pendingTx.currency || 'HTG',
         original_currency: pendingTx.currency || 'HTG',
@@ -65,6 +74,14 @@ export async function GET(request: Request) {
         status: 'valid',
         qr_code_data: qrCodeData,
         purchased_at: new Date().toISOString(),
+        tier_name: pendingTx.tier_name || 'General Admission',
+        tier_id: pendingTx.tier_id || null,
+        // Include event date fields for scanner
+        start_datetime: eventDetails?.start_datetime || null,
+        end_datetime: eventDetails?.end_datetime || null,
+        event_date: eventDetails?.start_datetime || null,
+        venue_name: eventDetails?.venue_name || null,
+        city: eventDetails?.city || null,
       }
       
       const insertResult = await supabase
@@ -85,13 +102,6 @@ export async function GET(request: Request) {
         console.log('Created ticket:', createdTicket.id, 'with QR:', qrCodeData)
       }
     }
-
-    // Fetch event and attendee details separately (no joins with Firebase)
-    const eventQuery = await supabase.from('events').select('*')
-    const eventDetails = eventQuery.data?.find((e: any) => e.id === pendingTx.event_id)
-    
-    const attendeeQuery = await supabase.from('users').select('*')
-    const attendee = attendeeQuery.data?.find((u: any) => u.id === pendingTx.user_id)
     
     // Create ticket object with joined data for email
     const ticket = createdTickets[0] ? {

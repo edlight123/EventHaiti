@@ -67,10 +67,18 @@ export async function POST(request: Request) {
       const ticketData = {
         event_id: eventId,
         attendee_id: user.id,
+        attendee_name: user.full_name || user.email || 'Guest',
         status: 'valid',
         qr_code_data: qrCodeData,
         price_paid: 0,
         purchased_at: new Date().toISOString(),
+        tier_name: 'General Admission',
+        // Include event date fields for scanner
+        start_datetime: event.start_datetime || null,
+        end_datetime: event.end_datetime || null,
+        event_date: event.start_datetime || null,
+        venue_name: event.venue_name || null,
+        city: event.city || null,
       }
       
       const insertResult = await supabase
