@@ -437,7 +437,7 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
         getDateValue(draft.start_date),
         handleStartDateChange,
         () => setShowStartDate(false),
-        new Date()
+        undefined
       )}
       {renderDatePickerModal(
         showEndDate,
@@ -445,7 +445,7 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
         getDateValue(draft.end_date),
         handleEndDateChange,
         () => setShowEndDate(false),
-        draft.start_date ? new Date(draft.start_date) : new Date()
+        draft.start_date ? new Date(draft.start_date) : undefined
       )}
 
       {/* iOS Time Picker Modals */}
