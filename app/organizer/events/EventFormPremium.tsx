@@ -10,7 +10,6 @@ import { useToast } from '@/components/ui/Toast'
 import { getEventCompletion, getPublishBlockingIssues, EventFormData, TicketTier } from '@/lib/event-validation'
 import { EditEventHeader } from '@/components/organizer/event-edit/EditEventHeader'
 import { StepperTabs } from '@/components/organizer/event-edit/StepperTabs'
-import { PublishChecklist } from '@/components/organizer/event-edit/PublishChecklist'
 import { EventLivePreview } from '@/components/organizer/event-edit/EventLivePreview'
 import { BasicInfoTab } from './tabs/BasicInfoTab'
 import { LocationTab } from './tabs/LocationTab'
@@ -358,13 +357,6 @@ export default function EventFormPremium({ userId, event }: EventFormProps) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column: Form (2/3) */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Publish Checklist */}
-            <PublishChecklist
-              blockingIssues={blockingIssues}
-              onNavigateToTab={handleNavigateToTab}
-              canPublish={completion.canPublish}
-            />
-
             {/* Tab Content */}
             <div className="bg-white rounded-xl border-2 border-gray-200 p-6 md:p-8 shadow-sm">
               {renderCurrentTab()}
