@@ -493,7 +493,7 @@ export async function checkIsFavorite(userId: string, eventId: string): Promise<
 export async function checkIsFollowing(userId: string, organizerId: string): Promise<boolean> {
   try {
     const snapshot = await adminDb.collection('organizer_follows')
-      .where('user_id', '==', userId)
+      .where('follower_id', '==', userId)
       .where('organizer_id', '==', organizerId)
       .limit(1)
       .get()

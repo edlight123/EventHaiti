@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
+import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
 import { notifyTicketPurchase, notifyOrganizerTicketSale } from '@/lib/notifications/helpers'
+import { FieldValue } from 'firebase-admin/firestore'
 
 export async function POST(request: Request) {
   try {
@@ -25,20 +27,16 @@ export async function POST(request: Request) {
     const ticketQuantity = Math.min(Math.max(1, quantity), 10) // Max 10 tickets per claim
     console.log('Validated quantity:', ticketQuantity)
 
-    const supabase = await createClient()
+    // Fetch event details from Firestore
+    const eventDoc = await adminDb.collection('events').doc(eventId).get()
+    
+    console.log('Event fetch result:', { exists: eventDoc.exists, id: eventDoc.id })
 
-    // Fetch event details
-    const { data: event, error: eventError } = await supabase
-      .from('events')
-      .select('*')
-      .eq('id', eventId)
-      .single()
-
-    console.log('Event fetch result:', { event, error: eventError })
-
-    if (eventError || !event) {
+    if (!eventDoc.exists) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
+
+    const event = { id: eventDoc.id, ...eventDoc.data() } as any
 
     // Verify event is free
     console.log('Event ticket price:', event.ticket_price)
@@ -69,7 +67,7 @@ export async function POST(request: Request) {
         attendee_name: user.full_name || user.email || 'Guest',
         status: 'valid',
         price_paid: 0,
-        purchased_at: new Date().toISOString(),
+        purchased_at: FieldValue.serverTimestamp(),
         tier_name: 'General Admission',
         // Include event date fields for scanner
         start_datetime: event.start_datetime || null,
@@ -79,39 +77,28 @@ export async function POST(request: Request) {
         city: event.city || null,
       }
       
-      const insertResult = await supabase
-        .from('tickets')
-        .insert([ticketData])
-        .select()
+      const ticketRef = await adminDb.collection('tickets').add(ticketData)
       
-      if (insertResult.error) {
-        console.error('Ticket creation error:', insertResult.error)
-        return NextResponse.json({ error: 'Failed to create ticket' }, { status: 500 })
-      }
+      // Now update with QR code data using the actual ticket ID
+      await ticketRef.update({ qr_code_data: ticketRef.id })
       
-      const createdTicket = insertResult.data?.[0]
-      if (createdTicket) {
-        // Now update with QR code data using the actual ticket ID
-        await supabase
-          .from('tickets')
-          .update({ qr_code_data: createdTicket.id })
-          .eq('id', createdTicket.id)
-        
-        createdTicket.qr_code_data = createdTicket.id
-        createdTickets.push(createdTicket)
-        console.log('Created ticket:', createdTicket.id, 'with QR:', createdTicket.id)
-      }
+      const createdTicketDoc = await ticketRef.get()
+      const createdTicket = { id: createdTicketDoc.id, ...createdTicketDoc.data() }
+      createdTickets.push(createdTicket)
+      console.log('Created ticket:', createdTicket.id, 'with QR:', createdTicket.id)
     }
     
     console.log('Created tickets:', createdTickets.length)
 
-    // Update tickets_sold count
-    const updateResult = await supabase
-      .from('events')
-      .update({ tickets_sold: (event.tickets_sold || 0) + ticketQuantity })
-      .eq('id', eventId)
+    // Update tickets_sold count in Firestore using increment
+    await adminDb
+      .collection('events')
+      .doc(eventId)
+      .update({ 
+        tickets_sold: FieldValue.increment(ticketQuantity)
+      })
       
-    console.log('Update tickets_sold result:', updateResult)
+    console.log(`✅ Incremented tickets_sold for event ${eventId} by ${ticketQuantity}`)
 
     // Send in-app notification for free ticket claim
     try {

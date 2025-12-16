@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
   // Top Right Actions (Share & Save)
   heroActions: {
     position: 'absolute',
-    top: 16,
+    top: 60,
     right: 16,
     flexDirection: 'row',
     gap: 8,

@@ -245,27 +245,29 @@ export async function getTodayEvents(
     const eventsWithTickets = await Promise.all(
       todayEvents.map(async (event) => {
         try {
+          console.log(`[getTodayEvents] Event ${event.title} tickets_sold field:`, event.tickets_sold);
+          
+          // Get checked in count from tickets collection
           const ticketsQuery = query(
             collection(db, 'tickets'),
-            where('event_id', '==', event.id)
+            where('event_id', '==', event.id),
+            where('checked_in_at', '!=', null)
           );
-          const ticketsSnapshot = await getDocs(ticketsQuery);
+          const checkedInSnapshot = await getDocs(ticketsQuery);
 
-          const tickets = ticketsSnapshot.docs.map((doc) => doc.data());
-          const ticketsSold = tickets.length;
-          const ticketsCheckedIn = tickets.filter(
-            (t) => t.checked_in
-          ).length;
-
-          return {
+          const result = {
             id: event.id,
             title: event.title,
             start_datetime: event.start_datetime,
             location: event.location,
-            ticketsSold,
-            ticketsCheckedIn,
+            ticketsSold: event.tickets_sold || 0,
+            ticketsCheckedIn: checkedInSnapshot.size,
             capacity: event.total_tickets || 0,
           };
+          
+          console.log(`[getTodayEvents] Event ${event.title} result:`, result);
+          
+          return result;
         } catch (error) {
           console.error(`Error fetching tickets for event ${event.id}:`, error);
           return {
@@ -273,7 +275,7 @@ export async function getTodayEvents(
             title: event.title,
             start_datetime: event.start_datetime,
             location: event.location,
-            ticketsSold: 0,
+            ticketsSold: event.tickets_sold || 0,
             ticketsCheckedIn: 0,
             capacity: event.total_tickets || 0,
           };
@@ -340,9 +342,10 @@ export async function getEventTicketBreakdown(eventId: string): Promise<{
   }>;
 }> {
   try {
-    const [event, ticketsSnapshot] = await Promise.all([
+    const [event, ticketsSnapshot, tiersSnapshot] = await Promise.all([
       getEventById(eventId),
       getDocs(query(collection(db, 'tickets'), where('event_id', '==', eventId))),
+      getDocs(query(collection(db, 'ticket_tiers'), where('event_id', '==', eventId))),
     ]);
 
     if (!event) {
@@ -355,24 +358,39 @@ export async function getEventTicketBreakdown(eventId: string): Promise<{
     }
 
     const tickets = ticketsSnapshot.docs.map((doc) => doc.data());
-    const ticketsSold = tickets.length;
-    const ticketsCheckedIn = tickets.filter((t) => t.checked_in).length;
+    const tiers = tiersSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    
+    // Use tickets_sold from event document (same as webapp)
+    const ticketsSold = event.tickets_sold || 0;
+    const ticketsCheckedIn = tickets.filter((t) => t.checked_in_at).length;
 
-    // Group by ticket tier name (use tier_name from webapp tickets)
+    // Group tickets by tier and get capacities from ticket_tiers
     const tierMap = new Map<string, { sold: number; capacity: number }>();
+    
+    // Initialize with tier data
+    tiers.forEach((tier: any) => {
+      tierMap.set(tier.name, { 
+        sold: 0, 
+        capacity: tier.quantity || 0 
+      });
+    });
+    
+    // Count sold tickets per tier
     tickets.forEach((ticket) => {
       const tierName = ticket.tier_name || ticket.ticket_tier_name || 'General Admission';
-      if (!tierMap.has(tierName)) {
-        tierMap.set(tierName, { sold: 0, capacity: 0 });
+      if (tierMap.has(tierName)) {
+        const tier = tierMap.get(tierName)!;
+        tier.sold += 1;
+      } else {
+        // If tier not found in tiers collection, create entry
+        tierMap.set(tierName, { sold: 1, capacity: 1 });
       }
-      const tier = tierMap.get(tierName)!;
-      tier.sold += 1;
     });
 
     const ticketTypes = Array.from(tierMap.entries()).map(([name, data]) => ({
       name,
       sold: data.sold,
-      capacity: data.capacity || data.sold, // Use sold as capacity if not available
+      capacity: data.capacity,
     }));
 
     return {

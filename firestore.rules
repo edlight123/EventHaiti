@@ -140,6 +140,13 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.follower_id == request.auth.uid;
     }
     
+    // Organizer follows - users can read all, authenticated users can follow/unfollow
+    match /organizer_follows/{followId} {
+      allow read: if true; // Anyone can see follower counts
+      allow create: if isSignedIn() && request.resource.data.follower_id == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.follower_id == request.auth.uid;
+    }
+    
     // Admin actions log - read-only for admins (writes via server)
     match /admin_actions/{actionId} {
       allow read: if false; // Admin reads via server SDK only

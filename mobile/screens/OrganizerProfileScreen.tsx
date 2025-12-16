@@ -130,7 +130,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
 
       // Fetch follower count
       const followersQuery = query(
-        collection(db, 'organizer_followers'),
+        collection(db, 'organizer_follows'),
         where('organizer_id', '==', organizerId)
       );
       const followersSnapshot = await getDocs(followersQuery);
@@ -155,7 +155,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
     
     try {
       const followQuery = query(
-        collection(db, 'organizer_followers'),
+        collection(db, 'organizer_follows'),
         where('organizer_id', '==', organizerId),
         where('follower_id', '==', user.uid)
       );
@@ -178,12 +178,12 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
 
     try {
       if (isFollowing && followDocId) {
-        await deleteDoc(doc(db, 'organizer_followers', followDocId));
+        await deleteDoc(doc(db, 'organizer_follows', followDocId));
         setIsFollowing(false);
         setFollowDocId(null);
         setStats(prev => ({ ...prev, followerCount: prev.followerCount - 1 }));
       } else {
-        const docRef = await addDoc(collection(db, 'organizer_followers'), {
+        const docRef = await addDoc(collection(db, 'organizer_follows'), {
           organizer_id: organizerId,
           follower_id: user.uid,
           created_at: Timestamp.now(),
