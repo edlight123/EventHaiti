@@ -85,9 +85,9 @@ export default function SendEventUpdateScreen() {
                   type: 'event_update',
                   title: `Update: ${eventTitle}`,
                   message: title,
-                  event_id: eventId,
-                  read: false,
-                  created_at: serverTimestamp(),
+                  eventId: eventId,
+                  isRead: false,
+                  createdAt: serverTimestamp(),
                 })
               );
 
