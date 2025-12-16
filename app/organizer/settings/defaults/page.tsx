@@ -45,7 +45,7 @@ export default async function DefaultsSettingsPage() {
             userId={user.id}
             initialData={{
               default_city: organizerData?.default_city || '',
-              default_country: organizerData?.default_country || 'Haiti',
+              default_country: organizerData?.default_country || 'HT',
               default_timezone: organizerData?.default_timezone || 'America/Port-au-Prince',
               default_currency: organizerData?.default_currency || 'HTG',
               default_categories: organizerData?.default_categories || [],

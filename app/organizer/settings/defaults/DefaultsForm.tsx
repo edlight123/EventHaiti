@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MapPin, Globe, Clock, DollarSign, Tag, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { LOCATION_CONFIG, getCitiesForCountry } from '@/lib/filters/config';
 
 interface DefaultsFormProps {
   userId: string;
@@ -14,11 +15,6 @@ interface DefaultsFormProps {
     default_categories: string[];
   };
 }
-
-const HAITI_CITIES = [
-  'Port-au-Prince', 'Cap-Haïtien', 'Gonaïves', 'Les Cayes', 'Jacmel', 
-  'Jérémie', 'Petit-Goâve', 'Port-de-Paix', 'Hinche', 'Saint-Marc'
-];
 
 const CATEGORIES = [
   'Music', 'Arts & Culture', 'Sports', 'Food & Drink', 'Business',
@@ -42,6 +38,27 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
   const [formData, setFormData] = useState(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
+
+  // Get cities for selected country
+  const cities = useMemo(() => {
+    return getCitiesForCountry(formData.default_country || 'HT');
+  }, [formData.default_country]);
+
+  // Get list of countries
+  const countries = useMemo(() => {
+    return Object.values(LOCATION_CONFIG).map(country => ({
+      code: country.code,
+      name: country.name
+    }));
+  }, []);
+
+  const handleCountryChange = (countryCode: string) => {
+    setFormData({
+      ...formData,
+      default_country: countryCode,
+      default_city: '', // Reset city when country changes
+    });
+  };
 
   const handleCategoryToggle = (category: string) => {
     setFormData((prev) => ({
@@ -95,13 +112,19 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
           </label>
           <div className="relative">
             <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
+            <select
               id="default_country"
               value={formData.default_country}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
-              disabled
-            />
+              onChange={(e) => handleCountryChange(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none"
+            >
+              <option value="">Select a country</option>
+              {countries.map((country) => (
+                <option key={country.code} value={country.code}>
+                  {country.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -117,15 +140,19 @@ export default function DefaultsForm({ userId, initialData }: DefaultsFormProps)
               value={formData.default_city}
               onChange={(e) => setFormData({ ...formData, default_city: e.target.value })}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none"
+              disabled={!formData.default_country}
             >
               <option value="">Select a city</option>
-              {HAITI_CITIES.map((city) => (
+              {cities.map((city) => (
                 <option key={city} value={city}>
                   {city}
                 </option>
               ))}
             </select>
           </div>
+          {!formData.default_country && (
+            <p className="text-xs text-gray-500 mt-1">Select a country first</p>
+          )}
         </div>
       </div>
 
