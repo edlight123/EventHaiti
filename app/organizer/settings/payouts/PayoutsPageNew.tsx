@@ -58,7 +58,7 @@ export default function PayoutsPageNew({
   const [isEditing, setIsEditing] = useState(!config)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [period, setPeriod] = useState<'this_month' | 'last_3_months' | 'all_time'>('this_month')
+  const [period, setPeriod] = useState<'this_month' | 'last_3_months' | 'all_time'>('all_time')
   const [formData, setFormData] = useState({
     accountLocation: config?.country || 'haiti',
     method: config?.method || 'bank_transfer',

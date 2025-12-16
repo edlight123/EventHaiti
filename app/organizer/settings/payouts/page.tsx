@@ -19,6 +19,8 @@ async function getEventEarnings(organizerId: string) {
       .where('organizer_id', '==', organizerId)
       .get()
 
+    console.log(`[Payouts] Found ${eventsSnapshot.size} events for organizer ${organizerId}`)
+
     const earnings = await Promise.all(
       eventsSnapshot.docs.map(async (eventDoc: any) => {
         const eventData = eventDoc.data()
@@ -29,6 +31,8 @@ async function getEventEarnings(organizerId: string) {
           .where('event_id', '==', eventDoc.id)
           .where('status', '==', 'active')
           .get()
+
+        console.log(`[Payouts] Event ${eventData.title}: ${ticketsSnapshot.size} tickets`)
 
         // Calculate earnings
         let grossSales = 0
@@ -69,7 +73,11 @@ async function getEventEarnings(organizerId: string) {
       })
     )
 
-    return earnings.filter(e => e.ticketsSold > 0).sort((a, b) => 
+    const filteredEarnings = earnings.filter(e => e.ticketsSold > 0)
+    console.log(`[Payouts] Total events: ${earnings.length}, with sales: ${filteredEarnings.length}`)
+    
+    // For now, return all events to help with debugging
+    return earnings.sort((a, b) => 
       new Date(b.date).getTime() - new Date(a.date).getTime()
     )
   } catch (error) {
