@@ -2,7 +2,7 @@ import { getCurrentUser } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { isAdmin } from '@/lib/admin'
-import I18nProvider from '@/components/I18nProvider'
+import { I18nProvider } from '@/components/I18nProvider'
 import SupportContent from './SupportContent'
 
 export const metadata = {
