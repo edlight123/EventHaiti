@@ -317,6 +317,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               <EventbriteStyleTicketSelector
                 eventId={eventId}
                 userId={userId}
+                currency={currency}
                 onPurchase={handleTieredPurchase}
               />
             </BottomSheet>
@@ -341,31 +342,33 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
               {quantity === 1 ? t('events.select_payment_description', { count: quantity }) : t('events.select_payment_description_plural', { count: quantity })}
             </p>
 
-            {/* Quantity Selector */}
-            <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-              <span className="text-sm font-medium text-gray-700">{t('events.quantity')}</span>
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={quantity <= 1 || loading}
-                  className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                  </svg>
-                </button>
-                <span className="w-12 text-center font-semibold text-gray-900">{quantity}</span>
-                <button
-                  onClick={() => setQuantity(Math.min(10, quantity + 1))}
-                  disabled={quantity >= 10 || loading}
-                  className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                </button>
+            {/* Quantity Selector - Only show for single tier purchases */}
+            {selectedTiers.length === 0 && (
+              <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+                <span className="text-sm font-medium text-gray-700">{t('events.quantity')}</span>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    disabled={quantity <= 1 || loading}
+                    className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                    </svg>
+                  </button>
+                  <span className="w-12 text-center font-semibold text-gray-900">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(Math.min(10, quantity + 1))}
+                    disabled={quantity >= 10 || loading}
+                    className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="bg-teal-50 rounded-lg p-4">
               {selectedTiers.length > 0 ? (

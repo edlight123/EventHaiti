@@ -33,12 +33,14 @@ interface PromoCodeValidation {
 interface EventbriteStyleTicketSelectorProps {
   eventId: string
   userId: string | null
+  currency?: string
   onPurchase: (selections: { tierId: string; quantity: number; price: number; tierName?: string }[], promoCodeId?: string) => void
 }
 
 export default function EventbriteStyleTicketSelector({ 
   eventId, 
   userId, 
+  currency = 'HTG',
   onPurchase 
 }: EventbriteStyleTicketSelectorProps) {
   const { t } = useTranslation('common')
@@ -218,7 +220,7 @@ export default function EventbriteStyleTicketSelector({
                   )}
                   <div className="flex items-center gap-3 mt-2 text-sm">
                     <span className="font-medium text-teal-600">
-                      {tier.price.toFixed(2)} HTG
+                      {tier.price.toFixed(2)} {currency}
                     </span>
                     <span className={available > 0 ? 'text-gray-600' : 'text-red-600'}>
                       {available > 0 ? `${available} ${t('ticket.available')}` : t('ticket.sold_out')}
@@ -301,7 +303,7 @@ export default function EventbriteStyleTicketSelector({
                     {quantities[tier.id]}× {tier.name}
                   </span>
                   <span className="text-gray-900">
-                    {(tier.price * quantities[tier.id]).toFixed(2)} HTG
+                    {(tier.price * quantities[tier.id]).toFixed(2)} {currency}
                   </span>
                 </div>
               ))}
@@ -313,13 +315,13 @@ export default function EventbriteStyleTicketSelector({
                 <span>
                   -{promoValidation.promoCode.discountType === 'percentage' 
                     ? `${promoValidation.promoCode.discountValue}%` 
-                    : `${promoValidation.promoCode.discountValue.toFixed(2)} HTG`}
+                    : `${promoValidation.promoCode.discountValue.toFixed(2)} ${currency}`}
                 </span>
               </div>
             )}
             <div className="border-t border-gray-300 pt-2 flex justify-between font-semibold text-lg">
               <span>{t('events.total')} ({totalTickets} {t('ticket.ticket')}{totalTickets !== 1 ? 's' : ''})</span>
-              <span className="text-teal-600">{totalPrice.toFixed(2)} HTG</span>
+              <span className="text-teal-600">{totalPrice.toFixed(2)} {currency}</span>
             </div>
           </div>
         </div>
@@ -335,7 +337,7 @@ export default function EventbriteStyleTicketSelector({
           ? t('events.sign_in_to_purchase') 
           : totalTickets === 0
           ? t('events.select_tickets')
-          : `${t('events.checkout')} - ${totalPrice.toFixed(2)} HTG`
+          : `${t('events.checkout')} - ${totalPrice.toFixed(2)} ${currency}`
         }
       </button>
     </div>
