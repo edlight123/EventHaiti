@@ -1,0 +1,77 @@
+{
+  "hero": {
+    "title": "How can we help you?",
+    "subtitle": "Find answers to common questions or contact our support team"
+  },
+  "search": {
+    "placeholder": "Search for help...",
+    "no_results": "No articles found",
+    "no_results_desc": "Try different keywords or browse categories below"
+  },
+  "role_toggle": {
+    "attendee": "Attendee",
+    "organizer": "Organizer"
+  },
+  "need_help": {
+    "title": "Still need help?",
+    "description": "Can't find what you're looking for? We're here to help.",
+    "contact_support": "Contact Support",
+    "submit_request": "Submit a Request"
+  },
+  "categories": {
+    "tickets_orders": {
+      "title": "Tickets & Orders",
+      "description": "Purchase tickets, view orders, and manage your bookings"
+    },
+    "event_access": {
+      "title": "Event Access",
+      "description": "Check-in, entry requirements, and event attendance"
+    },
+    "payments_refunds": {
+      "title": "Payments & Refunds",
+      "description": "Payment methods, pricing, and refund policies"
+    },
+    "account_settings": {
+      "title": "Account & Settings",
+      "description": "Profile, preferences, and account management"
+    },
+    "creating_events": {
+      "title": "Creating Events",
+      "description": "Set up events, pricing, and ticket types"
+    },
+    "managing_sales": {
+      "title": "Managing Sales",
+      "description": "Track sales, view attendees, and manage inventory"
+    },
+    "payouts_fees": {
+      "title": "Payouts & Fees",
+      "description": "Getting paid, platform fees, and payment schedules"
+    },
+    "event_day": {
+      "title": "Event Day Operations",
+      "description": "Check-in tools, attendee management, and support"
+    }
+  },
+  "request_form": {
+    "title": "Submit a Support Request",
+    "description": "Fill out the form below and we'll get back to you within 24 hours.",
+    "name": "Name",
+    "name_placeholder": "Your full name",
+    "email": "Email",
+    "email_placeholder": "your@email.com",
+    "subject": "Subject",
+    "subject_placeholder": "Brief description of your issue",
+    "category": "Category",
+    "select_category": "Select a category",
+    "message": "Message",
+    "message_placeholder": "Describe your issue or question in detail...",
+    "submit": "Submit Request",
+    "submitting": "Submitting...",
+    "success_title": "Request Submitted!",
+    "success_message": "We've received your support request and will respond within 24 hours. Check your email for confirmation.",
+    "error_title": "Submission Failed",
+    "error_message": "There was an error submitting your request. Please try again or email us directly at support@eventhaiti.com",
+    "try_again": "Try Again",
+    "back_to_support": "Back to Help Center"
+  }
+}

@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Search, Mail, MessageCircle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { attendeeFAQs, organizerFAQs, type UserRole, type FAQCategory } from './faqData'
 
 export default function SupportContent() {
+  const { t } = useTranslation('support')
   const [role, setRole] = useState<UserRole>('attendee')
   const [searchQuery, setSearchQuery] = useState('')
   const [openFAQs, setOpenFAQs] = useState<Set<string>>(new Set())
@@ -52,17 +54,17 @@ export default function SupportContent() {
             {/* Pill Label */}
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full text-sm font-medium mb-4">
               <span>💬</span>
-              <span>Help Center</span>
+              <span>{t('hero.title')}</span>
             </div>
 
             {/* Title */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4">
-              Support
+              {t('hero.title')}
             </h1>
 
             {/* Subtitle */}
             <p className="text-lg sm:text-xl text-purple-100 mb-8">
-              Get help with tickets, events, and your organizer account.
+              {t('hero.subtitle')}
             </p>
 
             {/* Search Bar */}
@@ -70,7 +72,7 @@ export default function SupportContent() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search for help..."
+                placeholder={t('search.placeholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-4 rounded-xl border-0 shadow-lg text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-purple-400 focus:outline-none"
@@ -96,7 +98,7 @@ export default function SupportContent() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              🎫 Attendee
+              🎫 {t('role_toggle.attendee')}
             </button>
             <button
               onClick={() => {
@@ -110,7 +112,7 @@ export default function SupportContent() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              📅 Organizer
+              📅 {t('role_toggle.organizer')}
             </button>
           </div>
         </div>
@@ -122,10 +124,10 @@ export default function SupportContent() {
         {!searchQuery && (
           <div className="mb-16">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-              Top Help Topics
+              {t('categories.title', 'Top Help Topics')}
             </h2>
             <p className="text-gray-600 mb-8">
-              Browse by category or search for specific questions
+              {t('categories.subtitle', 'Browse by category or search for specific questions')}
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -154,10 +156,10 @@ export default function SupportContent() {
             <div className="text-center py-16">
               <div className="text-6xl mb-4">🔍</div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                No results found
+                {t('search.no_results')}
               </h3>
               <p className="text-gray-600">
-                Try adjusting your search or browse the categories above
+                {t('search.no_results_desc')}
               </p>
             </div>
           )}
@@ -211,10 +213,10 @@ export default function SupportContent() {
         <div className="mt-20 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl border border-purple-100 p-8 sm:p-12">
           <div className="text-center max-w-2xl mx-auto mb-8">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
-              Still need help?
+              {t('need_help.title')}
             </h2>
             <p className="text-gray-700">
-              Can&apos;t find what you&apos;re looking for? We&apos;re here to help.
+              {t('need_help.description')}
             </p>
           </div>
 

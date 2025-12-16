@@ -1,0 +1,79 @@
+{
+  "hero": {
+    "title": "Comment pouvons-nous vous aider?",
+    "subtitle": "Trouvez des réponses aux questions fréquentes ou contactez notre équipe de support"
+  },
+  "search": {
+    "placeholder": "Rechercher de l'aide...",
+    "no_results": "Aucun article trouvé",
+    "no_results_desc": "Essayez des mots-clés différents ou parcourez les catégories ci-dessous"
+  },
+  "role_toggle": {
+    "attendee": "Participant",
+    "organizer": "Organisateur"
+  },
+  "need_help": {
+    "title": "Besoin d'aide supplémentaire?",
+    "description": "Vous ne trouvez pas ce que vous cherchez? Nous sommes là pour vous aider.",
+    "contact_support": "Contacter le support",
+    "submit_request": "Soumettre une demande"
+  },
+  "categories": {
+    "title": "Sujets d'aide principaux",
+    "subtitle": "Parcourir par catégorie ou rechercher des questions spécifiques",
+    "tickets_orders": {
+      "title": "Billets et commandes",
+      "description": "Acheter des billets, voir les commandes et gérer vos réservations"
+    },
+    "event_access": {
+      "title": "Accès aux événements",
+      "description": "Enregistrement, exigences d'entrée et présence aux événements"
+    },
+    "payments_refunds": {
+      "title": "Paiements et remboursements",
+      "description": "Méthodes de paiement, tarification et politiques de remboursement"
+    },
+    "account_settings": {
+      "title": "Compte et paramètres",
+      "description": "Profil, préférences et gestion du compte"
+    },
+    "creating_events": {
+      "title": "Création d'événements",
+      "description": "Configurer des événements, tarification et types de billets"
+    },
+    "managing_sales": {
+      "title": "Gestion des ventes",
+      "description": "Suivre les ventes, voir les participants et gérer l'inventaire"
+    },
+    "payouts_fees": {
+      "title": "Paiements et frais",
+      "description": "Être payé, frais de plateforme et calendriers de paiement"
+    },
+    "event_day": {
+      "title": "Opérations le jour de l'événement",
+      "description": "Outils d'enregistrement, gestion des participants et support"
+    }
+  },
+  "request_form": {
+    "title": "Soumettre une demande de support",
+    "description": "Remplissez le formulaire ci-dessous et nous vous répondrons dans les 24 heures.",
+    "name": "Nom",
+    "name_placeholder": "Votre nom complet",
+    "email": "Email",
+    "email_placeholder": "votre@email.com",
+    "subject": "Sujet",
+    "subject_placeholder": "Brève description de votre problème",
+    "category": "Catégorie",
+    "select_category": "Sélectionner une catégorie",
+    "message": "Message",
+    "message_placeholder": "Décrivez votre problème ou question en détail...",
+    "submit": "Soumettre la demande",
+    "submitting": "Envoi en cours...",
+    "success_title": "Demande soumise!",
+    "success_message": "Nous avons reçu votre demande de support et vous répondrons dans les 24 heures. Vérifiez votre email pour confirmation.",
+    "error_title": "Échec de la soumission",
+    "error_message": "Une erreur s'est produite lors de la soumission de votre demande. Veuillez réessayer ou nous envoyer un email directement à support@eventhaiti.com",
+    "try_again": "Réessayer",
+    "back_to_support": "Retour au centre d'aide"
+  }
+}

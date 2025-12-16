@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Send, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/Toast'
@@ -20,6 +21,7 @@ const TOPICS = [
 ]
 
 export default function SupportRequestForm() {
+  const { t } = useTranslation('support')
   const router = useRouter()
   const { showToast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -74,10 +76,10 @@ export default function SupportRequestForm() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-            Submit a Support Request
+            {t('request_form.title')}
           </h1>
           <p className="text-gray-600">
-            Fill out the form below and we&apos;ll get back to you within 24 hours.
+            {t('request_form.description')}
           </p>
         </div>
 
@@ -117,7 +119,7 @@ export default function SupportRequestForm() {
           {/* Name */}
           <div>
             <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
-              Your Name *
+              {t('request_form.name')} *
             </label>
             <input
               type="text"
@@ -126,14 +128,14 @@ export default function SupportRequestForm() {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="John Doe"
+              placeholder={t('request_form.name_placeholder')}
             />
           </div>
 
           {/* Email */}
           <div>
             <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
-              Email Address *
+              {t('request_form.email')} *
             </label>
             <input
               type="email"
@@ -142,14 +144,14 @@ export default function SupportRequestForm() {
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="john@example.com"
+              placeholder={t('request_form.email_placeholder')}
             />
           </div>
 
           {/* Topic */}
           <div>
             <label htmlFor="topic" className="block text-sm font-semibold text-gray-700 mb-2">
-              Topic *
+              {t('request_form.category')} *
             </label>
             <select
               id="topic"
@@ -158,7 +160,7 @@ export default function SupportRequestForm() {
               onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none"
             >
-              <option value="">Select a topic</option>
+              <option value="">{t('request_form.select_category')}</option>
               {TOPICS.map(topic => (
                 <option key={topic} value={topic}>{topic}</option>
               ))}
@@ -168,7 +170,7 @@ export default function SupportRequestForm() {
           {/* Subject */}
           <div>
             <label htmlFor="subject" className="block text-sm font-semibold text-gray-700 mb-2">
-              Subject *
+              {t('request_form.subject')} *
             </label>
             <input
               type="text"
@@ -177,14 +179,14 @@ export default function SupportRequestForm() {
               value={formData.subject}
               onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="Brief description of your issue"
+              placeholder={t('request_form.subject_placeholder')}
             />
           </div>
 
           {/* Message */}
           <div>
             <label htmlFor="message" className="block text-sm font-semibold text-gray-700 mb-2">
-              Message *
+              {t('request_form.message')} *
             </label>
             <textarea
               id="message"
@@ -193,7 +195,7 @@ export default function SupportRequestForm() {
               value={formData.message}
               onChange={(e) => setFormData({ ...formData, message: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-              placeholder="Please provide as much detail as possible..."
+              placeholder={t('request_form.message_placeholder')}
             />
             <p className="text-xs text-gray-500 mt-1">
               Include relevant details like order numbers, event names, or error messages
@@ -210,12 +212,12 @@ export default function SupportRequestForm() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Submitting...
+                  {t('request_form.submitting')}
                 </>
               ) : (
                 <>
                   <Send className="w-5 h-5" />
-                  Submit Request
+                  {t('request_form.submit')}
                 </>
               )}
             </button>

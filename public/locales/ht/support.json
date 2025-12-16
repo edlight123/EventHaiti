@@ -1,0 +1,79 @@
+{
+  "hero": {
+    "title": "Kijan nou ka ede ou?",
+    "subtitle": "Jwenn repons a kesyon komen oswa kontakte ekip sipò nou an"
+  },
+  "search": {
+    "placeholder": "Chache èd...",
+    "no_results": "Pa gen atik ki jwenn",
+    "no_results_desc": "Eseye mo kle diferan oswa gade kategori yo anba a"
+  },
+  "role_toggle": {
+    "attendee": "Patisipan",
+    "organizer": "Òganizatè"
+  },
+  "need_help": {
+    "title": "Toujou bezwen èd?",
+    "description": "Ou pa jwenn sa w ap chache? Nou la pou ede w.",
+    "contact_support": "Kontakte sipò",
+    "submit_request": "Soumèt yon demann"
+  },
+  "categories": {
+    "title": "Sijè èd prensipal yo",
+    "subtitle": "Gade pa kategori oswa chache kesyon espesifik",
+    "tickets_orders": {
+      "title": "Tikè ak kòmand",
+      "description": "Achte tikè, gade kòmand, epi jere rezèvasyon ou"
+    },
+    "event_access": {
+      "title": "Aksè nan evènman",
+      "description": "Anrejistreman, kondisyon pou antre, ak prezans nan evènman"
+    },
+    "payments_refunds": {
+      "title": "Peman ak ranbousman",
+      "description": "Metòd peman, pri, ak règleman ranbousman"
+    },
+    "account_settings": {
+      "title": "Kont ak paramèt",
+      "description": "Pwofil, preferans, ak jesyon kont"
+    },
+    "creating_events": {
+      "title": "Kreye evènman",
+      "description": "Konfigirasyon evènman, pri, ak kalite tikè"
+    },
+    "managing_sales": {
+      "title": "Jesyon vant",
+      "description": "Suiv vant, gade patisipan, ak jere envantè"
+    },
+    "payouts_fees": {
+      "title": "Peman ak frè",
+      "description": "Resevwa peman, frè platfòm, ak orè peman"
+    },
+    "event_day": {
+      "title": "Operasyon jou evènman an",
+      "description": "Zouti anrejistreman, jesyon patisipan, ak sipò"
+    }
+  },
+  "request_form": {
+    "title": "Soumèt yon demann sipò",
+    "description": "Ranpli fòmilè a epi n ap reponn ou nan 24 èdtan.",
+    "name": "Non",
+    "name_placeholder": "Non konplè ou",
+    "email": "Email",
+    "email_placeholder": "email@ou.com",
+    "subject": "Sijè",
+    "subject_placeholder": "Deskripsyon kout pwoblèm ou",
+    "category": "Kategori",
+    "select_category": "Chwazi yon kategori",
+    "message": "Mesaj",
+    "message_placeholder": "Dekri pwoblèm oswa kesyon ou an detay...",
+    "submit": "Soumèt demann",
+    "submitting": "Ap soumèt...",
+    "success_title": "Demann soumèt!",
+    "success_message": "Nou resevwa demann sipò ou epi n ap reponn nan 24 èdtan. Gade email ou pou konfimasyon.",
+    "error_title": "Echèk nan soumisyon",
+    "error_message": "Te gen yon erè nan soumèt demann ou. Tanpri eseye ankò oswa voye nou yon email dirèkteman nan support@eventhaiti.com",
+    "try_again": "Eseye ankò",
+    "back_to_support": "Retounen nan sant èd"
+  }
+}
