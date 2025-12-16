@@ -7,6 +7,7 @@ import { CategoryChips } from './CategoryChips'
 import { EventsSection } from './EventsSection'
 import { EmptyState } from './EmptyState'
 import { FeaturedCarousel } from './FeaturedCarousel'
+import { LOCATION_CONFIG } from '@/lib/filters/config'
 
 interface DiscoverPageContentProps {
   currentDate: DateFilter
@@ -14,12 +15,14 @@ interface DiscoverPageContentProps {
   hasActiveFilters: boolean
   featuredEvents: any[]
   upcomingEvents: any[]
+  countryEvents: any[]
   nearYouEvents: any[]
   budgetEvents: any[]
   onlineEvents: any[]
   filteredEvents: any[]
   city?: string
   commune?: string
+  userCountry?: string
 }
 
 export function DiscoverPageContent({
@@ -28,14 +31,17 @@ export function DiscoverPageContent({
   hasActiveFilters,
   featuredEvents,
   upcomingEvents,
+  countryEvents,
   nearYouEvents,
   budgetEvents,
   onlineEvents,
   filteredEvents,
   city,
-  commune
+  commune,
+  userCountry = 'HT'
 }: DiscoverPageContentProps) {
   const { t } = useTranslation('common')
+  const countryName = LOCATION_CONFIG[userCountry]?.name || 'Haiti'
 
   return (
     <div className="space-y-8">
@@ -82,6 +88,17 @@ export function DiscoverPageContent({
             seeAllLink="/discover?date=this-week"
           />
 
+          {/* Events in Your Country */}
+          {countryEvents.length > 0 && (
+            <EventsSection
+              title={`Events in ${countryName}`}
+              description={`Discover events happening in ${countryName}`}
+              emoji="🌎"
+              events={countryEvents}
+              seeAllLink={`/discover?country=${userCountry}`}
+            />
+          )}
+
           {/* Near You (only if location set) */}
           {nearYouEvents.length > 0 && (
             <EventsSection
@@ -117,6 +134,7 @@ export function DiscoverPageContent({
 
           {/* All Events Fallback */}
           {upcomingEvents.length === 0 && 
+           countryEvents.length === 0 &&
            nearYouEvents.length === 0 && 
            budgetEvents.length === 0 && 
            onlineEvents.length === 0 && (

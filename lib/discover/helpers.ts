@@ -137,6 +137,10 @@ export function filterOnlineEvents(events: Event[]): Event[] {
   return events.filter(e => isOnlineEvent(e.venue_name))
 }
 
+export function filterEventsByCountry(events: Event[], country: string): Event[] {
+  return events.filter(e => e.country === country)
+}
+
 export function filterEventsByLocation(events: Event[], city: string, commune?: string): Event[] {
   let filtered = events.filter(e => e.city === city)
   if (commune) {

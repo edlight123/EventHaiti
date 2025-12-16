@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MapPin, Tag, Globe, Info } from 'lucide-react'
-import { CITIES, CITY_CONFIG, CATEGORIES, getLocationTypeLabel, getSubdivisions } from '@/lib/filters/config'
+import { LOCATION_CONFIG, CATEGORIES, getLocationTypeLabel, getSubdivisions, getCitiesForCountry } from '@/lib/filters/config'
 import type { UserProfile } from '@/lib/firestore/user-profile'
 
 interface PreferencesCardProps {
@@ -13,18 +13,36 @@ interface PreferencesCardProps {
 
 export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
   const { i18n, t } = useTranslation('profile')
+  const [defaultCountry, setDefaultCountry] = useState(profile.defaultCountry || 'HT')
   const [defaultCity, setDefaultCity] = useState(profile.defaultCity || '')
   const [defaultSubarea, setDefaultSubarea] = useState(profile.defaultSubarea || '')
   const [favoriteCategories, setFavoriteCategories] = useState<string[]>(profile.favoriteCategories || [])
   const [language, setLanguage] = useState(profile.language || 'en')
   const [isUpdating, setIsUpdating] = useState(false)
 
+  // Get cities for selected country
+  const cities = useMemo(() => {
+    return getCitiesForCountry(defaultCountry)
+  }, [defaultCountry])
+
   // Get current subdivisions based on selected city
   const subdivisions = useMemo(() => {
-    return defaultCity ? getSubdivisions(defaultCity) : []
-  }, [defaultCity])
-  const subareaType = defaultCity ? CITY_CONFIG[defaultCity]?.type.toUpperCase() : 'COMMUNE'
-  const subareaLabel = defaultCity ? getLocationTypeLabel(defaultCity) : 'Area'
+    return defaultCity ? getSubdivisions(defaultCity, defaultCountry) : []
+  }, [defaultCity, defaultCountry])
+  
+  const subareaType = defaultCity && LOCATION_CONFIG[defaultCountry]?.cities[defaultCity]
+    ? LOCATION_CONFIG[defaultCountry].cities[defaultCity].type.toUpperCase()
+    : 'COMMUNE'
+  const subareaLabel = defaultCity ? getLocationTypeLabel(defaultCity, defaultCountry) : 'Area'
+
+  // Reset city and subarea when country changes
+  useEffect(() => {
+    const availableCities = getCitiesForCountry(defaultCountry)
+    if (defaultCity && !availableCities.includes(defaultCity)) {
+      setDefaultCity('')
+      setDefaultSubarea('')
+    }
+  }, [defaultCountry, defaultCity])
 
   // Reset subarea when city changes
   useEffect(() => {
@@ -33,15 +51,35 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
     }
   }, [defaultCity, defaultSubarea, subdivisions])
 
+  const handleCountryChange = async (country: string) => {
+    setDefaultCountry(country)
+    setDefaultCity('') // Reset city
+    setDefaultSubarea('') // Reset subarea
+    setIsUpdating(true)
+    try {
+      await onUpdate({ 
+        defaultCountry: country,
+        defaultCity: '',
+        defaultSubarea: '',
+        subareaType: 'COMMUNE'
+      })
+    } catch (error) {
+      console.error('Failed to update country:', error)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
   const handleCityChange = async (city: string) => {
     setDefaultCity(city)
     setDefaultSubarea('') // Reset subarea
     setIsUpdating(true)
     try {
+      const cityConfig = LOCATION_CONFIG[defaultCountry]?.cities[city]
       await onUpdate({ 
         defaultCity: city,
         defaultSubarea: '',
-        subareaType: CITY_CONFIG[city]?.type.toUpperCase() as 'COMMUNE' | 'NEIGHBORHOOD'
+        subareaType: (cityConfig?.type.toUpperCase() || 'COMMUNE') as 'COMMUNE' | 'NEIGHBORHOOD'
       })
     } catch (error) {
       console.error('Failed to update city:', error)
@@ -103,7 +141,7 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
 
       <div className="space-y-6">
         {/* Default Location Pill */}
-        {defaultCity && defaultSubarea && (
+        {defaultCountry && defaultCity && defaultSubarea && (
           <div className="bg-gradient-to-r from-teal-50 to-purple-50 border border-teal-200 rounded-xl p-4">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
@@ -114,7 +152,7 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
                   {t('preferences.default_location')}
                 </p>
                 <p className="text-lg font-bold text-gray-900">
-                  {defaultCity} • {defaultSubarea}
+                  {LOCATION_CONFIG[defaultCountry]?.name} • {defaultCity} • {defaultSubarea}
                 </p>
                 <p className="text-xs text-teal-600 mt-1">
                   {t('preferences.location_note')}
@@ -123,6 +161,24 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
             </div>
           </div>
         )}
+
+        {/* Country Selector */}
+        <div>
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+            <Globe className="w-4 h-4" />
+            {t('preferences.default_country', { defaultValue: 'Country' })}
+          </label>
+          <select
+            value={defaultCountry}
+            onChange={(e) => handleCountryChange(e.target.value)}
+            disabled={isUpdating}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {Object.values(LOCATION_CONFIG).map(country => (
+              <option key={country.code} value={country.code}>{country.name}</option>
+            ))}
+          </select>
+        </div>
 
         {/* City Selector */}
         <div>
@@ -137,7 +193,7 @@ export function PreferencesCard({ profile, onUpdate }: PreferencesCardProps) {
             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value="">{t('preferences.select_city')}</option>
-            {CITIES.map(city => (
+            {cities.map(city => (
               <option key={city} value={city}>{city}</option>
             ))}
           </select>

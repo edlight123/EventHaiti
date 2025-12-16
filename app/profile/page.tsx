@@ -25,6 +25,7 @@ export default async function ProfilePage() {
       email: user.email || '',
       photoURL: '',
       phone: user.phone_number || '',
+      defaultCountry: 'HT',
       defaultCity: '',
       subareaType: 'COMMUNE',
       defaultSubarea: '',

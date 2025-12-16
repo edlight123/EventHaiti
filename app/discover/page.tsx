@@ -19,10 +19,12 @@ import {
   filterEventsByPrice, 
   filterOnlineEvents,
   filterEventsByLocation,
+  filterEventsByCountry,
   sortEventsDefault,
   sortEventsByDate
 } from '@/lib/discover/helpers'
 import { getDiscoverEvents } from '@/lib/data/events'
+import { getUserProfileAdmin } from '@/lib/firestore/user-profile-admin'
 
 // Revalidate every 30 seconds for discover page (frequently updated)
 export const revalidate = 30
@@ -34,6 +36,17 @@ export default async function DiscoverPage({
 }) {
   const user = await getCurrentUser()
   const params = await searchParams
+  
+  // Get user's default country for prioritization
+  let userCountry = 'HT' // Default to Haiti
+  if (user?.uid) {
+    try {
+      const profile = await getUserProfileAdmin(user.uid)
+      userCountry = profile?.defaultCountry || 'HT'
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error)
+    }
+  }
   
   // Parse filters from URL
   const urlParams = new URLSearchParams()
@@ -86,6 +99,11 @@ export default async function DiscoverPage({
   const freeEvents = filterFreeEvents(filteredEvents)
   const budgetEvents = filterEventsByPrice(filteredEvents, 500)
   const onlineEvents = filterOnlineEvents(filteredEvents)
+  
+  // Events from user's country (prioritized)
+  const countryEvents = filterEventsByCountry(filteredEvents, userCountry)
+  
+  // Near you events (specific city + commune)
   const nearYouEvents = filters.city 
     ? filterEventsByLocation(allEvents, filters.city, filters.commune)
     : []
@@ -114,6 +132,7 @@ export default async function DiscoverPage({
 
   const serializedFeaturedEvents = serializeData(featuredEvents)
   const serializedUpcomingEvents = serializeData(upcomingEvents)
+  const serializedCountryEvents = serializeData(countryEvents)
   const serializedNearYouEvents = serializeData(nearYouEvents)
   const serializedBudgetEvents = serializeData(budgetEvents)
   const serializedOnlineEvents = serializeData(onlineEvents)
@@ -137,12 +156,14 @@ export default async function DiscoverPage({
             hasActiveFilters={hasActiveFilters}
             featuredEvents={serializedFeaturedEvents}
             upcomingEvents={serializedUpcomingEvents}
+            countryEvents={serializedCountryEvents}
             nearYouEvents={serializedNearYouEvents}
             budgetEvents={serializedBudgetEvents}
             onlineEvents={serializedOnlineEvents}
             filteredEvents={serializedFilteredEvents}
             city={filters.city}
             commune={filters.commune}
+            userCountry={userCountry}
           />
         </Suspense>
       </div>
