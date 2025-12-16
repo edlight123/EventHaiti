@@ -11,6 +11,7 @@ import FilterManager from '@/components/FilterManager'
 import { parseFiltersFromURL } from '@/lib/filters/utils'
 import { applyFiltersAndSort } from '@/lib/filters/apply'
 import { getDiscoverEvents } from '@/lib/data/events'
+import { getUserProfileAdmin } from '@/lib/firestore/user-profile-admin'
 
 type Event = Database['public']['Tables']['events']['Row']
 
@@ -24,6 +25,17 @@ export default async function HomePage({
 }) {
   const user = await getCurrentUser()
   const params = await searchParams
+  
+  // Get user's default country for prioritization
+  let userCountry = 'HT' // Default to Haiti
+  if (user?.uid) {
+    try {
+      const profile = await getUserProfileAdmin(user.uid)
+      userCountry = profile?.defaultCountry || 'HT'
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error)
+    }
+  }
   
   // Parse filters from URL
   const urlParams = new URLSearchParams()
@@ -45,11 +57,16 @@ export default async function HomePage({
   // Apply filters and sorting using new filter system
   events = applyFiltersAndSort(events, filters)
   
+  // Prioritize events from user's country
+  const eventsInUserCountry = events.filter(e => e.country === userCountry)
+  const eventsInOtherCountries = events.filter(e => e.country !== userCountry)
+  const prioritizedEvents = [...eventsInUserCountry, ...eventsInOtherCountries]
+  
   // Organize events into sections
   const now = new Date()
   
-  // Use top events with most tickets sold as "featured"
-  const featuredEvents = [...events]
+  // Use top events with most tickets sold as "featured" (prioritize user's country)
+  const featuredEvents = [...prioritizedEvents]
     .sort((a, b) => (b.tickets_sold || 0) - (a.tickets_sold || 0))
     .slice(0, 5)
     .map(e => ({
@@ -65,10 +82,11 @@ export default async function HomePage({
       isVIP: (e.ticket_price || 0) > 100,
     }))
   
-  const trendingEvents = events.filter(e => (e.tickets_sold || 0) > 10).slice(0, 6)
+  const trendingEvents = prioritizedEvents.filter(e => (e.tickets_sold || 0) > 10).slice(0, 6)
   const thisWeekEnd = new Date(now)
   thisWeekEnd.setDate(now.getDate() + 7)
-  const upcomingThisWeek = events.filter(e => new Date(e.start_datetime) <= thisWeekEnd).slice(0, 6)
+  const upcomingThisWeek = prioritizedEvents.filter(e => new Date(e.start_datetime) <= thisWeekEnd).slice(0, 6)
+  const countryEvents = eventsInUserCountry.slice(0, 6)
   
   // Check if we have any active filters
   const hasActiveFilters = filters.date !== 'any' || 
@@ -96,6 +114,7 @@ export default async function HomePage({
   const serializedFeaturedEvents = serializeData(featuredEvents)
   const serializedTrendingEvents = serializeData(trendingEvents)
   const serializedUpcomingThisWeek = serializeData(upcomingThisWeek)
+  const serializedCountryEvents = serializeData(countryEvents)
 
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
@@ -136,6 +155,8 @@ export default async function HomePage({
             events={serializedEvents}
             trendingEvents={serializedTrendingEvents}
             upcomingThisWeek={serializedUpcomingThisWeek}
+            countryEvents={serializedCountryEvents}
+            userCountry={userCountry}
           />
         </div>
       

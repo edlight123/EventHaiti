@@ -6,12 +6,15 @@ import EventCardHorizontal from '@/components/EventCardHorizontal'
 import CategoryGrid from '@/components/CategoryGrid'
 import { Suspense } from 'react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
+import { LOCATION_CONFIG } from '@/lib/filters/config'
 
 interface HomePageContentProps {
   hasActiveFilters: boolean
   events: any[]
   trendingEvents: any[]
   upcomingThisWeek: any[]
+  countryEvents?: any[]
+  userCountry?: string
 }
 
 export default function HomePageContent({
@@ -19,8 +22,11 @@ export default function HomePageContent({
   events,
   trendingEvents,
   upcomingThisWeek,
+  countryEvents = [],
+  userCountry = 'HT',
 }: HomePageContentProps) {
   const { t } = useTranslation('common')
+  const countryName = LOCATION_CONFIG[userCountry]?.name || 'Haiti'
 
   if (hasActiveFilters) {
     return (
@@ -116,6 +122,39 @@ export default function HomePageContent({
             {/* Desktop: Grid Cards */}
             <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {trendingEvents.map((event, index) => (
+                <EventCard key={event.id} event={event} index={index} />
+              ))}
+            </div>
+          </Suspense>
+        </section>
+      )}
+
+      {/* Events in Your Country */}
+      {countryEvents.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <div>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
+                🌎 Events in {countryName}
+              </h2>
+              <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-0.5 sm:mt-1">
+                Discover events happening in {countryName}
+              </p>
+            </div>
+            <a href={`/discover?country=${userCountry}`} className="text-brand-600 hover:text-brand-700 font-semibold">
+              {t('common.viewAll')} →
+            </a>
+          </div>
+          <Suspense fallback={<LoadingSkeleton rows={6} animated={false} />}>
+            {/* Mobile: Horizontal Cards */}
+            <div className="md:hidden space-y-4">
+              {countryEvents.map((event) => (
+                <EventCardHorizontal key={event.id} event={event} />
+              ))}
+            </div>
+            {/* Desktop: Grid Cards */}
+            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {countryEvents.map((event, index) => (
                 <EventCard key={event.id} event={event} index={index} />
               ))}
             </div>
