@@ -82,6 +82,13 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
 
     const start = combineDateAndTime(draft.start_date, draft.start_time);
     const end = combineDateAndTime(draft.end_date, draft.end_time);
+    const now = new Date();
+
+    // Check if start date is in the past
+    if (start < now) {
+      setError('Event cannot start in the past');
+      return false;
+    }
 
     if (end <= start) {
       setError('End time must be after start time');

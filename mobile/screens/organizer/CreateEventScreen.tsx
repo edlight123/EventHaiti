@@ -94,6 +94,25 @@ export default function CreateEventScreen() {
           Alert.alert('Required', 'Please select end date and time');
           return false;
         }
+        // Check if event starts in the past
+        const parseTime = (timeStr: string) => {
+          const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+          if (!match) return { hours: 0, minutes: 0 };
+          let hours = parseInt(match[1]);
+          const minutes = parseInt(match[2]);
+          const period = match[3].toUpperCase();
+          if (period === 'PM' && hours !== 12) hours += 12;
+          if (period === 'AM' && hours === 12) hours = 0;
+          return { hours, minutes };
+        };
+        const startTime = parseTime(formData.start_time);
+        const startDate = new Date(formData.start_date + 'T00:00:00');
+        startDate.setHours(startTime.hours, startTime.minutes);
+        const now = new Date();
+        if (startDate < now) {
+          Alert.alert('Invalid Date', 'Event cannot start in the past');
+          return false;
+        }
         return true;
       case 4:
         if (formData.ticket_tiers.length === 0) {
