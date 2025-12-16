@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LogOut, Trash2, AlertTriangle } from 'lucide-react'
+import { LogOut, Trash2, AlertTriangle, HelpCircle } from 'lucide-react'
 import { signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase/client'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 interface AccountCardProps {
   onDeleteAccount?: () => Promise<void>
@@ -74,6 +75,20 @@ export function AccountCard({ onDeleteAccount }: AccountCardProps) {
               <p className="text-sm text-gray-600">{t('account.sign_out_desc')}</p>
             </div>
           </button>
+
+          {/* Help & Support */}
+          <Link
+            href="/support"
+            className="w-full flex items-center gap-3 px-4 py-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors group"
+          >
+            <div className="w-10 h-10 bg-blue-100 group-hover:bg-blue-200 rounded-lg flex items-center justify-center">
+              <HelpCircle className="w-5 h-5 text-blue-600" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-semibold text-blue-900">{t('account.help_support')}</p>
+              <p className="text-sm text-blue-700">{t('account.help_support_desc')}</p>
+            </div>
+          </Link>
 
           {/* Delete Account */}
           <button

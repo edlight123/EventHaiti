@@ -51,6 +51,8 @@
     "subtitle": "Manage your account settings",
     "sign_out": "Sign Out",
     "sign_out_desc": "Sign out of your account",
+    "help_support": "Help & Support",
+    "help_support_desc": "Get help and find answers to your questions",
     "delete_account": "Delete Account",
     "delete_account_desc": "Permanently delete your account and data",
     "delete_modal_title": "Delete Account?",
