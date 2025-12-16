@@ -208,6 +208,25 @@ export default function PayoutsPageNew({
     )
   }
 
+  // Filter earnings by period
+  const filteredEarnings = eventSummaries.filter((event) => {
+    const eventDate = new Date(event.date)
+    const now = new Date()
+    
+    if (period === 'this_month') {
+      return (
+        eventDate.getMonth() === now.getMonth() &&
+        eventDate.getFullYear() === now.getFullYear()
+      )
+    } else if (period === 'last_3_months') {
+      const threeMonthsAgo = new Date()
+      threeMonthsAgo.setMonth(now.getMonth() - 3)
+      return eventDate >= threeMonthsAgo
+    }
+    
+    return true // all_time
+  })
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -596,14 +615,14 @@ export default function PayoutsPageNew({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {eventSummaries.length === 0 ? (
+                    {filteredEarnings.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                           No events found for this period
                         </td>
                       </tr>
                     ) : (
-                      eventSummaries.map((event) => (
+                      filteredEarnings.map((event) => (
                         <tr key={event.eventId} className="hover:bg-gray-50">
                           <td className="px-6 py-4">
                             <Link
@@ -640,12 +659,12 @@ export default function PayoutsPageNew({
 
               {/* Mobile Cards */}
               <div className="md:hidden divide-y divide-gray-200">
-                {eventSummaries.length === 0 ? (
+                {filteredEarnings.length === 0 ? (
                   <div className="px-6 py-12 text-center text-gray-500">
                     No events found for this period
                   </div>
                 ) : (
-                  eventSummaries.map((event) => (
+                  filteredEarnings.map((event) => (
                     <Link
                       key={event.eventId}
                       href={`/organizer/events/${event.eventId}/earnings`}

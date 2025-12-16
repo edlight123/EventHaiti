@@ -1,4 +1,4 @@
-import { adminAuth } from '@/lib/firebase/admin'
+import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { getPayoutConfig } from '@/lib/firestore/payout'
@@ -6,8 +6,6 @@ import { serializeData } from '@/lib/utils/serialize'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import PayoutsPageNew from './PayoutsPageNew'
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore'
-import { db } from '@/lib/firebase/client'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -16,27 +14,25 @@ export const revalidate = 0
 async function getEventEarnings(organizerId: string) {
   try {
     // Fetch all events for this organizer
-    const eventsQuery = query(
-      collection(db, 'events'),
-      where('organizer_id', '==', organizerId)
-    )
-    const eventsSnapshot = await getDocs(eventsQuery)
+    const eventsSnapshot = await adminDb
+      .collection('events')
+      .where('organizer_id', '==', organizerId)
+      .get()
 
     const earnings = await Promise.all(
-      eventsSnapshot.docs.map(async (eventDoc) => {
+      eventsSnapshot.docs.map(async (eventDoc: any) => {
         const eventData = eventDoc.data()
         
         // Fetch tickets for this event
-        const ticketsQuery = query(
-          collection(db, 'tickets'),
-          where('event_id', '==', eventDoc.id),
-          where('status', '==', 'active')
-        )
-        const ticketsSnapshot = await getDocs(ticketsQuery)
+        const ticketsSnapshot = await adminDb
+          .collection('tickets')
+          .where('event_id', '==', eventDoc.id)
+          .where('status', '==', 'active')
+          .get()
 
         // Calculate earnings
         let grossSales = 0
-        ticketsSnapshot.docs.forEach((ticketDoc) => {
+        ticketsSnapshot.docs.forEach((ticketDoc: any) => {
           const ticketData = ticketDoc.data()
           grossSales += ticketData.price || 0
         })
@@ -48,7 +44,7 @@ async function getEventEarnings(organizerId: string) {
         const netPayout = grossSales - totalFees
 
         // Determine payout status
-        const eventDate = eventData.date instanceof Timestamp ? eventData.date.toDate() : new Date(eventData.date)
+        const eventDate = eventData.date?.toDate ? eventData.date.toDate() : new Date(eventData.date)
         const now = new Date()
         const daysSinceEvent = Math.floor((now.getTime() - eventDate.getTime()) / (1000 * 60 * 60 * 24))
         
