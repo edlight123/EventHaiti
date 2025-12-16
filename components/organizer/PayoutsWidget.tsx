@@ -52,7 +52,7 @@ export function PayoutsWidget({ status, pendingBalance = 0, lastPayout, nextPayo
           title: t('payouts.pending_title'),
           description: t('payouts.pending_description'),
           ctaText: t('payouts.view_details'),
-          ctaHref: '/organizer/payouts',
+          ctaHref: '/organizer/settings/payouts',
           ctaColor: 'bg-yellow-600 hover:bg-yellow-700'
         }
       case 'active':
@@ -63,7 +63,7 @@ export function PayoutsWidget({ status, pendingBalance = 0, lastPayout, nextPayo
           title: t('payouts.active_title'),
           description: t('payouts.active_description'),
           ctaText: t('payouts.view_history'),
-          ctaHref: '/organizer/payouts',
+          ctaHref: '/organizer/settings/payouts/history',
           ctaColor: 'bg-blue-600 hover:bg-blue-700'
         }
     }
