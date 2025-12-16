@@ -413,7 +413,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                       <div className="mt-3 pt-3 border-t border-gray-100">
                         <ShareButton eventId={event.id} eventTitle={event.title} />
                       </div>
-                      {user.id !== event.organizer_id && (
+                      {user.id !== event.organizer_id && event.organizer_id && (
                         <div className="mt-3">
                           <FollowButton organizerId={event.organizer_id} userId={user.id} initialIsFollowing={isFollowing} />
                         </div>

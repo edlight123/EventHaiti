@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/firebase-db/server'
+import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
 
 export async function POST(request: Request) {
@@ -19,31 +19,31 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Cannot follow yourself' }, { status: 400 })
     }
 
-    const supabase = await createClient()
-
     // Check if already following
-    const { data: existing } = await supabase
-      .from('organizer_follows')
-      .select('id')
-      .eq('follower_id', user.id)
-      .eq('organizer_id', organizerId)
-      .single()
+    const existingSnapshot = await adminDb
+      .collection('organizer_follows')
+      .where('follower_id', '==', user.id)
+      .where('organizer_id', '==', organizerId)
+      .limit(1)
+      .get()
 
-    if (existing) {
+    if (!existingSnapshot.empty) {
       // Unfollow
-      await supabase
-        .from('organizer_follows')
+      const docId = existingSnapshot.docs[0].id
+      await adminDb
+        .collection('organizer_follows')
+        .doc(docId)
         .delete()
-        .eq('id', existing.id)
 
       return Response.json({ isFollowing: false })
     } else {
       // Follow
-      await supabase
-        .from('organizer_follows')
-        .insert({
+      await adminDb
+        .collection('organizer_follows')
+        .add({
           follower_id: user.id,
-          organizer_id: organizerId
+          organizer_id: organizerId,
+          created_at: new Date()
         })
 
       return Response.json({ isFollowing: true })

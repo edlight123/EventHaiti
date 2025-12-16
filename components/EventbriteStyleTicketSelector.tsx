@@ -265,13 +265,13 @@ export default function EventbriteStyleTicketSelector({
 
       {/* Promo Code Section */}
       <div className="border border-gray-200 rounded-lg p-4">
-        <h4 className="font-medium text-gray-900 mb-3">{t('events.promo_code')}</h4>
+        <h4 className="font-medium text-gray-900 mb-3">{t('events.promo_code_optional')}</h4>
         <div className="flex gap-2">
           <input
             type="text"
             value={promoCode}
             onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-            placeholder={t('events.enter_promo_code')}
+            placeholder={t('events.enter_code')}
             disabled={!userId || validatingPromo}
             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-100"
           />
