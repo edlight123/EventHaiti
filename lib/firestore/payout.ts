@@ -7,10 +7,13 @@ export interface PayoutConfig {
   status: PayoutStatus
   method?: PayoutMethod
   bankDetails?: {
+    accountLocation?: string
     accountName: string
     accountNumber: string // masked after save
     bankName: string
     routingNumber?: string
+    swift?: string
+    iban?: string
   }
   mobileMoneyDetails?: {
     provider: string // 'moncash' | 'natcash' | etc

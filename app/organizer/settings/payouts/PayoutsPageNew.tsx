@@ -11,9 +11,13 @@ interface PayoutConfig {
   country?: string
   method?: 'bank_transfer' | 'mobile_money'
   bankDetails?: {
+    accountLocation?: string
     accountName: string
     accountNumber: string
     bankName: string
+    routingNumber?: string
+    swift?: string
+    iban?: string
   }
   mobileMoneyDetails?: {
     provider: string
@@ -56,20 +60,69 @@ export default function PayoutsPageNew({
   const [error, setError] = useState<string | null>(null)
   const [period, setPeriod] = useState<'this_month' | 'last_3_months' | 'all_time'>('this_month')
   const [formData, setFormData] = useState({
-    country: config?.country || 'haiti',
+    accountLocation: config?.country || 'haiti',
     method: config?.method || 'bank_transfer',
-    bankName: config?.bankDetails?.bankName || '',
+    bankName: config?.bankDetails?.bankName || 'unibank',
+    customBankName: '',
+    routingNumber: config?.bankDetails?.routingNumber || '',
     accountName: config?.bankDetails?.accountName || '',
     accountNumber: config?.bankDetails?.accountNumber || '',
+    swift: config?.bankDetails?.swift || '',
+    iban: config?.bankDetails?.iban || '',
     provider: config?.mobileMoneyDetails?.provider || 'moncash',
     phoneNumber: config?.mobileMoneyDetails?.phoneNumber || ''
   })
 
   const hasPayoutSetup = Boolean(config)
 
+  // List of supported banks
+  const banks = [
+    { value: 'unibank', label: 'Unibank' },
+    { value: 'sogebank', label: 'Sogebank' },
+    { value: 'bnc', label: 'BNC (Banque Nationale de Crédit)' },
+    { value: 'capital_bank', label: 'Capital Bank' },
+    { value: 'citibank', label: 'Citibank Haiti' },
+    { value: 'scotiabank', label: 'Scotiabank' },
+    { value: 'other', label: 'Other (add my bank)' }
+  ]
+
   const handleSavePayoutDetails = async () => {
     setIsSaving(true)
     setError(null)
+    
+    // Validate required fields
+    if (formData.method === 'bank_transfer') {
+      if (!formData.accountLocation) {
+        setError('Please select an account location')
+        setIsSaving(false)
+        return
+      }
+      if (!formData.bankName) {
+        setError('Please select a bank')
+        setIsSaving(false)
+        return
+      }
+      if (formData.bankName === 'other' && !formData.customBankName.trim()) {
+        setError('Please enter your bank name')
+        setIsSaving(false)
+        return
+      }
+      if (!formData.routingNumber.trim()) {
+        setError('Please enter a routing number')
+        setIsSaving(false)
+        return
+      }
+      if (!formData.accountNumber.trim()) {
+        setError('Please enter an account number')
+        setIsSaving(false)
+        return
+      }
+      if (!formData.accountName.trim()) {
+        setError('Please enter the account holder name')
+        setIsSaving(false)
+        return
+      }
+    }
     
     try {
       const updates: any = {
@@ -77,10 +130,18 @@ export default function PayoutsPageNew({
       }
 
       if (formData.method === 'bank_transfer') {
+        const finalBankName = formData.bankName === 'other' 
+          ? formData.customBankName 
+          : formData.bankName
+        
         updates.bankDetails = {
-          bankName: formData.bankName,
+          accountLocation: formData.accountLocation,
+          bankName: finalBankName,
+          routingNumber: formData.routingNumber,
           accountName: formData.accountName,
-          accountNumber: formData.accountNumber
+          accountNumber: formData.accountNumber,
+          swift: formData.swift || null,
+          iban: formData.iban || null
         }
       } else {
         updates.mobileMoneyDetails = {
@@ -190,7 +251,11 @@ export default function PayoutsPageNew({
                   <div className="space-y-4">
                     <div>
                       <div className="text-sm font-medium text-gray-500 mb-1">Location</div>
-                      <div className="text-base text-gray-900 capitalize">{config?.country}</div>
+                      <div className="text-base text-gray-900 capitalize">
+                        {config?.bankDetails?.accountLocation 
+                          ? config.bankDetails.accountLocation.replace('_', ' ') 
+                          : config?.country || 'Not set'}
+                      </div>
                     </div>
 
                     <div>
@@ -231,22 +296,24 @@ export default function PayoutsPageNew({
                     {/* Account Location */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Account location
+                        Account location <span className="text-red-500">*</span>
                       </label>
                       <select
-                        value={formData.country}
-                        onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                        value={formData.accountLocation}
+                        onChange={(e) => setFormData({ ...formData, accountLocation: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       >
                         <option value="haiti">Haiti</option>
-                        <option value="abroad">Abroad</option>
+                        <option value="canada">Canada</option>
+                        <option value="united_states">United States</option>
+                        <option value="other">Other…</option>
                       </select>
                     </div>
 
                     {/* Payout Method */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Payout method
+                        Payout method <span className="text-red-500">*</span>
                       </label>
                       <div className="space-y-2">
                         <label className="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
@@ -277,26 +344,65 @@ export default function PayoutsPageNew({
                     {/* Bank Transfer Fields */}
                     {formData.method === 'bank_transfer' && (
                       <>
+                        {/* Bank Name */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Bank name
+                            Bank name <span className="text-red-500">*</span>
                           </label>
                           <select
                             value={formData.bankName}
-                            onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                            onChange={(e) => setFormData({ ...formData, bankName: e.target.value, customBankName: '' })}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           >
-                            <option value="">Select bank</option>
-                            <option value="unibank">Unibank</option>
-                            <option value="sogebank">Sogebank</option>
-                            <option value="capital_bank">Capital Bank</option>
-                            <option value="buh">BUH</option>
+                            {banks.map(bank => (
+                              <option key={bank.value} value={bank.value}>{bank.label}</option>
+                            ))}
                           </select>
                         </div>
 
+                        {/* Custom Bank Name (shown when Other is selected) */}
+                        {formData.bankName === 'other' && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Bank name <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.customBankName}
+                              onChange={(e) => setFormData({ ...formData, customBankName: e.target.value })}
+                              placeholder="Type your bank name"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            />
+                          </div>
+                        )}
+
+                        {/* Routing Number */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Account holder name
+                            Routing number <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.routingNumber}
+                            onChange={(e) => setFormData({ ...formData, routingNumber: e.target.value })}
+                            placeholder={
+                              formData.accountLocation === 'united_states' ? 'ABA routing number' :
+                              formData.accountLocation === 'canada' ? 'Institution / transit number' :
+                              'Routing or bank code'
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            {formData.accountLocation === 'united_states' && 'ABA routing number for US banks'}
+                            {formData.accountLocation === 'canada' && 'Institution / transit number for Canadian banks'}
+                            {!['united_states', 'canada'].includes(formData.accountLocation) && 'Bank code, routing number, or equivalent'}
+                          </p>
+                        </div>
+
+                        {/* Account Holder Name */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Account holder name <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -307,9 +413,10 @@ export default function PayoutsPageNew({
                           />
                         </div>
 
+                        {/* Account Number */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Account number
+                            Account number <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -318,6 +425,40 @@ export default function PayoutsPageNew({
                             placeholder="1234567890"
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           />
+                        </div>
+
+                        {/* SWIFT / BIC (Optional) */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            SWIFT / BIC <span className="text-gray-400 text-xs">(optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.swift}
+                            onChange={(e) => setFormData({ ...formData, swift: e.target.value })}
+                            placeholder="SWIFT or BIC code"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            Required for some international payouts. Leave blank if you&apos;re not sure.
+                          </p>
+                        </div>
+
+                        {/* IBAN (Optional) */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            IBAN <span className="text-gray-400 text-xs">(optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.iban}
+                            onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
+                            placeholder="International Bank Account Number"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            Used in European and some international transfers.
+                          </p>
                         </div>
                       </>
                     )}
