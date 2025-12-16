@@ -1,13 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../config/brand';
+import { COUNTRIES, CITIES_BY_COUNTRY } from '../../../types/filters';
 import type { EventDraft } from '../CreateEventFlowRefactored';
-
-const CITIES = [
-  'Port-au-Prince', 'Cap-Haïtien', 'Pétion-Ville', 'Delmas', 
-  'Carrefour', 'Gonaïves', 'Les Cayes', 'Saint-Marc'
-];
 
 interface Props {
   draft: EventDraft;
@@ -15,10 +11,54 @@ interface Props {
 }
 
 export default function Step2Location({ draft, updateDraft }: Props) {
+  const selectedCountry = (draft as any).country || 'HT';
+  const cities = CITIES_BY_COUNTRY[selectedCountry] || [];
+
+  const handleCountryChange = (countryCode: string) => {
+    const newCities = CITIES_BY_COUNTRY[countryCode] || [];
+    updateDraft({ 
+      country: countryCode,
+      city: newCities[0] || '',
+      commune: ''
+    } as any);
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Where will it happen?</Text>
       <Text style={styles.subtitle}>Help people find your event</Text>
+
+      {/* Country */}
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>
+          Country <Text style={styles.required}>*</Text>
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.cityScroll}
+        >
+          {COUNTRIES.map((country) => (
+            <TouchableOpacity
+              key={country.code}
+              style={[
+                styles.cityChip,
+                selectedCountry === country.code && styles.cityChipActive,
+              ]}
+              onPress={() => handleCountryChange(country.code)}
+            >
+              <Text
+                style={[
+                  styles.cityChipText,
+                  selectedCountry === country.code && styles.cityChipTextActive,
+                ]}
+              >
+                {country.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {/* Venue Name */}
       <View style={styles.formGroup}>
@@ -46,7 +86,7 @@ export default function Step2Location({ draft, updateDraft }: Props) {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.cityScroll}
         >
-          {CITIES.map((city) => (
+          {cities.map((city) => (
             <TouchableOpacity
               key={city}
               style={[

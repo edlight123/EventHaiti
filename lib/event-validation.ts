@@ -5,6 +5,7 @@ export interface EventFormData {
   description: string
   category: string
   venue_name: string
+  country?: string
   city: string
   commune: string
   address: string
@@ -85,6 +86,10 @@ function validateBasicInfo(data: EventFormData): TabValidation {
 function validateLocation(data: EventFormData): TabValidation {
   const missingFields: string[] = []
   const warnings: string[] = []
+
+  if (!data.country || data.country.trim() === '') {
+    missingFields.push('Country')
+  }
 
   if (!data.city || data.city.trim() === '') {
     missingFields.push('City')

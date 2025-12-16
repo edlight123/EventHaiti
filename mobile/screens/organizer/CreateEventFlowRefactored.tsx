@@ -52,6 +52,7 @@ export interface EventDraft {
   
   // Location
   venue_name: string;
+  country?: string;
   city: string;
   commune: string;
   address: string;
@@ -100,6 +101,7 @@ export default function CreateEventFlowRefactored() {
     category: 'Concert',
     banner_image_url: '',
     venue_name: '',
+    country: 'HT',
     city: 'Port-au-Prince',
     commune: '',
     address: '',

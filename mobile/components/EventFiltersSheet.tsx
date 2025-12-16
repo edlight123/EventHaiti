@@ -16,7 +16,8 @@ import { X } from 'lucide-react-native';
 import { useFilters } from '../contexts/FiltersContext';
 import { 
   CATEGORIES, 
-  CITIES, 
+  COUNTRIES,
+  CITIES_BY_COUNTRY,
   PRICE_FILTERS, 
   DATE_OPTIONS, 
   EVENT_TYPE_OPTIONS,
@@ -315,9 +316,32 @@ export default function EventFiltersSheet() {
 
           {/* Location Filter */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>LOCATION</Text>
+            <Text style={styles.sectionLabel}>COUNTRY</Text>
             <View style={styles.chipsRow}>
-              {CITIES.map(city => (
+              {COUNTRIES.map(country => (
+                <TouchableOpacity
+                  key={country.code}
+                  style={[
+                    styles.chip,
+                    (draftFilters.country || 'HT') === country.code && styles.chipActive
+                  ]}
+                  onPress={() => setDraftFilters({ ...draftFilters, country: country.code, city: '' })}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      (draftFilters.country || 'HT') === country.code && styles.chipTextActive
+                    ]}
+                  >
+                    {country.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.sectionLabel, { marginTop: 12 }]}>CITY</Text>
+            <View style={styles.chipsRow}>
+              {(CITIES_BY_COUNTRY[draftFilters.country || 'HT'] || []).map(city => (
                 <TouchableOpacity
                   key={city}
                   style={[

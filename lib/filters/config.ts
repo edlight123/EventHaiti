@@ -1,8 +1,8 @@
 /**
- * Configuration for city-specific location filters
+ * Configuration for multi-country location filters
  */
 
-export type LocationType = 'commune' | 'neighborhood'
+export type LocationType = 'commune' | 'neighborhood' | 'state' | 'province' | 'region' | 'department'
 
 export interface CityConfig {
   name: string
@@ -10,91 +10,295 @@ export interface CityConfig {
   subdivisions: string[]
 }
 
+export interface CountryConfig {
+  code: string
+  name: string
+  cities: Record<string, CityConfig>
+}
+
 /**
- * City configuration map
- * - Commune: Administrative subdivision (e.g., Port-au-Prince has communes)
- * - Neighborhood: Informal/popular area names
+ * Multi-country location configuration
  */
-export const CITY_CONFIG: Record<string, CityConfig> = {
-  'Port-au-Prince': {
-    name: 'Port-au-Prince',
-    type: 'commune',
-    subdivisions: [
-      'Pétion-Ville',
-      'Delmas',
-      'Tabarre',
-      'Carrefour',
-      'Cité Soleil',
-      'Croix-des-Bouquets',
-      'Kenscoff',
-      'Gressier'
-    ]
+export const LOCATION_CONFIG: Record<string, CountryConfig> = {
+  'HT': {
+    code: 'HT',
+    name: 'Haiti',
+    cities: {
+      'Port-au-Prince': {
+        name: 'Port-au-Prince',
+        type: 'commune',
+        subdivisions: [
+          'Pétion-Ville',
+          'Delmas',
+          'Tabarre',
+          'Carrefour',
+          'Cité Soleil',
+          'Croix-des-Bouquets',
+          'Kenscoff',
+          'Gressier'
+        ]
+      },
+      'Cap-Haïtien': {
+        name: 'Cap-Haïtien',
+        type: 'neighborhood',
+        subdivisions: [
+          'Centre-Ville',
+          'Petite Anse',
+          'Vertières',
+          'Quartier Morin'
+        ]
+      },
+      'Jacmel': {
+        name: 'Jacmel',
+        type: 'neighborhood',
+        subdivisions: [
+          'Centre-Ville',
+          'La Gosseline',
+          'Cayes-Jacmel',
+          'Cyvadier'
+        ]
+      },
+      'Gonaïves': {
+        name: 'Gonaïves',
+        type: 'neighborhood',
+        subdivisions: [
+          'Centre',
+          'Raboteau',
+          'Bigot',
+          'Jubilée'
+        ]
+      },
+      'Les Cayes': {
+        name: 'Les Cayes',
+        type: 'neighborhood',
+        subdivisions: [
+          'Centre-Ville',
+          'Gelée',
+          'Port-Salut'
+        ]
+      },
+      'Saint-Marc': {
+        name: 'Saint-Marc',
+        type: 'neighborhood',
+        subdivisions: []
+      },
+      'Port-de-Paix': {
+        name: 'Port-de-Paix',
+        type: 'neighborhood',
+        subdivisions: []
+      },
+      'Jérémie': {
+        name: 'Jérémie',
+        type: 'neighborhood',
+        subdivisions: []
+      },
+      'Fort-Liberté': {
+        name: 'Fort-Liberté',
+        type: 'neighborhood',
+        subdivisions: []
+      }
+    }
   },
-  'Cap-Haïtien': {
-    name: 'Cap-Haïtien',
-    type: 'neighborhood',
-    subdivisions: [
-      'Centre-Ville',
-      'Petite Anse',
-      'Vertières',
-      'Quartier Morin'
-    ]
+  'US': {
+    code: 'US',
+    name: 'United States',
+    cities: {
+      'New York, NY': {
+        name: 'New York',
+        type: 'state',
+        subdivisions: ['Manhattan', 'Brooklyn', 'Queens', 'Bronx', 'Staten Island']
+      },
+      'Los Angeles, CA': {
+        name: 'Los Angeles',
+        type: 'state',
+        subdivisions: ['Downtown', 'Hollywood', 'Santa Monica', 'Beverly Hills', 'Venice']
+      },
+      'Miami, FL': {
+        name: 'Miami',
+        type: 'state',
+        subdivisions: ['Downtown', 'South Beach', 'Brickell', 'Wynwood', 'Little Havana']
+      },
+      'Houston, TX': {
+        name: 'Houston',
+        type: 'state',
+        subdivisions: ['Downtown', 'Midtown', 'Montrose', 'The Heights']
+      },
+      'Chicago, IL': {
+        name: 'Chicago',
+        type: 'state',
+        subdivisions: ['Downtown', 'North Side', 'South Side', 'West Side']
+      },
+      'Atlanta, GA': {
+        name: 'Atlanta',
+        type: 'state',
+        subdivisions: ['Downtown', 'Midtown', 'Buckhead', 'East Atlanta']
+      },
+      'Boston, MA': {
+        name: 'Boston',
+        type: 'state',
+        subdivisions: ['Downtown', 'Back Bay', 'South End', 'Cambridge']
+      },
+      'Orlando, FL': {
+        name: 'Orlando',
+        type: 'state',
+        subdivisions: ['Downtown', 'International Drive', 'Lake Nona', 'Winter Park']
+      }
+    }
   },
-  'Jacmel': {
-    name: 'Jacmel',
-    type: 'neighborhood',
-    subdivisions: [
-      'Centre-Ville',
-      'La Gosseline',
-      'Cayes-Jacmel',
-      'Cyvadier'
-    ]
+  'CA': {
+    code: 'CA',
+    name: 'Canada',
+    cities: {
+      'Toronto, ON': {
+        name: 'Toronto',
+        type: 'province',
+        subdivisions: ['Downtown', 'North York', 'Scarborough', 'Etobicoke', 'Mississauga']
+      },
+      'Montreal, QC': {
+        name: 'Montreal',
+        type: 'province',
+        subdivisions: ['Downtown', 'Plateau', 'Old Montreal', 'Mile End', 'Westmount']
+      },
+      'Vancouver, BC': {
+        name: 'Vancouver',
+        type: 'province',
+        subdivisions: ['Downtown', 'Gastown', 'Yaletown', 'Kitsilano', 'Richmond']
+      },
+      'Calgary, AB': {
+        name: 'Calgary',
+        type: 'province',
+        subdivisions: ['Downtown', 'Beltline', 'Kensington', 'Inglewood']
+      },
+      'Ottawa, ON': {
+        name: 'Ottawa',
+        type: 'province',
+        subdivisions: ['Downtown', 'ByWard Market', 'Gatineau', 'Kanata']
+      }
+    }
   },
-  'Gonaïves': {
-    name: 'Gonaïves',
-    type: 'neighborhood',
-    subdivisions: [
-      'Centre',
-      'Raboteau',
-      'Bigot',
-      'Jubilée'
-    ]
+  'FR': {
+    code: 'FR',
+    name: 'France',
+    cities: {
+      'Paris': {
+        name: 'Paris',
+        type: 'region',
+        subdivisions: ['1er', '2e', '3e', '4e', '5e', '6e', '7e', '8e', '9e', '10e', '11e', '12e', '13e', '14e', '15e', '16e', '17e', '18e', '19e', '20e']
+      },
+      'Lyon': {
+        name: 'Lyon',
+        type: 'region',
+        subdivisions: ['1er', '2e', '3e', '4e', '5e', '6e', '7e', '8e', '9e']
+      },
+      'Marseille': {
+        name: 'Marseille',
+        type: 'region',
+        subdivisions: ['Centre', 'Nord', 'Sud', 'Est']
+      },
+      'Nice': {
+        name: 'Nice',
+        type: 'region',
+        subdivisions: ['Centre', 'Vieux Nice', 'Promenade', 'Cimiez']
+      },
+      'Toulouse': {
+        name: 'Toulouse',
+        type: 'region',
+        subdivisions: ['Centre', 'Capitole', 'Saint-Cyprien', 'Carmes']
+      },
+      'Bordeaux': {
+        name: 'Bordeaux',
+        type: 'region',
+        subdivisions: ['Centre', 'Chartrons', 'Bastide', 'Saint-Michel']
+      }
+    }
   },
-  'Les Cayes': {
-    name: 'Les Cayes',
-    type: 'neighborhood',
-    subdivisions: [
-      'Centre-Ville',
-      'Gelée',
-      'Port-Salut'
-    ]
+  'DO': {
+    code: 'DO',
+    name: 'Dominican Republic',
+    cities: {
+      'Santo Domingo': {
+        name: 'Santo Domingo',
+        type: 'province',
+        subdivisions: ['Zona Colonial', 'Piantini', 'Naco', 'Gazcue', 'Los Cacicazgos']
+      },
+      'Santiago': {
+        name: 'Santiago',
+        type: 'province',
+        subdivisions: ['Centro', 'Gurabo', 'Los Jardines', 'Cienfuegos']
+      },
+      'Punta Cana': {
+        name: 'Punta Cana',
+        type: 'province',
+        subdivisions: ['Bávaro', 'Cap Cana', 'Uvero Alto']
+      },
+      'La Romana': {
+        name: 'La Romana',
+        type: 'province',
+        subdivisions: ['Centro', 'Casa de Campo']
+      },
+      'Puerto Plata': {
+        name: 'Puerto Plata',
+        type: 'province',
+        subdivisions: ['Centro', 'Playa Dorada', 'Sosúa', 'Cabarete']
+      }
+    }
   }
 }
+
+// Export list of countries
+export const COUNTRIES = Object.values(LOCATION_CONFIG).map(c => ({ code: c.code, name: c.name }))
+
+// Backward compatibility: Export Haiti cities as default
+export const CITY_CONFIG = LOCATION_CONFIG['HT'].cities
 
 export const CITIES = Object.keys(CITY_CONFIG)
 
 /**
- * Get subdivisions for a city
+ * Get cities for a specific country
  */
-export function getSubdivisions(city: string): string[] {
-  return CITY_CONFIG[city]?.subdivisions || []
+export function getCitiesForCountry(countryCode: string): string[] {
+  return Object.keys(LOCATION_CONFIG[countryCode]?.cities || {})
+}
+
+/**
+ * Get all cities across all countries
+ */
+export function getAllCities(): Array<{ country: string; countryName: string; city: string }> {
+  const allCities: Array<{ country: string; countryName: string; city: string }> = []
+  Object.entries(LOCATION_CONFIG).forEach(([code, config]) => {
+    Object.keys(config.cities).forEach(city => {
+      allCities.push({ country: code, countryName: config.name, city })
+    })
+  })
+  return allCities
+}
+
+/**
+ * Get subdivisions for a city in a specific country
+ */
+export function getSubdivisions(city: string, countryCode: string = 'HT'): string[] {
+  return LOCATION_CONFIG[countryCode]?.cities[city]?.subdivisions || []
 }
 
 /**
  * Get location type label for a city
  */
-export function getLocationTypeLabel(city: string): string {
-  const type = CITY_CONFIG[city]?.type
+export function getLocationTypeLabel(city: string, countryCode: string = 'HT'): string {
+  const type = LOCATION_CONFIG[countryCode]?.cities[city]?.type
   if (type === 'commune') return 'Commune'
   if (type === 'neighborhood') return 'Neighborhood'
+  if (type === 'state') return 'State'
+  if (type === 'province') return 'Province'
+  if (type === 'region') return 'Region'
+  if (type === 'department') return 'Department'
   return 'Area'
 }
 
 /**
  * Check if city has subdivisions
  */
-export function hasSubdivisions(city: string): boolean {
-  return (CITY_CONFIG[city]?.subdivisions.length || 0) > 0
+export function hasSubdivisions(city: string, countryCode: string = 'HT'): boolean {
+  return (LOCATION_CONFIG[countryCode]?.cities[city]?.subdivisions.length || 0) > 0
 }
 
 /**

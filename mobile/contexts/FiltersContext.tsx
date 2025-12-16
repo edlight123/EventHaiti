@@ -71,6 +71,7 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
     let count = 0;
     
     if (appliedFilters.date !== DEFAULT_FILTERS.date) count++;
+    if ((appliedFilters.country || 'HT') !== (DEFAULT_FILTERS.country || 'HT')) count++;
     if (appliedFilters.city !== DEFAULT_FILTERS.city) count++;
     if (appliedFilters.categories.length > 0) count++;
     if (appliedFilters.price !== DEFAULT_FILTERS.price) count++;

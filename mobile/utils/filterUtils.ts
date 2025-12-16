@@ -93,6 +93,11 @@ export function getPriceRange(priceFilter: PriceFilter, customRange?: { min: num
 export function applyFilters(events: any[], filters: EventFilters): any[] {
   let filtered = events;
 
+  // Country filter
+  if (filters.country) {
+    filtered = filtered.filter(event => (event.country || 'HT') === filters.country)
+  }
+
   // Date filter
   if (filters.date !== 'any') {
     const { start, end } = getDateRange(filters.date, filters.pickedDate);

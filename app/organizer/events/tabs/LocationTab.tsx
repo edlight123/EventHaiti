@@ -2,8 +2,7 @@
 
 import { EventFormData, TabValidation } from '@/lib/event-validation'
 import { AlertCircle, CheckCircle, MapPin, Globe } from 'lucide-react'
-
-const CITIES = ['Port-au-Prince', 'Cap-Haïtien', 'Gonaïves', 'Les Cayes', 'Jacmel', 'Port-de-Paix', 'Jérémie', 'Saint-Marc']
+import { LOCATION_CONFIG } from '@/lib/filters/config'
 
 interface LocationTabProps {
   formData: EventFormData
@@ -17,6 +16,21 @@ export function LocationTab({ formData, onChange, validation }: LocationTabProps
   const venueError = validation.missingFields.find(f => f.toLowerCase().includes('venue'))
   const addressError = validation.missingFields.find(f => f.toLowerCase().includes('address'))
   const joinUrlError = validation.missingFields.find(f => f.toLowerCase().includes('join'))
+
+  // Get cities for selected country (default to Haiti)
+  const selectedCountry = formData.country || 'HT'
+  const countries: Array<{ code: string; name: string }> = Object.values(LOCATION_CONFIG).map((c: any) => ({ code: c.code as string, name: c.name as string }))
+  const cities = Object.keys(LOCATION_CONFIG[selectedCountry]?.cities || {})
+
+  const handleCountryChange = (countryCode: string) => {
+    onChange('country', countryCode)
+    // Reset city when country changes
+    const newCities = Object.keys(LOCATION_CONFIG[countryCode]?.cities || {})
+    if (newCities.length > 0) {
+      onChange('city', newCities[0])
+    }
+    onChange('commune', '')
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -59,7 +73,26 @@ export function LocationTab({ formData, onChange, validation }: LocationTabProps
         </div>
       </div>
 
-      {/* City & Commune (Always Required) */}
+      {/* Country Selection */}
+      <div>
+        <label htmlFor="country" className="block text-sm font-semibold text-gray-700 mb-2">
+          Country <span className="text-red-600">*</span>
+        </label>
+        <select
+          id="country"
+          value={selectedCountry}
+          onChange={(e) => handleCountryChange(e.target.value)}
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+        >
+          {countries.map((country: { code: string; name: string }) => (
+            <option key={country.code} value={country.code}>
+              {country.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* City & Commune */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label htmlFor="city" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -75,7 +108,7 @@ export function LocationTab({ formData, onChange, validation }: LocationTabProps
                 : 'border-gray-200 focus:border-teal-500'
             }`}
           >
-            {CITIES.map(city => (
+            {cities.map(city => (
               <option key={city} value={city}>{city}</option>
             ))}
           </select>
