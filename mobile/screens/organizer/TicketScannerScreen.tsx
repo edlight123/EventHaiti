@@ -86,8 +86,6 @@ export default function TicketScannerScreen() {
       console.log('Ticket Data:', JSON.stringify(ticketData, null, 2));
       console.log('=== END DEBUG ===');
 
-      const ticketData = ticketSnap.data();
-
       // Verify ticket belongs to this event
       if (ticketData.event_id !== eventId) {
         setScanResult({
