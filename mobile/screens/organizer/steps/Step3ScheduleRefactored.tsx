@@ -331,7 +331,6 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
               mode="date"
               display="default"
               onChange={handleStartDateChange}
-              minimumDate={new Date()}
             />
           )}
         </View>
@@ -384,7 +383,7 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
               mode="date"
               display="default"
               onChange={handleEndDateChange}
-              minimumDate={draft.start_date ? new Date(draft.start_date) : new Date()}
+              minimumDate={draft.start_date ? new Date(draft.start_date) : undefined}
             />
           )}
         </View>

@@ -631,7 +631,6 @@ function Step3Schedule({ formData, updateField }: any) {
               mode="date"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={handleStartDateChange}
-              minimumDate={new Date()}
             />
           )}
         </View>
@@ -717,7 +716,7 @@ function Step3Schedule({ formData, updateField }: any) {
               mode="date"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={handleEndDateChange}
-              minimumDate={formData.start_date ? new Date(formData.start_date) : new Date()}
+              minimumDate={formData.start_date ? new Date(formData.start_date) : undefined}
             />
           )}
         </View>

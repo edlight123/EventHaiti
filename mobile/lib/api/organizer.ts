@@ -358,10 +358,10 @@ export async function getEventTicketBreakdown(eventId: string): Promise<{
     const ticketsSold = tickets.length;
     const ticketsCheckedIn = tickets.filter((t) => t.checked_in).length;
 
-    // Group by ticket tier name
+    // Group by ticket tier name (use tier_name from webapp tickets)
     const tierMap = new Map<string, { sold: number; capacity: number }>();
     tickets.forEach((ticket) => {
-      const tierName = ticket.ticket_tier_name || 'General Admission';
+      const tierName = ticket.tier_name || ticket.ticket_tier_name || 'General Admission';
       if (!tierMap.has(tierName)) {
         tierMap.set(tierName, { sold: 0, capacity: 0 });
       }
