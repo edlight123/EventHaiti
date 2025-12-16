@@ -36,6 +36,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   const [quantity, setQuantity] = useState(1)
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
   const [selectedTierPrice, setSelectedTierPrice] = useState<number>(0)
+  const [selectedTiers, setSelectedTiers] = useState<{ tierId: string; quantity: number; price: number; tierName?: string }[]>([])
   const [promoCode, setPromoCode] = useState<string | undefined>()
 
   async function handleClaimFreeTicket() {
@@ -239,17 +240,21 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
     checkStatus()
   }
 
-  const handleTieredPurchase = (selections: { tierId: string; quantity: number; price: number }[]) => {
-    // For now, use the first selection (can be enhanced for multi-tier later)
-    const firstSelection = selections[0]
-    if (!firstSelection) return
+  const handleTieredPurchase = (selections: { tierId: string; quantity: number; price: number; tierName?: string }[]) => {
+    if (!selections || selections.length === 0) return
 
     const totalQuantity = selections.reduce((sum, s) => sum + s.quantity, 0)
     const totalPrice = selections.reduce((sum, s) => sum + (s.price * s.quantity), 0)
 
+    // Store all selections for multi-tier support
+    setSelectedTiers(selections)
+    
+    // For backward compatibility, also set the first tier
+    const firstSelection = selections[0]
     setSelectedTierId(firstSelection.tierId)
-    setSelectedTierPrice(firstSelection.price)
+    setSelectedTierPrice(totalPrice / totalQuantity) // Average price (for display compatibility)
     setQuantity(totalQuantity)
+    
     setShowTieredModal(false)
     setShowModal(true)
   }
@@ -363,12 +368,37 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             </div>
 
             <div className="bg-teal-50 rounded-lg p-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">{t('events.total_amount')}:</span>
-                <span className="text-xl font-bold text-teal-700">
-                  {((selectedTierPrice || ticketPrice) * quantity).toLocaleString()} HTG
-                </span>
-              </div>
+              {selectedTiers.length > 0 ? (
+                // Show itemized breakdown for multi-tier purchases
+                <div className="space-y-2">
+                  {selectedTiers.map((tier, index) => (
+                    <div key={index} className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">
+                        {tier.quantity}x {tier.tierName || 'Ticket'}
+                      </span>
+                      <span className="font-medium text-gray-900">
+                        {(tier.price * tier.quantity).toLocaleString()} {currency}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="border-t border-teal-200 pt-2 mt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-600">{t('events.total_amount')}:</span>
+                      <span className="text-xl font-bold text-teal-700">
+                        {selectedTiers.reduce((sum, t) => sum + (t.price * t.quantity), 0).toLocaleString()} {currency}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // Single tier or legacy display
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">{t('events.total_amount')}:</span>
+                  <span className="text-xl font-bold text-teal-700">
+                    {((selectedTierPrice || ticketPrice) * quantity).toLocaleString()} {currency}
+                  </span>
+                </div>
+              )}
               {promoCode && (
                 <div className="mt-2 text-sm text-green-600">
                   ✓ Promo code {promoCode} applied
@@ -446,7 +476,11 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
           eventTitle={eventTitle}
           userId={userId}
           quantity={quantity}
-          totalAmount={(selectedTierPrice || ticketPrice) * quantity}
+          totalAmount={
+            selectedTiers.length > 0
+              ? selectedTiers.reduce((sum, t) => sum + (t.price * t.quantity), 0)
+              : (selectedTierPrice || ticketPrice) * quantity
+          }
           currency={currency}
           tierId={selectedTierId || undefined}
           promoCodeId={promoCode}
@@ -456,6 +490,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             setQuantity(1)
             setSelectedTierId(null)
             setSelectedTierPrice(0)
+            setSelectedTiers([])
             setPromoCode(undefined)
           }}
         />
@@ -492,15 +527,42 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             </div>
 
             <div className="bg-teal-50 rounded-lg p-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Total Amount:</span>
-                <span className="text-xl font-bold text-teal-700">
-                  {((selectedTierPrice || ticketPrice) * quantity).toLocaleString()} HTG
-                </span>
-              </div>
-              <div className="mt-1 text-sm text-gray-600">
-                {quantity} ticket{quantity !== 1 ? 's' : ''}
-              </div>
+              {selectedTiers.length > 0 ? (
+                // Show itemized breakdown for multi-tier purchases
+                <div className="space-y-2">
+                  {selectedTiers.map((tier, index) => (
+                    <div key={index} className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">
+                        {tier.quantity}x {tier.tierName || 'Ticket'}
+                      </span>
+                      <span className="font-medium text-gray-900">
+                        {(tier.price * tier.quantity).toLocaleString()} {currency}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="border-t border-teal-200 pt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-600">Total Amount:</span>
+                      <span className="text-xl font-bold text-teal-700">
+                        {selectedTiers.reduce((sum, t) => sum + (t.price * t.quantity), 0).toLocaleString()} {currency}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // Single tier or legacy display
+                <>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Total Amount:</span>
+                    <span className="text-xl font-bold text-teal-700">
+                      {((selectedTierPrice || ticketPrice) * quantity).toLocaleString()} {currency}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-sm text-gray-600">
+                    {quantity} ticket{quantity !== 1 ? 's' : ''}
+                  </div>
+                </>
+              )}
             </div>
 
             {error && (

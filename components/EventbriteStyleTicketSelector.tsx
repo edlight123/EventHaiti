@@ -33,7 +33,7 @@ interface PromoCodeValidation {
 interface EventbriteStyleTicketSelectorProps {
   eventId: string
   userId: string | null
-  onPurchase: (selections: { tierId: string; quantity: number; price: number }[], promoCodeId?: string) => void
+  onPurchase: (selections: { tierId: string; quantity: number; price: number; tierName?: string }[], promoCodeId?: string) => void
 }
 
 export default function EventbriteStyleTicketSelector({ 
@@ -162,7 +162,8 @@ export default function EventbriteStyleTicketSelector({
       .map(tier => ({
         tierId: tier.id,
         quantity: quantities[tier.id],
-        price: tier.price
+        price: tier.price,
+        tierName: tier.name
       }))
 
     if (selections.length === 0) return
