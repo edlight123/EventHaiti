@@ -91,6 +91,7 @@ export default function FavoritesContent({ userId }: FavoritesContentProps) {
                 end_datetime: eventData.end_datetime?.toDate?.().toISOString() || new Date().toISOString(),
                 venue_name: eventData.venue_name || '',
                 address: eventData.address || '',
+                country: eventData.country || 'HT',
                 city: eventData.city || '',
                 commune: eventData.commune || '',
                 department: eventData.department || '',

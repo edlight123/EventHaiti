@@ -109,6 +109,7 @@ export interface Database {
           description: string
           category: string
           venue_name: string
+          country: string
           city: string
           commune: string
           address: string
@@ -131,6 +132,7 @@ export interface Database {
           description: string
           category: string
           venue_name: string
+          country: string
           city: string
           commune: string
           address: string
@@ -153,6 +155,7 @@ export interface Database {
           description?: string
           category?: string
           venue_name?: string
+          country?: string
           city?: string
           commune?: string
           address?: string
