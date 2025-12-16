@@ -29,6 +29,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
   const isSoldOut = (event.total_tickets && event.tickets_sold >= event.total_tickets) || false
   const ticketsRemaining = event.total_tickets ? event.total_tickets - (event.tickets_sold || 0) : null
   const isFree = !event.ticket_price || event.ticket_price === 0
+  const isPastEvent = event.end_datetime ? new Date(event.end_datetime) < new Date() : new Date(event.start_datetime) < new Date()
   
   // Premium badge logic
   const isVIP = (event.ticket_price || 0) > 100
@@ -390,7 +391,12 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 )}
               </div>
 
-              {isSoldOut ? (
+              {isPastEvent ? (
+                <div className="text-center py-4">
+                  <Badge variant="neutral" size="lg">Event Ended</Badge>
+                  <p className="text-sm text-gray-600 mt-2">This event has ended. Tickets are no longer available.</p>
+                </div>
+              ) : isSoldOut ? (
                 <div className="text-center py-4">
                   <Badge variant="error" size="lg">{t('ticket.sold_out_caps')}</Badge>
                   <p className="text-sm text-gray-600 mt-2">{t('events.event_reached_capacity')}</p>
