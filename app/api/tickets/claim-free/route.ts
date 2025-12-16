@@ -99,7 +99,7 @@ export async function POST(request: Request) {
         
         createdTicket.qr_code_data = createdTicket.id
         createdTickets.push(createdTicket)
-        console.log('Created ticket:', createdTicket.id, 'with QR:', qrCodeData)
+        console.log('Created ticket:', createdTicket.id, 'with QR:', createdTicket.id)
       }
     }
     

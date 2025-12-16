@@ -148,24 +148,19 @@ export async function POST(request: Request) {
         )
         
         // Notify organizer about the sale
-        const attendeeNotif = attendee || (await supabase.from('users').select('*').eq('id', paymentIntent.metadata.userId).single()).data
-        
         await notifyOrganizerTicketSale(
           eventDetails.organizer_id,
           paymentIntent.metadata.eventId,
           eventDetails.title,
           quantity,
           paymentIntent.amount / 100,
-          attendeeNotif?.full_name
+          attendee?.full_name
         )
       } catch (error) {
         console.error('Failed to send notification:', error)
       }
 
       // Send email confirmation
-      const attendeeQuery = await supabase.from('users').select('*')
-      const attendee = attendeeQuery.data?.find((u: any) => u.id === paymentIntent.metadata.userId)
-
       if (attendee) {
         const firstTicket = createdTickets[0]
         console.log('=== QR CODE GENERATION DEBUG ===')
