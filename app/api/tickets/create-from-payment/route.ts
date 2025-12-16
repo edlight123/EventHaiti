@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       console.log('✅ Tickets already exist for payment:', paymentIntentId)
       return NextResponse.json({ 
         success: true, 
-        ticketIds: existingTicketsSnapshot.docs.map(doc => doc.id),
+        ticketIds: existingTicketsSnapshot.docs.map((doc: any) => doc.id),
         message: 'Tickets already created' 
       })
     }
