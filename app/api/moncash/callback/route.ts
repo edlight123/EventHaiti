@@ -60,7 +60,6 @@ export async function GET(request: Request) {
 
     const createdTickets = []
     for (let i = 0; i < quantity; i++) {
-      const qrCodeData = `ticket-${pendingTx.event_id}-${pendingTx.user_id}-${Date.now()}-${i}`
       const ticketData = {
         event_id: pendingTx.event_id,
         attendee_id: pendingTx.user_id,
@@ -72,7 +71,6 @@ export async function GET(request: Request) {
         payment_method: 'moncash',
         payment_id: transactionId,
         status: 'valid',
-        qr_code_data: qrCodeData,
         purchased_at: new Date().toISOString(),
         tier_name: pendingTx.tier_name || 'General Admission',
         tier_id: pendingTx.tier_id || null,
@@ -98,8 +96,15 @@ export async function GET(request: Request) {
       
       const createdTicket = insertResult.data?.[0]
       if (createdTicket) {
+        // Now update with QR code data using the actual ticket ID
+        await supabase
+          .from('tickets')
+          .update({ qr_code_data: createdTicket.id })
+          .eq('id', createdTicket.id)
+        
+        createdTicket.qr_code_data = createdTicket.id
         createdTickets.push(createdTicket)
-        console.log('Created ticket:', createdTicket.id, 'with QR:', qrCodeData)
+        console.log('Created ticket:', createdTicket.id, 'with QR:', createdTicket.id)
       }
     }
     

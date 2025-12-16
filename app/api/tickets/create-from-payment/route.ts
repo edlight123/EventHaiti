@@ -66,7 +66,6 @@ export async function POST(request: Request) {
 
     const createdTickets = []
     for (let i = 0; i < quantity; i++) {
-      const qrCodeData = `ticket-${paymentIntent.metadata.eventId}-${paymentIntent.metadata.userId}-${Date.now()}-${i}`
       const ticketData = {
         event_id: paymentIntent.metadata.eventId,
         attendee_id: paymentIntent.metadata.userId,
@@ -78,7 +77,6 @@ export async function POST(request: Request) {
         payment_method: 'stripe',
         payment_id: paymentIntentId,
         status: 'valid',
-        qr_code_data: qrCodeData,
         purchased_at: new Date().toISOString(),
         tier_id: paymentIntent.metadata.tierId || null,
         tier_name: paymentIntent.metadata.tierName || 'General Admission',
@@ -102,6 +100,13 @@ export async function POST(request: Request) {
       
       const createdTicket = insertResult.data?.[0]
       if (createdTicket) {
+        // Now update with QR code data using the actual ticket ID
+        await supabase
+          .from('tickets')
+          .update({ qr_code_data: createdTicket.id })
+          .eq('id', createdTicket.id)
+        
+        createdTicket.qr_code_data = createdTicket.id
         console.log('=== TICKET CREATION DEBUG ===')
         console.log('Created Ticket ID:', createdTicket.id)
         console.log('Event ID:', createdTicket.event_id)
