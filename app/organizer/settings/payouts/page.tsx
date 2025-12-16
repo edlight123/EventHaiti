@@ -29,16 +29,27 @@ async function getEventEarnings(organizerId: string) {
         const ticketsSnapshot = await adminDb
           .collection('tickets')
           .where('event_id', '==', eventDoc.id)
-          .where('status', '==', 'active')
           .get()
 
-        console.log(`[Payouts] Event ${eventData.title}: ${ticketsSnapshot.size} tickets`)
+        console.log(`[Payouts] Event ${eventData.title} (${eventDoc.id}): Total ${ticketsSnapshot.size} tickets`)
+        
+        // Filter active tickets
+        const activeTickets = ticketsSnapshot.docs.filter((doc: any) => {
+          const data = doc.data()
+          return data.status === 'active' || data.status === 'used'
+        })
+        
+        console.log(`[Payouts] Event ${eventData.title}: ${activeTickets.length} active/used tickets`)
 
         // Calculate earnings
         let grossSales = 0
-        ticketsSnapshot.docs.forEach((ticketDoc: any) => {
+        activeTickets.forEach((ticketDoc: any) => {
           const ticketData = ticketDoc.data()
-          grossSales += ticketData.price || 0
+          const price = ticketData.price_paid || ticketData.price || 0
+          grossSales += price
+          if (price > 0) {
+            console.log(`[Payouts] Ticket ${ticketDoc.id}: HTG ${price}`)
+          }
         })
 
         // Calculate fees (2.5% platform + 2.9% + HTG 15 processing)
@@ -48,7 +59,27 @@ async function getEventEarnings(organizerId: string) {
         const netPayout = grossSales - totalFees
 
         // Determine payout status
-        const eventDate = eventData.date?.toDate ? eventData.date.toDate() : new Date(eventData.date)
+        let eventDate: Date
+        try {
+          if (eventData.date?.toDate && typeof eventData.date.toDate === 'function') {
+            eventDate = eventData.date.toDate()
+          } else if (eventData.date) {
+            eventDate = new Date(eventData.date)
+          } else {
+            // Fallback to created_at or current date
+            eventDate = eventData.created_at?.toDate ? eventData.created_at.toDate() : new Date()
+          }
+          
+          // Validate the date
+          if (isNaN(eventDate.getTime())) {
+            console.warn(`[Payouts] Invalid date for event ${eventData.title}, using current date`)
+            eventDate = new Date()
+          }
+        } catch (err) {
+          console.error(`[Payouts] Error parsing date for event ${eventData.title}:`, err)
+          eventDate = new Date()
+        }
+        
         const now = new Date()
         const daysSinceEvent = Math.floor((now.getTime() - eventDate.getTime()) / (1000 * 60 * 60 * 24))
         
@@ -64,7 +95,7 @@ async function getEventEarnings(organizerId: string) {
           eventId: eventDoc.id,
           name: eventData.title || 'Untitled Event',
           date: eventDate.toISOString(),
-          ticketsSold: ticketsSnapshot.size,
+          ticketsSold: activeTickets.length,
           grossSales,
           fees: totalFees,
           netPayout,
