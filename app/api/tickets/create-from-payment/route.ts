@@ -138,9 +138,6 @@ export async function POST(request: Request) {
     }
 
     // Send notification
-    const eventQuery = await supabase.from('events').select('*')
-    const eventDetails = eventQuery.data?.find((e: any) => e.id === paymentIntent.metadata.eventId)
-    
     if (eventDetails) {
       try {
         await notifyTicketPurchase(
@@ -151,8 +148,7 @@ export async function POST(request: Request) {
         )
         
         // Notify organizer about the sale
-        const attendeeQuery = await supabase.from('users').select('*')
-        const attendee = attendeeQuery.data?.find((u: any) => u.id === paymentIntent.metadata.userId)
+        const attendeeNotif = attendee || (await supabase.from('users').select('*').eq('id', paymentIntent.metadata.userId).single()).data
         
         await notifyOrganizerTicketSale(
           eventDetails.organizer_id,
@@ -160,7 +156,7 @@ export async function POST(request: Request) {
           eventDetails.title,
           quantity,
           paymentIntent.amount / 100,
-          attendee?.full_name
+          attendeeNotif?.full_name
         )
       } catch (error) {
         console.error('Failed to send notification:', error)
