@@ -1,0 +1,253 @@
+import { ChevronRight, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react'
+import Link from 'next/link'
+import { adminAuth } from '@/lib/firebase/admin'
+import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
+import { getPayoutHistory } from '@/lib/firestore/payout'
+import { serializeData } from '@/lib/utils/serialize'
+
+interface PayoutHistoryItem {
+  id: string
+  date: string
+  amount: number
+  status: 'completed' | 'processing' | 'failed' | 'cancelled'
+  eventCount: number
+  method: string
+}
+
+function PayoutHistoryClient({ payouts }: { payouts: PayoutHistoryItem[] }) {
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'HTG',
+      minimumFractionDigits: 0
+    }).format(amount)
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    })
+  }
+
+  const getStatusBadge = (status: PayoutHistoryItem['status']) => {
+    const styles = {
+      completed: 'bg-green-100 text-green-800 border-green-200',
+      processing: 'bg-blue-100 text-blue-800 border-blue-200',
+      failed: 'bg-red-100 text-red-800 border-red-200',
+      cancelled: 'bg-gray-100 text-gray-800 border-gray-200'
+    }
+
+    const icons = {
+      completed: <CheckCircle className="w-3 h-3" />,
+      processing: <Clock className="w-3 h-3" />,
+      failed: <XCircle className="w-3 h-3" />,
+      cancelled: <AlertCircle className="w-3 h-3" />
+    }
+
+    const labels = {
+      completed: 'Paid',
+      processing: 'Processing',
+      failed: 'Failed',
+      cancelled: 'Cancelled'
+    }
+
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${styles[status]}`}>
+        {icons[status]}
+        {labels[status]}
+      </span>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+            <Link href="/organizer/settings" className="hover:text-gray-900">
+              Settings
+            </Link>
+            <ChevronRight className="w-4 h-4" />
+            <Link href="/organizer/settings/payouts" className="hover:text-gray-900">
+              Payouts
+            </Link>
+            <ChevronRight className="w-4 h-4" />
+            <span className="text-gray-900 font-medium">Payout History</span>
+          </div>
+
+          {/* Title */}
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+            Payout History
+          </h1>
+          <p className="text-gray-600">
+            View all your past and pending payouts.
+          </p>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Events
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Method
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {payouts.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                      <div className="flex flex-col items-center gap-2">
+                        <AlertCircle className="w-12 h-12 text-gray-300" />
+                        <p>No payout history yet</p>
+                        <p className="text-sm">
+                          Your payouts will appear here after your events are completed.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  payouts.map((payout) => (
+                    <tr
+                      key={payout.id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => {
+                        // TODO: Navigate to payout detail page
+                        console.log('View payout details:', payout.id)
+                      }}
+                    >
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {formatDate(payout.date)}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900 text-right">
+                        {formatCurrency(payout.amount)}
+                      </td>
+                      <td className="px-6 py-4">
+                        {getStatusBadge(payout.status)}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {payout.eventCount} {payout.eventCount === 1 ? 'event' : 'events'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600 capitalize">
+                        {payout.method}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden divide-y divide-gray-200">
+            {payouts.length === 0 ? (
+              <div className="px-6 py-12 text-center text-gray-500">
+                <div className="flex flex-col items-center gap-2">
+                  <AlertCircle className="w-12 h-12 text-gray-300" />
+                  <p>No payout history yet</p>
+                  <p className="text-sm">
+                    Your payouts will appear here after your events are completed.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              payouts.map((payout) => (
+                <button
+                  key={payout.id}
+                  onClick={() => {
+                    // TODO: Navigate to payout detail page
+                    console.log('View payout details:', payout.id)
+                  }}
+                  className="w-full p-6 text-left hover:bg-gray-50"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="text-sm text-gray-500">
+                      {formatDate(payout.date)}
+                    </div>
+                    {getStatusBadge(payout.status)}
+                  </div>
+                  <div className="text-lg font-semibold text-gray-900 mb-2">
+                    {formatCurrency(payout.amount)}
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <span>{payout.eventCount} {payout.eventCount === 1 ? 'event' : 'events'}</span>
+                    <span>·</span>
+                    <span className="capitalize">{payout.method}</span>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Back Link */}
+        <div className="pt-6">
+          <Link
+            href="/organizer/settings/payouts"
+            className="inline-flex items-center gap-2 text-sm font-medium text-purple-600 hover:text-purple-700"
+          >
+            ← Back to Payouts
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default async function PayoutHistoryPage() {
+  // Verify authentication
+  const cookieStore = await cookies()
+  const sessionCookie = cookieStore.get('session')?.value
+
+  if (!sessionCookie) {
+    redirect('/login')
+  }
+
+  let authUser
+  try {
+    const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
+    authUser = decodedClaims
+  } catch (error) {
+    console.error('Error verifying session:', error)
+    redirect('/login')
+  }
+
+  // Fetch payout history
+  const payouts = await getPayoutHistory(authUser.uid, 50)
+  const serializedPayouts = serializeData(payouts)
+
+  // Transform to expected format
+  const transformedPayouts: PayoutHistoryItem[] = serializedPayouts.map((payout: any) => ({
+    id: payout.id,
+    date: payout.createdAt || new Date().toISOString(),
+    amount: payout.amount || 0,
+    status: payout.status === 'completed' ? 'completed' : payout.status === 'processing' ? 'processing' : 'failed',
+    eventCount: payout.ticketIds?.length || 0,
+    method: payout.method || 'bank_transfer'
+  }))
+
+  return <PayoutHistoryClient payouts={transformedPayouts} />
+}

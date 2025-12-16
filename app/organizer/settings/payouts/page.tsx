@@ -1,20 +1,102 @@
 import { adminAuth } from '@/lib/firebase/admin'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
-import { getPayoutConfig, getPayoutHistory, getOrganizerBalance } from '@/lib/firestore/payout'
+import { getPayoutConfig } from '@/lib/firestore/payout'
 import { serializeData } from '@/lib/utils/serialize'
-import { PayoutStatusHero } from '@/components/payout/PayoutStatusHero'
-import { BalanceRow } from '@/components/payout/BalanceRow'
-import { PayoutMethodCard } from '@/components/payout/PayoutMethodCard'
-import { FeesAndRulesCard } from '@/components/payout/FeesAndRulesCard'
-import { VerificationChecklist } from '@/components/payout/VerificationChecklist'
-import { PayoutHistory } from '@/components/payout/PayoutHistory'
-import PayoutSettingsHeader from '@/components/organizer/settings/PayoutSettingsHeader'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
+import PayoutsPageNew from './PayoutsPageNew'
+import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore'
+import { db } from '@/lib/firebase/client'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+// Helper to get event earnings summaries
+async function getEventEarnings(organizerId: string) {
+  try {
+    // Fetch all events for this organizer
+    const eventsQuery = query(
+      collection(db, 'events'),
+      where('organizer_id', '==', organizerId)
+    )
+    const eventsSnapshot = await getDocs(eventsQuery)
+
+    const earnings = await Promise.all(
+      eventsSnapshot.docs.map(async (eventDoc) => {
+        const eventData = eventDoc.data()
+        
+        // Fetch tickets for this event
+        const ticketsQuery = query(
+          collection(db, 'tickets'),
+          where('event_id', '==', eventDoc.id),
+          where('status', '==', 'active')
+        )
+        const ticketsSnapshot = await getDocs(ticketsQuery)
+
+        // Calculate earnings
+        let grossSales = 0
+        ticketsSnapshot.docs.forEach((ticketDoc) => {
+          const ticketData = ticketDoc.data()
+          grossSales += ticketData.price || 0
+        })
+
+        // Calculate fees (2.5% platform + 2.9% + HTG 15 processing)
+        const platformFee = grossSales * 0.025
+        const processingFee = grossSales * 0.029 + (ticketsSnapshot.size * 15)
+        const totalFees = platformFee + processingFee
+        const netPayout = grossSales - totalFees
+
+        // Determine payout status
+        const eventDate = eventData.date instanceof Timestamp ? eventData.date.toDate() : new Date(eventData.date)
+        const now = new Date()
+        const daysSinceEvent = Math.floor((now.getTime() - eventDate.getTime()) / (1000 * 60 * 60 * 24))
+        
+        let payoutStatus: 'pending' | 'scheduled' | 'paid' | 'on_hold' = 'pending'
+        if (daysSinceEvent >= 7) {
+          payoutStatus = 'scheduled'
+        }
+        if (daysSinceEvent >= 12) {
+          payoutStatus = 'paid'
+        }
+
+        return {
+          eventId: eventDoc.id,
+          name: eventData.title || 'Untitled Event',
+          date: eventDate.toISOString(),
+          ticketsSold: ticketsSnapshot.size,
+          grossSales,
+          fees: totalFees,
+          netPayout,
+          payoutStatus
+        }
+      })
+    )
+
+    return earnings.filter(e => e.ticketsSold > 0).sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    )
+  } catch (error) {
+    console.error('Error fetching event earnings:', error)
+    return []
+  }
+}
+
+// Calculate upcoming payout
+function calculateUpcomingPayout(earnings: any[]) {
+  const scheduled = earnings.filter(e => e.payoutStatus === 'scheduled')
+  if (scheduled.length === 0) return undefined
+
+  const totalAmount = scheduled.reduce((sum, e) => sum + e.netPayout, 0)
+  const nextPayoutDate = new Date()
+  nextPayoutDate.setDate(nextPayoutDate.getDate() + 5) // 5 business days from now
+
+  return {
+    amount: totalAmount,
+    date: nextPayoutDate.toISOString(),
+    eventCount: scheduled.length
+  }
+}
 
 export default async function PayoutsSettingsPage() {
   // Verify authentication
@@ -35,21 +117,10 @@ export default async function PayoutsSettingsPage() {
   }
 
   // Fetch payout data
-  const [config, balanceData, payouts] = await Promise.all([
+  const [config, eventEarnings] = await Promise.all([
     getPayoutConfig(authUser.uid),
-    getOrganizerBalance(authUser.uid),
-    getPayoutHistory(authUser.uid, 10),
+    getEventEarnings(authUser.uid)
   ])
-
-  // Determine status for hero
-  const status = config?.status || 'not_setup'
-  const hasMethod = config?.method && (config.bankDetails || config.mobileMoneyDetails)
-
-  // Refresh handler (must be a server action)
-  async function refreshData() {
-    'use server'
-    // This will trigger revalidation since revalidate = 0
-  }
 
   const navbarUser = {
     id: authUser.uid,
@@ -58,53 +129,21 @@ export default async function PayoutsSettingsPage() {
     role: 'organizer' as const,
   }
 
-  // Serialize data before passing to client components
-  const serializedConfig = serializeData(config)
-  const serializedPayouts = serializeData(payouts)
+  // Serialize data
+  const serializedConfig = serializeData(config) || undefined
+  const serializedEarnings = serializeData(eventEarnings)
+  const upcomingPayout = calculateUpcomingPayout(eventEarnings)
 
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={navbarUser} />
 
-      {/* Header */}
-      <PayoutSettingsHeader />
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <div className="space-y-8">
-          {/* Status Hero */}
-          <PayoutStatusHero status={status} />
-
-          {/* Balance Summary */}
-          {hasMethod && (
-            <BalanceRow
-              availableBalance={balanceData.available}
-              pendingBalance={balanceData.pending}
-              nextPayoutDate={balanceData.nextPayoutDate}
-            />
-          )}
-
-          {/* Two Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column - Payout Method & Verification */}
-            <div className="lg:col-span-2 space-y-8">
-              <PayoutMethodCard
-                config={serializedConfig}
-                onUpdate={refreshData}
-              />
-
-              {hasMethod && <VerificationChecklist config={serializedConfig} />}
-
-              {hasMethod && <PayoutHistory payouts={serializedPayouts} />}
-            </div>
-
-            {/* Right Column - Fees & Rules */}
-            <div className="lg:col-span-1">
-              <FeesAndRulesCard />
-            </div>
-          </div>
-        </div>
-      </div>
+      <PayoutsPageNew
+        config={serializedConfig}
+        eventSummaries={serializedEarnings}
+        upcomingPayout={upcomingPayout}
+        organizerId={authUser.uid}
+      />
       
       <MobileNavWrapper user={navbarUser} />
     </div>
