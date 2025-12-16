@@ -70,7 +70,7 @@ export function getDateRange(filter: EventFilters['date'], pickedDate?: string):
 /**
  * Get price range for a price filter
  */
-export function getPriceRange(priceFilter: PriceFilter): { min?: number; max?: number } {
+export function getPriceRange(priceFilter: PriceFilter, customRange?: { min: number; max: number }): { min?: number; max?: number } {
   switch (priceFilter) {
     case 'any':
       return {};
@@ -80,6 +80,8 @@ export function getPriceRange(priceFilter: PriceFilter): { min?: number; max?: n
       return { min: 0, max: 500 };
     case '>500':
       return { min: 500, max: undefined };
+    case 'custom':
+      return customRange || {};
     default:
       return {};
   }
@@ -125,7 +127,7 @@ export function applyFilters(events: any[], filters: EventFilters): any[] {
 
   // Price filter
   if (filters.price !== 'any') {
-    const { min, max } = getPriceRange(filters.price);
+    const { min, max } = getPriceRange(filters.price, filters.customPriceRange);
     filtered = filtered.filter(event => {
       const price = event.ticket_price || 0;
       if (min !== undefined && price < min) return false;

@@ -150,7 +150,7 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   const handleViewAllEvents = () => {
-    navigation.navigate('Discover');
+    navigation.navigate('Discover', { allEvents: true, timestamp: Date.now() });
   };
 
   return (

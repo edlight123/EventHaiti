@@ -15,6 +15,7 @@ export type PriceFilter =
   | 'free' 
   | '<=500' 
   | '>500'
+  | 'custom'
 
 export type EventTypeFilter = 'all' | 'in-person' | 'online'
 
@@ -34,6 +35,7 @@ export interface EventFilters {
   
   // Price
   price: PriceFilter
+  customPriceRange?: { min: number; max: number }
   
   // Event type
   eventType: EventTypeFilter
@@ -87,7 +89,8 @@ export const PRICE_FILTERS = [
   { value: 'any' as const, label: 'Any price' },
   { value: 'free' as const, label: 'Free' },
   { value: '<=500' as const, label: '≤ 500 HTG', min: 0, max: 500 },
-  { value: '>500' as const, label: '> 500 HTG', min: 500, max: Infinity }
+  { value: '>500' as const, label: '> 500 HTG', min: 500, max: Infinity },
+  { value: 'custom' as const, label: 'Custom range' }
 ]
 
 // Date filter options

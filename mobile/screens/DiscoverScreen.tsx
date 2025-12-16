@@ -109,9 +109,9 @@ export default function DiscoverScreen({ navigation, route }: any) {
     return unsubscribe;
   }, [navigation]);
 
-  // Handle special navigation params: category, trending, thisWeek
+  // Handle special navigation params: category, trending, thisWeek, allEvents
   useEffect(() => {
-    const { category, trending, thisWeek, timestamp } = route?.params || {};
+    const { category, trending, thisWeek, allEvents, timestamp } = route?.params || {};
     
     if (category) {
       console.log('[DiscoverScreen] Applying category filter:', category);
@@ -128,8 +128,12 @@ export default function DiscoverScreen({ navigation, route }: any) {
       console.log('[DiscoverScreen] Filtering for this week events');
       // Filter this week events in organizeEvents
       setSearchQuery('');
+    } else if (allEvents) {
+      console.log('[DiscoverScreen] Showing all events list');
+      // This will skip featured carousels and show full list
+      setSearchQuery('');
     }
-  }, [route?.params?.category, route?.params?.trending, route?.params?.thisWeek, route?.params?.timestamp]);
+  }, [route?.params?.category, route?.params?.trending, route?.params?.thisWeek, route?.params?.allEvents, route?.params?.timestamp]);
 
   // Re-organize events when filters change
   useEffect(() => {
@@ -278,7 +282,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
     // Apply search filter
     events = filterBySearch(events);
 
-    const hasAnyFilters = hasActiveFilters() || searchQuery.trim() !== '' || trending || thisWeek || selectedDate !== 'any' || selectedCategories.length > 0;
+    const hasAnyFilters = hasActiveFilters() || searchQuery.trim() !== '' || trending || thisWeek || route?.params?.allEvents || selectedDate !== 'any' || selectedCategories.length > 0;
 
     if (hasAnyFilters) {
       console.log('[DiscoverScreen] Showing filtered results:', events.length);
@@ -510,7 +514,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
     );
   }
 
-  const hasAnyFilters = hasActiveFilters() || searchQuery.trim() !== '' || route?.params?.trending || route?.params?.thisWeek || selectedDate !== 'any' || selectedCategories.length > 0;
+  const hasAnyFilters = hasActiveFilters() || searchQuery.trim() !== '' || route?.params?.trending || route?.params?.thisWeek || route?.params?.allEvents || selectedDate !== 'any' || selectedCategories.length > 0;
 
   return (
     <View style={styles.container}>

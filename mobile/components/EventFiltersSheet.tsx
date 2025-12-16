@@ -7,8 +7,11 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
-  Platform
+  Platform,
+  TextInput
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import Slider from '@react-native-community/slider';
 import { X } from 'lucide-react-native';
 import { useFilters } from '../contexts/FiltersContext';
 import { 
@@ -36,12 +39,36 @@ export default function EventFiltersSheet() {
 
   const activeCount = countActiveFilters();
 
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   const handleDateChange = (date: DateFilter) => {
+    if (date === 'pick-date') {
+      // Show date picker
+      setShowDatePicker(true);
+    }
     setDraftFilters({ 
       ...draftFilters, 
       date, 
       pickedDate: date === 'pick-date' ? draftFilters.pickedDate : undefined 
     });
+  };
+
+  const handleDatePicked = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios'); // Keep open on iOS, close on Android
+    
+    if (event.type === 'set' && selectedDate) {
+      // Format date as ISO string
+      const isoDate = selectedDate.toISOString().split('T')[0];
+      setDraftFilters({ 
+        ...draftFilters, 
+        date: 'pick-date',
+        pickedDate: isoDate
+      });
+    }
+    
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
   };
 
   const handleCityChange = (city: string) => {
@@ -60,7 +87,23 @@ export default function EventFiltersSheet() {
   };
 
   const handlePriceChange = (price: PriceFilter) => {
-    setDraftFilters({ ...draftFilters, price });
+    setDraftFilters({ 
+      ...draftFilters, 
+      price,
+      customPriceRange: price === 'custom' ? draftFilters.customPriceRange || { min: 0, max: 2000 } : undefined
+    });
+  };
+
+  const handleCustomPriceChange = (type: 'min' | 'max', value: number) => {
+    const currentRange = draftFilters.customPriceRange || { min: 0, max: 2000 };
+    setDraftFilters({
+      ...draftFilters,
+      price: 'custom',
+      customPriceRange: {
+        ...currentRange,
+        [type]: value
+      }
+    });
   };
 
   const handleEventTypeChange = (eventType: EventTypeFilter) => {
@@ -122,6 +165,32 @@ export default function EventFiltersSheet() {
                 </TouchableOpacity>
               ))}
             </View>
+            
+            {/* Date Picker */}
+            {draftFilters.date === 'pick-date' && (
+              <>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={draftFilters.pickedDate ? new Date(draftFilters.pickedDate) : new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleDatePicked}
+                    minimumDate={new Date()}
+                  />
+                )}
+                {draftFilters.pickedDate && !showDatePicker && (
+                  <TouchableOpacity 
+                    style={styles.selectedDateContainer}
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <Text style={styles.selectedDateText}>
+                      Selected: {new Date(draftFilters.pickedDate).toLocaleDateString()}
+                    </Text>
+                    <Text style={styles.selectedDateHint}>Tap to change</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
           </View>
 
           {/* Event Type Filter */}
@@ -176,6 +245,46 @@ export default function EventFiltersSheet() {
                 </TouchableOpacity>
               ))}
             </View>
+            
+            {/* Custom Price Range Slider */}
+            {draftFilters.price === 'custom' && (
+              <View style={styles.priceSliderContainer}>
+                <View style={styles.priceRangeHeader}>
+                  <Text style={styles.priceRangeLabel}>
+                    Min: {draftFilters.customPriceRange?.min || 0} HTG
+                  </Text>
+                  <Text style={styles.priceRangeLabel}>
+                    Max: {draftFilters.customPriceRange?.max || 2000} HTG
+                  </Text>
+                </View>
+                
+                <Text style={styles.sliderLabel}>Minimum Price</Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={0}
+                  maximumValue={2000}
+                  step={50}
+                  value={draftFilters.customPriceRange?.min || 0}
+                  onValueChange={(value) => handleCustomPriceChange('min', value)}
+                  minimumTrackTintColor={COLORS.primary}
+                  maximumTrackTintColor="#D1D5DB"
+                  thumbTintColor={COLORS.primary}
+                />
+                
+                <Text style={styles.sliderLabel}>Maximum Price</Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={0}
+                  maximumValue={5000}
+                  step={100}
+                  value={draftFilters.customPriceRange?.max || 2000}
+                  onValueChange={(value) => handleCustomPriceChange('max', value)}
+                  minimumTrackTintColor={COLORS.primary}
+                  maximumTrackTintColor="#D1D5DB"
+                  thumbTintColor={COLORS.primary}
+                />
+              </View>
+            )}
           </View>
 
           {/* Categories Filter */}
@@ -412,5 +521,49 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFF',
+  },
+  selectedDateContainer: {
+    marginTop: 12,
+    padding: 16,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  selectedDateText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  selectedDateHint: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
+  priceSliderContainer: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+  },
+  priceRangeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  priceRangeLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  sliderLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.textSecondary,
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  slider: {
+    width: '100%',
+    height: 40,
   },
 });
