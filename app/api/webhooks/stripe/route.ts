@@ -5,6 +5,7 @@ import { generateTicketQRCode } from '@/lib/qrcode'
 import { sendWhatsAppMessage, getTicketConfirmationWhatsApp } from '@/lib/whatsapp'
 import { trackPromoCodeUsage, calculateDiscount } from '@/lib/promo-codes'
 import { notifyTicketPurchase, notifyOrganizerTicketSale } from '@/lib/notifications/helpers'
+import { addTicketToEarnings } from '@/lib/earnings'
 
 // Lazy load Stripe to avoid build-time initialization
 function getStripe() {
@@ -123,6 +124,19 @@ export async function POST(request: Request) {
           .from('events')
           .update({ tickets_sold: (eventData.tickets_sold || 0) + quantity })
           .eq('id', session.metadata.eventId)
+      }
+
+      // Update event earnings (NEW: automatic earnings tracking)
+      try {
+        await addTicketToEarnings(
+          session.metadata.eventId,
+          session.amount_total, // Already in cents
+          quantity
+        )
+        console.log(`✅ Updated earnings for event ${session.metadata.eventId}: ${session.amount_total} cents (${quantity} tickets)`)
+      } catch (earningsError) {
+        console.error('❌ Failed to update earnings:', earningsError)
+        // Don't fail the webhook - log for manual reconciliation
       }
 
       // Generate QR code

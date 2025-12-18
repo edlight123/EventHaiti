@@ -1,0 +1,195 @@
+/**
+ * Event Earnings & Payout Types
+ * 
+ * Tracks organizer revenue, fees, and withdrawal status per event
+ */
+
+export type SettlementStatus = 'pending' | 'ready' | 'locked'
+
+export interface EventEarnings {
+  id: string
+  eventId: string
+  organizerId: string
+  
+  // Revenue tracking (all in cents)
+  grossSales: number             // Total ticket revenue
+  ticketsSold: number            // Number of tickets sold
+  
+  // Fee breakdown (all in cents)
+  platformFee: number            // EventHaiti's commission (typically 10%)
+  processingFees: number         // Stripe/payment processor fees
+  netAmount: number              // grossSales - platformFee - processingFees
+  
+  // Withdrawal tracking (all in cents)
+  availableToWithdraw: number    // Funds not yet withdrawn
+  withdrawnAmount: number        // Total already paid out
+  
+  // Settlement logic
+  settlementStatus: SettlementStatus
+  settlementReadyDate?: string | null  // When funds become available
+  
+  // Currency
+  currency: 'HTG' | 'USD'
+  
+  // Timestamps
+  lastCalculatedAt: string       // Last time earnings were recalculated
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * Firestore collection structure:
+ * /event_earnings/{earningsId}
+ * 
+ * Indexes needed:
+ * - organizerId + settlementStatus + createdAt (desc)
+ * - eventId (asc) - should be unique per event
+ * - organizerId + availableToWithdraw (desc) - for finding withdrawable events
+ */
+
+/**
+ * Links a payout to specific events and amounts
+ * Stored as subcollection under payouts
+ */
+export interface PayoutEventLink {
+  id: string
+  payoutId: string
+  eventId: string
+  eventTitle: string
+  amount: number                 // Amount withdrawn from this event (cents)
+  currency: string
+  ticketIds: string[]            // Specific tickets included
+  createdAt: string
+}
+
+/**
+ * Firestore collection structure:
+ * /organizers/{organizerId}/payouts/{payoutId}/event_links/{linkId}
+ */
+
+/**
+ * Extended payout type with event breakdown
+ * Combines data from payout.ts with event links
+ */
+export interface PayoutWithEvents {
+  id: string
+  organizerId: string
+  amount: number
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled'
+  method: 'bank_transfer' | 'mobile_money'
+  currency: string
+  
+  // Event breakdown
+  events: {
+    eventId: string
+    eventTitle: string
+    amount: number
+    ticketCount: number
+  }[]
+  
+  // Dates
+  requestedAt: string
+  scheduledDate: string
+  completedAt?: string | null
+  
+  // Approval workflow
+  approvedBy?: string | null
+  approvedAt?: string | null
+  declinedBy?: string | null
+  declinedAt?: string | null
+  declineReason?: string | null
+}
+
+/**
+ * Earnings summary for organizer dashboard
+ */
+export interface EarningsSummary {
+  totalGrossSales: number
+  totalNetAmount: number
+  totalAvailableToWithdraw: number
+  totalWithdrawn: number
+  totalPlatformFees: number
+  totalProcessingFees: number
+  currency: string
+  
+  // Breakdown by event
+  events: Array<{
+    eventId: string
+    eventTitle: string
+    eventDate: string
+    grossSales: number
+    netAmount: number
+    availableToWithdraw: number
+    settlementStatus: SettlementStatus
+  }>
+}
+
+/**
+ * Fee calculation utilities
+ */
+export interface FeeCalculation {
+  grossAmount: number
+  platformFee: number
+  processingFee: number
+  netAmount: number
+}
+
+/**
+ * Configuration for fee calculations
+ */
+export const FEE_CONFIG = {
+  // Platform commission
+  PLATFORM_FEE_PERCENTAGE: 0.10,      // 10%
+  PLATFORM_FEE_MIN: 50,                // 50 cents minimum
+  
+  // Stripe fees (standard US rates)
+  STRIPE_FEE_PERCENTAGE: 0.029,        // 2.9%
+  STRIPE_FEE_FIXED: 30,                // 30 cents per transaction
+  
+  // Payout minimums
+  MINIMUM_PAYOUT_AMOUNT: 5000,         // $50.00 in cents
+  
+  // Settlement timing
+  SETTLEMENT_HOLD_DAYS: 7,             // Days after event before funds are available
+} as const
+
+/**
+ * Withdrawal request for manual processing (Haiti - MonCash/Bank)
+ */
+export interface WithdrawalRequest {
+  id?: string
+  organizerId: string
+  eventId: string
+  amount: number                       // Amount in USD (not cents)
+  method: 'moncash' | 'bank'
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  
+  // Method-specific details
+  moncashNumber?: string
+  bankDetails?: {
+    accountNumber: string
+    bankName: string
+    accountHolder: string
+    swiftCode?: string
+    routingNumber?: string
+  }
+  
+  // Processing
+  processedBy?: string                 // Admin user ID
+  processedAt?: Date
+  failureReason?: string
+  
+  // Timestamps
+  createdAt: Date
+  updatedAt: Date
+}
+
+/**
+ * Firestore collection structure:
+ * /withdrawal_requests/{requestId}
+ * 
+ * Indexes needed:
+ * - status + createdAt (desc) - for admin queue
+ * - organizerId + status + createdAt (desc) - for organizer history
+ * - eventId + createdAt (desc) - for per-event history
+ */

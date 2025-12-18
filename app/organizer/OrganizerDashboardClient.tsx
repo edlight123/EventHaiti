@@ -72,6 +72,71 @@ export default function OrganizerDashboardClient({
         <SalesSnapshot data={salesData} />
       </div>
 
+      {/* Quick Actions */}
+      <div className="mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Link
+            href="/organizer/earnings"
+            className="bg-white p-4 rounded-xl border border-gray-200 hover:border-teal-300 hover:shadow-md transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-teal-50 rounded-lg flex items-center justify-center group-hover:bg-teal-100 transition-colors">
+                <span className="text-xl">💰</span>
+              </div>
+              <div>
+                <div className="font-semibold text-gray-900">View Earnings</div>
+                <div className="text-xs text-gray-500">Track event revenue & fees</div>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/organizer/events"
+            className="bg-white p-4 rounded-xl border border-gray-200 hover:border-teal-300 hover:shadow-md transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                <span className="text-xl">📅</span>
+              </div>
+              <div>
+                <div className="font-semibold text-gray-900">Manage Events</div>
+                <div className="text-xs text-gray-500">Edit & view all events</div>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/organizer/payouts"
+            className="bg-white p-4 rounded-xl border border-gray-200 hover:border-teal-300 hover:shadow-md transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                <span className="text-xl">💸</span>
+              </div>
+              <div>
+                <div className="font-semibold text-gray-900">Payouts</div>
+                <div className="text-xs text-gray-500">Setup & request withdrawals</div>
+              </div>
+            </div>
+          </Link>
+
+          <a
+            href="/organizer/events/new"
+            className="bg-gradient-to-br from-teal-500 to-purple-600 p-4 rounded-xl hover:shadow-lg transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                <span className="text-xl">✨</span>
+              </div>
+              <div>
+                <div className="font-semibold text-white">Create Event</div>
+                <div className="text-xs text-white/80">Start selling tickets</div>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+
       {/* Events Grid */}
       <div>
         <div className="flex items-center justify-between mb-4">

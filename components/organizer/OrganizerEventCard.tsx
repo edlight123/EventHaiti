@@ -3,7 +3,7 @@
 import { useTranslation } from 'react-i18next'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Calendar, Edit, Eye, QrCode, Share2 } from 'lucide-react'
+import { Calendar, DollarSign, Edit, Eye, QrCode, Share2 } from 'lucide-react'
 import Badge from '@/components/ui/Badge'
 
 interface OrganizerEventCardProps {
@@ -88,7 +88,7 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-4 gap-2" onClick={(e) => e.stopPropagation()}>
+        <div className="grid grid-cols-5 gap-1" onClick={(e) => e.stopPropagation()}>
           <Link
             href={`/organizer/events/${event.id}/edit`}
             className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg hover:bg-brand-50 transition-colors group/btn"
@@ -97,6 +97,16 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
           >
             <Edit className="w-4 h-4 text-gray-600 group-hover/btn:text-brand-600" />
             <span className="text-xs text-gray-600 group-hover/btn:text-brand-600 font-medium">{t('event_card.manage')}</span>
+          </Link>
+
+          <Link
+            href={`/organizer/events/${event.id}/earnings`}
+            className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg hover:bg-green-50 transition-colors group/btn"
+            title="Earnings"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DollarSign className="w-4 h-4 text-gray-600 group-hover/btn:text-green-600" />
+            <span className="text-xs text-gray-600 group-hover/btn:text-green-600 font-medium">Earnings</span>
           </Link>
 
           <Link

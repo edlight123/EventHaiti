@@ -20,6 +20,10 @@
     {
       "path": "/api/cron/favorite-reminders",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/update-settlement-status",
+      "schedule": "0 2 * * *"
     }
   ]
 }
