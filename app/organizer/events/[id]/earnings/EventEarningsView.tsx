@@ -38,7 +38,7 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
           <span className="text-6xl mb-4 block">💰</span>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">No Earnings Yet</h2>
           <p className="text-gray-600 mb-6">
-            This event hasn't generated any earnings yet. Earnings are recorded when attendees purchase tickets.
+            This event hasn&apos;t generated any earnings yet. Earnings are recorded when attendees purchase tickets.
           </p>
           <Link 
             href={`/events/${event.id}`}

@@ -9,6 +9,27 @@ import { calculateFees, calculateSettlementDate, isSettlementReady } from '@/lib
 import type { EventEarnings, SettlementStatus, EarningsSummary } from '@/types/earnings'
 
 /**
+ * Get event earnings record (without creating if missing)
+ * 
+ * @param eventId - Event ID
+ * @returns EventEarnings or null if not found
+ */
+export async function getEventEarnings(eventId: string): Promise<EventEarnings | null> {
+  const earningsSnapshot = await adminDb
+    .collection('event_earnings')
+    .where('eventId', '==', eventId)
+    .limit(1)
+    .get()
+
+  if (earningsSnapshot.empty) {
+    return null
+  }
+
+  const doc = earningsSnapshot.docs[0]
+  return { id: doc.id, ...doc.data() } as EventEarnings
+}
+
+/**
  * Get or create event earnings record
  * 
  * @param eventId - Event ID

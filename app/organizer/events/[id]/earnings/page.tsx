@@ -1,6 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { adminDb } from '@/lib/firebaseAdmin'
+import { adminDb } from '@/lib/firebase/admin'
 import { getEventEarnings } from '@/lib/earnings'
 import { calculateFees } from '@/lib/fees'
 import EventEarningsView from './EventEarningsView'
