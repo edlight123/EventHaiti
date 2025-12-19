@@ -21,9 +21,11 @@ export default async function EventEarningsPage({
   params: { id: string }
 }) {
   const { user, error } = await requireAuth()
-  if (error || !user) redirect('/auth/login')
-
   const eventId = params.id
+
+  if (error || !user) {
+    redirect(`/auth/login?redirect=/organizer/events/${eventId}/earnings`)
+  }
 
   // Fetch event details
   const eventDoc = await adminDb.collection('events').doc(eventId).get()

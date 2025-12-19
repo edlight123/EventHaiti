@@ -16,7 +16,11 @@ export default async function PromoCodesPage({
   const user = await getCurrentUser()
 
   if (!user) {
-    redirect('/auth/login')
+    redirect('/auth/login?redirect=/organizer/promo-codes')
+  }
+
+  if (user.role !== 'organizer') {
+    redirect('/organizer?redirect=/organizer/promo-codes')
   }
 
   const supabase = await createClient()

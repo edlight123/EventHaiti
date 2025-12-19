@@ -9,7 +9,7 @@ export const revalidate = 0
 
 export default async function NotificationSettingsPage() {
   const user = await getCurrentUser()
-  if (!user) redirect('/auth/login')
+  if (!user) redirect('/auth/login?redirect=/settings/notifications')
 
   async function refreshPage() {
     'use server'

@@ -21,9 +21,17 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  function sanitizeRedirectTarget(target: string | null): string {
+    if (!target) return '/'
+    // Only allow same-origin relative paths to prevent open redirects.
+    if (!target.startsWith('/')) return '/'
+    if (target.startsWith('//')) return '/'
+    return target
+  }
+
   // Check for redirect parameter (from mobile app)
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
-  const redirectTo = searchParams?.get('redirect') || '/'
+  const redirectTo = sanitizeRedirectTarget(searchParams?.get('redirect') || null)
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault()
@@ -40,7 +48,7 @@ export default function LoginPage() {
         }
 
         // Force full page reload for demo mode
-        window.location.href = '/'
+        window.location.href = redirectTo
         return
       }
 
@@ -56,7 +64,7 @@ export default function LoginPage() {
       })
 
       // Force router refresh and navigate
-      window.location.href = '/'
+      window.location.href = redirectTo
     } catch (err: any) {
       setError(err.message || t('errors.login_failed'))
     } finally {
@@ -242,7 +250,7 @@ export default function LoginPage() {
             <p className="text-[13px] text-gray-600">
               {t('login.no_account')}{' '}
               <Link
-                href="/auth/signup"
+                href={`/auth/signup?redirect=${encodeURIComponent(redirectTo)}`}
                 className="font-semibold text-teal-700 hover:text-teal-800"
               >
                 {t('login.sign_up')}

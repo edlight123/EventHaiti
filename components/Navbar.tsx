@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 import { useRouter } from 'next/navigation'
 import { BRAND } from '@/config/brand'
@@ -24,9 +24,15 @@ interface NavbarProps {
 
 export default function Navbar({ user, isAdmin = false }: NavbarProps) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const { t } = useTranslation('common')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const redirectTarget = (() => {
+    const query = searchParams?.toString()
+    return query ? `${pathname}?${query}` : pathname
+  })()
 
   async function handleSignOut() {
     // Handle demo logout
@@ -149,13 +155,13 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
             ) : (
               <>
                 <Link
-                  href="/auth/login"
+                  href={`/auth/login?redirect=${encodeURIComponent(redirectTarget)}`}
                   className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
                 >
                   {t('nav.signIn')}
                 </Link>
                 <Link
-                  href="/auth/signup"
+                  href={`/auth/signup?redirect=${encodeURIComponent(redirectTarget)}`}
                   className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 shadow-md hover:shadow-lg transition-all duration-200"
                 >
                   {t('auth:signup.submit')}

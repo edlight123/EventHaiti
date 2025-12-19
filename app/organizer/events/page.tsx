@@ -68,8 +68,8 @@ export default function OrganizerEventsPage() {
         const userRole = userData?.role || 'attendee'
 
         if (userRole !== 'organizer') {
-          // Not an organizer, redirect to profile
-          router.push('/profile')
+          // Not an organizer, show upgrade flow
+          router.push('/organizer?redirect=/organizer/events')
           return
         }
 

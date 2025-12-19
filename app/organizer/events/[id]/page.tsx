@@ -8,13 +8,16 @@ import { EventCommandCenter } from './EventCommandCenter'
 export const revalidate = 0
 
 export default async function EventCommandCenterPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const { user, error } = await requireAuth()
 
   if (error || !user) {
-    redirect('/auth/login')
+    redirect(`/auth/login?redirect=/organizer/events/${id}`)
   }
 
-  const { id } = await params
+  if (user.role !== 'organizer') {
+    redirect(`/organizer?redirect=/organizer/events/${id}`)
+  }
 
   // Fetch event
   const eventDoc = await adminDb.collection('events').doc(id).get()

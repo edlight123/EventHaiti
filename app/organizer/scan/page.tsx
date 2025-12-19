@@ -11,7 +11,11 @@ export default async function ScanTicketPage() {
   const { user, error } = await requireAuth()
 
   if (error || !user) {
-    redirect('/auth/login')
+    redirect('/auth/login?redirect=/organizer/scan')
+  }
+
+  if (user.role !== 'organizer') {
+    redirect('/organizer?redirect=/organizer/scan')
   }
 
   // Fetch organizer's events

@@ -20,7 +20,11 @@ export default async function NotificationsSettingsPage() {
   const user = await getCurrentUser();
 
   if (!user?.id) {
-    redirect('/login');
+    redirect('/auth/login?redirect=/organizer/settings/notifications');
+  }
+
+  if (user.role !== 'organizer') {
+    redirect('/organizer?redirect=/organizer/settings/notifications');
   }
 
   const preferences = await getNotificationPreferences(user.id);

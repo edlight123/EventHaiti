@@ -13,7 +13,7 @@ export default function FavoritesSignInPrompt() {
           {t('sign_in.title')}
         </h2>
         <Link
-          href="/auth/login"
+          href="/auth/login?redirect=/favorites"
           className="text-orange-600 hover:text-orange-700 font-medium"
         >
           {t('sign_in.action')}

@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation'
 
 // Types
 interface PayoutConfig {
-  country?: string
+  status?: 'not_setup' | 'pending_verification' | 'active' | 'on_hold'
   method?: 'bank_transfer' | 'mobile_money'
   bankDetails?: {
     accountLocation?: string
@@ -18,11 +18,18 @@ interface PayoutConfig {
     routingNumber?: string
     swift?: string
     iban?: string
+    accountNumberLast4?: string
   }
   mobileMoneyDetails?: {
     provider: string
     phoneNumber: string
     accountName: string
+    phoneNumberLast4?: string
+  }
+  verificationStatus?: {
+    identity?: 'pending' | 'verified' | 'failed'
+    bank?: 'pending' | 'verified' | 'failed'
+    phone?: 'pending' | 'verified' | 'failed'
   }
 }
 
@@ -59,8 +66,16 @@ export default function PayoutsPageNew({
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [period, setPeriod] = useState<'this_month' | 'last_3_months' | 'all_time'>('all_time')
+  const [isSendingPhoneCode, setIsSendingPhoneCode] = useState(false)
+  const [isSubmittingPhoneCode, setIsSubmittingPhoneCode] = useState(false)
+  const [phoneVerificationCode, setPhoneVerificationCode] = useState('')
+  const [phoneVerificationMessage, setPhoneVerificationMessage] = useState<string | null>(null)
+  const [bankVerificationType, setBankVerificationType] = useState<'bank_statement' | 'void_check' | 'utility_bill'>('bank_statement')
+  const [bankVerificationFile, setBankVerificationFile] = useState<File | null>(null)
+  const [isSubmittingBankVerification, setIsSubmittingBankVerification] = useState(false)
+  const [bankVerificationMessage, setBankVerificationMessage] = useState<string | null>(null)
   const [formData, setFormData] = useState({
-    accountLocation: config?.country || 'haiti',
+    accountLocation: config?.bankDetails?.accountLocation || 'haiti',
     method: config?.method || 'bank_transfer',
     bankName: config?.bankDetails?.bankName || 'unibank',
     customBankName: '',
@@ -74,6 +89,9 @@ export default function PayoutsPageNew({
   })
 
   const hasPayoutSetup = Boolean(config)
+  const identityStatus = config?.verificationStatus?.identity || 'pending'
+  const bankStatus = config?.verificationStatus?.bank || 'pending'
+  const phoneStatus = config?.verificationStatus?.phone || 'pending'
 
   // List of supported banks
   const banks = [
@@ -123,6 +141,13 @@ export default function PayoutsPageNew({
         return
       }
     }
+    if (formData.method === 'mobile_money') {
+      if (!formData.phoneNumber.trim()) {
+        setError('Please enter a phone number')
+        setIsSaving(false)
+        return
+      }
+    }
     
     try {
       const updates: any = {
@@ -163,11 +188,13 @@ export default function PayoutsPageNew({
   }
 
   const formatCurrency = (amount: number) => {
+    const normalized = amount / 100
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'HTG',
-      minimumFractionDigits: 0
-    }).format(amount)
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(normalized)
   }
 
   const formatDate = (dateString: string) => {
@@ -206,6 +233,82 @@ export default function PayoutsPageNew({
         {labels[status]}
       </span>
     )
+  }
+
+  const sendPhoneVerificationCode = async () => {
+    setPhoneVerificationMessage(null)
+    setError(null)
+    setIsSendingPhoneCode(true)
+    try {
+      const res = await fetch('/api/organizer/send-phone-verification-code', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Failed to send code')
+
+      const devCode = data?.debugCode
+      if (process.env.NODE_ENV === 'development' && devCode) {
+        setPhoneVerificationMessage(`Code sent. Dev code: ${devCode}`)
+      } else {
+        setPhoneVerificationMessage('Code sent. Check your phone.')
+      }
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message || 'Failed to send code')
+    } finally {
+      setIsSendingPhoneCode(false)
+    }
+  }
+
+  const submitPhoneVerificationCode = async () => {
+    setPhoneVerificationMessage(null)
+    setError(null)
+    setIsSubmittingPhoneCode(true)
+    try {
+      const res = await fetch('/api/organizer/submit-phone-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verificationCode: phoneVerificationCode.trim() })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Failed to verify code')
+      setPhoneVerificationMessage('Phone verified successfully.')
+      setPhoneVerificationCode('')
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message || 'Failed to verify code')
+    } finally {
+      setIsSubmittingPhoneCode(false)
+    }
+  }
+
+  const submitBankVerification = async () => {
+    setBankVerificationMessage(null)
+    setError(null)
+    if (!bankVerificationFile) {
+      setError('Please attach a verification document')
+      return
+    }
+
+    setIsSubmittingBankVerification(true)
+    try {
+      const form = new FormData()
+      form.append('proofDocument', bankVerificationFile)
+      form.append('verificationType', bankVerificationType)
+
+      const res = await fetch('/api/organizer/submit-bank-verification', {
+        method: 'POST',
+        body: form,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Failed to submit bank verification')
+
+      setBankVerificationMessage('Bank verification submitted. Awaiting review.')
+      setBankVerificationFile(null)
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit bank verification')
+    } finally {
+      setIsSubmittingBankVerification(false)
+    }
   }
 
   // Filter earnings by period
@@ -257,6 +360,147 @@ export default function PayoutsPageNew({
           
           {/* Left Column - Payout Setup + Fees */}
           <div className="lg:col-span-1 space-y-6">
+
+            {/* Verification Card */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Verification</h2>
+
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">Organizer identity</div>
+                      <div className="text-sm text-gray-600">
+                        {identityStatus === 'verified'
+                          ? 'Verified'
+                          : identityStatus === 'failed'
+                            ? 'Needs attention'
+                            : 'Pending'}
+                      </div>
+                    </div>
+                    <Link
+                      href="/organizer/verify"
+                      className="text-sm font-medium text-purple-600 hover:text-purple-700"
+                    >
+                      View
+                    </Link>
+                  </div>
+
+                  {config?.method === 'bank_transfer' && hasPayoutSetup && (
+                    <div className="pt-3 border-t border-gray-200">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">Bank account</div>
+                          <div className="text-sm text-gray-600">
+                            {bankStatus === 'verified'
+                              ? 'Verified'
+                              : bankStatus === 'failed'
+                                ? 'Needs attention'
+                                : 'Pending'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {bankStatus !== 'verified' && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Document type</label>
+                            <select
+                              value={bankVerificationType}
+                              onChange={(e) => setBankVerificationType(e.target.value as any)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            >
+                              <option value="bank_statement">Bank statement</option>
+                              <option value="void_check">Void check</option>
+                              <option value="utility_bill">Utility bill</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Upload document</label>
+                            <input
+                              type="file"
+                              accept="image/*,application/pdf"
+                              onChange={(e) => setBankVerificationFile(e.target.files?.[0] || null)}
+                              className="w-full text-sm"
+                            />
+                          </div>
+
+                          <button
+                            onClick={submitBankVerification}
+                            disabled={isSubmittingBankVerification}
+                            className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isSubmittingBankVerification ? 'Submitting…' : 'Submit bank verification'}
+                          </button>
+
+                          {bankVerificationMessage && (
+                            <div className="text-sm text-gray-600">{bankVerificationMessage}</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {config?.method === 'mobile_money' && hasPayoutSetup && (
+                    <div className="pt-3 border-t border-gray-200">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">Phone number</div>
+                          <div className="text-sm text-gray-600">
+                            {phoneStatus === 'verified'
+                              ? 'Verified'
+                              : phoneStatus === 'failed'
+                                ? 'Needs attention'
+                                : 'Pending'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {phoneStatus !== 'verified' && (
+                        <div className="space-y-3">
+                          <button
+                            onClick={sendPhoneVerificationCode}
+                            disabled={isSendingPhoneCode}
+                            className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isSendingPhoneCode ? 'Sending…' : 'Send verification code'}
+                          </button>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Enter 6-digit code</label>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={phoneVerificationCode}
+                              onChange={(e) => setPhoneVerificationCode(e.target.value)}
+                              placeholder="123456"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            />
+                          </div>
+
+                          <button
+                            onClick={submitPhoneVerificationCode}
+                            disabled={isSubmittingPhoneCode}
+                            className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isSubmittingPhoneCode ? 'Verifying…' : 'Verify phone'}
+                          </button>
+
+                          {phoneVerificationMessage && (
+                            <div className="text-sm text-gray-600">{phoneVerificationMessage}</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-xs text-gray-500 mt-4">
+                  Verification is required to receive payouts and publish paid events.
+                </p>
+              </div>
+            </div>
             
             {/* Payout Setup Card */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -273,7 +517,7 @@ export default function PayoutsPageNew({
                       <div className="text-base text-gray-900 capitalize">
                         {config?.bankDetails?.accountLocation 
                           ? config.bankDetails.accountLocation.replace('_', ' ') 
-                          : config?.country || 'Not set'}
+                          : 'Not set'}
                       </div>
                     </div>
 
@@ -284,14 +528,14 @@ export default function PayoutsPageNew({
                           <>
                             Bank transfer · {config?.bankDetails?.bankName} · 
                             <span className="font-mono">
-                              ****{config?.bankDetails?.accountNumber?.slice(-4)}
+                              ****{config?.bankDetails?.accountNumberLast4 || config?.bankDetails?.accountNumber?.slice(-4)}
                             </span>
                           </>
                         ) : (
                           <>
                             Mobile money · {config?.mobileMoneyDetails?.provider} · 
                             <span className="font-mono">
-                              ****{config?.mobileMoneyDetails?.phoneNumber?.slice(-4)}
+                              ****{config?.mobileMoneyDetails?.phoneNumberLast4 || config?.mobileMoneyDetails?.phoneNumber?.slice(-4)}
                             </span>
                           </>
                         )}

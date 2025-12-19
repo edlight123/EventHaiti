@@ -10,7 +10,11 @@ export default async function NewEventPage() {
   const { user, error } = await requireAuth()
 
   if (error || !user) {
-    redirect('/auth/login')
+    redirect('/auth/login?redirect=/organizer/events/new')
+  }
+
+  if (user.role !== 'organizer') {
+    redirect('/organizer?redirect=/organizer/events/new')
   }
 
   // Allow event creation (drafts) for everyone; paid publishing is enforced in UI + API.

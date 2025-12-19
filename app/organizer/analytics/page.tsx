@@ -16,7 +16,11 @@ export default async function AnalyticsPage() {
   const user = await getCurrentUser()
 
   if (!user) {
-    redirect('/auth/login')
+    redirect('/auth/login?redirect=/organizer/analytics')
+  }
+
+  if (user.role !== 'organizer') {
+    redirect('/organizer?redirect=/organizer/analytics')
   }
 
   const supabase = await createClient()

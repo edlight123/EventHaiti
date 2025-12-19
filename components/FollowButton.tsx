@@ -18,7 +18,8 @@ export default function FollowButton({ organizerId, userId, initialIsFollowing =
 
   async function toggleFollow() {
     if (!userId) {
-      router.push('/auth/login?callbackUrl=' + window.location.pathname)
+      const redirectTo = `${window.location.pathname}${window.location.search || ''}`
+      router.push(`/auth/login?redirect=${encodeURIComponent(redirectTo)}`)
       return
     }
 

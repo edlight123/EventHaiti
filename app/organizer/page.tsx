@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
@@ -6,14 +6,40 @@ import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { getOrganizerStats, getNextEvent } from '@/lib/firestore/organizer'
 import { determinePayoutStatus, getOrganizerBalance, getPayoutConfig, hasPayoutMethod } from '@/lib/firestore/payout'
 import OrganizerDashboardClient from './OrganizerDashboardClient'
+import OrganizerUpgradePrompt from './OrganizerUpgradePrompt'
 
 export const revalidate = 30 // Cache for 30 seconds
 
-export default async function OrganizerDashboard() {
-  const { user, error } = await requireAuth()
+function sanitizeRedirectTarget(target: string | undefined): string {
+  if (!target) return '/organizer'
+  if (!target.startsWith('/')) return '/organizer'
+  if (target.startsWith('//')) return '/organizer'
+  return target
+}
 
-  if (error || !user) {
-    redirect('/auth/login')
+export default async function OrganizerDashboard({
+  searchParams
+}: {
+  searchParams?: { redirect?: string }
+}) {
+  const user = await getCurrentUser()
+
+  if (!user) {
+    redirect('/auth/login?redirect=/organizer')
+  }
+
+  if (user.role !== 'organizer') {
+    const redirectTo = sanitizeRedirectTarget(searchParams?.redirect)
+
+    return (
+      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+        <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+
+        <OrganizerUpgradePrompt redirectTo={redirectTo} />
+
+        <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
+      </div>
+    )
   }
 
   // Fetch organizer data

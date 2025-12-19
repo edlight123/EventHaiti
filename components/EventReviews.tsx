@@ -55,7 +55,8 @@ export default function EventReviews({ eventId, userId, hasAttended }: EventRevi
     e.preventDefault()
 
     if (!userId) {
-      router.push('/auth/signin?callbackUrl=' + window.location.pathname)
+      const redirectTo = `${window.location.pathname}${window.location.search || ''}`
+      router.push(`/auth/login?redirect=${encodeURIComponent(redirectTo)}`)
       return
     }
 

@@ -10,12 +10,14 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function AttendeesPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: eventId } = await params
+
   // Verify authentication
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get('session')?.value
 
   if (!sessionCookie) {
-    redirect('/login')
+    redirect(`/auth/login?redirect=${encodeURIComponent(`/organizer/events/${eventId}/attendees`)}`)
   }
 
   let authUser
@@ -24,10 +26,8 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
     authUser = decodedClaims
   } catch (error) {
     console.error('Error verifying session:', error)
-    redirect('/login')
+    redirect(`/auth/login?redirect=${encodeURIComponent(`/organizer/events/${eventId}/attendees`)}`)
   }
-
-  const { id: eventId } = await params
 
   // Fetch event
   let eventDoc

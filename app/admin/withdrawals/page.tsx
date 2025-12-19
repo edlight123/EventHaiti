@@ -12,7 +12,7 @@ export const metadata = {
 
 export default async function AdminWithdrawalsPage() {
   const { user, error } = await requireAuth()
-  if (error || !user) redirect('/auth/login')
+  if (error || !user) redirect('/auth/login?redirect=/admin/withdrawals')
   
   if (!isAdmin(user?.email)) {
     redirect('/organizer')

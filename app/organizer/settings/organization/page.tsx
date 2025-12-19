@@ -14,7 +14,11 @@ export default async function OrganizationSettingsPage() {
   const user = await getCurrentUser();
 
   if (!user?.id) {
-    redirect('/login');
+    redirect('/auth/login?redirect=/organizer/settings/organization');
+  }
+
+  if (user.role !== 'organizer') {
+    redirect('/organizer?redirect=/organizer/settings/organization');
   }
 
   const organizerData = await getOrganizerData(user.id);

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { adminAuth } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
+import { adminDb } from '@/lib/firebase/admin'
 import { getOrganizerEarningsSummary } from '@/lib/earnings'
 import EarningsView from './EarningsView'
 
@@ -14,12 +15,24 @@ export default async function EarningsPage() {
   const sessionCookie = cookieStore.get('session')?.value
 
   if (!sessionCookie) {
-    redirect('/auth/login')
+    redirect('/auth/login?redirect=/organizer/earnings')
   }
 
   try {
     const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
     const organizerId = decodedClaims.uid
+
+    // Ensure this user is an organizer (attendees should go through the upgrade flow)
+    try {
+      const userDoc = await adminDb.collection('users').doc(organizerId).get()
+      const role = userDoc.exists ? userDoc.data()?.role : null
+      if (role !== 'organizer') {
+        redirect('/organizer?redirect=/organizer/earnings')
+      }
+    } catch (error) {
+      console.error('Error checking user role:', error)
+      redirect('/organizer?redirect=/organizer/earnings')
+    }
 
     const summary = await getOrganizerEarningsSummary(organizerId)
 
@@ -39,6 +52,6 @@ export default async function EarningsPage() {
     )
   } catch (error) {
     console.error('Error loading earnings:', error)
-    redirect('/auth/login')
+    redirect('/auth/login?redirect=/organizer/earnings')
   }
 }

@@ -1,6 +1,6 @@
 import { ChevronRight, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
-import { adminAuth } from '@/lib/firebase/admin'
+import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { getPayoutHistory } from '@/lib/firestore/payout'
@@ -223,7 +223,7 @@ export default async function PayoutHistoryPage() {
   const sessionCookie = cookieStore.get('session')?.value
 
   if (!sessionCookie) {
-    redirect('/login')
+    redirect('/auth/login?redirect=/organizer/settings/payouts/history')
   }
 
   let authUser
@@ -232,7 +232,19 @@ export default async function PayoutHistoryPage() {
     authUser = decodedClaims
   } catch (error) {
     console.error('Error verifying session:', error)
-    redirect('/login')
+    redirect('/auth/login?redirect=/organizer/settings/payouts/history')
+  }
+
+  // Ensure this user is an organizer (attendees should go through the upgrade flow)
+  try {
+    const userDoc = await adminDb.collection('users').doc(authUser.uid).get()
+    const role = userDoc.exists ? userDoc.data()?.role : null
+    if (role !== 'organizer') {
+      redirect('/organizer?redirect=/organizer/settings/payouts/history')
+    }
+  } catch (error) {
+    console.error('Error checking user role:', error)
+    redirect('/organizer?redirect=/organizer/settings/payouts/history')
   }
 
   // Fetch payout history

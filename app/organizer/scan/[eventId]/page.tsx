@@ -7,12 +7,13 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function DoorModeScanPage({ params }: { params: Promise<{ eventId: string }> }) {
+  const { eventId } = await params
   // Verify authentication
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get('session')?.value
 
   if (!sessionCookie) {
-    redirect('/auth/login')
+    redirect(`/auth/login?redirect=/organizer/scan/${eventId}`)
   }
 
   let authUser
@@ -21,10 +22,20 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
     authUser = decodedClaims
   } catch (error) {
     console.error('Error verifying session:', error)
-    redirect('/auth/login')
+    redirect(`/auth/login?redirect=/organizer/scan/${eventId}`)
   }
 
-  const { eventId } = await params
+  // Ensure this user is an organizer (attendees should go through the upgrade flow)
+  try {
+    const userDoc = await adminDb.collection('users').doc(authUser.uid).get()
+    const role = userDoc.exists ? userDoc.data()?.role : null
+    if (role !== 'organizer') {
+      redirect(`/organizer?redirect=/organizer/scan/${eventId}`)
+    }
+  } catch (error) {
+    console.error('Error checking user role:', error)
+    redirect(`/organizer?redirect=/organizer/scan/${eventId}`)
+  }
 
   // Fetch event
   const eventDoc = await adminDb.collection('events').doc(eventId).get()

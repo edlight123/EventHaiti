@@ -35,7 +35,11 @@ export default async function OrganizerSettingsHubPage() {
   const user = await getCurrentUser()
 
   if (!user) {
-    redirect('/auth/login')
+    redirect('/auth/login?redirect=/organizer/settings')
+  }
+
+  if (user.role !== 'organizer') {
+    redirect('/organizer?redirect=/organizer/settings')
   }
 
   const { organizerData, payoutConfig } = await getOrganizerData(user.id)

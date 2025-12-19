@@ -191,7 +191,10 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 currency={event.currency || 'HTG'}
               />
             ) : (
-              <a href="/auth/login" className="block w-full bg-brand-600 text-white text-center font-semibold py-3 rounded-xl">
+              <a
+                href={`/auth/login?redirect=${encodeURIComponent(`/events/${event.id}`)}`}
+                className="block w-full bg-brand-600 text-white text-center font-semibold py-3 rounded-xl"
+              >
                 {t('common.sign_in_to_get_tickets')}
               </a>
             )}
@@ -422,7 +425,10 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                     </>
                   ) : (
                     <>
-                      <a href="/auth/login" className="block w-full bg-brand-600 text-white text-center font-semibold py-4 rounded-xl hover:bg-brand-700 transition-colors">
+                      <a
+                        href={`/auth/login?redirect=${encodeURIComponent(`/events/${event.id}`)}`}
+                        className="block w-full bg-brand-600 text-white text-center font-semibold py-4 rounded-xl hover:bg-brand-700 transition-colors"
+                      >
                         {t('events.sign_in_to_get_tickets')}
                       </a>
                       <p className="text-xs text-gray-500 text-center mt-3">{t('events.create_account_to_purchase')}</p>

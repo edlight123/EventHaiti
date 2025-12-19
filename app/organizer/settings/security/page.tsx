@@ -24,7 +24,11 @@ export default async function SecuritySettingsPage() {
   const user = await getCurrentUser();
 
   if (!user?.id) {
-    redirect('/login');
+    redirect('/auth/login?redirect=/organizer/settings/security');
+  }
+
+  if (user.role !== 'organizer') {
+    redirect('/organizer?redirect=/organizer/settings/security');
   }
 
   const loginHistory = await getLoginHistory(user.id);

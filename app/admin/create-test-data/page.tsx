@@ -367,7 +367,7 @@ export default function CreateTestDataPage() {
             You must be logged in to access this page.
           </p>
           <button
-            onClick={() => router.push('/auth/login')}
+            onClick={() => router.push('/auth/login?redirect=/admin/create-test-data')}
             className="w-full px-6 py-3 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 transition"
           >
             Go to Login

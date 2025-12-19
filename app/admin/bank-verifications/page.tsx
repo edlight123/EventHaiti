@@ -35,7 +35,7 @@ export default async function AdminBankVerificationsPage() {
   const sessionCookie = cookieStore.get('session')?.value
 
   if (!sessionCookie) {
-    redirect('/login')
+    redirect('/auth/login?redirect=/admin/bank-verifications')
   }
 
   let authUser
@@ -44,7 +44,7 @@ export default async function AdminBankVerificationsPage() {
     authUser = decodedClaims
   } catch (error) {
     console.error('Error verifying session:', error)
-    redirect('/login')
+    redirect('/auth/login?redirect=/admin/bank-verifications')
   }
 
   // Check if user is admin

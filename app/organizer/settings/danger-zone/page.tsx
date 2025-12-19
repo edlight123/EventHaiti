@@ -8,7 +8,11 @@ export default async function DangerZoneSettingsPage() {
   const user = await getCurrentUser();
 
   if (!user?.id) {
-    redirect('/login');
+    redirect('/auth/login?redirect=/organizer/settings/danger-zone');
+  }
+
+  if (user.role !== 'organizer') {
+    redirect('/organizer?redirect=/organizer/settings/danger-zone');
   }
 
   return (

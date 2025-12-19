@@ -22,6 +22,17 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  function sanitizeRedirectTarget(target: string | null): string {
+    if (!target) return '/'
+    // Only allow same-origin relative paths to prevent open redirects.
+    if (!target.startsWith('/')) return '/'
+    if (target.startsWith('//')) return '/'
+    return target
+  }
+
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+  const redirectTo = sanitizeRedirectTarget(searchParams?.get('redirect') || null)
+
   async function handleSignup(e: FormEvent) {
     e.preventDefault()
     setError(null)
@@ -42,7 +53,7 @@ export default function SignupPage() {
         email: user.email,
         full_name: fullName,
         phone_number: phoneNumber || null,
-        role: 'organizer' as UserRole,
+        role: 'attendee' as UserRole,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -56,7 +67,7 @@ export default function SignupPage() {
       })
 
       // Force full page reload
-      window.location.href = '/'
+      window.location.href = redirectTo
     } catch (err: any) {
       setError(err.message || t('errors.signup_failed'))
     } finally {
@@ -83,7 +94,7 @@ export default function SignupPage() {
           email: user.email,
           full_name: user.displayName || '',
           phone_number: user.phoneNumber || null,
-          role: 'organizer' as UserRole,
+          role: 'attendee' as UserRole,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -98,7 +109,7 @@ export default function SignupPage() {
       })
 
       // Force full page reload
-      window.location.href = '/'
+      window.location.href = redirectTo
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') {
         setError(t('errors.signup_cancelled'))
@@ -278,7 +289,7 @@ export default function SignupPage() {
             <p className="text-[13px] text-gray-600">
               {t('signup.have_account')}{' '}
               <Link
-                href="/auth/login"
+                href={`/auth/login?redirect=${encodeURIComponent(redirectTo)}`}
                 className="font-semibold text-teal-700 hover:text-teal-800"
               >
                 {t('signup.sign_in')}

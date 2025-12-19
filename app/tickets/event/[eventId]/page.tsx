@@ -36,13 +36,12 @@ function serializeTimestamps(obj: any): any {
 }
 
 export default async function EventTicketsPage({ params }: { params: Promise<{ eventId: string }> }) {
+  const { eventId } = await params
   const { user, error } = await requireAuth()
 
   if (error || !user) {
-    redirect('/auth/login')
+    redirect(`/auth/login?redirect=/tickets/event/${eventId}`)
   }
-
-  const { eventId } = await params
   
   // Server action for pull-to-refresh
   async function refreshPage() {

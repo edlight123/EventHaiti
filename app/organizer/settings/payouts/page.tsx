@@ -10,109 +10,54 @@ import PayoutsPageNew from './PayoutsPageNew'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-// Helper to get event earnings summaries
-async function getEventEarnings(organizerId: string) {
+async function getOrganizerEventSummaries(organizerId: string) {
   try {
-    // Fetch all events for this organizer
-    const eventsSnapshot = await adminDb
-      .collection('events')
-      .where('organizer_id', '==', organizerId)
+    const earningsSnapshot = await adminDb
+      .collection('event_earnings')
+      .where('organizerId', '==', organizerId)
       .get()
 
-    console.log(`[Payouts] Found ${eventsSnapshot.size} events for organizer ${organizerId}`)
+    const summaries = await Promise.all(
+      earningsSnapshot.docs.map(async (earningsDoc: any) => {
+        const earnings = earningsDoc.data()
 
-    const earnings = await Promise.all(
-      eventsSnapshot.docs.map(async (eventDoc: any) => {
-        const eventData = eventDoc.data()
-        
-        // Fetch tickets for this event
-        const ticketsSnapshot = await adminDb
-          .collection('tickets')
-          .where('event_id', '==', eventDoc.id)
-          .get()
+        const eventId = earnings.eventId as string
+        const eventDoc = await adminDb.collection('events').doc(eventId).get()
+        const eventData = eventDoc.exists ? eventDoc.data() : null
 
-        console.log(`[Payouts] Event ${eventData.title} (${eventDoc.id}): Total ${ticketsSnapshot.size} tickets`)
-        
-        // Filter active tickets
-        const activeTickets = ticketsSnapshot.docs.filter((doc: any) => {
-          const data = doc.data()
-          return data.status === 'active' || data.status === 'used'
-        })
-        
-        console.log(`[Payouts] Event ${eventData.title}: ${activeTickets.length} active/used tickets`)
+        const eventDateRaw = eventData?.start_datetime || eventData?.date_time || eventData?.date || eventData?.created_at
+        const eventDate = eventDateRaw?.toDate ? eventDateRaw.toDate() : eventDateRaw ? new Date(eventDateRaw) : new Date()
+        const eventDateIso = isNaN(eventDate.getTime()) ? new Date().toISOString() : eventDate.toISOString()
 
-        // Calculate earnings
-        let grossSales = 0
-        activeTickets.forEach((ticketDoc: any) => {
-          const ticketData = ticketDoc.data()
-          const price = ticketData.price_paid || ticketData.price || 0
-          grossSales += price
-          if (price > 0) {
-            console.log(`[Payouts] Ticket ${ticketDoc.id}: HTG ${price}`)
-          }
-        })
+        const grossSales = Number(earnings.grossSales || 0)
+        const fees = Number(earnings.platformFee || 0) + Number(earnings.processingFees || 0)
+        const netPayout = Number(earnings.netAmount || 0)
+        const availableToWithdraw = Number(earnings.availableToWithdraw || 0)
+        const withdrawnAmount = Number(earnings.withdrawnAmount || 0)
 
-        // Calculate fees (2.5% platform + 2.9% + HTG 15 processing)
-        const platformFee = grossSales * 0.025
-        const processingFee = grossSales * 0.029 + (ticketsSnapshot.size * 15)
-        const totalFees = platformFee + processingFee
-        const netPayout = grossSales - totalFees
-
-        // Determine payout status
-        let eventDate: Date
-        try {
-          if (eventData.date?.toDate && typeof eventData.date.toDate === 'function') {
-            eventDate = eventData.date.toDate()
-          } else if (eventData.date) {
-            eventDate = new Date(eventData.date)
-          } else {
-            // Fallback to created_at or current date
-            eventDate = eventData.created_at?.toDate ? eventData.created_at.toDate() : new Date()
-          }
-          
-          // Validate the date
-          if (isNaN(eventDate.getTime())) {
-            console.warn(`[Payouts] Invalid date for event ${eventData.title}, using current date`)
-            eventDate = new Date()
-          }
-        } catch (err) {
-          console.error(`[Payouts] Error parsing date for event ${eventData.title}:`, err)
-          eventDate = new Date()
-        }
-        
-        const now = new Date()
-        const daysSinceEvent = Math.floor((now.getTime() - eventDate.getTime()) / (1000 * 60 * 60 * 24))
-        
-        let payoutStatus: 'pending' | 'scheduled' | 'paid' | 'on_hold' = 'pending'
-        if (daysSinceEvent >= 7) {
-          payoutStatus = 'scheduled'
-        }
-        if (daysSinceEvent >= 12) {
-          payoutStatus = 'paid'
-        }
+        const payoutStatus: 'pending' | 'scheduled' | 'paid' | 'on_hold' = (() => {
+          if (earnings.settlementStatus === 'ready' && availableToWithdraw > 0) return 'scheduled'
+          if (withdrawnAmount > 0 && availableToWithdraw === 0) return 'paid'
+          if (earnings.settlementStatus === 'locked' && withdrawnAmount === 0) return 'on_hold'
+          return 'pending'
+        })()
 
         return {
-          eventId: eventDoc.id,
-          name: eventData.title || 'Untitled Event',
-          date: eventDate.toISOString(),
-          ticketsSold: activeTickets.length,
+          eventId,
+          name: eventData?.title || 'Untitled Event',
+          date: eventDateIso,
+          ticketsSold: Number(earnings.ticketsSold || 0),
           grossSales,
-          fees: totalFees,
+          fees,
           netPayout,
-          payoutStatus
+          payoutStatus,
         }
       })
     )
 
-    const filteredEarnings = earnings.filter(e => e.ticketsSold > 0)
-    console.log(`[Payouts] Total events: ${earnings.length}, with sales: ${filteredEarnings.length}`)
-    
-    // For now, return all events to help with debugging
-    return earnings.sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    )
+    return summaries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   } catch (error) {
-    console.error('Error fetching event earnings:', error)
+    console.error('Error fetching organizer event summaries:', error)
     return []
   }
 }
@@ -139,7 +84,7 @@ export default async function PayoutsSettingsPage() {
   const sessionCookie = cookieStore.get('session')?.value
 
   if (!sessionCookie) {
-    redirect('/login')
+    redirect('/auth/login?redirect=/organizer/settings/payouts')
   }
 
   let authUser
@@ -148,13 +93,25 @@ export default async function PayoutsSettingsPage() {
     authUser = decodedClaims
   } catch (error) {
     console.error('Error verifying session:', error)
-    redirect('/login')
+    redirect('/auth/login?redirect=/organizer/settings/payouts')
+  }
+
+  // Ensure this user is an organizer (attendees should go through the upgrade flow)
+  try {
+    const userDoc = await adminDb.collection('users').doc(authUser.uid).get()
+    const role = userDoc.exists ? userDoc.data()?.role : null
+    if (role !== 'organizer') {
+      redirect('/organizer?redirect=/organizer/settings/payouts')
+    }
+  } catch (error) {
+    console.error('Error checking user role:', error)
+    redirect('/organizer?redirect=/organizer/settings/payouts')
   }
 
   // Fetch payout data
   const [config, eventEarnings] = await Promise.all([
     getPayoutConfig(authUser.uid),
-    getEventEarnings(authUser.uid)
+    getOrganizerEventSummaries(authUser.uid)
   ])
 
   const navbarUser = {

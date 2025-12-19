@@ -13,7 +13,7 @@ export default async function DashboardPage() {
   const user = await getCurrentUser()
 
   if (!user) {
-    redirect('/auth/login')
+    redirect('/auth/login?redirect=/dashboard')
   }
 
   let upcomingEvents: any[] = []

@@ -6,13 +6,16 @@ import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import { getOrganizerVerificationStatus } from '@/lib/organizerVerification'
 
 export default async function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const { user, error } = await requireAuth()
 
   if (error || !user) {
-    redirect('/auth/login')
+    redirect(`/auth/login?redirect=/organizer/events/${id}/edit`)
   }
 
-  const { id } = await params
+  if (user.role !== 'organizer') {
+    redirect(`/organizer?redirect=/organizer/events/${id}/edit`)
+  }
   let event: any = null
 
   if (isDemoMode()) {

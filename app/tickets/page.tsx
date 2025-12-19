@@ -40,7 +40,7 @@ export default async function MyTicketsPage() {
   const { user, error } = await requireAuth()
 
   if (error || !user) {
-    redirect('/auth/login')
+    redirect('/auth/login?redirect=/tickets')
   }
 
   return (

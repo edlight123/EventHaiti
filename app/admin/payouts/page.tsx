@@ -61,8 +61,12 @@ async function getPendingPayouts() {
 export default async function AdminPayoutsPage() {
   const user = await getCurrentUser()
 
-  if (!user || user.role !== 'admin') {
-    redirect('/auth/login')
+  if (!user) {
+    redirect('/auth/login?redirect=/admin/payouts')
+  }
+
+  if (user.role !== 'admin') {
+    redirect('/organizer')
   }
 
   const pendingPayouts = await getPendingPayouts()

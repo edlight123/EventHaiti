@@ -34,7 +34,11 @@ export default async function TeamSettingsPage() {
   const user = await getCurrentUser();
 
   if (!user?.id) {
-    redirect('/login');
+    redirect('/auth/login?redirect=/organizer/settings/team');
+  }
+
+  if (user.role !== 'organizer') {
+    redirect('/organizer?redirect=/organizer/settings/team');
   }
 
   const teamMembers = await getTeamMembers(user.id);

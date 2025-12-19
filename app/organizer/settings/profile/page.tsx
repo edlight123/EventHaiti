@@ -14,7 +14,11 @@ export default async function ProfileSettingsPage() {
   const user = await getCurrentUser();
 
   if (!user?.id) {
-    redirect('/login');
+    redirect('/auth/login?redirect=/organizer/settings/profile');
+  }
+
+  if (user.role !== 'organizer') {
+    redirect('/organizer?redirect=/organizer/settings/profile');
   }
 
   const userProfile = await getUserProfile(user.id);
