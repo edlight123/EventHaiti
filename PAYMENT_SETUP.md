@@ -95,9 +95,11 @@ MONCASH_BUTTON_SECRET_API_KEY='-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC 
 # Return URL (browser redirect): https://<your-domain>/api/moncash-button/return
 # Alert URL  (server notification): https://<your-domain>/api/moncash-button/alert
 
-# Optional: RSA padding mode (only change if Digicel tells you to)
+# RSA padding mode
+# Digicel MonCash Button docs/examples use RSA "NoPadding".
+# Use `none` unless Digicel explicitly tells you otherwise.
 # NOTE: Digicel sandbox keys may be very small; OAEP can fail with "data too large for key size".
-MONCASH_BUTTON_RSA_PADDING=pkcs1
+MONCASH_BUTTON_RSA_PADDING=none
 ```
 
 ### Test Accounts

@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 
 // Bump to confirm deployments in logs (no secrets).
-const MONCASH_BUTTON_HELPER_VERSION = '2025-12-19g'
+const MONCASH_BUTTON_HELPER_VERSION = '2025-12-19h'
 
 const MONCASH_SANDBOX_URL = 'https://sandbox.moncashbutton.digicelgroup.com'
 const MONCASH_PRODUCTION_URL = 'https://moncashbutton.digicelgroup.com'
@@ -66,7 +66,7 @@ function getMonCashButtonKeyPem(): string {
   return normalized
 }
 
-type RsaPaddingMode = 'pkcs1' | 'oaep-sha1' | 'oaep-sha256'
+type RsaPaddingMode = 'none' | 'pkcs1' | 'oaep-sha1' | 'oaep-sha256'
 
 type CiphertextEncoding = 'base64' | 'base64url'
 
@@ -94,7 +94,8 @@ function sha256Short(value: string): string {
 
 function getRsaPaddingMode(): RsaPaddingMode {
   const mode = (process.env.MONCASH_BUTTON_RSA_PADDING || 'pkcs1').toLowerCase()
-  if (mode === 'auto') return 'pkcs1'
+  if (mode === 'auto') return 'none'
+  if (mode === 'none' || mode === 'no-padding' || mode === 'nopadding') return 'none'
   if (mode === 'oaep' || mode === 'oaep-sha1') return 'oaep-sha1'
   if (mode === 'oaep-sha256') return 'oaep-sha256'
   return 'pkcs1'
@@ -105,7 +106,7 @@ function getRsaPaddingModesToTry(): RsaPaddingMode[] {
   const envMode = (process.env.MONCASH_BUTTON_RSA_PADDING || '').toLowerCase()
   if (isRsaPaddingExplicit() && envMode !== 'auto') return [configured]
 
-  const all: RsaPaddingMode[] = ['pkcs1', 'oaep-sha1', 'oaep-sha256']
+  const all: RsaPaddingMode[] = ['none', 'pkcs1', 'oaep-sha1', 'oaep-sha256']
   return [configured, ...all.filter((m) => m !== configured)]
 }
 
@@ -119,14 +120,28 @@ function getKeyDetails() {
 function maxPlaintextBytes(modulusLengthBits: number | undefined, paddingMode: RsaPaddingMode): number | undefined {
   if (!modulusLengthBits) return undefined
   const k = Math.ceil(modulusLengthBits / 8)
+  if (paddingMode === 'none') return k
   if (paddingMode === 'pkcs1') return k - 11
   const hLen = paddingMode === 'oaep-sha256' ? 32 : 20
   return k - 2 * hLen - 2
 }
 
+function getKeySizeBytes(modulusLengthBits: number | undefined): number | undefined {
+  if (!modulusLengthBits) return undefined
+  return Math.ceil(modulusLengthBits / 8)
+}
+
+function leftPadToLength(buf: Buffer, length: number): Buffer {
+  if (buf.length === length) return buf
+  if (buf.length > length) return buf
+  const out = Buffer.alloc(length)
+  buf.copy(out, length - buf.length)
+  return out
+}
+
 function publicEncryptBytes(value: string, paddingOverride?: RsaPaddingMode): Buffer {
   const { keyPem, modulusLength } = getKeyDetails()
-  const buffer = Buffer.from(value, 'utf8')
+  let buffer = Buffer.from(value, 'utf8')
   const paddingMode = paddingOverride ?? getRsaPaddingMode()
 
   const maxLen = maxPlaintextBytes(modulusLength, paddingMode)
@@ -139,12 +154,24 @@ function publicEncryptBytes(value: string, paddingOverride?: RsaPaddingMode): Bu
   // NOTE: Some Digicel environments appear to use very small keys; don't block OAEP by key size.
   // Plaintext size constraints are enforced via maxPlaintextBytes().
 
+  // MonCash Button documentation examples use RSA/None/NoPadding.
+  // For RSA_NO_PADDING, OpenSSL expects an input block of the full key size.
+  if (paddingMode === 'none') {
+    const keySizeBytes = getKeySizeBytes(modulusLength)
+    if (!keySizeBytes) {
+      throw new Error('MonCash Button RSA key size is unknown; cannot use padding=none')
+    }
+    buffer = leftPadToLength(buffer, keySizeBytes)
+  }
+
   const encryptOptions: crypto.RsaPublicKey = {
     key: keyPem,
     padding:
-      paddingMode === 'pkcs1'
-        ? crypto.constants.RSA_PKCS1_PADDING
-        : crypto.constants.RSA_PKCS1_OAEP_PADDING,
+      paddingMode === 'none'
+        ? (crypto.constants as any).RSA_NO_PADDING
+        : paddingMode === 'pkcs1'
+          ? crypto.constants.RSA_PKCS1_PADDING
+          : crypto.constants.RSA_PKCS1_OAEP_PADDING,
   }
 
   if (paddingMode === 'oaep-sha256') {
