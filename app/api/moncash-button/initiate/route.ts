@@ -135,8 +135,9 @@ export async function POST(request: Request) {
     const totalAmount = normalizedSelections.reduce((sum, s) => sum + s.quantity * s.unitPrice, 0)
 
     // Create a gateway order ID.
-    // Keep it very short to fit sandbox RSA encryption limits (Digicel sandbox keys can be tiny).
-    const orderId = `mc_${crypto.randomBytes(4).toString('hex')}`
+    // Keep it short to fit sandbox RSA encryption limits (Digicel sandbox keys can be tiny).
+    // IMPORTANT: Digicel appears to expect a numeric orderId (parsing errors can happen otherwise).
+    const orderId = `${Date.now() % 1_000_000_000}${String(crypto.randomInt(0, 1000)).padStart(3, '0')}`
     const internalOrderId = `mcbtn_${eventId}_${user.id}_${Date.now()}`
 
     const { token } = await createMonCashButtonCheckoutToken({
