@@ -45,7 +45,7 @@ export default function VerificationStatusHero({
       iconBgColor: 'bg-blue-100',
       iconColor: 'text-blue-600',
       title: 'Start Verification',
-      description: 'Complete your verification to start creating events on EventHaiti',
+      description: 'Complete identity verification to publish paid events and receive payouts.',
       ctaText: 'Begin Verification',
       ctaColor: 'bg-gradient-to-r from-blue-600 to-teal-600 hover:from-blue-700 hover:to-teal-700',
       actionType: 'continue'
@@ -57,7 +57,7 @@ export default function VerificationStatusHero({
       iconBgColor: 'bg-amber-100',
       iconColor: 'text-amber-600',
       title: 'Complete Your Verification',
-      description: `You're ${completionPercentage}% complete. Finish all required steps to submit for review.`,
+      description: `You're ${completionPercentage}% complete. Finish the required steps to submit for review.`,
       ctaText: 'Continue',
       ctaColor: 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700',
       actionType: 'continue'
@@ -95,7 +95,7 @@ export default function VerificationStatusHero({
       iconBgColor: 'bg-green-100',
       iconColor: 'text-green-600',
       title: 'Verification Approved!',
-      description: 'Your account has been verified. You can now create and publish events.',
+      description: 'Your account is verified. You can now publish paid events and request payouts.',
       ctaText: 'Create Event',
       ctaColor: 'bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700',
       ctaHref: '/organizer/events/new',
@@ -191,10 +191,10 @@ export default function VerificationStatusHero({
               </Link>
             ) : (
               <button
-                onClick={config.actionType === 'restart' ? onRestart : (config.readonly ? undefined : onContinue)}
-                disabled={config.readonly || isRestarting}
+                  onClick={config.actionType === 'restart' ? onRestart : onContinue}
+                  disabled={isRestarting && config.actionType === 'restart'}
                 className={`${config.ctaColor} ${
-                  config.readonly || isRestarting ? 'opacity-50 cursor-not-allowed' : ''
+                    isRestarting && config.actionType === 'restart' ? 'opacity-50 cursor-not-allowed' : ''
                 } text-white px-6 py-3 rounded-lg font-semibold text-sm md:text-base transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2`}
               >
                 {isRestarting && config.actionType === 'restart' && (

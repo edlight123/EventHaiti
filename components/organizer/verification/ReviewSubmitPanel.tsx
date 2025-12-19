@@ -15,7 +15,7 @@ interface Props {
 export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnly = false }: Props) {
   const canSubmit = canSubmitForReview(request)
   const blockingIssues = getBlockingIssues(request)
-  const isSubmitted = ['pending_review', 'in_review', 'approved'].includes(request.status)
+  const isSubmitted = ['pending', 'in_review', 'approved'].includes(request.status)
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6 md:p-8">

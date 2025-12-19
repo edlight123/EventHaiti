@@ -25,6 +25,7 @@ import {
   submitVerificationForReview,
   restartVerification,
   calculateCompletionPercentage,
+  canSubmitForReview,
   type VerificationRequest
 } from '@/lib/verification'
 
@@ -61,11 +62,14 @@ export default function VerifyOrganizerPage() {
         if (!verificationRequest) {
           verificationRequest = await initializeVerificationRequest(authUser.uid)
         } else {
-          // Migrate old payout step to optional (temporary migration code)
+          // Migrate old payout step to optional (persisted so submit validation won't be blocked).
           if (verificationRequest.steps.payoutSetup?.required === true) {
-            verificationRequest.steps.payoutSetup.required = false
-            verificationRequest.steps.payoutSetup.missingFields = []
-            verificationRequest.steps.payoutSetup.description = 'Configure how you receive payments (can be set up later)'
+            await updateVerificationStep(authUser.uid, 'payoutSetup', {
+              required: false,
+              missingFields: [],
+              description: 'Configure how you receive payments (can be set up later)'
+            })
+            verificationRequest = (await getVerificationRequest(authUser.uid)) || verificationRequest
           }
         }
 
@@ -255,6 +259,7 @@ export default function VerifyOrganizerPage() {
 
   const completionPercentage = calculateCompletionPercentage(request)
   const isReadOnly = ['pending', 'in_review'].includes(request.status)
+  const canSubmit = canSubmitForReview(request)
 
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
@@ -281,7 +286,7 @@ export default function VerifyOrganizerPage() {
               isReadOnly={isReadOnly}
             />
 
-            {!isReadOnly && completionPercentage === 100 && (
+            {!isReadOnly && canSubmit && (
               <div className="text-center">
                 <button
                   onClick={() => setViewMode('review')}

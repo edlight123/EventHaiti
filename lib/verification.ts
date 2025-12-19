@@ -309,8 +309,12 @@ export async function submitVerificationForReview(userId: string): Promise<void>
 // Helper: Calculate overall completion percentage
 export function calculateCompletionPercentage(request: VerificationRequest): number {
   const allSteps = Object.values(request.steps)
-  const completedSteps = allSteps.filter(step => step.status === 'complete')
-  return Math.round((completedSteps.length / allSteps.length) * 100)
+  const requiredSteps = allSteps.filter(step => step.required)
+
+  // Progress should reflect required steps so optional steps don't block submission UX.
+  const denominator = requiredSteps.length > 0 ? requiredSteps.length : allSteps.length
+  const numerator = (requiredSteps.length > 0 ? requiredSteps : allSteps).filter(step => step.status === 'complete').length
+  return Math.round((numerator / denominator) * 100)
 }
 
 // Helper: Get blocking issues (for submit button)
