@@ -4,6 +4,17 @@ import { getCurrentUser } from '@/lib/auth'
 
 export async function POST(request: Request) {
   try {
+    // Legacy MerchantApi polling is deprecated in favor of MonCash Button redirect + return handler.
+    if ((process.env.MONCASH_MERCHANT_API_ENABLED || '').toLowerCase() !== 'true') {
+      return NextResponse.json(
+        {
+          error:
+            'MonCash MerchantApi polling is disabled. Please refresh/update the app and complete payment via MonCash Button checkout.',
+        },
+        { status: 410 }
+      )
+    }
+
     const user = await getCurrentUser()
     
     if (!user) {

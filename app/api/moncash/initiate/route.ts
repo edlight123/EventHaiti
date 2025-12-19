@@ -5,6 +5,19 @@ import { createMonCashPayment } from '@/lib/moncash'
 
 export async function POST(request: Request) {
   try {
+    // Legacy MerchantApi flow is deprecated in favor of MonCash Button (middleware/hosted checkout).
+    // Keep it behind an explicit flag to avoid accidental production use.
+    if ((process.env.MONCASH_MERCHANT_API_ENABLED || '').toLowerCase() !== 'true') {
+      return NextResponse.json(
+        {
+          error:
+            'MonCash MerchantApi is disabled. Please refresh/update the app and use MonCash Button checkout instead.',
+          recommendedEndpoint: '/api/moncash-button/initiate',
+        },
+        { status: 410 }
+      )
+    }
+
     const user = await getCurrentUser()
     
     if (!user) {
