@@ -477,14 +477,40 @@ export async function createMonCashButtonCheckoutToken(params: {
     return lastAttempt ? { ...lastAttempt, attempts } : null
   }
 
-  let bestAttempt = await tryTokenRequestsForMode(configuredMode)
+  let bestAttempt: any = null
+  let bestAttemptMode: 'sandbox' | 'production' = configuredMode
 
-  // If the portal keys belong to the other environment, Digicel often returns 404/410.
-  // Only auto-fallback when MONCASH_BUTTON_MODE is NOT explicitly set.
-  if (!bestAttempt && !isButtonModeExplicit()) {
+  const attemptConfigured = await tryTokenRequestsForMode(configuredMode)
+  if (attemptConfigured) {
+    bestAttempt = attemptConfigured
+    bestAttemptMode = configuredMode
+  }
+
+  // If the portal keys belong to the other environment, Digicel often returns 404/410 or generic parse errors.
+  // Auto-fallback when MONCASH_BUTTON_MODE is NOT explicitly set.
+  if (!isButtonModeExplicit()) {
     const fallbackMode: 'sandbox' | 'production' = configuredMode === 'sandbox' ? 'production' : 'sandbox'
-    console.warn('[MonCash Button] Token request failed on', configuredMode, '- trying', fallbackMode)
-    bestAttempt = await tryTokenRequestsForMode(fallbackMode)
+
+    const configuredOk =
+      !!bestAttempt?.response?.ok && !!bestAttempt?.parsed?.data?.success && typeof bestAttempt?.parsed?.data?.token === 'string'
+
+    if (!configuredOk) {
+      console.warn('[MonCash Button] Token request failed on', configuredMode, '- trying', fallbackMode)
+      const attemptFallback = await tryTokenRequestsForMode(fallbackMode)
+      const fallbackOk =
+        !!attemptFallback?.response?.ok &&
+        !!attemptFallback?.parsed?.data?.success &&
+        typeof attemptFallback?.parsed?.data?.token === 'string'
+
+      // Prefer a successful fallback, otherwise keep the configured attempt for diagnostics.
+      if (fallbackOk) {
+        bestAttempt = attemptFallback
+        bestAttemptMode = fallbackMode
+      } else if (!bestAttempt && attemptFallback) {
+        bestAttempt = attemptFallback
+        bestAttemptMode = fallbackMode
+      }
+    }
   }
 
   if (!bestAttempt) throw new Error('MonCash Button token request failed: unable to perform any attempts')
@@ -501,6 +527,7 @@ export async function createMonCashButtonCheckoutToken(params: {
     console.error('[MonCash Button] Token request error:', {
       status: response.status,
       mode: configuredMode,
+      attemptedMode: bestAttemptMode,
       helperVersion: MONCASH_BUTTON_HELPER_VERSION,
       modeExplicit: isButtonModeExplicit(),
       rsaPaddingExplicit: isRsaPaddingExplicit(),
@@ -627,10 +654,23 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
     return lastAttempt ? { ...lastAttempt, attempts } : null
   }
 
-  let bestAttempt = await tryLookupForMode(configuredMode)
-  if (!bestAttempt && !isButtonModeExplicit()) {
+  let bestAttempt: any = await tryLookupForMode(configuredMode)
+  let bestAttemptMode: 'sandbox' | 'production' = configuredMode
+
+  if (!isButtonModeExplicit()) {
     const fallbackMode: 'sandbox' | 'production' = configuredMode === 'sandbox' ? 'production' : 'sandbox'
-    bestAttempt = await tryLookupForMode(fallbackMode)
+    const configuredOk = !!bestAttempt?.response?.ok && !!bestAttempt?.parsed?.data?.success
+    if (!configuredOk) {
+      const attemptFallback = await tryLookupForMode(fallbackMode)
+      const fallbackOk = !!attemptFallback?.response?.ok && !!attemptFallback?.parsed?.data?.success
+      if (fallbackOk) {
+        bestAttempt = attemptFallback
+        bestAttemptMode = fallbackMode
+      } else if (!bestAttempt && attemptFallback) {
+        bestAttempt = attemptFallback
+        bestAttemptMode = fallbackMode
+      }
+    }
   }
 
   if (!bestAttempt) throw new Error('MonCash Button payment lookup failed: unable to perform any attempts')
@@ -646,6 +686,7 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
     console.error('[MonCash Button] Payment lookup error:', {
       status: response.status,
       mode: configuredMode,
+      attemptedMode: bestAttemptMode,
       helperVersion: MONCASH_BUTTON_HELPER_VERSION,
       modeExplicit: isButtonModeExplicit(),
       rsaPaddingExplicit: isRsaPaddingExplicit(),
