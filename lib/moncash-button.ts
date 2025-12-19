@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 
 // Bump to confirm deployments in logs (no secrets).
-const MONCASH_BUTTON_HELPER_VERSION = '2025-12-19d'
+const MONCASH_BUTTON_HELPER_VERSION = '2025-12-19e'
 
 const MONCASH_SANDBOX_URL = 'https://sandbox.moncashbutton.digicelgroup.com'
 const MONCASH_PRODUCTION_URL = 'https://moncashbutton.digicelgroup.com'
@@ -70,6 +70,7 @@ type RsaPaddingMode = 'pkcs1' | 'oaep-sha1' | 'oaep-sha256'
 
 function getRsaPaddingMode(): RsaPaddingMode {
   const mode = (process.env.MONCASH_BUTTON_RSA_PADDING || 'pkcs1').toLowerCase()
+  if (mode === 'auto') return 'pkcs1'
   if (mode === 'oaep' || mode === 'oaep-sha1') return 'oaep-sha1'
   if (mode === 'oaep-sha256') return 'oaep-sha256'
   return 'pkcs1'
@@ -77,7 +78,8 @@ function getRsaPaddingMode(): RsaPaddingMode {
 
 function getRsaPaddingModesToTry(): RsaPaddingMode[] {
   const configured = getRsaPaddingMode()
-  if (isRsaPaddingExplicit()) return [configured]
+  const envMode = (process.env.MONCASH_BUTTON_RSA_PADDING || '').toLowerCase()
+  if (isRsaPaddingExplicit() && envMode !== 'auto') return [configured]
 
   const all: RsaPaddingMode[] = ['pkcs1', 'oaep-sha1', 'oaep-sha256']
   return [configured, ...all.filter((m) => m !== configured)]
@@ -110,12 +112,8 @@ function publicEncryptBase64(value: string, paddingOverride?: RsaPaddingMode): s
     )
   }
 
-  // OAEP has significant overhead; with small sandbox keys it will usually fail.
-  if (paddingMode !== 'pkcs1' && modulusLength && modulusLength < 1024) {
-    throw new Error(
-      `MonCash Button RSA key too small for OAEP (modulusLength=${modulusLength}). Set MONCASH_BUTTON_RSA_PADDING=pkcs1.`
-    )
-  }
+  // NOTE: Some Digicel environments appear to use very small keys; don't block OAEP by key size.
+  // Plaintext size constraints are enforced via maxPlaintextBytes().
 
   const encryptOptions: crypto.RsaPublicKey = {
     key: keyPem,
@@ -310,7 +308,7 @@ export async function createMonCashButtonCheckoutToken(params: {
   const retryableHttpStatuses = new Set([404, 410])
   const retryableGatewayError = (rawText?: string) => {
     if (!rawText) return false
-    return /system\s*error/i.test(rawText)
+    return /system\s*error/i.test(rawText) || /could\s*not\s*pars/i.test(rawText)
   }
 
   async function tryTokenRequestsForMode(mode: 'sandbox' | 'production') {
@@ -411,7 +409,7 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
   const retryableHttpStatuses = new Set([404, 410])
   const retryableGatewayError = (rawText?: string) => {
     if (!rawText) return false
-    return /system\s*error/i.test(rawText)
+    return /system\s*error/i.test(rawText) || /could\s*not\s*pars/i.test(rawText)
   }
 
   async function postLookupForMode(
