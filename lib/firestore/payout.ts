@@ -166,12 +166,19 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
     }
 
     // Determine organizer identity verification status (approved/pending/failed)
-    const userDoc = await adminDb.collection('users').doc(organizerId).get()
+    const [userDoc, organizerDoc] = await Promise.all([
+      adminDb.collection('users').doc(organizerId).get(),
+      adminDb.collection('organizers').doc(organizerId).get(),
+    ])
+
     const userData = userDoc.exists ? userDoc.data() : null
+    const organizerData = organizerDoc.exists ? organizerDoc.data() : null
 
     const userSaysApproved =
       userData?.verification_status === 'approved' ||
-      userData?.is_verified === true
+      userData?.is_verified === true ||
+      organizerData?.verification_status === 'approved' ||
+      organizerData?.is_verified === true
 
     // Primary lookup: doc id == organizerId
     let verificationData: any | null = null

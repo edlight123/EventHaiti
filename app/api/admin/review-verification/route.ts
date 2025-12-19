@@ -89,6 +89,16 @@ export async function POST(request: NextRequest) {
       // Use Firebase Admin SDK directly to ensure the update works
       await adminDb.collection('users').doc(userId).set(updatePayload, { merge: true })
       console.log('User updated successfully via Admin SDK')
+
+      // Keep organizer profile in sync for pages that read from organizers/{id}
+      await adminDb.collection('organizers').doc(userId).set(
+        {
+          is_verified: status === 'approved',
+          verification_status: status,
+          updated_at: new Date().toISOString(),
+        },
+        { merge: true }
+      )
     } catch (adminError) {
       console.error('Error updating user via Admin SDK:', adminError)
       return NextResponse.json(
