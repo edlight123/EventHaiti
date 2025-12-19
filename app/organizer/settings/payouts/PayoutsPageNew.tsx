@@ -396,6 +396,35 @@ export default function PayoutsPageNew({
                     </Link>
                   </div>
 
+                  <div className="pt-3 border-t border-gray-200">
+                    <div className="text-sm font-medium text-gray-900">Payout rails</div>
+                    <div className="mt-1 space-y-2">
+                      <div className="flex items-start gap-2">
+                        <Clock className="w-4 h-4 text-yellow-600 mt-0.5" />
+                        <div className="min-w-0">
+                          <div className="text-sm text-gray-900">Stripe Connect (US/CA)</div>
+                          <div className="text-xs text-gray-600">
+                            {isHaiti
+                              ? 'Set Account location to United States/Canada to use Stripe Connect.'
+                              : 'Stripe Connect onboarding will appear for US/CA accounts when enabled.'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {isHaiti ? (
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-gray-500 mt-0.5" />
+                          <div className="min-w-0">
+                            <div className="text-sm text-gray-900">MonCash setup</div>
+                            <div className="text-xs text-gray-600">
+                              Choose Payout setup → Mobile money, then Provider → MonCash.
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+
                   {config?.method === 'bank_transfer' && hasPayoutSetup && (
                     <div className="pt-3 border-t border-gray-200">
                       <div className="flex items-start justify-between gap-3 mb-3">
