@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 
 // Bump to confirm deployments in logs (no secrets).
-const MONCASH_BUTTON_HELPER_VERSION = '2025-12-19b'
+const MONCASH_BUTTON_HELPER_VERSION = '2025-12-19c'
 
 const MONCASH_SANDBOX_URL = 'https://sandbox.moncashbutton.digicelgroup.com'
 const MONCASH_PRODUCTION_URL = 'https://moncashbutton.digicelgroup.com'
@@ -183,15 +183,27 @@ function base64DecodeUtf8(value: string): string | null {
   }
 }
 
+function expandWhitespaceVariants(value: string): string[] {
+  const trimmed = value.trim()
+  if (!trimmed) return []
+  if (!/\s/.test(trimmed)) return [trimmed]
+
+  const tokens = trimmed.split(/\s+/g).map((t) => t.trim()).filter(Boolean)
+  const noWhitespace = trimmed.replace(/\s+/g, '')
+  const joined = tokens.join('')
+
+  return Array.from(new Set([noWhitespace, ...tokens, joined, trimmed].filter(Boolean)))
+}
+
 function getBusinessKeyCandidates(): string[] {
   const raw = getBusinessKey().trim()
   const candidates: string[] = []
 
   // If the env var was pasted with spaces/newlines, try additional variants.
   if (/\s/.test(raw)) {
-    const noWhitespace = raw.replace(/\s+/g, '')
     const tokens = raw.split(/\s+/g).map((t) => t.trim()).filter(Boolean)
     // Prefer whitespace-safe variants first so we avoid routing with "%20" in the path.
+    const noWhitespace = raw.replace(/\s+/g, '')
     if (noWhitespace && noWhitespace !== raw) candidates.push(noWhitespace)
     for (const token of tokens) candidates.push(token)
 
@@ -206,11 +218,14 @@ function getBusinessKeyCandidates(): string[] {
   candidates.push(raw)
 
   // If any candidate looks like base64, also try decoding it (some portals provide an encoded BusinessKey).
+  // If the decoded value contains whitespace, try its tokens first (to avoid "%20" in the path).
   for (const candidate of [...candidates]) {
-    if (isLikelyBase64(candidate)) {
-      const decoded = base64DecodeUtf8(candidate)
-      if (decoded) candidates.push(decoded)
-    }
+    if (!isLikelyBase64(candidate)) continue
+    const decoded = base64DecodeUtf8(candidate)
+    if (!decoded) continue
+
+    const decodedVariants = expandWhitespaceVariants(decoded)
+    for (const v of decodedVariants) candidates.push(v)
   }
 
   // Dedupe + drop empties
