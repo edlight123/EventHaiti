@@ -140,15 +140,8 @@ export async function POST(request: Request) {
     const orderId = `${Date.now() % 1_000_000_000}${String(crypto.randomInt(0, 1000)).padStart(3, '0')}`
     const internalOrderId = `mcbtn_${eventId}_${user.id}_${Date.now()}`
 
-    const { token } = await createMonCashButtonCheckoutToken({
-      amount: totalAmount,
-      orderId,
-    })
-
-    const redirectUrl = getMonCashButtonRedirectUrl(token)
-
-    // Store pending transaction (keyed by order_id for Button flow)
-    await supabase.from('pending_transactions').insert({
+    // Store pending transaction first so we can fall back to an HTML form POST flow.
+    const { error: pendingInsertError } = await supabase.from('pending_transactions').insert({
       transaction_id: null,
       order_id: orderId,
       internal_order_id: internalOrderId,
@@ -161,8 +154,44 @@ export async function POST(request: Request) {
       currency: event.currency || 'HTG',
       tier_selections: normalizedSelections,
       promo_code_id: promoCode || null,
-      moncash_button_token: token,
+      moncash_button_token: null,
     })
+
+    if (pendingInsertError) {
+      console.error('Error creating pending transaction:', pendingInsertError)
+      return NextResponse.json({ error: 'Failed to create pending transaction' }, { status: 500 })
+    }
+
+    let redirectUrl: string
+    try {
+      const { token } = await createMonCashButtonCheckoutToken({
+        amount: totalAmount,
+        orderId,
+      })
+
+      const orderHash = crypto.createHash('sha256').update(orderId).digest('hex').slice(0, 10)
+      console.info('[moncash_button] initiate: using REST token redirect', {
+        orderHash,
+        hasToken: Boolean(token),
+      })
+
+      const { error: pendingUpdateError } = await supabase
+        .from('pending_transactions')
+        .update({ moncash_button_token: token })
+        .eq('order_id', orderId)
+
+      if (pendingUpdateError) {
+        console.error('Error updating pending transaction token:', pendingUpdateError)
+      }
+
+      redirectUrl = getMonCashButtonRedirectUrl(token)
+    } catch (err: any) {
+      const orderHash = crypto.createHash('sha256').update(orderId).digest('hex').slice(0, 10)
+      console.error('MonCash Button REST token failed; falling back to form POST:', err)
+      console.info('[moncash_button] initiate: using FORM POST fallback', { orderHash })
+      const origin = new URL(request.url).origin
+      redirectUrl = `${origin}/api/moncash-button/checkout?orderId=${encodeURIComponent(orderId)}`
+    }
 
     const res = NextResponse.json({ redirectUrl })
 

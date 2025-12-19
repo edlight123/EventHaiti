@@ -357,6 +357,43 @@ function getBusinessKeyPathSegmentMeta(): Array<{ segment: string; kind: string 
   })
 }
 
+function pickPrimaryBusinessKeySegment(): string {
+  const segments = getBusinessKeyPathSegmentMeta()
+  if (segments.length === 0) {
+    throw new Error('MONCASH_BUTTON_BUSINESS_KEY is not configured')
+  }
+  // Prefer the first raw-ish segment (raw/raw-unpadded), otherwise fall back to the first.
+  const preferred = segments.find((s) => s.kind.startsWith('raw'))
+  return (preferred || segments[0]).segment
+}
+
+export function createMonCashButtonCheckoutFormPost(params: {
+  amount: number
+  orderId: string
+}): {
+  actionUrl: string
+  fields: { amount: string; orderId: string }
+} {
+  const mode = getMonCashMode()
+  const baseUrl = getMonCashMiddlewareBaseUrlForMode(mode)
+  const businessKey = pickPrimaryBusinessKeySegment()
+
+  const amountStr = formatAmountForGateway(params.amount)
+  const paddingMode = getRsaPaddingMode()
+
+  // Digicel docs for the HTML form explicitly say base64(encrypt(...)).
+  const encryptedAmount = encryptToMonCashButtonCiphertext(amountStr, paddingMode, 'base64')
+  const encryptedOrderId = encryptToMonCashButtonCiphertext(params.orderId, paddingMode, 'base64')
+
+  return {
+    actionUrl: `${baseUrl}/Checkout/${businessKey}`,
+    fields: {
+      amount: encryptedAmount,
+      orderId: encryptedOrderId,
+    },
+  }
+}
+
 export function encryptToMonCashButtonBase64(value: string): string {
   return encodeCiphertext(publicEncryptBytes(value), 'base64')
 }
