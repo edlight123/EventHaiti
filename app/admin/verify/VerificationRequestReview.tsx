@@ -184,6 +184,124 @@ export default function VerificationRequestReview({ request, user }: Props) {
 
   const steps = request.steps || null
 
+  const renderImageThumb = (label: string, url: string | null, alt: string) => {
+    return (
+      <div>
+        <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">{label}</p>
+        {url ? (
+          <div
+            onClick={() => setSelectedImage(url)}
+            className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
+          >
+            <Image
+              src={url}
+              alt={alt}
+              fill
+              sizes="(max-width: 640px) 100vw, 33vw"
+              className="object-cover"
+              unoptimized
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-10 transition-opacity">
+              <svg className="w-8 h-8 text-white opacity-0 hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+              </svg>
+            </div>
+          </div>
+        ) : (
+          <div className="aspect-[1.586/1] bg-gray-100 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center">
+            <p className="text-[12px] sm:text-sm text-gray-500">Not provided</p>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const renderProofForStep = (stepKeyOrId: string) => {
+    const normalized = (stepKeyOrId || '').toLowerCase()
+
+    if (normalized.includes('governmentid') || normalized.includes('government_id')) {
+      return (
+        <div className="mt-3">
+          {loadingImages ? (
+            <div className="text-center py-4">
+              <div className="inline-block w-6 h-6 border-4 border-teal-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-gray-600 mt-2">Loading documents...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+              {renderImageThumb('ID Card - Front', imageUrls.idFrontUrl, 'ID Front')}
+              {renderImageThumb('ID Card - Back', imageUrls.idBackUrl, 'ID Back')}
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    if (normalized.includes('selfie') || normalized.includes('identity')) {
+      return (
+        <div className="mt-3">
+          {loadingImages ? (
+            <div className="text-center py-4">
+              <div className="inline-block w-6 h-6 border-4 border-teal-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-gray-600 mt-2">Loading selfie...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+              {renderImageThumb('Selfie Photo', imageUrls.facePhotoUrl, 'Selfie')}
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    if (normalized.includes('businessdetails') || normalized.includes('business_details')) {
+      return (
+        <div className="mt-3">
+          {loadingImages ? (
+            <div className="text-center py-4">
+              <div className="inline-block w-6 h-6 border-4 border-teal-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-gray-600 mt-2">Loading business documents...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {imageUrls.businessRegistrationUrl ? (
+                <a
+                  href={imageUrls.businessRegistrationUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-teal-700 hover:text-teal-800 text-[13px] sm:text-sm font-medium"
+                >
+                  Open business registration
+                </a>
+              ) : (
+                <div className="px-3 py-2 rounded-lg border border-dashed border-gray-200 bg-white text-[13px] sm:text-sm text-gray-500">
+                  Business registration not provided
+                </div>
+              )}
+
+              {imageUrls.taxIdUrl ? (
+                <a
+                  href={imageUrls.taxIdUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-teal-700 hover:text-teal-800 text-[13px] sm:text-sm font-medium"
+                >
+                  Open tax ID document
+                </a>
+              ) : (
+                <div className="px-3 py-2 rounded-lg border border-dashed border-gray-200 bg-white text-[13px] sm:text-sm text-gray-500">
+                  Tax ID not provided
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    return null
+  }
+
   const handleApprove = async () => {
     if (!confirm('Are you sure you want to approve this verification?')) return
 
@@ -276,6 +394,7 @@ export default function VerificationRequestReview({ request, user }: Props) {
                 const fields = stepValue?.fields && typeof stepValue.fields === 'object' ? stepValue.fields : {}
                 const missingFields: string[] = Array.isArray(stepValue?.missingFields) ? stepValue.missingFields : []
                 const errorMessage: string | null = stepValue?.errorMessage || null
+                const stepId: string = stepValue?.id || stepKey
 
                 return (
                   <div key={stepKey} className="border border-gray-200 rounded-lg p-3 sm:p-4 bg-gray-50">
@@ -325,6 +444,8 @@ export default function VerificationRequestReview({ request, user }: Props) {
                           ))}
                       </div>
                     )}
+
+                    {renderProofForStep(stepId)}
                   </div>
                 )
               })}
@@ -337,130 +458,61 @@ export default function VerificationRequestReview({ request, user }: Props) {
           )}
         </div>
 
-        {/* Verification Images */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
-          {loadingImages ? (
-            <div className="col-span-1 sm:col-span-3 text-center py-8">
-              <div className="inline-block w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-gray-600 mt-2">Loading images...</p>
+        {/* Fallback proof section for legacy/unknown request shapes */}
+        {!steps ? (
+          <div className="mb-4 sm:mb-6">
+            <p className="text-sm sm:text-base font-semibold text-gray-900 mb-2">Proof</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+              {loadingImages ? (
+                <div className="col-span-1 sm:col-span-3 text-center py-8">
+                  <div className="inline-block w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm text-gray-600 mt-2">Loading images...</p>
+                </div>
+              ) : (
+                <>
+                  {renderImageThumb('ID Card - Front', imageUrls.idFrontUrl, 'ID Front')}
+                  {renderImageThumb('ID Card - Back', imageUrls.idBackUrl, 'ID Back')}
+                  {renderImageThumb('Selfie Photo', imageUrls.facePhotoUrl, 'Selfie')}
+                </>
+              )}
             </div>
-          ) : (
-            <>
-              {/* ID Front */}
-              <div>
-                <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">ID Card - Front</p>
-                {imageUrls.idFrontUrl ? (
-                  <div
-                    onClick={() => setSelectedImage(imageUrls.idFrontUrl)}
-                    className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
-                  >
-                    <Image
-                      src={imageUrls.idFrontUrl}
-                      alt="ID Front"
-                      fill
-                      sizes="(max-width: 640px) 100vw, 33vw"
-                      className="object-cover"
-                      unoptimized
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-10 transition-opacity">
-                      <svg className="w-8 h-8 text-white opacity-0 hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                      </svg>
+
+            {!loadingImages && (imageUrls.businessRegistrationUrl || imageUrls.taxIdUrl) ? (
+              <div className="mt-3 border border-gray-200 rounded-lg p-3 sm:p-4 bg-gray-50">
+                <p className="text-sm sm:text-base font-semibold text-gray-900 mb-2">Business Documents</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {imageUrls.businessRegistrationUrl ? (
+                    <a
+                      href={imageUrls.businessRegistrationUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-teal-700 hover:text-teal-800 text-[13px] sm:text-sm font-medium"
+                    >
+                      Open business registration
+                    </a>
+                  ) : (
+                    <div className="px-3 py-2 rounded-lg border border-dashed border-gray-200 bg-white text-[13px] sm:text-sm text-gray-500">
+                      Business registration not provided
                     </div>
-                  </div>
-                ) : (
-                  <div className="aspect-[1.586/1] bg-gray-100 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center">
-                    <p className="text-[12px] sm:text-sm text-gray-500">Not provided</p>
-                  </div>
-                )}
-              </div>
+                  )}
 
-              {/* ID Back */}
-              <div>
-                <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">ID Card - Back</p>
-                {imageUrls.idBackUrl ? (
-                  <div
-                    onClick={() => setSelectedImage(imageUrls.idBackUrl)}
-                    className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
-                  >
-                    <Image
-                      src={imageUrls.idBackUrl}
-                      alt="ID Back"
-                      fill
-                      sizes="(max-width: 640px) 100vw, 33vw"
-                      className="object-cover"
-                      unoptimized
-                    />
-                  </div>
-                ) : (
-                  <div className="aspect-[1.586/1] bg-gray-100 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center">
-                    <p className="text-[12px] sm:text-sm text-gray-500">Not provided</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Face Photo */}
-              <div>
-                <p className="text-[11px] sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Selfie Photo</p>
-                {imageUrls.facePhotoUrl ? (
-                  <div
-                    onClick={() => setSelectedImage(imageUrls.facePhotoUrl)}
-                    className="relative aspect-[1.586/1] bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 border-gray-200"
-                  >
-                    <Image
-                      src={imageUrls.facePhotoUrl}
-                      alt="Face Photo"
-                      fill
-                      sizes="(max-width: 640px) 100vw, 33vw"
-                      className="object-cover"
-                      unoptimized
-                    />
-                  </div>
-                ) : (
-                  <div className="aspect-[1.586/1] bg-gray-100 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center">
-                    <p className="text-[12px] sm:text-sm text-gray-500">Not provided</p>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Optional business docs (download links) */}
-        {(!loadingImages && (imageUrls.businessRegistrationUrl || imageUrls.taxIdUrl)) ? (
-          <div className="mb-4 sm:mb-6 border border-gray-200 rounded-lg p-3 sm:p-4 bg-gray-50">
-            <p className="text-sm sm:text-base font-semibold text-gray-900 mb-2">Business Documents</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {imageUrls.businessRegistrationUrl ? (
-                <a
-                  href={imageUrls.businessRegistrationUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-teal-700 hover:text-teal-800 text-[13px] sm:text-sm font-medium"
-                >
-                  Open business registration
-                </a>
-              ) : (
-                <div className="px-3 py-2 rounded-lg border border-dashed border-gray-200 bg-white text-[13px] sm:text-sm text-gray-500">
-                  Business registration not provided
+                  {imageUrls.taxIdUrl ? (
+                    <a
+                      href={imageUrls.taxIdUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-teal-700 hover:text-teal-800 text-[13px] sm:text-sm font-medium"
+                    >
+                      Open tax ID document
+                    </a>
+                  ) : (
+                    <div className="px-3 py-2 rounded-lg border border-dashed border-gray-200 bg-white text-[13px] sm:text-sm text-gray-500">
+                      Tax ID not provided
+                    </div>
+                  )}
                 </div>
-              )}
-
-              {imageUrls.taxIdUrl ? (
-                <a
-                  href={imageUrls.taxIdUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-teal-700 hover:text-teal-800 text-[13px] sm:text-sm font-medium"
-                >
-                  Open tax ID document
-                </a>
-              ) : (
-                <div className="px-3 py-2 rounded-lg border border-dashed border-gray-200 bg-white text-[13px] sm:text-sm text-gray-500">
-                  Tax ID not provided
-                </div>
-              )}
-            </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
