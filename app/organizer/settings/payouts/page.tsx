@@ -78,13 +78,20 @@ function calculateUpcomingPayout(earnings: any[]) {
   }
 }
 
-export default async function PayoutsSettingsPage() {
+export default async function PayoutsSettingsPage({
+  searchParams,
+}: {
+  searchParams?: { stripe?: string }
+}) {
+  const stripeParam = typeof searchParams?.stripe === 'string' ? searchParams.stripe : undefined
+  const payoutPath = `/organizer/settings/payouts${stripeParam ? `?stripe=${encodeURIComponent(stripeParam)}` : ''}`
+
   // Verify authentication
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get('session')?.value
 
   if (!sessionCookie) {
-    redirect('/auth/login?redirect=/organizer/settings/payouts')
+    redirect(`/auth/login?redirect=${encodeURIComponent(payoutPath)}`)
   }
 
   let authUser
@@ -93,7 +100,7 @@ export default async function PayoutsSettingsPage() {
     authUser = decodedClaims
   } catch (error) {
     console.error('Error verifying session:', error)
-    redirect('/auth/login?redirect=/organizer/settings/payouts')
+    redirect(`/auth/login?redirect=${encodeURIComponent(payoutPath)}`)
   }
 
   // Ensure this user is an organizer (attendees should go through the upgrade flow)
@@ -101,11 +108,11 @@ export default async function PayoutsSettingsPage() {
     const userDoc = await adminDb.collection('users').doc(authUser.uid).get()
     const role = userDoc.exists ? userDoc.data()?.role : null
     if (role !== 'organizer') {
-      redirect('/organizer?redirect=/organizer/settings/payouts')
+      redirect(`/organizer?redirect=${encodeURIComponent(payoutPath)}`)
     }
   } catch (error) {
     console.error('Error checking user role:', error)
-    redirect('/organizer?redirect=/organizer/settings/payouts')
+    redirect(`/organizer?redirect=${encodeURIComponent(payoutPath)}`)
   }
 
   // Fetch payout data
