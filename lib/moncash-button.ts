@@ -8,8 +8,20 @@ function getMonCashMode(): 'sandbox' | 'production' {
   return mode === 'production' ? 'production' : 'sandbox'
 }
 
+function isButtonModeExplicit(): boolean {
+  return typeof process.env.MONCASH_BUTTON_MODE === 'string' && process.env.MONCASH_BUTTON_MODE.length > 0
+}
+
 function getMonCashButtonHost(): string {
   return getMonCashMode() === 'production' ? MONCASH_PRODUCTION_URL : MONCASH_SANDBOX_URL
+}
+
+function getMonCashButtonHostForMode(mode: 'sandbox' | 'production'): string {
+  return mode === 'production' ? MONCASH_PRODUCTION_URL : MONCASH_SANDBOX_URL
+}
+
+function getMonCashMiddlewareBaseUrlForMode(mode: 'sandbox' | 'production'): string {
+  return `${getMonCashButtonHostForMode(mode)}/Moncash-middleware`
 }
 
 function getMonCashMiddlewareBaseUrl(): string {
@@ -80,30 +92,59 @@ export async function createMonCashButtonCheckoutToken(params: {
   orderId: string
 }): Promise<{ token: string }> {
   const businessKey = encodeURIComponent(getBusinessKey())
+  const configuredMode = getMonCashMode()
   const baseUrl = getMonCashMiddlewareBaseUrl()
 
   const amountStr = params.amount.toFixed(2)
   const encryptedAmount = encryptToMonCashButtonBase64(amountStr)
   const encryptedOrderId = encryptToMonCashButtonBase64(params.orderId)
 
-  const response = await fetch(`${baseUrl}/Checkout/Rest/${businessKey}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      amount: encryptedAmount,
-      orderId: encryptedOrderId,
-    }).toString(),
-  })
+  const body = new URLSearchParams({
+    amount: encryptedAmount,
+    orderId: encryptedOrderId,
+  }).toString()
 
-  const data = (await response.json().catch(async () => {
-    const text = await response.text().catch(() => '')
-    throw new Error(`MonCash Button token request failed (${response.status}): ${text || 'Invalid JSON response'}`)
-  })) as MonCashButtonTokenResponse
+  async function postForMode(mode: 'sandbox' | 'production'): Promise<Response> {
+    const modeBaseUrl = mode === configuredMode ? baseUrl : getMonCashMiddlewareBaseUrlForMode(mode)
+    return fetch(`${modeBaseUrl}/Checkout/Rest/${businessKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body,
+    })
+  }
 
+  async function parseResponse(resp: Response): Promise<{ data?: MonCashButtonTokenResponse; rawText?: string }> {
+    const contentType = resp.headers.get('content-type') || ''
+    if (contentType.includes('application/json')) {
+      return { data: (await resp.json().catch(() => undefined)) as MonCashButtonTokenResponse | undefined }
+    }
+    return { rawText: await resp.text().catch(() => '') }
+  }
+
+  let response = await postForMode(configuredMode)
+  let parsed = await parseResponse(response)
+
+  // If the portal keys belong to the other environment, Digicel often returns 404/410.
+  // Only auto-fallback when MONCASH_BUTTON_MODE is NOT explicitly set.
+  if (!response.ok && !isButtonModeExplicit() && (response.status === 404 || response.status === 410)) {
+    const fallbackMode: 'sandbox' | 'production' = configuredMode === 'sandbox' ? 'production' : 'sandbox'
+    console.warn('[MonCash Button] Token request failed on', configuredMode, 'status', response.status, '- trying', fallbackMode)
+    response = await postForMode(fallbackMode)
+    parsed = await parseResponse(response)
+  }
+
+  const data = parsed.data
   if (!response.ok || !data?.success || !data.token) {
-    throw new Error(data?.message || `MonCash Button token request failed (${response.status})`)
+    const message =
+      data?.message ||
+      (parsed.rawText ? parsed.rawText.slice(0, 500) : '') ||
+      `MonCash Button token request failed (${response.status})`
+
+    // Avoid logging secrets; only include mode + status.
+    console.error('[MonCash Button] Token request error:', { status: response.status, mode: configuredMode })
+    throw new Error(`MonCash Button token request failed (${response.status}): ${message}`)
   }
 
   return { token: data.token }
