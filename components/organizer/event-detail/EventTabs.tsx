@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 
-type TabId = 'overview' | 'attendees' | 'check-in' | 'sales' | 'updates' | 'settings'
+type TabId = 'overview' | 'attendees' | 'check-in' | 'earnings' | 'sales' | 'updates' | 'settings'
 
 interface EventTabsProps {
   activeTab: TabId
@@ -20,6 +20,7 @@ export function EventTabs({ activeTab, onTabChange, eventId, ticketCount }: Even
     { id: 'overview' as TabId, label: t('organizer.overview'), count: undefined, enabled: true },
     { id: 'attendees' as TabId, label: t('organizer.attendees'), count: ticketCount, enabled: true, href: `/organizer/events/${eventId}/attendees` },
     { id: 'check-in' as TabId, label: t('organizer.check_in'), count: undefined, enabled: true, href: `/organizer/scan/${eventId}` },
+    { id: 'earnings' as TabId, label: '💰 Earnings', count: undefined, enabled: true, href: `/organizer/events/${eventId}/earnings` },
     { id: 'sales' as TabId, label: t('organizer.sales'), count: undefined, enabled: false },
     { id: 'updates' as TabId, label: t('organizer.updates'), count: undefined, enabled: false },
     { id: 'settings' as TabId, label: t('organizer_dashboard.settings'), count: undefined, enabled: false },
