@@ -13,45 +13,13 @@ function getStripe() {
 }
 
 function normalizeAppUrl(request: NextRequest) {
-  // Prefer request origin on Vercel (avoids redirecting to a stale/incorrect configured URL)
+  const fromEnv = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '')
+  if (fromEnv) return fromEnv
+
   const forwardedProto = request.headers.get('x-forwarded-proto')
   const forwardedHost = request.headers.get('x-forwarded-host')
-  const requestOrigin =
-    forwardedProto && forwardedHost ? `${forwardedProto}://${forwardedHost}` : request.nextUrl.origin
+  if (forwardedProto && forwardedHost) return `${forwardedProto}://${forwardedHost}`
 
-  const fromEnvRaw = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL
-  const fromEnv = fromEnvRaw ? fromEnvRaw.replace(/\/$/, '') : ''
-
-  // If NEXT_PUBLIC_APP_URL is a custom domain, prefer it for stable redirects.
-  // If it is a different *.vercel.app subdomain than the current request, prefer the request origin
-  // (prevents redirects to non-existent deployments).
-  if (fromEnv) {
-    try {
-      const envHost = new URL(fromEnv).host
-      const reqHost = new URL(requestOrigin).host
-
-      const envIsVercel = envHost.endsWith('.vercel.app')
-      const reqIsVercel = reqHost.endsWith('.vercel.app')
-
-      if (envHost === reqHost) return fromEnv
-
-      if (!envIsVercel && reqIsVercel) return fromEnv
-
-      if (envIsVercel && reqIsVercel) return requestOrigin
-
-      if (envIsVercel && !reqIsVercel) return requestOrigin
-
-      return fromEnv
-    } catch {
-      // If env URL is malformed, fall back to request origin
-    }
-  }
-
-  if (forwardedProto && forwardedHost) {
-    return `${forwardedProto}://${forwardedHost}`
-  }
-
-  // Fallback (works in dev)
   return request.nextUrl.origin || 'http://localhost:3000'
 }
 
