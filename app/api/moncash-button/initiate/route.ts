@@ -162,33 +162,43 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to create pending transaction' }, { status: 500 })
     }
 
+    const orderHash = crypto.createHash('sha256').update(orderId).digest('hex').slice(0, 10)
+    const restTokenEnabled = String(process.env.MONCASH_BUTTON_REST_TOKEN_ENABLED || '').toLowerCase() === 'true'
+
     let redirectUrl: string
-    try {
-      const { token } = await createMonCashButtonCheckoutToken({
-        amount: totalAmount,
-        orderId,
-      })
+    if (restTokenEnabled) {
+      try {
+        const { token } = await createMonCashButtonCheckoutToken({
+          amount: totalAmount,
+          orderId,
+        })
 
-      const orderHash = crypto.createHash('sha256').update(orderId).digest('hex').slice(0, 10)
-      console.info('[moncash_button] initiate: using REST token redirect', {
-        orderHash,
-        hasToken: Boolean(token),
-      })
+        console.info('[moncash_button] initiate: using REST token redirect', {
+          orderHash,
+          hasToken: Boolean(token),
+        })
 
-      const { error: pendingUpdateError } = await supabase
-        .from('pending_transactions')
-        .update({ moncash_button_token: token })
-        .eq('order_id', orderId)
+        const { error: pendingUpdateError } = await supabase
+          .from('pending_transactions')
+          .update({ moncash_button_token: token })
+          .eq('order_id', orderId)
 
-      if (pendingUpdateError) {
-        console.error('Error updating pending transaction token:', pendingUpdateError)
+        if (pendingUpdateError) {
+          console.error('Error updating pending transaction token:', pendingUpdateError)
+        }
+
+        redirectUrl = getMonCashButtonRedirectUrl(token)
+      } catch (err: any) {
+        console.warn('MonCash Button REST token failed; falling back to form POST:', {
+          orderHash,
+          message: err?.message,
+        })
+        console.info('[moncash_button] initiate: using FORM POST fallback', { orderHash })
+        const origin = new URL(request.url).origin
+        redirectUrl = `${origin}/api/moncash-button/checkout?orderId=${encodeURIComponent(orderId)}`
       }
-
-      redirectUrl = getMonCashButtonRedirectUrl(token)
-    } catch (err: any) {
-      const orderHash = crypto.createHash('sha256').update(orderId).digest('hex').slice(0, 10)
-      console.error('MonCash Button REST token failed; falling back to form POST:', err)
-      console.info('[moncash_button] initiate: using FORM POST fallback', { orderHash })
+    } else {
+      console.info('[moncash_button] initiate: REST token disabled; using FORM POST fallback', { orderHash })
       const origin = new URL(request.url).origin
       redirectUrl = `${origin}/api/moncash-button/checkout?orderId=${encodeURIComponent(orderId)}`
     }
