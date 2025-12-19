@@ -489,33 +489,32 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
     for (const ciphertextEncoding of ciphertextEncodings) {
       for (const paddingMode of paddingModes) {
         for (const segment of businessKeySegments) {
-        try {
-          attempts += 1
-          const response = await postLookupForMode(mode, segment, paddingMode, ciphertextEncoding)
-          const parsed = await parsePaymentResponse(response)
+          try {
+            attempts += 1
+            const response = await postLookupForMode(mode, segment, paddingMode, ciphertextEncoding)
+            const parsed = await parsePaymentResponse(response)
 
-          lastAttempt = { response, parsed }
+            lastAttempt = { response, parsed }
 
-          if (response.ok && parsed.data?.success) {
-            return { response, parsed, attempts }
+            if (response.ok && parsed.data?.success) {
+              return { response, parsed, attempts }
+            }
+
+            const rawText = parsed.rawText || ''
+            const shouldRetry =
+              !response.ok
+                ? (response.status === 500 ? true : retryableHttpStatuses.has(response.status))
+                : !parsed.data?.success && retryableGatewayError(rawText)
+
+            if (!shouldRetry) {
+              return { response, parsed, attempts }
+            }
+          } catch (err: any) {
+            const message = String(err?.message || err)
+            if (/rsa/i.test(message)) continue
+            throw err
           }
-
-          const rawText = parsed.rawText || ''
-          const shouldRetry =
-            !response.ok
-              ? (response.status === 500 ? true : retryableHttpStatuses.has(response.status))
-              : !parsed.data?.success && retryableGatewayError(rawText)
-
-          if (!shouldRetry) {
-            return { response, parsed, attempts }
-          }
-        } catch (err: any) {
-          const message = String(err?.message || err)
-          if (/rsa/i.test(message)) continue
-          throw err
         }
-      }
-    }
       }
     }
     return lastAttempt ? { ...lastAttempt, attempts } : null
