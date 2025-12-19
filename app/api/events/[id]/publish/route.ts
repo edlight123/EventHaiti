@@ -4,6 +4,30 @@ import { requireAuth } from '@/lib/auth'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
 
+async function isOrganizerVerified(userId: string): Promise<boolean> {
+  const userDoc = await adminDb.collection('users').doc(userId).get()
+  const userData = userDoc.exists ? userDoc.data() : null
+
+  const userVerified = userData?.is_verified === true || userData?.verification_status === 'approved'
+  if (userVerified) return true
+
+  const requestDoc = await adminDb.collection('verification_requests').doc(userId).get()
+  const requestData = requestDoc.exists ? requestDoc.data() : null
+  return requestData?.status === 'approved'
+}
+
+async function isPaidEvent(eventId: string, eventData: any): Promise<boolean> {
+  if ((eventData?.ticket_price || 0) > 0) return true
+
+  const tiersSnapshot = await adminDb
+    .collection('ticket_tiers')
+    .where('event_id', '==', eventId)
+    .limit(25)
+    .get()
+
+  return tiersSnapshot.docs.some((d: any) => (d.data()?.price || 0) > 0)
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -30,6 +54,20 @@ export async function POST(
     
     if (eventData.organizer_id !== user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
+    // Backend enforcement: publishing paid events requires identity verification.
+    if (is_published === true) {
+      const paid = await isPaidEvent(id, eventData)
+      if (paid) {
+        const verified = await isOrganizerVerified(user.id)
+        if (!verified) {
+          return NextResponse.json(
+            { error: 'Verification required to publish paid events' },
+            { status: 403 }
+          )
+        }
+      }
     }
 
     // Update publish status

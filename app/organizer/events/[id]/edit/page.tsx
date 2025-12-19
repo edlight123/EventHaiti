@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import EventFormPremium from '../../EventFormPremium'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
+import { getOrganizerVerificationStatus } from '@/lib/organizerVerification'
 
 export default async function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
   const { user, error } = await requireAuth()
@@ -23,23 +24,28 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
   } else {
     // Fetch from database
     const supabase = await createClient()
-    const allEventsQuery = await supabase
+    const { data: eventData } = await supabase
       .from('events')
       .select('*')
+      .eq('id', id)
+      .eq('organizer_id', user.id)
+      .single()
 
-    const allEvents = allEventsQuery.data || []
-    event = allEvents.find((e: any) => e.id === id && e.organizer_id === user.id) || null
+    event = eventData || null
 
     if (!event) {
       notFound()
     }
 
-    // Check verification status
-    const allUsers = await supabase.from('users').select('*')
-    const userData = allUsers.data?.find((u: any) => u.id === user.id)
-    const isVerified = userData?.is_verified === true || userData?.verification_status === 'approved'
-
-    return <EventFormPremium userId={user.id} event={event} isVerified={isVerified} />
+    const verification = await getOrganizerVerificationStatus(user.id)
+    return (
+      <EventFormPremium
+        userId={user.id}
+        event={event}
+        isVerified={verification.isVerified}
+        verificationStatus={verification.status || undefined}
+      />
+    )
   }
 
   return <EventFormPremium userId={user.id} event={event} />

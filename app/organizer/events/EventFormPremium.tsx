@@ -21,9 +21,10 @@ interface EventFormProps {
   userId: string
   event?: any
   isVerified?: boolean
+  verificationStatus?: string
 }
 
-export default function EventFormPremium({ userId, event, isVerified = false }: EventFormProps) {
+export default function EventFormPremium({ userId, event, isVerified = false, verificationStatus }: EventFormProps) {
   const router = useRouter()
   const { showToast } = useToast()
   const [loading, setLoading] = useState(false)
@@ -57,6 +58,13 @@ export default function EventFormPremium({ userId, event, isVerified = false }: 
   // Calculate validation and completion
   const completion = getEventCompletion(formData, ticketTiers)
   const blockingIssues = getPublishBlockingIssues(formData, ticketTiers)
+
+  const isPaidEvent =
+    ticketTiers.some((tier) => parseFloat(String(tier.price || '0')) > 0) ||
+    parseFloat(String(formData.ticket_price || '0')) > 0
+
+  const paidPublishingBlocked = isPaidEvent && !isVerified
+  const canPublishEffective = completion.canPublish && !paidPublishingBlocked
 
   // Load ticket tiers for existing event
   useEffect(() => {
@@ -274,10 +282,7 @@ export default function EventFormPremium({ userId, event, isVerified = false }: 
     }
 
     // Check if event is paid and user is not verified
-    const isPaidEvent = ticketTiers.some(tier => parseFloat(String(tier.price || '0')) > 0) || 
-                       parseFloat(String(formData.ticket_price || '0')) > 0
-    
-    if (isPaidEvent && !isVerified) {
+    if (paidPublishingBlocked) {
       showToast({
         type: 'error',
         title: 'Verification Required',
@@ -395,12 +400,36 @@ export default function EventFormPremium({ userId, event, isVerified = false }: 
         isPublished={formData.is_published}
         completionPercentage={completion.percentage}
         missingItemsCount={completion.blockingIssues.length}
-        canPublish={completion.canPublish}
+        canPublish={canPublishEffective}
         hasUnsavedChanges={hasUnsavedChanges}
         onSave={() => handleSave(false)}
         onPublish={handlePublish}
         isSaving={isSaving}
       />
+
+      {/* Verification banner (premium + non-blocking) */}
+      {paidPublishingBlocked && (
+        <div className="bg-yellow-50 border-b border-yellow-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
+              <div className="text-sm text-yellow-900">
+                <span className="font-semibold">Verification required:</span>{' '}
+                You can keep editing and saving drafts, but paid events can’t be published until your identity is approved.
+                {verificationStatus ? (
+                  <span className="ml-2 text-yellow-800">Status: {verificationStatus.replace(/_/g, ' ')}</span>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push('/organizer/verify')}
+                className="px-4 py-2 bg-white border border-yellow-300 text-yellow-900 rounded-lg font-semibold hover:bg-yellow-100 transition-colors"
+              >
+                Continue Verification
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stepper Tabs */}
       <StepperTabs
