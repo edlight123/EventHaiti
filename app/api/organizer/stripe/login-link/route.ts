@@ -42,10 +42,19 @@ export async function POST(_request: NextRequest) {
 
     return NextResponse.json({ url: link.url })
   } catch (error: any) {
+    const statusCode = Number(error?.statusCode) || Number(error?.raw?.statusCode) || 500
+    const rawMessage = String(error?.raw?.message || error?.message || 'Failed to create Stripe login link')
     console.error('Stripe login link error:', error)
     return NextResponse.json(
-      { error: 'Failed to create Stripe login link', message: error?.message || String(error) },
-      { status: 500 }
+      {
+        error: 'Failed to create Stripe login link',
+        message: rawMessage,
+        stripe: {
+          requestId: error?.requestId || error?.raw?.requestId,
+          type: error?.type || error?.rawType,
+        },
+      },
+      { status: statusCode }
     )
   }
 }

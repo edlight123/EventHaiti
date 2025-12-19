@@ -80,10 +80,19 @@ export async function GET(_request: NextRequest) {
       },
     })
   } catch (error: any) {
+    const statusCode = Number(error?.statusCode) || Number(error?.raw?.statusCode) || 500
+    const rawMessage = String(error?.raw?.message || error?.message || 'Failed to fetch Stripe status')
     console.error('Stripe status error:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch Stripe status', message: error?.message || String(error) },
-      { status: 500 }
+      {
+        error: 'Failed to fetch Stripe status',
+        message: rawMessage,
+        stripe: {
+          requestId: error?.requestId || error?.raw?.requestId,
+          type: error?.type || error?.rawType,
+        },
+      },
+      { status: statusCode }
     )
   }
 }

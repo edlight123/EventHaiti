@@ -123,10 +123,33 @@ export async function POST(request: NextRequest) {
       stripeAccountId,
     })
   } catch (error: any) {
+    const statusCode = Number(error?.statusCode) || Number(error?.raw?.statusCode) || 500
+
+    // Common misconfiguration: Stripe account not enabled for Connect
+    const rawMessage =
+      String(error?.raw?.message || error?.message || 'Failed to create Stripe onboarding link')
+
+    const connectNotEnabled =
+      rawMessage.includes("signed up for Connect") ||
+      rawMessage.includes('sign up for Connect') ||
+      rawMessage.includes('signed up for connect')
+
+    const userMessage = connectNotEnabled
+      ? 'Stripe Connect is not enabled on this Stripe account. In Stripe Dashboard → Settings → Connect, enable Connect for this account (Test mode and/or Live mode), then retry.'
+      : rawMessage
+
     console.error('Stripe connect error:', error)
+
     return NextResponse.json(
-      { error: 'Failed to create Stripe onboarding link', message: error?.message || String(error) },
-      { status: 500 }
+      {
+        error: 'Failed to create Stripe onboarding link',
+        message: userMessage,
+        stripe: {
+          requestId: error?.requestId || error?.raw?.requestId,
+          type: error?.type || error?.rawType,
+        },
+      },
+      { status: statusCode }
     )
   }
 }
