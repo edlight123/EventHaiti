@@ -135,5 +135,13 @@ export default async function NewEventPage() {
     )
   }
 
-  return <EventFormPremium userId={user.id} />
+  // Allow event creation but pass verification status to form
+  const isVerified = userData?.is_verified === true || userData?.verification_status === 'approved'
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+      <EventFormPremium userId={user.id} isVerified={isVerified} />
+    </div>
+  )
 }

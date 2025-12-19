@@ -29,8 +29,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Minimum withdrawal amount
-    if (amount < 50) {
+    // Minimum withdrawal amount (in cents)
+    if (amount < 5000) {
       return NextResponse.json(
         { error: 'Minimum withdrawal amount is $50.00' },
         { status: 400 }
@@ -49,16 +49,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify earnings and settlement status
-    const earningsDoc = await adminDb
+    const earningsSnapshot = await adminDb
       .collection('event_earnings')
-      .doc(eventId)
+      .where('eventId', '==', eventId)
+      .limit(1)
       .get()
 
-    if (!earningsDoc.exists) {
+    if (earningsSnapshot.empty) {
       return NextResponse.json({ error: 'No earnings found for this event' }, { status: 404 })
     }
 
-    const earnings = earningsDoc.data()
+    const earnings = earningsSnapshot.docs[0].data()
     if (earnings?.settlementStatus !== 'ready') {
       return NextResponse.json(
         { error: 'Earnings are not yet available for withdrawal' },
@@ -66,10 +67,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const availableBalance = (earnings.netEarnings || 0) - (earnings.withdrawn || 0)
+    // Amount comes in cents, availableToWithdraw is also in cents
+    const availableBalance = earnings.availableToWithdraw || 0
     if (amount > availableBalance) {
       return NextResponse.json(
-        { error: `Insufficient balance. Available: $${availableBalance.toFixed(2)}` },
+        { error: `Insufficient balance. Available: ${(availableBalance / 100).toFixed(2)} ${earnings.currency || 'HTG'}` },
         { status: 400 }
       )
     }
@@ -96,8 +98,8 @@ export async function POST(req: NextRequest) {
       .collection('withdrawal_requests')
       .add(withdrawalRequest)
 
-    // Update earnings record (convert dollars to cents)
-    await withdrawFromEarnings(eventId, amount * 100, withdrawalRef.id)
+    // Update earnings record (amount is already in cents)
+    await withdrawFromEarnings(eventId, amount, withdrawalRef.id)
 
     return NextResponse.json({
       success: true,

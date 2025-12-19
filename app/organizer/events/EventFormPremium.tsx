@@ -20,9 +20,10 @@ import { DetailsTab } from './tabs/DetailsTab'
 interface EventFormProps {
   userId: string
   event?: any
+  isVerified?: boolean
 }
 
-export default function EventFormPremium({ userId, event }: EventFormProps) {
+export default function EventFormPremium({ userId, event, isVerified = false }: EventFormProps) {
   const router = useRouter()
   const { showToast } = useToast()
   const [loading, setLoading] = useState(false)
@@ -30,6 +31,7 @@ export default function EventFormPremium({ userId, event }: EventFormProps) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [currentTab, setCurrentTab] = useState('basic')
   const [ticketTiers, setTicketTiers] = useState<TicketTier[]>([])
+  const [showVerificationWarning, setShowVerificationWarning] = useState(false)
 
   const [formData, setFormData] = useState<EventFormData>({
     title: event?.title || '',
@@ -116,7 +118,12 @@ export default function EventFormPremium({ userId, event }: EventFormProps) {
 
   const handleChange = useCallback((field: keyof EventFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-  }, [])
+    
+    // Check if trying to set paid tickets without verification
+    if (field === 'ticket_price' && parseFloat(value || '0') > 0 && !isVerified) {
+      setShowVerificationWarning(true)
+    }
+  }, [isVerified])
 
   const handleSave = async (silent = false) => {
     setIsSaving(true)
@@ -266,6 +273,21 @@ export default function EventFormPremium({ userId, event }: EventFormProps) {
       return
     }
 
+    // Check if event is paid and user is not verified
+    const isPaidEvent = ticketTiers.some(tier => parseFloat(String(tier.price || '0')) > 0) || 
+                       parseFloat(String(formData.ticket_price || '0')) > 0
+    
+    if (isPaidEvent && !isVerified) {
+      showToast({
+        type: 'error',
+        title: 'Verification Required',
+        message: 'You must complete identity verification to publish paid events',
+        duration: 6000
+      })
+      setShowVerificationWarning(true)
+      return
+    }
+
     setIsSaving(true)
 
     try {
@@ -333,6 +355,39 @@ export default function EventFormPremium({ userId, event }: EventFormProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Verification Warning Modal */}
+      {showVerificationWarning && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Verification Required for Paid Events</h3>
+              <p className="text-gray-600 mb-6">
+                To publish events with paid tickets, you need to complete identity verification. This helps keep our platform secure and trustworthy.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowVerificationWarning(false)}
+                  className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+                >
+                  Continue Editing
+                </button>
+                <button
+                  onClick={() => router.push('/organizer/verify')}
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-teal-600 to-blue-600 text-white rounded-lg font-bold hover:shadow-lg transition-all"
+                >
+                  Get Verified
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sticky Header */}
       <EditEventHeader
         eventId={event?.id}

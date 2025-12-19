@@ -33,6 +33,13 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
     if (!event) {
       notFound()
     }
+
+    // Check verification status
+    const allUsers = await supabase.from('users').select('*')
+    const userData = allUsers.data?.find((u: any) => u.id === user.id)
+    const isVerified = userData?.is_verified === true || userData?.verification_status === 'approved'
+
+    return <EventFormPremium userId={user.id} event={event} isVerified={isVerified} />
   }
 
   return <EventFormPremium userId={user.id} event={event} />
