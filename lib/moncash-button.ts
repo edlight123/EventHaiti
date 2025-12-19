@@ -57,6 +57,45 @@ function getMonCashButtonKeyPem(): string {
   return normalized
 }
 
+type RsaPaddingMode = 'pkcs1' | 'oaep-sha1' | 'oaep-sha256'
+
+function getRsaPaddingMode(): RsaPaddingMode {
+  const mode = (process.env.MONCASH_BUTTON_RSA_PADDING || 'pkcs1').toLowerCase()
+  if (mode === 'oaep' || mode === 'oaep-sha1') return 'oaep-sha1'
+  if (mode === 'oaep-sha256') return 'oaep-sha256'
+  return 'pkcs1'
+}
+
+function publicEncryptBase64(value: string): string {
+  const keyPem = getMonCashButtonKeyPem()
+  const buffer = Buffer.from(value, 'utf8')
+  const paddingMode = getRsaPaddingMode()
+
+  const encryptOptions: crypto.RsaPublicKey | crypto.RsaPublicKey = {
+    key: keyPem,
+    padding:
+      paddingMode === 'pkcs1'
+        ? crypto.constants.RSA_PKCS1_PADDING
+        : crypto.constants.RSA_PKCS1_OAEP_PADDING,
+  }
+
+  if (paddingMode === 'oaep-sha256') {
+    ;(encryptOptions as any).oaepHash = 'sha256'
+  }
+
+  // Default OAEP hash is SHA-1 (Node default), which is commonly expected by legacy gateways.
+  const encrypted = crypto.publicEncrypt(encryptOptions as any, buffer)
+  return encrypted.toString('base64')
+}
+
+function formatAmountForGateway(amount: number): string {
+  // Many MonCash integrations expect a whole-number HTG amount.
+  if (Number.isFinite(amount) && Math.abs(amount - Math.round(amount)) < 1e-9) {
+    return String(Math.round(amount))
+  }
+  return amount.toFixed(2)
+}
+
 function getBusinessKey(): string {
   const businessKey = process.env.MONCASH_BUTTON_BUSINESS_KEY
   if (!businessKey) {
@@ -74,19 +113,7 @@ function getBusinessKeyPathSegments(): { raw: string; encoded: string } {
 }
 
 export function encryptToMonCashButtonBase64(value: string): string {
-  const keyPem = getMonCashButtonKeyPem()
-  const buffer = Buffer.from(value, 'utf8')
-
-  // The Digicel PDF describes RSA + base64. PKCS1 padding is the most common for legacy integrations.
-  const encrypted = crypto.publicEncrypt(
-    {
-      key: keyPem,
-      padding: crypto.constants.RSA_PKCS1_PADDING,
-    },
-    buffer
-  )
-
-  return encrypted.toString('base64')
+  return publicEncryptBase64(value)
 }
 
 type MonCashButtonTokenResponse = {
@@ -103,7 +130,7 @@ export async function createMonCashButtonCheckoutToken(params: {
   const configuredMode = getMonCashMode()
   const baseUrl = getMonCashMiddlewareBaseUrl()
 
-  const amountStr = params.amount.toFixed(2)
+  const amountStr = formatAmountForGateway(params.amount)
   const encryptedAmount = encryptToMonCashButtonBase64(amountStr)
   const encryptedOrderId = encryptToMonCashButtonBase64(params.orderId)
 
