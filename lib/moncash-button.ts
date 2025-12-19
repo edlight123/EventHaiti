@@ -185,14 +185,33 @@ function base64DecodeUtf8(value: string): string | null {
 
 function getBusinessKeyCandidates(): string[] {
   const raw = getBusinessKey().trim()
-  const candidates = [raw]
+  const candidates: string[] = [raw]
 
-  if (isLikelyBase64(raw)) {
-    const decoded = base64DecodeUtf8(raw)
-    if (decoded) candidates.push(decoded)
+  // If the env var was pasted with spaces/newlines, try additional variants.
+  if (/\s/.test(raw)) {
+    const noWhitespace = raw.replace(/\s+/g, '')
+    if (noWhitespace && noWhitespace !== raw) candidates.push(noWhitespace)
+
+    const tokens = raw.split(/\s+/g).map((t) => t.trim()).filter(Boolean)
+    for (const token of tokens) candidates.push(token)
+
+    // Sometimes portals show a key in two wrapped lines; concatenation is the intended value.
+    if (tokens.length > 1) {
+      const joined = tokens.join('')
+      if (joined && joined !== noWhitespace) candidates.push(joined)
+    }
   }
 
-  return Array.from(new Set(candidates))
+  // If any candidate looks like base64, also try decoding it (some portals provide an encoded BusinessKey).
+  for (const candidate of [...candidates]) {
+    if (isLikelyBase64(candidate)) {
+      const decoded = base64DecodeUtf8(candidate)
+      if (decoded) candidates.push(decoded)
+    }
+  }
+
+  // Dedupe + drop empties
+  return Array.from(new Set(candidates.map((c) => c.trim()).filter(Boolean)))
 }
 
 function getBusinessKeyPathSegments(): string[] {
