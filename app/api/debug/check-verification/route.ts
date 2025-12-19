@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
+import { requireAuth } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 
 export async function GET(request: NextRequest) {
   try {
+    const { user, error } = await requireAuth()
+    if (error || !user || !isAdmin(user?.email)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')
 

@@ -212,7 +212,7 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
       verificationData = hit ? hit.data() : null
     }
 
-    const requestStatus = String(verificationData?.status || '').toLowerCase()
+    const requestStatus = String(verificationData?.status || '').trim().toLowerCase()
     const organizerIdentityStatus: NonNullable<PayoutConfig['verificationStatus']>['identity'] = (() => {
       if (userSaysApproved || requestStatus === 'approved') return 'verified'
       if (requestStatus === 'rejected') return 'failed'
