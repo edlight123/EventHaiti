@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 
 // Bump to confirm deployments in logs (no secrets).
-const MONCASH_BUTTON_HELPER_VERSION = '2025-12-19a'
+const MONCASH_BUTTON_HELPER_VERSION = '2025-12-19b'
 
 const MONCASH_SANDBOX_URL = 'https://sandbox.moncashbutton.digicelgroup.com'
 const MONCASH_PRODUCTION_URL = 'https://moncashbutton.digicelgroup.com'
@@ -185,14 +185,14 @@ function base64DecodeUtf8(value: string): string | null {
 
 function getBusinessKeyCandidates(): string[] {
   const raw = getBusinessKey().trim()
-  const candidates: string[] = [raw]
+  const candidates: string[] = []
 
   // If the env var was pasted with spaces/newlines, try additional variants.
   if (/\s/.test(raw)) {
     const noWhitespace = raw.replace(/\s+/g, '')
-    if (noWhitespace && noWhitespace !== raw) candidates.push(noWhitespace)
-
     const tokens = raw.split(/\s+/g).map((t) => t.trim()).filter(Boolean)
+    // Prefer whitespace-safe variants first so we avoid routing with "%20" in the path.
+    if (noWhitespace && noWhitespace !== raw) candidates.push(noWhitespace)
     for (const token of tokens) candidates.push(token)
 
     // Sometimes portals show a key in two wrapped lines; concatenation is the intended value.
@@ -201,6 +201,9 @@ function getBusinessKeyCandidates(): string[] {
       if (joined && joined !== noWhitespace) candidates.push(joined)
     }
   }
+
+  // Always include the raw value as a fallback.
+  candidates.push(raw)
 
   // If any candidate looks like base64, also try decoding it (some portals provide an encoded BusinessKey).
   for (const candidate of [...candidates]) {
@@ -313,7 +316,7 @@ export async function createMonCashButtonCheckoutToken(params: {
           const rawText = parsed.rawText || ''
           const shouldRetry =
             !response.ok
-              ? retryableHttpStatuses.has(response.status)
+              ? (response.status === 500 ? true : retryableHttpStatuses.has(response.status))
               : !parsed.data?.success && retryableGatewayError(rawText)
 
           if (!shouldRetry) {
@@ -444,7 +447,7 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
           const rawText = parsed.rawText || ''
           const shouldRetry =
             !response.ok
-              ? retryableHttpStatuses.has(response.status)
+              ? (response.status === 500 ? true : retryableHttpStatuses.has(response.status))
               : !parsed.data?.success && retryableGatewayError(rawText)
 
           if (!shouldRetry) {
