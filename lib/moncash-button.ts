@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 
 // Bump to confirm deployments in logs (no secrets).
-const MONCASH_BUTTON_HELPER_VERSION = '2025-12-19e'
+const MONCASH_BUTTON_HELPER_VERSION = '2025-12-19f'
 
 const MONCASH_SANDBOX_URL = 'https://sandbox.moncashbutton.digicelgroup.com'
 const MONCASH_PRODUCTION_URL = 'https://moncashbutton.digicelgroup.com'
@@ -68,6 +68,30 @@ function getMonCashButtonKeyPem(): string {
 
 type RsaPaddingMode = 'pkcs1' | 'oaep-sha1' | 'oaep-sha256'
 
+type CiphertextEncoding = 'base64' | 'base64url'
+
+function getCiphertextEncodingsToTry(): CiphertextEncoding[] {
+  const configured = (process.env.MONCASH_BUTTON_CIPHERTEXT_ENCODING || '').toLowerCase()
+  if (configured === 'base64url') return ['base64url']
+  if (configured === 'base64') return ['base64']
+  // Default: try standard base64 first, then URL-safe base64.
+  return ['base64', 'base64url']
+}
+
+function encodeCiphertext(buf: Buffer, encoding: CiphertextEncoding): string {
+  if (encoding === 'base64') return buf.toString('base64')
+  // base64url without padding
+  return buf
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '')
+}
+
+function sha256Short(value: string): string {
+  return crypto.createHash('sha256').update(value).digest('hex').slice(0, 12)
+}
+
 function getRsaPaddingMode(): RsaPaddingMode {
   const mode = (process.env.MONCASH_BUTTON_RSA_PADDING || 'pkcs1').toLowerCase()
   if (mode === 'auto') return 'pkcs1'
@@ -100,7 +124,7 @@ function maxPlaintextBytes(modulusLengthBits: number | undefined, paddingMode: R
   return k - 2 * hLen - 2
 }
 
-function publicEncryptBase64(value: string, paddingOverride?: RsaPaddingMode): string {
+function publicEncryptBytes(value: string, paddingOverride?: RsaPaddingMode): Buffer {
   const { keyPem, modulusLength } = getKeyDetails()
   const buffer = Buffer.from(value, 'utf8')
   const paddingMode = paddingOverride ?? getRsaPaddingMode()
@@ -128,8 +152,7 @@ function publicEncryptBase64(value: string, paddingOverride?: RsaPaddingMode): s
   }
 
   try {
-    const encrypted = crypto.publicEncrypt(encryptOptions as any, buffer)
-    return encrypted.toString('base64')
+    return crypto.publicEncrypt(encryptOptions as any, buffer)
   } catch (err: any) {
     if (err?.code === 'ERR_OSSL_RSA_DATA_TOO_LARGE_FOR_KEY_SIZE') {
       const hint =
@@ -245,11 +268,11 @@ function getBusinessKeyPathSegments(): string[] {
 }
 
 export function encryptToMonCashButtonBase64(value: string): string {
-  return publicEncryptBase64(value)
+  return encodeCiphertext(publicEncryptBytes(value), 'base64')
 }
 
-function encryptToMonCashButtonBase64WithPadding(value: string, paddingMode: RsaPaddingMode): string {
-  return publicEncryptBase64(value, paddingMode)
+function encryptToMonCashButtonCiphertext(value: string, paddingMode: RsaPaddingMode, encoding: CiphertextEncoding): string {
+  return encodeCiphertext(publicEncryptBytes(value, paddingMode), encoding)
 }
 
 type MonCashButtonTokenResponse = {
@@ -268,15 +291,17 @@ export async function createMonCashButtonCheckoutToken(params: {
   const amountStr = formatAmountForGateway(params.amount)
   const businessKeySegments = getBusinessKeyPathSegments()
   const paddingModes = getRsaPaddingModesToTry()
+  const ciphertextEncodings = getCiphertextEncodingsToTry()
 
   async function postForMode(
     mode: 'sandbox' | 'production',
     businessKeySegment: string,
-    paddingMode: RsaPaddingMode
+    paddingMode: RsaPaddingMode,
+    ciphertextEncoding: CiphertextEncoding
   ): Promise<Response> {
     const modeBaseUrl = mode === configuredMode ? baseUrl : getMonCashMiddlewareBaseUrlForMode(mode)
-    const encryptedAmount = encryptToMonCashButtonBase64WithPadding(amountStr, paddingMode)
-    const encryptedOrderId = encryptToMonCashButtonBase64WithPadding(params.orderId, paddingMode)
+    const encryptedAmount = encryptToMonCashButtonCiphertext(amountStr, paddingMode, ciphertextEncoding)
+    const encryptedOrderId = encryptToMonCashButtonCiphertext(params.orderId, paddingMode, ciphertextEncoding)
 
     const body = new URLSearchParams({
       amount: encryptedAmount,
@@ -312,17 +337,27 @@ export async function createMonCashButtonCheckoutToken(params: {
   }
 
   async function tryTokenRequestsForMode(mode: 'sandbox' | 'production') {
-    let lastAttempt: { response: Response; parsed: { data?: MonCashButtonTokenResponse; rawText?: string } } | null =
-      null
+    let lastAttempt:
+      | {
+          response: Response
+          parsed: { data?: MonCashButtonTokenResponse; rawText?: string }
+          meta: { segmentHash: string; paddingMode: RsaPaddingMode; ciphertextEncoding: CiphertextEncoding }
+        }
+      | null = null
     let attempts = 0
-    for (const paddingMode of paddingModes) {
-      for (const segment of businessKeySegments) {
+    for (const ciphertextEncoding of ciphertextEncodings) {
+      for (const paddingMode of paddingModes) {
+        for (const segment of businessKeySegments) {
         try {
           attempts += 1
-          const response = await postForMode(mode, segment, paddingMode)
+          const response = await postForMode(mode, segment, paddingMode, ciphertextEncoding)
           const parsed = await parseResponse(response)
 
-          lastAttempt = { response, parsed }
+          lastAttempt = {
+            response,
+            parsed,
+            meta: { segmentHash: sha256Short(segment), paddingMode, ciphertextEncoding },
+          }
 
           if (response.ok && parsed.data?.success && parsed.data.token) {
             return { response, parsed, attempts }
@@ -343,6 +378,7 @@ export async function createMonCashButtonCheckoutToken(params: {
           if (/rsa/i.test(message)) continue
           throw err
         }
+    }
       }
     }
     return lastAttempt ? { ...lastAttempt, attempts } : null
@@ -377,7 +413,9 @@ export async function createMonCashButtonCheckoutToken(params: {
       rsaPaddingExplicit: isRsaPaddingExplicit(),
       businessKeySegments: businessKeySegments.length,
       paddingModes: paddingModes.length,
+      ciphertextEncodings: ciphertextEncodings.length,
       attempts: (bestAttempt as any)?.attempts,
+      lastAttempt: (bestAttempt as any)?.meta,
     })
     throw new Error(`MonCash Button token request failed (${response.status}): ${message}`)
   }
@@ -405,6 +443,7 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
   const baseUrl = getMonCashMiddlewareBaseUrl()
   const businessKeySegments = getBusinessKeyPathSegments()
   const paddingModes = getRsaPaddingModesToTry()
+  const ciphertextEncodings = getCiphertextEncodingsToTry()
 
   const retryableHttpStatuses = new Set([404, 410])
   const retryableGatewayError = (rawText?: string) => {
@@ -415,10 +454,11 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
   async function postLookupForMode(
     mode: 'sandbox' | 'production',
     businessKeySegment: string,
-    paddingMode: RsaPaddingMode
+    paddingMode: RsaPaddingMode,
+    ciphertextEncoding: CiphertextEncoding
   ): Promise<Response> {
     const modeBaseUrl = mode === configuredMode ? baseUrl : getMonCashMiddlewareBaseUrlForMode(mode)
-    const encryptedOrderId = encryptToMonCashButtonBase64WithPadding(orderId, paddingMode)
+    const encryptedOrderId = encryptToMonCashButtonCiphertext(orderId, paddingMode, ciphertextEncoding)
     return fetch(`${modeBaseUrl}/Checkout/${businessKeySegment}/Payment/Order/`, {
       method: 'POST',
       headers: {
@@ -446,11 +486,12 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
     let lastAttempt: { response: Response; parsed: { data?: MonCashButtonPaymentResponse; rawText?: string } } | null =
       null
     let attempts = 0
-    for (const paddingMode of paddingModes) {
-      for (const segment of businessKeySegments) {
+    for (const ciphertextEncoding of ciphertextEncodings) {
+      for (const paddingMode of paddingModes) {
+        for (const segment of businessKeySegments) {
         try {
           attempts += 1
-          const response = await postLookupForMode(mode, segment, paddingMode)
+          const response = await postLookupForMode(mode, segment, paddingMode, ciphertextEncoding)
           const parsed = await parsePaymentResponse(response)
 
           lastAttempt = { response, parsed }
@@ -473,6 +514,8 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
           if (/rsa/i.test(message)) continue
           throw err
         }
+      }
+    }
       }
     }
     return lastAttempt ? { ...lastAttempt, attempts } : null
@@ -502,6 +545,7 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
       rsaPaddingExplicit: isRsaPaddingExplicit(),
       businessKeySegments: businessKeySegments.length,
       paddingModes: paddingModes.length,
+      ciphertextEncodings: ciphertextEncodings.length,
       attempts: (bestAttempt as any)?.attempts,
     })
     throw new Error(data?.message || `MonCash Button payment lookup failed (${response.status})`)
