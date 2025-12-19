@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/firebase-db/server'
 import { checkPaymentStatus } from '@/lib/moncash'
 import { sendEmail, getTicketConfirmationEmail } from '@/lib/email'
@@ -26,6 +27,16 @@ export async function GET(request: Request) {
       .single()
 
     if (txError || !pendingTx) {
+      // If this was actually a MonCash Button return (misconfigured portal URL),
+      // route it to the Button handler which correlates via cookie/orderId.
+      const orderIdFromCookie = cookies().get('moncash_button_order_id')?.value
+      if (orderIdFromCookie) {
+        const url = new URL('/api/moncash-button/return', request.url)
+        url.searchParams.set('transactionId', transactionId)
+        url.searchParams.set('orderId', orderIdFromCookie)
+        return NextResponse.redirect(url)
+      }
+
       return NextResponse.redirect(
         new URL('/purchase/failed?reason=transaction_not_found', request.url)
       )

@@ -76,6 +76,19 @@ Add to `.env.local`:
 MONCASH_CLIENT_ID=your_moncash_client_id
 MONCASH_SECRET_KEY=your_moncash_secret_key
 MONCASH_MODE=sandbox  # Change to 'production' when ready
+
+# MonCash Button (Middleware) Keys
+# Used for hosted "MonCash Button" checkout flow.
+MONCASH_BUTTON_BUSINESS_KEY=your_business_key
+# MONCASH_BUTTON_SECRET_API_KEY can be either:
+# - a PEM public key (recommended), OR
+# - a base64 DER/SPKI public key string from the Digicel portal (the code will wrap it as PEM).
+MONCASH_BUTTON_SECRET_API_KEY='-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----'
+
+# Digicel Portal URLs (MonCash Button)
+# IMPORTANT: Use the same domain as your Website URL so the return flow receives the httpOnly cookie.
+# Return URL (browser redirect): https://<your-domain>/api/moncash-button/return
+# Alert URL  (server notification): https://<your-domain>/api/moncash-button/alert
 ```
 
 ### Test Accounts

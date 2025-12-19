@@ -16,7 +16,7 @@ import { X, CreditCard, Lock, Smartphone, AlertCircle } from 'lucide-react-nativ
 import { COLORS } from '../config/brand';
 
 // Check if we're in Expo Go (Stripe won't work)
-const isExpoGo = !Platform.constants?.expoConfig;
+const isExpoGo = !(Platform as any).constants?.expoConfig;
 
 // Conditionally import Stripe only if not in Expo Go
 let StripeProvider: any;
@@ -124,24 +124,17 @@ function PaymentForm({
 
   // MonCash Payment (Haiti Mobile Money) - MerchantApi
   const handleMonCashPayment = async () => {
-    if (!phoneNumber || phoneNumber.length < 8) {
-      setError('Please enter a valid MonCash phone number');
-      return;
-    }
-
     setProcessing(true);
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/moncash/initiate`, {
+      const response = await fetch(`${API_URL}/api/moncash-button/initiate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventId,
           quantity,
-          phoneNumber,
           tierId,
-          tierPrice: totalAmount,
           promoCode: promoCodeId,
         }),
       });
@@ -152,106 +145,32 @@ function PaymentForm({
         throw new Error(data.error || 'Failed to initiate MonCash payment');
       }
 
-      // Payment request sent to phone
-      if (data.status === 'successful') {
-        // Payment completed immediately
-        Alert.alert(
-          'Payment Successful! 🎉',
-          'Your tickets have been created.',
-          [{ text: 'OK', onPress: () => {
-            onSuccess('moncash', data.transactionId);
-            onClose();
-          }}]
-        );
-      } else {
-        // Payment pending - show waiting message
-        Alert.alert(
-          'Payment Request Sent',
-          `A payment request has been sent to ${phoneNumber}. Please approve it in your MonCash app.`,
-          [
-            {
-              text: 'Check Status',
-              onPress: () => pollPaymentStatus(data.transactionId, data.reference),
-            },
-            {
-              text: 'Cancel',
-              style: 'cancel',
-              onPress: () => setProcessing(false),
-            },
-          ]
-        );
+      if (!data.redirectUrl) {
+        throw new Error('Missing MonCash redirect URL');
       }
+
+      await Linking.openURL(data.redirectUrl);
+      Alert.alert('Continue in Browser', 'Complete the MonCash payment in your browser. After payment, return to the app and check your Tickets.');
+      onClose();
     } catch (err: any) {
       setError(err.message || 'MonCash payment failed');
       setProcessing(false);
     }
   };
 
-  // Poll for payment status
-  const pollPaymentStatus = async (transactionId: string, reference: string) => {
-    let attempts = 0;
-    const maxAttempts = 24; // 2 minutes (5s intervals)
-
-    const checkStatus = async (): Promise<boolean> => {
-      try {
-        const response = await fetch(`${API_URL}/api/moncash/check-status`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transactionId }),
-        });
-
-        const data = await response.json();
-
-        if (data.status === 'successful') {
-          Alert.alert(
-            'Payment Successful! 🎉',
-            'Your tickets have been created.',
-            [{ text: 'OK', onPress: () => {
-              onSuccess('moncash', transactionId);
-              onClose();
-            }}]
-          );
-          return true;
-        }
-
-        attempts++;
-        if (attempts >= maxAttempts) {
-          throw new Error('Payment timeout - please check your tickets later');
-        }
-
-        // Wait 5 seconds before next check
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        return checkStatus();
-      } catch (err: any) {
-        setError(err.message || 'Failed to verify payment');
-        setProcessing(false);
-        return false;
-      }
-    };
-
-    await checkStatus();
-  };
-
   // NatCash Payment (same backend as MonCash MerchantApi)
   const handleNatCashPayment = async () => {
-    if (!phoneNumber || phoneNumber.length < 8) {
-      setError('Please enter a valid NatCash phone number');
-      return;
-    }
-
     setProcessing(true);
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/moncash/initiate`, {
+      const response = await fetch(`${API_URL}/api/moncash-button/initiate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventId,
           quantity,
-          phoneNumber,
           tierId,
-          tierPrice: totalAmount,
           promoCode: promoCodeId,
         }),
       });
@@ -262,33 +181,13 @@ function PaymentForm({
         throw new Error(data.error || 'Failed to initiate NatCash payment');
       }
 
-      // Handle same as MonCash
-      if (data.status === 'successful') {
-        Alert.alert(
-          'Payment Successful! 🎉',
-          'Your tickets have been created.',
-          [{ text: 'OK', onPress: () => {
-            onSuccess('natcash', data.transactionId);
-            onClose();
-          }}]
-        );
-      } else {
-        Alert.alert(
-          'Payment Request Sent',
-          `A payment request has been sent to ${phoneNumber}. Please approve it in your NatCash app.`,
-          [
-            {
-              text: 'Check Status',
-              onPress: () => pollPaymentStatus(data.transactionId, data.reference),
-            },
-            {
-              text: 'Cancel',
-              style: 'cancel',
-              onPress: () => setProcessing(false),
-            },
-          ]
-        );
+      if (!data.redirectUrl) {
+        throw new Error('Missing MonCash redirect URL');
       }
+
+      await Linking.openURL(data.redirectUrl);
+      Alert.alert('Continue in Browser', 'Complete the NatCash/MonCash payment in your browser. After payment, return to the app and check your Tickets.');
+      onClose();
     } catch (err: any) {
       setError(err.message || 'NatCash payment failed');
       setProcessing(false);
@@ -400,7 +299,7 @@ function PaymentForm({
               }}
               cardStyle={styles.cardInput}
               style={styles.cardFieldContainer}
-              onCardChange={(cardDetails) => {
+              onCardChange={(cardDetails: any) => {
                 setCardComplete(cardDetails.complete);
               }}
             />
