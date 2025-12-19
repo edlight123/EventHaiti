@@ -148,11 +148,7 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
       .doc('main')
       .get()
 
-    if (!configDoc.exists) {
-      return null
-    }
-
-    const data = configDoc.data()!
+    const data = configDoc.exists ? configDoc.data()! : null
     
     // Helper function to convert timestamps
     const convertTimestamp = (value: any, fallback: string = new Date().toISOString()): string => {
@@ -169,44 +165,60 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
       }
     }
 
-    // Check if user has already completed organizer verification (from /organizer/verify)
-    // Check verification_requests collection for existing verification
+    // Determine organizer identity verification status (approved/pending/failed)
+    const userDoc = await adminDb.collection('users').doc(organizerId).get()
+    const userData = userDoc.exists ? userDoc.data() : null
+
+    const userSaysApproved =
+      userData?.verification_status === 'approved' ||
+      userData?.is_verified === true
+
+    // Primary lookup: doc id == organizerId
+    let verificationData: any | null = null
     const organizerVerificationDoc = await adminDb
       .collection('verification_requests')
       .doc(organizerId)
       .get()
-    
-    let hasOrganizerVerification = false
-    
+
     if (organizerVerificationDoc.exists) {
-      const verificationData = organizerVerificationDoc.data()
-      
-      // Check multiple verification indicators:
-      // 1. Status field (new format): approved, in_review, or pending
-      const hasApprovedStatus = verificationData?.status === 'approved' || 
-                                verificationData?.status === 'in_review' ||
-                                verificationData?.status === 'pending'
-      
-      // 2. Government ID uploaded (new format with nested steps)
-      const hasGovernmentIdFiles = verificationData?.files?.governmentId?.front ||
-                                    verificationData?.files?.governmentId?.back
-      
-      // 3. Government ID step marked complete
-      const hasCompleteStep = verificationData?.steps?.governmentId?.status === 'complete'
-      
-      // 4. Old schema format - direct URL fields
-      const hasOldFormatUrls = verificationData?.id_front_url || verificationData?.id_back_url
-      
-      // User is verified if ANY of these conditions are true
-      hasOrganizerVerification = hasApprovedStatus || hasGovernmentIdFiles || hasCompleteStep || hasOldFormatUrls
+      verificationData = organizerVerificationDoc.data()
+    } else {
+      // Fallback for older/migrated data where docId != organizerId
+      const [byUserId, byUser_id] = await Promise.all([
+        adminDb
+          .collection('verification_requests')
+          .where('userId', '==', organizerId)
+          .limit(1)
+          .get(),
+        adminDb
+          .collection('verification_requests')
+          .where('user_id', '==', organizerId)
+          .limit(1)
+          .get(),
+      ])
+
+      const hit =
+        (!byUserId.empty && byUserId.docs[0]) ||
+        (!byUser_id.empty && byUser_id.docs[0]) ||
+        null
+
+      verificationData = hit ? hit.data() : null
     }
-    
-    // Also check the users collection verification_status field
-    if (!hasOrganizerVerification) {
-      const userDoc = await adminDb.collection('users').doc(organizerId).get()
-      const userVerificationStatus = userDoc.data()?.verification_status
-      hasOrganizerVerification = userVerificationStatus === 'approved'
-    }
+
+    const requestStatus = String(verificationData?.status || '').toLowerCase()
+    const organizerIdentityStatus: NonNullable<PayoutConfig['verificationStatus']>['identity'] = (() => {
+      if (userSaysApproved || requestStatus === 'approved') return 'verified'
+      if (requestStatus === 'rejected') return 'failed'
+      if (
+        requestStatus === 'pending' ||
+        requestStatus === 'pending_review' ||
+        requestStatus === 'in_review' ||
+        requestStatus === 'changes_requested'
+      ) {
+        return 'pending'
+      }
+      return 'pending'
+    })()
 
     // Get payout-specific verification documents
     const verificationDocs = await adminDb
@@ -216,8 +228,8 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
       .get()
 
     const verificationStatus: PayoutConfig['verificationStatus'] = {
-      // If they've completed organizer verification, mark identity as verified
-      identity: hasOrganizerVerification ? 'verified' : 'pending',
+      // Organizer verification controls identity status
+      identity: organizerIdentityStatus,
       bank: 'pending',
       phone: 'pending',
     }
@@ -226,11 +238,8 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
       const docData = doc.data()
       const type = doc.id as 'identity' | 'bank' | 'phone'
       if (type in verificationStatus) {
-        // Only override identity verification if not already verified from organizer verification
-        if (type === 'identity' && hasOrganizerVerification) {
-          // Keep it as 'verified' from organizer verification
-          return
-        }
+        // Keep organizer-approved identity as verified
+        if (type === 'identity' && organizerIdentityStatus === 'verified') return
         verificationStatus[type] = docData.status || 'pending'
       }
     })
@@ -245,13 +254,13 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
     }
 
     const baseConfig: PayoutConfig = {
-      status: data.status || 'not_setup',
-      method: data.method,
-      bankDetails: data.bankDetails,
-      mobileMoneyDetails: data.mobileMoneyDetails,
+      status: data?.status || 'not_setup',
+      method: data?.method,
+      bankDetails: data?.bankDetails,
+      mobileMoneyDetails: data?.mobileMoneyDetails,
       verificationStatus: finalVerificationStatus,
-      createdAt: convertTimestamp(data.createdAt),
-      updatedAt: convertTimestamp(data.updatedAt)
+      createdAt: convertTimestamp(data?.createdAt),
+      updatedAt: convertTimestamp(data?.updatedAt)
     }
 
     return {
