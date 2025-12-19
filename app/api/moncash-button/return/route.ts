@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { createClient } from '@/lib/firebase-db/server'
-import { getMonCashButtonPaymentByOrderId } from '@/lib/moncash-button'
+import { getMonCashButtonPaymentByOrderId, getMonCashButtonPaymentByTransactionId } from '@/lib/moncash-button'
 import { sendEmail, getTicketConfirmationEmail } from '@/lib/email'
 import { sendWhatsAppMessage, getTicketConfirmationWhatsApp } from '@/lib/whatsapp'
 import { generateTicketQRCode } from '@/lib/qrcode'
@@ -17,8 +16,20 @@ export async function GET(request: Request) {
 
     // Prefer explicit orderId if you configure Return URL like /api/moncash-button/return?orderId=...
     const orderIdFromQuery = searchParams.get('orderId')
-    const orderIdFromCookie = cookies().get('moncash_button_order_id')?.value
-    const orderId = orderIdFromQuery || orderIdFromCookie
+    let orderId = orderIdFromQuery
+
+    // Cookie-less correlation: Digicel provides transactionId; the payment reference should match our orderId.
+    let paymentFromLookup: any = null
+    if (!orderId && transactionId) {
+      try {
+        paymentFromLookup = await getMonCashButtonPaymentByTransactionId(transactionId)
+        if (paymentFromLookup?.reference) {
+          orderId = String(paymentFromLookup.reference)
+        }
+      } catch (err) {
+        console.error('MonCash Button return: transaction lookup failed', err)
+      }
+    }
 
     if (!orderId) {
       return NextResponse.redirect(new URL('/purchase/failed?reason=missing_order', request.url))
@@ -36,8 +47,8 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL('/purchase/failed?reason=transaction_not_found', request.url))
     }
 
-    // Verify payment via MonCash Button middleware using our orderId
-    const payment = await getMonCashButtonPaymentByOrderId(orderId)
+    // Verify payment via MonCash Button middleware
+    const payment = paymentFromLookup || (await getMonCashButtonPaymentByOrderId(orderId))
 
     const isPaid = !!(payment?.success && payment?.payment_status)
 
@@ -47,9 +58,7 @@ export async function GET(request: Request) {
         .update({ status: 'failed' })
         .eq('order_id', orderId)
 
-      const res = NextResponse.redirect(new URL('/purchase/failed?reason=payment_failed', request.url))
-      res.cookies.set('moncash_button_order_id', '', { path: '/', maxAge: 0 })
-      return res
+      return NextResponse.redirect(new URL('/purchase/failed?reason=payment_failed', request.url))
     }
 
     // Fetch event + attendee
@@ -204,9 +213,7 @@ export async function GET(request: Request) {
       }
     }
 
-    const res = NextResponse.redirect(new URL(`/purchase/success?ticketId=${ticket?.id || ''}`, request.url))
-    res.cookies.set('moncash_button_order_id', '', { path: '/', maxAge: 0 })
-    return res
+    return NextResponse.redirect(new URL(`/purchase/success?ticketId=${ticket?.id || ''}`, request.url))
   } catch (error: any) {
     console.error('MonCash Button return error:', error)
     return NextResponse.redirect(new URL('/purchase/failed?reason=processing_error', request.url))

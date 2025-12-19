@@ -606,6 +606,157 @@ type MonCashButtonPaymentResponse = {
   message?: string
 }
 
+export async function getMonCashButtonPaymentByTransactionId(
+  transactionId: string
+): Promise<MonCashButtonPaymentResponse> {
+  const configuredMode = getMonCashMode()
+  const baseUrl = getMonCashMiddlewareBaseUrl()
+  const businessKeySegments = getBusinessKeyPathSegmentMeta()
+  const paddingModes = getRsaPaddingModesToTry()
+  const ciphertextEncodings = getCiphertextEncodingsToTry()
+
+  const retryableHttpStatuses = new Set([404, 410])
+  const retryableGatewayError = (rawText?: string) => {
+    if (!rawText) return false
+    return /system\s*error/i.test(rawText) || /could\s*not\s*pars/i.test(rawText)
+  }
+
+  async function postLookupForMode(
+    mode: 'sandbox' | 'production',
+    businessKeySegment: string,
+    paddingMode: RsaPaddingMode,
+    ciphertextEncoding: CiphertextEncoding
+  ): Promise<Response> {
+    const modeBaseUrl = mode === configuredMode ? baseUrl : getMonCashMiddlewareBaseUrlForMode(mode)
+    const encryptedTransactionId = encryptToMonCashButtonCiphertext(transactionId, paddingMode, ciphertextEncoding)
+    return fetch(`${modeBaseUrl}/Checkout/${businessKeySegment}/Payment/Transaction/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        transactionId: encryptedTransactionId,
+      }).toString(),
+    })
+  }
+
+  async function parsePaymentResponse(resp: Response): Promise<{ data?: MonCashButtonPaymentResponse; rawText?: string }> {
+    const rawText = await resp.text().catch(() => '')
+    const data = (() => {
+      try {
+        return JSON.parse(rawText) as MonCashButtonPaymentResponse
+      } catch {
+        return undefined
+      }
+    })()
+    return { data, rawText }
+  }
+
+  async function tryLookupForMode(mode: 'sandbox' | 'production') {
+    let lastAttempt:
+      | {
+          response: Response
+          parsed: { data?: MonCashButtonPaymentResponse; rawText?: string }
+          meta: {
+            segmentHash: string
+            segmentKind: string
+            paddingMode: RsaPaddingMode
+            ciphertextEncoding: CiphertextEncoding
+          }
+        }
+      | null = null
+    let attempts = 0
+    for (const ciphertextEncoding of ciphertextEncodings) {
+      for (const paddingMode of paddingModes) {
+        for (const segmentInfo of businessKeySegments) {
+          try {
+            attempts += 1
+            const response = await postLookupForMode(mode, segmentInfo.segment, paddingMode, ciphertextEncoding)
+            const parsed = await parsePaymentResponse(response)
+
+            lastAttempt = {
+              response,
+              parsed,
+              meta: {
+                segmentHash: sha256Short(segmentInfo.segment),
+                segmentKind: segmentInfo.kind,
+                paddingMode,
+                ciphertextEncoding,
+              },
+            }
+
+            if (response.ok && parsed.data?.success) {
+              return { response, parsed, attempts }
+            }
+
+            const rawText = parsed.rawText || ''
+            const shouldRetry =
+              !response.ok
+                ? (response.status === 500 ? true : retryableHttpStatuses.has(response.status))
+                : !parsed.data?.success && retryableGatewayError(rawText)
+
+            if (!shouldRetry) {
+              return { response, parsed, attempts }
+            }
+          } catch (err: any) {
+            const message = String(err?.message || err)
+            if (/rsa/i.test(message)) continue
+            throw err
+          }
+        }
+      }
+    }
+    return lastAttempt ? { ...lastAttempt, attempts } : null
+  }
+
+  let bestAttempt: any = await tryLookupForMode(configuredMode)
+  let bestAttemptMode: 'sandbox' | 'production' = configuredMode
+
+  if (!isButtonModeExplicit()) {
+    const fallbackMode: 'sandbox' | 'production' = configuredMode === 'sandbox' ? 'production' : 'sandbox'
+    const configuredOk = !!bestAttempt?.response?.ok && !!bestAttempt?.parsed?.data?.success
+    if (!configuredOk) {
+      const attemptFallback = await tryLookupForMode(fallbackMode)
+      const fallbackOk = !!attemptFallback?.response?.ok && !!attemptFallback?.parsed?.data?.success
+      if (fallbackOk) {
+        bestAttempt = attemptFallback
+        bestAttemptMode = fallbackMode
+      } else if (!bestAttempt && attemptFallback) {
+        bestAttempt = attemptFallback
+        bestAttemptMode = fallbackMode
+      }
+    }
+  }
+
+  if (!bestAttempt) throw new Error('MonCash Button transaction lookup failed: unable to perform any attempts')
+
+  const { response, parsed } = bestAttempt
+  const data = parsed.data
+  if (!data) {
+    const text = parsed.rawText || ''
+    throw new Error(`MonCash Button transaction lookup failed (${response.status}): ${text || 'Invalid JSON response'}`)
+  }
+
+  if (!response.ok) {
+    console.error('[MonCash Button] Transaction lookup error:', {
+      status: response.status,
+      mode: configuredMode,
+      attemptedMode: bestAttemptMode,
+      helperVersion: MONCASH_BUTTON_HELPER_VERSION,
+      modeExplicit: isButtonModeExplicit(),
+      rsaPaddingExplicit: isRsaPaddingExplicit(),
+      businessKeySegments: businessKeySegments.length,
+      paddingModes: paddingModes.length,
+      ciphertextEncodings: ciphertextEncodings.length,
+      attempts: (bestAttempt as any)?.attempts,
+      lastAttempt: (bestAttempt as any)?.meta,
+    })
+    throw new Error(data?.message || `MonCash Button transaction lookup failed (${response.status})`)
+  }
+
+  return data
+}
+
 export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise<MonCashButtonPaymentResponse> {
   const configuredMode = getMonCashMode()
   const baseUrl = getMonCashMiddlewareBaseUrl()

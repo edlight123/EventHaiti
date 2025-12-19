@@ -203,19 +203,7 @@ export async function POST(request: Request) {
       redirectUrl = `${origin}/api/moncash-button/checkout?orderId=${encodeURIComponent(orderId)}`
     }
 
-    const res = NextResponse.json({ redirectUrl })
-
-    // Cookie helps the return handler map browser redirect back to the order.
-    // If you configure the MonCash portal Return URL to include ?orderId=... you can remove this.
-    res.cookies.set('moncash_button_order_id', orderId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 30, // 30 minutes
-    })
-
-    return res
+    return NextResponse.json({ redirectUrl })
   } catch (error: any) {
     console.error('MonCash Button initiate error:', error)
     return NextResponse.json(
