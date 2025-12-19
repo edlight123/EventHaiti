@@ -41,9 +41,18 @@ export async function GET(request: Request) {
       return new NextResponse('Forbidden', { status: 403 })
     }
 
-    const { actionUrl, fields } = createMonCashButtonCheckoutFormPost({
+    const { actionUrl, fields, meta } = createMonCashButtonCheckoutFormPost({
       amount: Number(pending.amount) || 0,
       orderId,
+    })
+
+    console.info('[moncash_button] checkout: form meta', {
+      orderHash,
+      mode: meta.mode,
+      paddingMode: meta.paddingMode,
+      amountPlaintext: meta.amountPlaintext,
+      businessKeySegmentKind: meta.businessKeySegmentKind,
+      businessKeySegmentHash: meta.businessKeySegmentHash,
     })
 
     const html = `<!doctype html>

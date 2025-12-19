@@ -108,6 +108,23 @@ function getRsaPaddingMode(): RsaPaddingMode {
   return 'pkcs1'
 }
 
+function parseRsaPaddingMode(modeRaw: string | undefined, defaultMode: RsaPaddingMode): RsaPaddingMode {
+  const mode = (modeRaw || '').toLowerCase().trim()
+  if (!mode) return defaultMode
+  if (mode === 'auto') return defaultMode
+  if (mode === 'none' || mode === 'no-padding' || mode === 'nopadding') return 'none'
+  if (mode === 'pkcs1') return 'pkcs1'
+  if (mode === 'oaep' || mode === 'oaep-sha1') return 'oaep-sha1'
+  if (mode === 'oaep-sha256') return 'oaep-sha256'
+  return defaultMode
+}
+
+function getFormRsaPaddingMode(): RsaPaddingMode {
+  // Hosted Checkout (HTML form POST) frequently expects PKCS#1 padding.
+  // Keep REST token padding controlled by MONCASH_BUTTON_RSA_PADDING.
+  return parseRsaPaddingMode(process.env.MONCASH_BUTTON_FORM_RSA_PADDING, 'pkcs1')
+}
+
 function getRsaPaddingModesToTry(): RsaPaddingMode[] {
   const configured = getRsaPaddingMode()
   const envMode = (process.env.MONCASH_BUTTON_RSA_PADDING || '').toLowerCase()
@@ -373,13 +390,24 @@ export function createMonCashButtonCheckoutFormPost(params: {
 }): {
   actionUrl: string
   fields: { amount: string; orderId: string }
+  meta: {
+    mode: 'sandbox' | 'production'
+    paddingMode: RsaPaddingMode
+    amountPlaintext: string
+    businessKeySegmentHash: string
+    businessKeySegmentKind: string
+  }
 } {
   const mode = getMonCashMode()
   const baseUrl = getMonCashMiddlewareBaseUrlForMode(mode)
   const businessKey = pickPrimaryBusinessKeySegment()
 
+  const businessKeyMeta = getBusinessKeyPathSegmentMeta().find((s) => s.segment === businessKey)
+  const businessKeySegmentKind = businessKeyMeta?.kind || 'unknown'
+  const businessKeySegmentHash = sha256Short(businessKey)
+
   const amountStr = formatAmountForGateway(params.amount)
-  const paddingMode = getRsaPaddingMode()
+  const paddingMode = getFormRsaPaddingMode()
 
   // Digicel docs for the HTML form explicitly say base64(encrypt(...)).
   const encryptedAmount = encryptToMonCashButtonCiphertext(amountStr, paddingMode, 'base64')
@@ -390,6 +418,13 @@ export function createMonCashButtonCheckoutFormPost(params: {
     fields: {
       amount: encryptedAmount,
       orderId: encryptedOrderId,
+    },
+    meta: {
+      mode,
+      paddingMode,
+      amountPlaintext: amountStr,
+      businessKeySegmentHash,
+      businessKeySegmentKind,
     },
   }
 }
