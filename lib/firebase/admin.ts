@@ -5,6 +5,13 @@ import { getStorage } from 'firebase-admin/storage'
 
 let app: App | undefined
 
+function getStorageBucketFromEnv(): string | undefined {
+  const raw = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+  if (!raw) return undefined
+  // Allow either "gs://bucket" or "bucket".
+  return raw.startsWith('gs://') ? raw.slice('gs://'.length) : raw
+}
+
 // Don't initialize during build time (when VERCEL_ENV is not set or when in build phase)
 const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build'
 
@@ -13,8 +20,10 @@ if (!isBuildTime && !getApps().length) {
   if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
     try {
       const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+      const storageBucket = getStorageBucketFromEnv()
       app = initializeApp({
         credential: cert(serviceAccount),
+        ...(storageBucket ? { storageBucket } : {}),
       })
     } catch (error) {
       console.error('Failed to parse Firebase service account:', error)
@@ -23,7 +32,10 @@ if (!isBuildTime && !getApps().length) {
   } else {
     // For development - uses Application Default Credentials
     try {
-      app = initializeApp()
+      const storageBucket = getStorageBucketFromEnv()
+      app = initializeApp({
+        ...(storageBucket ? { storageBucket } : {}),
+      })
     } catch (error) {
       console.warn('Firebase Admin not initialized (expected during build):', error)
       app = undefined

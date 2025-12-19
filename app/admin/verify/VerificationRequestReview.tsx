@@ -52,6 +52,21 @@ function parsePossibleDate(value: any): Date | null {
   return null
 }
 
+const submittedAtFormatter = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: true,
+  timeZone: 'UTC',
+})
+
+function formatSubmittedAt(date: Date): string {
+  // Deterministic formatting avoids server/client timezone/locale hydration mismatches.
+  return submittedAtFormatter.format(date)
+}
+
 function formatFieldValue(value: any): string {
   if (value == null) return ''
   if (typeof value === 'string') return value
@@ -238,8 +253,7 @@ export default function VerificationRequestReview({ request, user }: Props) {
             <p className="text-[11px] sm:text-xs text-gray-500 mt-1">
               {submittedDate ? (
                 <>
-                  Submitted {submittedDate.toLocaleDateString()} at{' '}
-                  {submittedDate.toLocaleTimeString()}
+                  Submitted {formatSubmittedAt(submittedDate)} (UTC)
                 </>
               ) : (
                 'Submission date not available'

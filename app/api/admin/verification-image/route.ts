@@ -4,6 +4,34 @@ import { adminStorage } from '@/lib/firebase/admin'
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@eventhaiti.com').split(',')
 
+function normalizeBucketName(bucket: string): string {
+  if (bucket.startsWith('gs://')) return bucket.slice('gs://'.length)
+  return bucket
+}
+
+function getStorageBucketName(): string | null {
+  const fromEnv = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+  return fromEnv ? normalizeBucketName(fromEnv) : null
+}
+
+function parseStorageTarget(rawPath: string): { bucketName: string | null; objectPath: string } {
+  const trimmed = rawPath.trim()
+  if (trimmed.startsWith('gs://')) {
+    // gs://<bucket>/<path>
+    const withoutScheme = trimmed.slice('gs://'.length)
+    const firstSlash = withoutScheme.indexOf('/')
+    if (firstSlash === -1) {
+      return { bucketName: withoutScheme, objectPath: '' }
+    }
+    return {
+      bucketName: withoutScheme.slice(0, firstSlash),
+      objectPath: withoutScheme.slice(firstSlash + 1),
+    }
+  }
+
+  return { bucketName: null, objectPath: trimmed }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser()
@@ -26,9 +54,29 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const { bucketName: bucketFromPath, objectPath } = parseStorageTarget(path)
+    const bucketName = bucketFromPath || getStorageBucketName()
+
+    if (!bucketName) {
+      return NextResponse.json(
+        {
+          error: 'Storage bucket not configured',
+          hint: 'Set FIREBASE_STORAGE_BUCKET (or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) to your Firebase Storage bucket name.',
+        },
+        { status: 500 }
+      )
+    }
+
+    if (!objectPath) {
+      return NextResponse.json(
+        { error: 'Invalid path parameter' },
+        { status: 400 }
+      )
+    }
+
     // Get signed URL that expires in 1 hour
-    const bucket = adminStorage.bucket()
-    const file = bucket.file(path)
+    const bucket = adminStorage.bucket(bucketName)
+    const file = bucket.file(objectPath)
 
     const [url] = await file.getSignedUrl({
       action: 'read',
@@ -39,7 +87,10 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error generating signed URL:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     )
   }
