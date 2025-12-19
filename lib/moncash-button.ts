@@ -11,6 +11,11 @@ function getMonCashMode(): 'sandbox' | 'production' {
   return mode === 'production' ? 'production' : 'sandbox'
 }
 
+function getMonCashFormMode(): 'sandbox' | 'production' {
+  const mode = (process.env.MONCASH_BUTTON_FORM_MODE || process.env.MONCASH_BUTTON_MODE || process.env.MONCASH_MODE || 'sandbox').toLowerCase()
+  return mode === 'production' ? 'production' : 'sandbox'
+}
+
 function isButtonModeExplicit(): boolean {
   return typeof process.env.MONCASH_BUTTON_MODE === 'string' && process.env.MONCASH_BUTTON_MODE.length > 0
 }
@@ -73,6 +78,15 @@ function getMonCashButtonKeyPem(): string {
   return keyObject.export({ format: 'pem', type: 'spki' }).toString()
 }
 
+function getMonCashFormKeyPem(): string {
+  const key = process.env.MONCASH_BUTTON_FORM_SECRET_API_KEY || process.env.MONCASH_BUTTON_SECRET_API_KEY
+  if (!key) {
+    throw new Error('MONCASH_BUTTON_SECRET_API_KEY is not configured')
+  }
+  const keyObject = parseMonCashPublicKeyFromEnv(key)
+  return keyObject.export({ format: 'pem', type: 'spki' }).toString()
+}
+
 type RsaPaddingMode = 'none' | 'pkcs1' | 'oaep-sha1' | 'oaep-sha256'
 
 type CiphertextEncoding = 'base64' | 'base64url'
@@ -93,6 +107,11 @@ function encodeCiphertext(buf: Buffer, encoding: CiphertextEncoding): string {
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/g, '')
+}
+
+function getFormCiphertextEncoding(): CiphertextEncoding {
+  const configured = (process.env.MONCASH_BUTTON_FORM_CIPHERTEXT_ENCODING || '').toLowerCase()
+  return configured === 'base64url' ? 'base64url' : 'base64'
 }
 
 function sha256Short(value: string): string {
@@ -235,6 +254,14 @@ function getBusinessKey(): string {
   return businessKey
 }
 
+function getMonCashFormBusinessKey(): string {
+  const businessKey = process.env.MONCASH_BUTTON_FORM_BUSINESS_KEY || process.env.MONCASH_BUTTON_BUSINESS_KEY
+  if (!businessKey) {
+    throw new Error('MONCASH_BUTTON_BUSINESS_KEY is not configured')
+  }
+  return businessKey
+}
+
 function isLikelyBase64(value: string): boolean {
   const cleaned = value.trim().replace(/\s+/g, '')
   if (cleaned.length < 8) return false
@@ -311,8 +338,8 @@ function expandPathSafeVariants(candidate: string): Array<{ segment: string; kin
   })
 }
 
-function getBusinessKeyCandidates(): string[] {
-  const raw = getBusinessKey().trim()
+function getBusinessKeyCandidatesFrom(rawValue: string): string[] {
+  const raw = rawValue.trim()
   const candidates: string[] = []
 
   // If the env var was pasted with spaces/newlines, try additional variants.
@@ -348,6 +375,14 @@ function getBusinessKeyCandidates(): string[] {
   return Array.from(new Set(candidates.map((c) => c.trim()).filter(Boolean)))
 }
 
+function getBusinessKeyCandidates(): string[] {
+  return getBusinessKeyCandidatesFrom(getBusinessKey())
+}
+
+function getFormBusinessKeyCandidates(): string[] {
+  return getBusinessKeyCandidatesFrom(getMonCashFormBusinessKey())
+}
+
 function getBusinessKeyPathSegments(): string[] {
   // Some vendor gateways do not route correctly if the path is percent-encoded.
   // We'll try raw first, then encoded as a fallback.
@@ -374,6 +409,19 @@ function getBusinessKeyPathSegmentMeta(): Array<{ segment: string; kind: string 
   })
 }
 
+function getFormBusinessKeyPathSegmentMeta(): Array<{ segment: string; kind: string }> {
+  const out: Array<{ segment: string; kind: string }> = []
+  for (const candidate of getFormBusinessKeyCandidates()) {
+    out.push(...expandPathSafeVariants(candidate))
+  }
+  const seen = new Set<string>()
+  return out.filter((x) => {
+    if (seen.has(x.segment)) return false
+    seen.add(x.segment)
+    return true
+  })
+}
+
 function pickPrimaryBusinessKeySegment(): string {
   const segments = getBusinessKeyPathSegmentMeta()
   if (segments.length === 0) {
@@ -382,6 +430,53 @@ function pickPrimaryBusinessKeySegment(): string {
   // Prefer the first raw-ish segment (raw/raw-unpadded), otherwise fall back to the first.
   const preferred = segments.find((s) => s.kind.startsWith('raw'))
   return (preferred || segments[0]).segment
+}
+
+function pickPrimaryFormBusinessKeySegment(): string {
+  const segments = getFormBusinessKeyPathSegmentMeta()
+  if (segments.length === 0) {
+    throw new Error('MONCASH_BUTTON_BUSINESS_KEY is not configured')
+  }
+  const preferred = segments.find((s) => s.kind.startsWith('raw'))
+  return (preferred || segments[0]).segment
+}
+
+function publicEncryptBytesWithKey(value: string, keyPem: string, paddingMode: RsaPaddingMode): Buffer {
+  const keyObject = crypto.createPublicKey(keyPem)
+  const modulusLength = (keyObject.asymmetricKeyDetails as any)?.modulusLength as number | undefined
+
+  let buffer: Buffer<ArrayBufferLike> = Buffer.from(value, 'utf8')
+
+  const maxLen = maxPlaintextBytes(modulusLength, paddingMode)
+  if (maxLen != null && buffer.length > maxLen) {
+    throw new Error(
+      `MonCash Button RSA plaintext too long (len=${buffer.length}, max=${maxLen}) for padding=${paddingMode} (modulusLength=${modulusLength ?? 'unknown'}). Use a shorter orderId.`
+    )
+  }
+
+  if (paddingMode === 'none') {
+    const keySizeBytes = getKeySizeBytes(modulusLength)
+    if (!keySizeBytes) {
+      throw new Error('MonCash Button RSA key size is unknown; cannot use padding=none')
+    }
+    buffer = leftPadToLength(buffer, keySizeBytes)
+  }
+
+  const encryptOptions: crypto.RsaPublicKey = {
+    key: keyPem,
+    padding:
+      paddingMode === 'none'
+        ? (crypto.constants as any).RSA_NO_PADDING
+        : paddingMode === 'pkcs1'
+          ? crypto.constants.RSA_PKCS1_PADDING
+          : crypto.constants.RSA_PKCS1_OAEP_PADDING,
+  }
+
+  if (paddingMode === 'oaep-sha256') {
+    ;(encryptOptions as any).oaepHash = 'sha256'
+  }
+
+  return crypto.publicEncrypt(encryptOptions as any, buffer)
 }
 
 export function createMonCashButtonCheckoutFormPost(params: {
@@ -396,22 +491,28 @@ export function createMonCashButtonCheckoutFormPost(params: {
     amountPlaintext: string
     businessKeySegmentHash: string
     businessKeySegmentKind: string
+    ciphertextEncoding: CiphertextEncoding
   }
 } {
-  const mode = getMonCashMode()
+  const mode = getMonCashFormMode()
   const baseUrl = getMonCashMiddlewareBaseUrlForMode(mode)
-  const businessKey = pickPrimaryBusinessKeySegment()
+  const businessKey = pickPrimaryFormBusinessKeySegment()
 
-  const businessKeyMeta = getBusinessKeyPathSegmentMeta().find((s) => s.segment === businessKey)
+  const businessKeyMeta = getFormBusinessKeyPathSegmentMeta().find((s) => s.segment === businessKey)
   const businessKeySegmentKind = businessKeyMeta?.kind || 'unknown'
   const businessKeySegmentHash = sha256Short(businessKey)
 
   const amountStr = formatAmountForGateway(params.amount)
   const paddingMode = getFormRsaPaddingMode()
 
-  // Digicel docs for the HTML form explicitly say base64(encrypt(...)).
-  const encryptedAmount = encryptToMonCashButtonCiphertext(amountStr, paddingMode, 'base64')
-  const encryptedOrderId = encryptToMonCashButtonCiphertext(params.orderId, paddingMode, 'base64')
+  const ciphertextEncoding = getFormCiphertextEncoding()
+  const keyPem = getMonCashFormKeyPem()
+
+  const encryptedAmount = encodeCiphertext(publicEncryptBytesWithKey(amountStr, keyPem, paddingMode), ciphertextEncoding)
+  const encryptedOrderId = encodeCiphertext(
+    publicEncryptBytesWithKey(params.orderId, keyPem, paddingMode),
+    ciphertextEncoding
+  )
 
   return {
     actionUrl: `${baseUrl}/Checkout/${businessKey}`,
@@ -425,6 +526,7 @@ export function createMonCashButtonCheckoutFormPost(params: {
       amountPlaintext: amountStr,
       businessKeySegmentHash,
       businessKeySegmentKind,
+      ciphertextEncoding,
     },
   }
 }

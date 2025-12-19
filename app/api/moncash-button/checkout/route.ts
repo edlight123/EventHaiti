@@ -50,6 +50,7 @@ export async function GET(request: Request) {
       orderHash,
       mode: meta.mode,
       paddingMode: meta.paddingMode,
+      ciphertextEncoding: meta.ciphertextEncoding,
       amountPlaintext: meta.amountPlaintext,
       businessKeySegmentKind: meta.businessKeySegmentKind,
       businessKeySegmentHash: meta.businessKeySegmentHash,
