@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 
 // Bump to confirm deployments in logs (no secrets).
-const MONCASH_BUTTON_HELPER_VERSION = '2025-12-19f'
+const MONCASH_BUTTON_HELPER_VERSION = '2025-12-19g'
 
 const MONCASH_SANDBOX_URL = 'https://sandbox.moncashbutton.digicelgroup.com'
 const MONCASH_PRODUCTION_URL = 'https://moncashbutton.digicelgroup.com'
@@ -217,6 +217,49 @@ function expandWhitespaceVariants(value: string): string[] {
   return Array.from(new Set([noWhitespace, ...tokens, joined].filter(Boolean)))
 }
 
+function stripBase64Padding(value: string): string {
+  return value.replace(/=+$/g, '')
+}
+
+function toBase64Url(value: string): string {
+  // Convert base64 to base64url (leave non-base64 chars as-is; caller decides applicability).
+  return value.replace(/\+/g, '-').replace(/\//g, '_')
+}
+
+function expandPathSafeVariants(candidate: string): Array<{ segment: string; kind: string }> {
+  const trimmed = candidate.trim()
+  if (!trimmed) return []
+
+  const out: Array<{ segment: string; kind: string }> = [{ segment: trimmed, kind: 'raw' }]
+
+  // Many gateways treat '=' oddly in path segments; try unpadded versions.
+  const unpadded = stripBase64Padding(trimmed)
+  if (unpadded && unpadded !== trimmed) out.push({ segment: unpadded, kind: 'raw-unpadded' })
+
+  // If it resembles base64/base64url, also try url-safe conversion.
+  // NOTE: This does not validate that the value is base64; it just produces an additional common routing-safe variant.
+  const urlSafe = toBase64Url(trimmed)
+  const urlSafeUnpadded = stripBase64Padding(urlSafe)
+  if (urlSafe !== trimmed) out.push({ segment: urlSafe, kind: 'base64url' })
+  if (urlSafeUnpadded && urlSafeUnpadded !== urlSafe && urlSafeUnpadded !== trimmed) {
+    out.push({ segment: urlSafeUnpadded, kind: 'base64url-unpadded' })
+  }
+
+  // Percent-encoded fallback (some routers only match when encoded).
+  const encoded = encodeURIComponent(trimmed)
+  if (encoded !== trimmed) out.push({ segment: encoded, kind: 'encoded' })
+
+  // Keep unique segments, preserving first-seen kind.
+  const seen = new Set<string>()
+  return out.filter((x) => {
+    if (!x.segment) return false
+    if (/\s/.test(x.segment)) return false
+    if (seen.has(x.segment)) return false
+    seen.add(x.segment)
+    return true
+  })
+}
+
 function getBusinessKeyCandidates(): string[] {
   const raw = getBusinessKey().trim()
   const candidates: string[] = []
@@ -259,12 +302,25 @@ function getBusinessKeyPathSegments(): string[] {
   // We'll try raw first, then encoded as a fallback.
   const segments: string[] = []
   for (const candidate of getBusinessKeyCandidates()) {
-    if (/\s/.test(candidate)) continue
-    segments.push(candidate)
-    const encoded = encodeURIComponent(candidate)
-    if (encoded !== candidate) segments.push(encoded)
+    for (const v of expandPathSafeVariants(candidate)) {
+      segments.push(v.segment)
+    }
   }
   return Array.from(new Set(segments))
+}
+
+function getBusinessKeyPathSegmentMeta(): Array<{ segment: string; kind: string }> {
+  const out: Array<{ segment: string; kind: string }> = []
+  for (const candidate of getBusinessKeyCandidates()) {
+    out.push(...expandPathSafeVariants(candidate))
+  }
+  // Dedupe while preserving first kind.
+  const seen = new Set<string>()
+  return out.filter((x) => {
+    if (seen.has(x.segment)) return false
+    seen.add(x.segment)
+    return true
+  })
 }
 
 export function encryptToMonCashButtonBase64(value: string): string {
@@ -289,7 +345,7 @@ export async function createMonCashButtonCheckoutToken(params: {
   const baseUrl = getMonCashMiddlewareBaseUrl()
 
   const amountStr = formatAmountForGateway(params.amount)
-  const businessKeySegments = getBusinessKeyPathSegments()
+  const businessKeySegments = getBusinessKeyPathSegmentMeta()
   const paddingModes = getRsaPaddingModesToTry()
   const ciphertextEncodings = getCiphertextEncodingsToTry()
 
@@ -341,22 +397,32 @@ export async function createMonCashButtonCheckoutToken(params: {
       | {
           response: Response
           parsed: { data?: MonCashButtonTokenResponse; rawText?: string }
-          meta: { segmentHash: string; paddingMode: RsaPaddingMode; ciphertextEncoding: CiphertextEncoding }
+          meta: {
+            segmentHash: string
+            segmentKind: string
+            paddingMode: RsaPaddingMode
+            ciphertextEncoding: CiphertextEncoding
+          }
         }
       | null = null
     let attempts = 0
     for (const ciphertextEncoding of ciphertextEncodings) {
       for (const paddingMode of paddingModes) {
-        for (const segment of businessKeySegments) {
-        try {
+        for (const segmentInfo of businessKeySegments) {
+          try {
           attempts += 1
-          const response = await postForMode(mode, segment, paddingMode, ciphertextEncoding)
+          const response = await postForMode(mode, segmentInfo.segment, paddingMode, ciphertextEncoding)
           const parsed = await parseResponse(response)
 
           lastAttempt = {
             response,
             parsed,
-            meta: { segmentHash: sha256Short(segment), paddingMode, ciphertextEncoding },
+            meta: {
+              segmentHash: sha256Short(segmentInfo.segment),
+              segmentKind: segmentInfo.kind,
+              paddingMode,
+              ciphertextEncoding,
+            },
           }
 
           if (response.ok && parsed.data?.success && parsed.data.token) {
@@ -372,13 +438,13 @@ export async function createMonCashButtonCheckoutToken(params: {
           if (!shouldRetry) {
             return { response, parsed, attempts }
           }
-        } catch (err: any) {
-          // Allow trying other variants when a padding/key combination can't encrypt.
-          const message = String(err?.message || err)
-          if (/rsa/i.test(message)) continue
-          throw err
+          } catch (err: any) {
+            // Allow trying other variants when a padding/key combination can't encrypt.
+            const message = String(err?.message || err)
+            if (/rsa/i.test(message)) continue
+            throw err
+          }
         }
-    }
       }
     }
     return lastAttempt ? { ...lastAttempt, attempts } : null
@@ -441,7 +507,7 @@ type MonCashButtonPaymentResponse = {
 export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise<MonCashButtonPaymentResponse> {
   const configuredMode = getMonCashMode()
   const baseUrl = getMonCashMiddlewareBaseUrl()
-  const businessKeySegments = getBusinessKeyPathSegments()
+  const businessKeySegments = getBusinessKeyPathSegmentMeta()
   const paddingModes = getRsaPaddingModesToTry()
   const ciphertextEncodings = getCiphertextEncodingsToTry()
 
@@ -483,18 +549,32 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
   }
 
   async function tryLookupForMode(mode: 'sandbox' | 'production') {
-    let lastAttempt: { response: Response; parsed: { data?: MonCashButtonPaymentResponse; rawText?: string } } | null =
-      null
+    let lastAttempt:
+      | {
+          response: Response
+          parsed: { data?: MonCashButtonPaymentResponse; rawText?: string }
+          meta: { segmentHash: string; segmentKind: string; paddingMode: RsaPaddingMode; ciphertextEncoding: CiphertextEncoding }
+        }
+      | null = null
     let attempts = 0
     for (const ciphertextEncoding of ciphertextEncodings) {
       for (const paddingMode of paddingModes) {
-        for (const segment of businessKeySegments) {
+        for (const segmentInfo of businessKeySegments) {
           try {
             attempts += 1
-            const response = await postLookupForMode(mode, segment, paddingMode, ciphertextEncoding)
+            const response = await postLookupForMode(mode, segmentInfo.segment, paddingMode, ciphertextEncoding)
             const parsed = await parsePaymentResponse(response)
 
-            lastAttempt = { response, parsed }
+            lastAttempt = {
+              response,
+              parsed,
+              meta: {
+                segmentHash: sha256Short(segmentInfo.segment),
+                segmentKind: segmentInfo.kind,
+                paddingMode,
+                ciphertextEncoding,
+              },
+            }
 
             if (response.ok && parsed.data?.success) {
               return { response, parsed, attempts }
@@ -546,6 +626,7 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
       paddingModes: paddingModes.length,
       ciphertextEncodings: ciphertextEncodings.length,
       attempts: (bestAttempt as any)?.attempts,
+      lastAttempt: (bestAttempt as any)?.meta,
     })
     throw new Error(data?.message || `MonCash Button payment lookup failed (${response.status})`)
   }

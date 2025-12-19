@@ -80,6 +80,11 @@ MONCASH_MODE=sandbox  # Change to 'production' when ready
 # MonCash Button (Middleware) Keys
 # Used for hosted "MonCash Button" checkout flow.
 MONCASH_BUTTON_BUSINESS_KEY=your_business_key
+# Notes:
+# - Avoid whitespace/newlines in the BusinessKey value.
+# - Some portals display an encoded/wrapped value that base64-decodes into multiple tokens separated by whitespace.
+#   In that case, you must use the correct single token Digicel expects (not the outer wrapper).
+# - The app will try common routing-safe variants (trimmed, concatenated, unpadded, base64url) but correct portal value is best.
 # MONCASH_BUTTON_SECRET_API_KEY can be either:
 # - a PEM public key (recommended), OR
 # - a base64 DER/SPKI public key string from the Digicel portal (the code will wrap it as PEM).
