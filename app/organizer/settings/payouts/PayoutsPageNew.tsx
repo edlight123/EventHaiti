@@ -9,6 +9,9 @@ import { useRouter } from 'next/navigation'
 // Types
 interface PayoutConfig {
   status?: 'not_setup' | 'pending_verification' | 'active' | 'on_hold'
+  accountLocation?: string
+  payoutProvider?: 'stripe_connect' | 'moncash' | 'natcash' | 'bank_transfer'
+  stripeAccountId?: string
   method?: 'bank_transfer' | 'mobile_money'
   bankDetails?: {
     accountLocation?: string
@@ -75,7 +78,7 @@ export default function PayoutsPageNew({
   const [isSubmittingBankVerification, setIsSubmittingBankVerification] = useState(false)
   const [bankVerificationMessage, setBankVerificationMessage] = useState<string | null>(null)
   const [formData, setFormData] = useState({
-    accountLocation: config?.bankDetails?.accountLocation || 'haiti',
+    accountLocation: config?.accountLocation || config?.bankDetails?.accountLocation || 'haiti',
     method: config?.method || 'bank_transfer',
     bankName: config?.bankDetails?.bankName || 'unibank',
     customBankName: '',
@@ -93,7 +96,7 @@ export default function PayoutsPageNew({
   const bankStatus = config?.verificationStatus?.bank || 'pending'
   const phoneStatus = config?.verificationStatus?.phone || 'pending'
 
-  const accountLocation = config?.bankDetails?.accountLocation || formData.accountLocation
+  const accountLocation = config?.accountLocation || config?.bankDetails?.accountLocation || formData.accountLocation
   const isHaiti = String(accountLocation || '').toLowerCase() === 'haiti'
   const selectedProvider = String(config?.mobileMoneyDetails?.provider || formData.provider || '').toLowerCase()
 
@@ -117,8 +120,41 @@ export default function PayoutsPageNew({
   const handleSavePayoutDetails = async () => {
     setIsSaving(true)
     setError(null)
+
+    const normalizedLocation = String(formData.accountLocation || '').toLowerCase()
+    const wantsStripeConnect = normalizedLocation === 'united_states' || normalizedLocation === 'canada'
     
     // Validate required fields
+    // Stripe Connect flow (US/CA): redirect to Stripe onboarding instead of collecting bank fields here.
+    if (!isHaiti && wantsStripeConnect) {
+      try {
+        await updatePayoutConfig({
+          accountLocation: normalizedLocation,
+          payoutProvider: 'stripe_connect',
+          method: 'bank_transfer',
+        } as any)
+
+        const res = await fetch('/api/organizer/stripe/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accountLocation: normalizedLocation }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          throw new Error(data?.error || data?.message || 'Failed to start Stripe onboarding')
+        }
+        if (data?.url) {
+          window.location.href = data.url
+          return
+        }
+        throw new Error('Stripe onboarding URL missing')
+      } catch (err: any) {
+        setError(err?.message || 'Failed to start Stripe onboarding')
+        setIsSaving(false)
+        return
+      }
+    }
+
     if (formData.method === 'bank_transfer') {
       if (!formData.accountLocation) {
         setError('Please select an account location')
@@ -161,6 +197,7 @@ export default function PayoutsPageNew({
     
     try {
       const updates: any = {
+        accountLocation: normalizedLocation,
         method: formData.method as 'bank_transfer' | 'mobile_money'
       }
 
@@ -184,6 +221,7 @@ export default function PayoutsPageNew({
           phoneNumber: formData.phoneNumber,
           accountName: formData.accountName || formData.phoneNumber
         }
+        updates.payoutProvider = String(formData.provider || '').toLowerCase() === 'natcash' ? 'natcash' : 'moncash'
       }
 
       await updatePayoutConfig(updates)
@@ -564,6 +602,25 @@ export default function PayoutsPageNew({
                       </span>
                     </div>
                   </div>
+
+                  {isHaiti ? (
+                    <div className="mt-3 border-t border-gray-200 pt-3">
+                      <p className="text-sm font-medium text-gray-900">Fees (Haiti)</p>
+                      <p className="text-[12px] sm:text-sm text-gray-600 mt-1">
+                        Mobile money is faster but typically has higher fees than bank payouts.
+                      </p>
+                      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                          <p className="text-sm font-semibold text-gray-900">MonCash / NatCash</p>
+                          <p className="text-[12px] sm:text-sm text-gray-600">Instant (prefunding) · Higher fees</p>
+                        </div>
+                        <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                          <p className="text-sm font-semibold text-gray-900">Bank payout</p>
+                          <p className="text-[12px] sm:text-sm text-gray-600">1–3 days · Lower fees</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Checklist + Setup Guidance */}

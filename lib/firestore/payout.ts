@@ -2,9 +2,13 @@ import { adminDb } from '@/lib/firebase/admin'
 
 export type PayoutStatus = 'not_setup' | 'pending_verification' | 'active' | 'on_hold'
 export type PayoutMethod = 'bank_transfer' | 'mobile_money'
+export type PayoutProvider = 'stripe_connect' | 'moncash' | 'natcash' | 'bank_transfer'
 
 export interface PayoutConfig {
   status: PayoutStatus
+  accountLocation?: string
+  payoutProvider?: PayoutProvider
+  stripeAccountId?: string
   method?: PayoutMethod
   bankDetails?: {
     accountLocation?: string
@@ -299,7 +303,7 @@ export async function updatePayoutConfig(
     // Mask sensitive data before saving
     const updateData: any = {
       ...updates,
-      updatedAt: now
+      updatedAt: now,
     }
 
     // If bank details are being updated, mask the account number
