@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 
 // Bump to confirm deployments in logs (no secrets).
-const MONCASH_BUTTON_HELPER_VERSION = '2025-12-19c'
+const MONCASH_BUTTON_HELPER_VERSION = '2025-12-19d'
 
 const MONCASH_SANDBOX_URL = 'https://sandbox.moncashbutton.digicelgroup.com'
 const MONCASH_PRODUCTION_URL = 'https://moncashbutton.digicelgroup.com'
@@ -192,7 +192,8 @@ function expandWhitespaceVariants(value: string): string[] {
   const noWhitespace = trimmed.replace(/\s+/g, '')
   const joined = tokens.join('')
 
-  return Array.from(new Set([noWhitespace, ...tokens, joined, trimmed].filter(Boolean)))
+  // IMPORTANT: never include the original whitespace-containing value, because it will produce "%20" in the URL path.
+  return Array.from(new Set([noWhitespace, ...tokens, joined].filter(Boolean)))
 }
 
 function getBusinessKeyCandidates(): string[] {
@@ -237,6 +238,7 @@ function getBusinessKeyPathSegments(): string[] {
   // We'll try raw first, then encoded as a fallback.
   const segments: string[] = []
   for (const candidate of getBusinessKeyCandidates()) {
+    if (/\s/.test(candidate)) continue
     segments.push(candidate)
     const encoded = encodeURIComponent(candidate)
     if (encoded !== candidate) segments.push(encoded)
