@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
 
+export const runtime = 'nodejs'
+
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
@@ -10,10 +12,19 @@ function getStripe() {
   return require('stripe')(process.env.STRIPE_SECRET_KEY)
 }
 
-function normalizeAppUrl() {
+function normalizeAppUrl(request: NextRequest) {
   const fromEnv = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL
   if (fromEnv) return fromEnv.replace(/\/$/, '')
-  return 'http://localhost:3000'
+
+  // Prefer request origin on Vercel (avoids accidentally generating localhost return URLs)
+  const forwardedProto = request.headers.get('x-forwarded-proto')
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  if (forwardedProto && forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`
+  }
+
+  // Fallback (works in dev)
+  return request.nextUrl.origin || 'http://localhost:3000'
 }
 
 function toStripeCountry(accountLocation: string): 'US' | 'CA' {
@@ -96,7 +107,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const appUrl = normalizeAppUrl()
+    const appUrl = normalizeAppUrl(request)
     const refreshUrl = `${appUrl}/organizer/settings/payouts?stripe=refresh`
     const returnUrl = `${appUrl}/organizer/settings/payouts?stripe=return`
 
