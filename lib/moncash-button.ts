@@ -141,7 +141,7 @@ function leftPadToLength(buf: Buffer, length: number): Buffer {
 
 function publicEncryptBytes(value: string, paddingOverride?: RsaPaddingMode): Buffer {
   const { keyPem, modulusLength } = getKeyDetails()
-  let buffer = Buffer.from(value, 'utf8')
+  let buffer: Buffer<ArrayBufferLike> = Buffer.from(value, 'utf8')
   const paddingMode = paddingOverride ?? getRsaPaddingMode()
 
   const maxLen = maxPlaintextBytes(modulusLength, paddingMode)
