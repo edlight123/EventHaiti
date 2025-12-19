@@ -65,6 +65,14 @@ function getBusinessKey(): string {
   return businessKey
 }
 
+function getBusinessKeyPathSegments(): { raw: string; encoded: string } {
+  const raw = getBusinessKey()
+  // Some vendor gateways do not route correctly if the path is percent-encoded.
+  // We'll try raw first, then encoded as a fallback.
+  const encoded = encodeURIComponent(raw)
+  return { raw, encoded }
+}
+
 export function encryptToMonCashButtonBase64(value: string): string {
   const keyPem = getMonCashButtonKeyPem()
   const buffer = Buffer.from(value, 'utf8')
@@ -91,7 +99,7 @@ export async function createMonCashButtonCheckoutToken(params: {
   amount: number
   orderId: string
 }): Promise<{ token: string }> {
-  const businessKey = encodeURIComponent(getBusinessKey())
+  const businessKey = getBusinessKeyPathSegments()
   const configuredMode = getMonCashMode()
   const baseUrl = getMonCashMiddlewareBaseUrl()
 
@@ -104,9 +112,9 @@ export async function createMonCashButtonCheckoutToken(params: {
     orderId: encryptedOrderId,
   }).toString()
 
-  async function postForMode(mode: 'sandbox' | 'production'): Promise<Response> {
+  async function postForMode(mode: 'sandbox' | 'production', businessKeySegment: string): Promise<Response> {
     const modeBaseUrl = mode === configuredMode ? baseUrl : getMonCashMiddlewareBaseUrlForMode(mode)
-    return fetch(`${modeBaseUrl}/Checkout/Rest/${businessKey}`, {
+    return fetch(`${modeBaseUrl}/Checkout/Rest/${businessKeySegment}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -116,23 +124,40 @@ export async function createMonCashButtonCheckoutToken(params: {
   }
 
   async function parseResponse(resp: Response): Promise<{ data?: MonCashButtonTokenResponse; rawText?: string }> {
-    const contentType = resp.headers.get('content-type') || ''
-    if (contentType.includes('application/json')) {
-      return { data: (await resp.json().catch(() => undefined)) as MonCashButtonTokenResponse | undefined }
-    }
-    return { rawText: await resp.text().catch(() => '') }
+    const rawText = await resp.text().catch(() => '')
+    // Attempt JSON parse regardless of content-type; Digicel sometimes returns JSON without the header.
+    const data = (() => {
+      try {
+        return JSON.parse(rawText) as MonCashButtonTokenResponse
+      } catch {
+        return undefined
+      }
+    })()
+    return { data, rawText }
   }
 
-  let response = await postForMode(configuredMode)
+  // Try with raw BusinessKey first.
+  let response = await postForMode(configuredMode, businessKey.raw)
   let parsed = await parseResponse(response)
+
+  // If routing rejects the raw key (or the key contains URL-sensitive characters), try encoded.
+  if (!response.ok && (response.status === 404 || response.status === 410)) {
+    response = await postForMode(configuredMode, businessKey.encoded)
+    parsed = await parseResponse(response)
+  }
 
   // If the portal keys belong to the other environment, Digicel often returns 404/410.
   // Only auto-fallback when MONCASH_BUTTON_MODE is NOT explicitly set.
   if (!response.ok && !isButtonModeExplicit() && (response.status === 404 || response.status === 410)) {
     const fallbackMode: 'sandbox' | 'production' = configuredMode === 'sandbox' ? 'production' : 'sandbox'
     console.warn('[MonCash Button] Token request failed on', configuredMode, 'status', response.status, '- trying', fallbackMode)
-    response = await postForMode(fallbackMode)
+    response = await postForMode(fallbackMode, businessKey.raw)
     parsed = await parseResponse(response)
+
+    if (!response.ok && (response.status === 404 || response.status === 410)) {
+      response = await postForMode(fallbackMode, businessKey.encoded)
+      parsed = await parseResponse(response)
+    }
   }
 
   const data = parsed.data
@@ -166,12 +191,12 @@ type MonCashButtonPaymentResponse = {
 }
 
 export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise<MonCashButtonPaymentResponse> {
-  const businessKey = encodeURIComponent(getBusinessKey())
+  const businessKey = getBusinessKeyPathSegments()
   const baseUrl = getMonCashMiddlewareBaseUrl()
 
   const encryptedOrderId = encryptToMonCashButtonBase64(orderId)
 
-  const response = await fetch(`${baseUrl}/Checkout/${businessKey}/Payment/Order/`, {
+  let response = await fetch(`${baseUrl}/Checkout/${businessKey.raw}/Payment/Order/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -180,6 +205,19 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
       orderId: encryptedOrderId,
     }).toString(),
   })
+
+  // Fallback for gateways that require encoded key.
+  if (!response.ok && (response.status === 404 || response.status === 410)) {
+    response = await fetch(`${baseUrl}/Checkout/${businessKey.encoded}/Payment/Order/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        orderId: encryptedOrderId,
+      }).toString(),
+    })
+  }
 
   const data = (await response.json().catch(async () => {
     const text = await response.text().catch(() => '')
