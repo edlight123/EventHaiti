@@ -93,6 +93,15 @@ export default function PayoutsPageNew({
   const bankStatus = config?.verificationStatus?.bank || 'pending'
   const phoneStatus = config?.verificationStatus?.phone || 'pending'
 
+  const accountLocation = config?.bankDetails?.accountLocation || formData.accountLocation
+  const isHaiti = String(accountLocation || '').toLowerCase() === 'haiti'
+
+  const statusIcon = (status: 'pending' | 'verified' | 'failed') => {
+    if (status === 'verified') return <CheckCircle className="w-4 h-4 text-green-600" />
+    if (status === 'failed') return <AlertCircle className="w-4 h-4 text-red-600" />
+    return <Clock className="w-4 h-4 text-yellow-600" />
+  }
+
   // List of supported banks
   const banks = [
     { value: 'unibank', label: 'Unibank' },
@@ -508,6 +517,88 @@ export default function PayoutsPageNew({
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
                   Payout setup
                 </h2>
+
+                {/* Checklist + Setup Guidance */}
+                <div className="mb-4 border border-gray-200 rounded-lg p-3 sm:p-4 bg-gray-50">
+                  <p className="text-sm font-semibold text-gray-900">Checklist</p>
+                  <p className="text-[12px] sm:text-sm text-gray-600 mt-1">
+                    This is what needs to be ready before you can receive payouts.
+                  </p>
+
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-start gap-2">
+                      {statusIcon(identityStatus)}
+                      <div className="min-w-0">
+                        <p className="text-sm text-gray-900 font-medium">Organizer identity verification</p>
+                        <p className="text-[12px] sm:text-sm text-gray-600">Complete your verification in /organizer/verify.</p>
+                      </div>
+                    </div>
+
+                    {hasPayoutSetup ? (
+                      <div className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <div className="min-w-0">
+                          <p className="text-sm text-gray-900 font-medium">Payout method selected</p>
+                          <p className="text-[12px] sm:text-sm text-gray-600">Bank transfer or mobile money.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2">
+                        <Clock className="w-4 h-4 text-yellow-600" />
+                        <div className="min-w-0">
+                          <p className="text-sm text-gray-900 font-medium">Choose payout method</p>
+                          <p className="text-[12px] sm:text-sm text-gray-600">Set up a bank account or mobile money to receive payouts.</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {hasPayoutSetup && config?.method === 'bank_transfer' ? (
+                      <div className="flex items-start gap-2">
+                        {statusIcon(bankStatus)}
+                        <div className="min-w-0">
+                          <p className="text-sm text-gray-900 font-medium">Bank account verification</p>
+                          <p className="text-[12px] sm:text-sm text-gray-600">Upload a statement/check to verify your bank details.</p>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {hasPayoutSetup && config?.method === 'mobile_money' ? (
+                      <>
+                        <div className="flex items-start gap-2">
+                          {statusIcon(phoneStatus)}
+                          <div className="min-w-0">
+                            <p className="text-sm text-gray-900 font-medium">Phone verification</p>
+                            <p className="text-[12px] sm:text-sm text-gray-600">Verify the phone number that will receive mobile money payouts.</p>
+                          </div>
+                        </div>
+
+                        {String(config?.mobileMoneyDetails?.provider || formData.provider).toLowerCase() === 'moncash' ? (
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 text-gray-500" />
+                            <div className="min-w-0">
+                              <p className="text-sm text-gray-900 font-medium">MonCash prefunding</p>
+                              <p className="text-[12px] sm:text-sm text-gray-600">
+                                MonCash payouts are processed as transfers. If payouts are temporarily delayed, it may be due to platform prefunding/availability.
+                              </p>
+                            </div>
+                          </div>
+                        ) : null}
+                      </>
+                    ) : null}
+
+                    {!isHaiti ? (
+                      <div className="flex items-start gap-2">
+                        <Clock className="w-4 h-4 text-yellow-600" />
+                        <div className="min-w-0">
+                          <p className="text-sm text-gray-900 font-medium">Stripe Connect (US/CA)</p>
+                          <p className="text-[12px] sm:text-sm text-gray-600">
+                            Stripe Connect onboarding will appear here for US/CA accounts when enabled.
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
 
                 {!isEditing && hasPayoutSetup ? (
                   // Summary View

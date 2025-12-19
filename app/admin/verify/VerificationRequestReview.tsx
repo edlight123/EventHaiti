@@ -184,6 +184,13 @@ export default function VerificationRequestReview({ request, user }: Props) {
 
   const steps = request.steps || null
 
+  const organizerCountry: string | null =
+    request?.steps?.organizerInfo?.fields?.country ||
+    request?.steps?.organizerInfo?.fields?.country_name ||
+    request?.organizer_country ||
+    null
+  const isHaitiOrganizer = String(organizerCountry || '').toLowerCase() === 'haiti'
+
   const renderImageThumb = (label: string, url: string | null, alt: string) => {
     return (
       <div>
@@ -218,6 +225,44 @@ export default function VerificationRequestReview({ request, user }: Props) {
 
   const renderProofForStep = (stepKeyOrId: string) => {
     const normalized = (stepKeyOrId || '').toLowerCase()
+
+    if (normalized.includes('payoutsetup') || normalized.includes('payout_setup')) {
+      return (
+        <div className="mt-3 border border-gray-200 rounded-lg p-3 sm:p-4 bg-white">
+          <p className="text-sm font-semibold text-gray-900">Payout checklist</p>
+          <p className="text-[12px] sm:text-sm text-gray-600 mt-1">
+            Payout setup can be completed after approval, but these items are required before payouts can be issued.
+          </p>
+
+          <div className="mt-3 space-y-2 text-[13px] sm:text-sm text-gray-700">
+            <div className="flex items-start gap-2">
+              <span className="mt-0.5">•</span>
+              <span>Identity verification (Organizer Verification) must be approved.</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="mt-0.5">•</span>
+              <span>Select payout method (Bank transfer or Mobile money) in Organizer Settings → Payouts.</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="mt-0.5">•</span>
+              <span>Complete method-specific verification (bank proof or phone verification).</span>
+            </div>
+
+            {isHaitiOrganizer ? (
+              <div className="flex items-start gap-2">
+                <span className="mt-0.5">•</span>
+                <span>MonCash payouts may depend on platform prefunding/availability.</span>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2">
+                <span className="mt-0.5">•</span>
+                <span>Stripe Connect (US/CA) onboarding is required when enabled.</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    }
 
     if (normalized.includes('governmentid') || normalized.includes('government_id')) {
       return (
