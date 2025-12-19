@@ -89,6 +89,10 @@ MONCASH_BUTTON_SECRET_API_KEY='-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC 
 # IMPORTANT: Use the same domain as your Website URL so the return flow receives the httpOnly cookie.
 # Return URL (browser redirect): https://<your-domain>/api/moncash-button/return
 # Alert URL  (server notification): https://<your-domain>/api/moncash-button/alert
+
+# Optional: RSA padding mode (only change if Digicel tells you to)
+# NOTE: Digicel sandbox keys may be very small; OAEP can fail with "data too large for key size".
+MONCASH_BUTTON_RSA_PADDING=pkcs1
 ```
 
 ### Test Accounts

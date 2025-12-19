@@ -134,9 +134,10 @@ export async function POST(request: Request) {
     const totalQuantity = normalizedSelections.reduce((sum, s) => sum + s.quantity, 0)
     const totalAmount = normalizedSelections.reduce((sum, s) => sum + s.quantity * s.unitPrice, 0)
 
-    // Create reference/order ID
-    // Keep it short to fit RSA encryption limits (vendor keys can be small).
-    const orderId = `mc_${crypto.randomBytes(9).toString('hex')}`
+    // Create a gateway order ID.
+    // Keep it very short to fit sandbox RSA encryption limits (Digicel sandbox keys can be tiny).
+    const orderId = `mc_${crypto.randomBytes(4).toString('hex')}`
+    const internalOrderId = `mcbtn_${eventId}_${user.id}_${Date.now()}`
 
     const { token } = await createMonCashButtonCheckoutToken({
       amount: totalAmount,
@@ -149,6 +150,7 @@ export async function POST(request: Request) {
     await supabase.from('pending_transactions').insert({
       transaction_id: null,
       order_id: orderId,
+      internal_order_id: internalOrderId,
       user_id: user.id,
       event_id: eventId,
       quantity: totalQuantity,

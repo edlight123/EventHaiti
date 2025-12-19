@@ -71,6 +71,16 @@ function publicEncryptBase64(value: string): string {
   const buffer = Buffer.from(value, 'utf8')
   const paddingMode = getRsaPaddingMode()
 
+  const keyObject = crypto.createPublicKey(keyPem)
+  const modulusLength = (keyObject.asymmetricKeyDetails as any)?.modulusLength as number | undefined
+
+  // OAEP has significant overhead; with small sandbox keys it will always fail.
+  if (paddingMode !== 'pkcs1' && modulusLength && modulusLength < 1024) {
+    throw new Error(
+      `MonCash Button RSA key too small for OAEP (modulusLength=${modulusLength}). Set MONCASH_BUTTON_RSA_PADDING=pkcs1.`
+    )
+  }
+
   const encryptOptions: crypto.RsaPublicKey | crypto.RsaPublicKey = {
     key: keyPem,
     padding:
@@ -84,8 +94,25 @@ function publicEncryptBase64(value: string): string {
   }
 
   // Default OAEP hash is SHA-1 (Node default), which is commonly expected by legacy gateways.
-  const encrypted = crypto.publicEncrypt(encryptOptions as any, buffer)
-  return encrypted.toString('base64')
+  try {
+    const encrypted = crypto.publicEncrypt(encryptOptions as any, buffer)
+    return encrypted.toString('base64')
+  } catch (err: any) {
+    if (err?.code === 'ERR_OSSL_RSA_DATA_TOO_LARGE_FOR_KEY_SIZE') {
+      const k = modulusLength ? Math.ceil(modulusLength / 8) : undefined
+      const overhead = paddingMode === 'pkcs1' ? 11 : undefined
+      const maxLen = k && overhead ? k - overhead : undefined
+      const hint =
+        maxLen != null
+          ? `Max plaintext length is ~${maxLen} bytes for this key/padding.`
+          : 'Plaintext is larger than allowed for this key/padding.'
+
+      throw new Error(
+        `MonCash Button RSA encryption failed: data too large for key size (padding=${paddingMode}, modulusLength=${modulusLength ?? 'unknown'}). ${hint} Use a shorter orderId and ensure MONCASH_BUTTON_RSA_PADDING=pkcs1.`
+      )
+    }
+    throw err
+  }
 }
 
 function formatAmountForGateway(amount: number): string {
