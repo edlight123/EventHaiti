@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 
 // Bump to confirm deployments in logs (no secrets).
-const MONCASH_BUTTON_HELPER_VERSION = '2025-12-19h'
+const MONCASH_BUTTON_HELPER_VERSION = '2025-12-19i'
 
 const MONCASH_SANDBOX_URL = 'https://sandbox.moncashbutton.digicelgroup.com'
 const MONCASH_PRODUCTION_URL = 'https://moncashbutton.digicelgroup.com'
@@ -42,12 +42,24 @@ function normalizePem(pem: string): string {
   return pem.includes('\\n') ? pem.replace(/\\n/g, '\n') : pem
 }
 
-function toPublicKeyPemFromBase64(base64Der: string): string {
-  // Convert base64 DER (SubjectPublicKeyInfo) to PEM.
-  // Accept both raw and already-normalized strings.
-  const cleaned = base64Der.replace(/\s+/g, '')
-  const lines = cleaned.match(/.{1,64}/g) || [cleaned]
-  return `-----BEGIN PUBLIC KEY-----\n${lines.join('\n')}\n-----END PUBLIC KEY-----`
+function parseMonCashPublicKeyFromEnv(value: string): crypto.KeyObject {
+  const normalized = normalizePem(value).trim()
+
+  // If it's already PEM (either PUBLIC KEY or RSA PUBLIC KEY), let Node parse it.
+  if (normalized.includes('BEGIN')) {
+    return crypto.createPublicKey(normalized)
+  }
+
+  // Otherwise, treat as base64 DER and try common public key containers.
+  const der = Buffer.from(normalized.replace(/\s+/g, ''), 'base64')
+
+  // 1) SPKI (matches the Java X509EncodedKeySpec example)
+  try {
+    return crypto.createPublicKey({ key: der, format: 'der', type: 'spki' })
+  } catch {
+    // 2) PKCS#1 RSAPublicKey (matches phpseclib CRYPT_RSA_PUBLIC_FORMAT_PKCS1 usage)
+    return crypto.createPublicKey({ key: der, format: 'der', type: 'pkcs1' })
+  }
 }
 
 function getMonCashButtonKeyPem(): string {
@@ -56,14 +68,9 @@ function getMonCashButtonKeyPem(): string {
   if (!key) {
     throw new Error('MONCASH_BUTTON_SECRET_API_KEY is not configured')
   }
-  const normalized = normalizePem(key).trim()
-
-  // If user provided a base64 DER/SPKI public key (common in vendor portals), wrap it into PEM.
-  if (!normalized.includes('BEGIN')) {
-    return toPublicKeyPemFromBase64(normalized)
-  }
-
-  return normalized
+  const keyObject = parseMonCashPublicKeyFromEnv(key)
+  // Normalize to a stable PEM for downstream uses.
+  return keyObject.export({ format: 'pem', type: 'spki' }).toString()
 }
 
 type RsaPaddingMode = 'none' | 'pkcs1' | 'oaep-sha1' | 'oaep-sha256'
@@ -477,41 +484,36 @@ export async function createMonCashButtonCheckoutToken(params: {
     return lastAttempt ? { ...lastAttempt, attempts } : null
   }
 
-  let bestAttempt: any = null
-  let bestAttemptMode: 'sandbox' | 'production' = configuredMode
-
   const attemptConfigured = await tryTokenRequestsForMode(configuredMode)
-  if (attemptConfigured) {
-    bestAttempt = attemptConfigured
-    bestAttemptMode = configuredMode
-  }
+  let attemptFallback: any = null
+  let fallbackMode: 'sandbox' | 'production' = configuredMode === 'sandbox' ? 'production' : 'sandbox'
 
   // If the portal keys belong to the other environment, Digicel often returns 404/410 or generic parse errors.
   // Auto-fallback when MONCASH_BUTTON_MODE is NOT explicitly set.
   if (!isButtonModeExplicit()) {
-    const fallbackMode: 'sandbox' | 'production' = configuredMode === 'sandbox' ? 'production' : 'sandbox'
-
     const configuredOk =
-      !!bestAttempt?.response?.ok && !!bestAttempt?.parsed?.data?.success && typeof bestAttempt?.parsed?.data?.token === 'string'
+      !!attemptConfigured?.response?.ok &&
+      !!attemptConfigured?.parsed?.data?.success &&
+      typeof attemptConfigured?.parsed?.data?.token === 'string'
 
     if (!configuredOk) {
       console.warn('[MonCash Button] Token request failed on', configuredMode, '- trying', fallbackMode)
-      const attemptFallback = await tryTokenRequestsForMode(fallbackMode)
-      const fallbackOk =
-        !!attemptFallback?.response?.ok &&
-        !!attemptFallback?.parsed?.data?.success &&
-        typeof attemptFallback?.parsed?.data?.token === 'string'
-
-      // Prefer a successful fallback, otherwise keep the configured attempt for diagnostics.
-      if (fallbackOk) {
-        bestAttempt = attemptFallback
-        bestAttemptMode = fallbackMode
-      } else if (!bestAttempt && attemptFallback) {
-        bestAttempt = attemptFallback
-        bestAttemptMode = fallbackMode
-      }
+      attemptFallback = await tryTokenRequestsForMode(fallbackMode)
     }
   }
+
+  const configuredOk =
+    !!attemptConfigured?.response?.ok &&
+    !!attemptConfigured?.parsed?.data?.success &&
+    typeof attemptConfigured?.parsed?.data?.token === 'string'
+  const fallbackOk =
+    !!attemptFallback?.response?.ok &&
+    !!attemptFallback?.parsed?.data?.success &&
+    typeof attemptFallback?.parsed?.data?.token === 'string'
+
+  // Choose the best attempt: prefer any success, otherwise prefer the fallback attempt if it exists (so diagnostics show both).
+  const bestAttempt = (fallbackOk ? attemptFallback : configuredOk ? attemptConfigured : attemptFallback ?? attemptConfigured) as any
+  const bestAttemptMode: 'sandbox' | 'production' = bestAttempt === attemptFallback ? fallbackMode : configuredMode
 
   if (!bestAttempt) throw new Error('MonCash Button token request failed: unable to perform any attempts')
 
@@ -536,6 +538,15 @@ export async function createMonCashButtonCheckoutToken(params: {
       ciphertextEncodings: ciphertextEncodings.length,
       attempts: (bestAttempt as any)?.attempts,
       lastAttempt: (bestAttempt as any)?.meta,
+      fallbackAttempt:
+        !isButtonModeExplicit() && attemptFallback
+          ? {
+              attemptedMode: fallbackMode,
+              status: (attemptFallback as any)?.response?.status,
+              attempts: (attemptFallback as any)?.attempts,
+              lastAttempt: (attemptFallback as any)?.meta,
+            }
+          : undefined,
     })
     throw new Error(`MonCash Button token request failed (${response.status}): ${message}`)
   }
