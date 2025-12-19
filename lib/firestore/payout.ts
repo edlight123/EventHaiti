@@ -9,6 +9,7 @@ export interface PayoutConfig {
   accountLocation?: string
   payoutProvider?: PayoutProvider
   stripeAccountId?: string
+  allowInstantMoncash?: boolean
   method?: PayoutMethod
   bankDetails?: {
     accountLocation?: string
@@ -266,6 +267,10 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
 
     const baseConfig: PayoutConfig = {
       status: data?.status || 'not_setup',
+      accountLocation: data?.accountLocation || data?.bankDetails?.accountLocation || undefined,
+      payoutProvider: data?.payoutProvider,
+      stripeAccountId: data?.stripeAccountId,
+      allowInstantMoncash: typeof data?.allowInstantMoncash === 'boolean' ? data.allowInstantMoncash : undefined,
       method: data?.method,
       bankDetails: data?.bankDetails,
       mobileMoneyDetails: data?.mobileMoneyDetails,

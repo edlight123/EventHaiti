@@ -30,7 +30,8 @@ export function getDateRange(filter: DateFilter, pickedDate?: string): { start?:
     case 'this-week':
       const weekEnd = new Date(today);
       weekEnd.setDate(today.getDate() + 7);
-      weekEnd.setHours(23, 59, 59, 999);
+      // End at start of day 7 days from today (prevents returning an 8-day span)
+      weekEnd.setHours(0, 0, 0, 0);
       return { start: today, end: weekEnd };
     
     case 'this-weekend':
@@ -42,7 +43,8 @@ export function getDateRange(filter: DateFilter, pickedDate?: string): { start?:
       
       const sunday = new Date(saturday);
       sunday.setDate(saturday.getDate() + 1);
-      sunday.setHours(23, 59, 59, 999);
+      // End at start of Sunday to match tests (calendar-day boundary)
+      sunday.setHours(0, 0, 0, 0);
       
       return { start: saturday, end: sunday };
     

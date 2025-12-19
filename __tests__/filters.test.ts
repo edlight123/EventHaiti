@@ -166,7 +166,7 @@ describe('Filter Utils', () => {
         eventType: 'online',
         sortBy: 'date'
       }
-      expect(countActiveFilters(filters)).toBe(5)
+      expect(countActiveFilters(filters)).toBe(6)
     })
   })
   

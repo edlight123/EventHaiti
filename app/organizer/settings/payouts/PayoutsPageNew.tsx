@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ChevronRight, AlertCircle, CheckCircle, Clock, Ban } from 'lucide-react'
 import Link from 'next/link'
 import { updatePayoutConfig } from './actions'
@@ -12,6 +12,7 @@ interface PayoutConfig {
   accountLocation?: string
   payoutProvider?: 'stripe_connect' | 'moncash' | 'natcash' | 'bank_transfer'
   stripeAccountId?: string
+  allowInstantMoncash?: boolean
   method?: 'bank_transfer' | 'mobile_money'
   bankDetails?: {
     accountLocation?: string
@@ -77,6 +78,11 @@ export default function PayoutsPageNew({
   const [bankVerificationFile, setBankVerificationFile] = useState<File | null>(null)
   const [isSubmittingBankVerification, setIsSubmittingBankVerification] = useState(false)
   const [bankVerificationMessage, setBankVerificationMessage] = useState<string | null>(null)
+  const [stripeStatus, setStripeStatus] = useState<any | null>(null)
+  const [stripeStatusError, setStripeStatusError] = useState<string | null>(null)
+  const [isLoadingStripeStatus, setIsLoadingStripeStatus] = useState(false)
+  const [prefunding, setPrefunding] = useState<{ enabled: boolean; available: boolean } | null>(null)
+  const [prefundingError, setPrefundingError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     accountLocation: config?.accountLocation || config?.bankDetails?.accountLocation || 'haiti',
     method: config?.method || 'bank_transfer',
@@ -99,6 +105,95 @@ export default function PayoutsPageNew({
   const accountLocation = config?.accountLocation || config?.bankDetails?.accountLocation || formData.accountLocation
   const isHaiti = String(accountLocation || '').toLowerCase() === 'haiti'
   const selectedProvider = String(config?.mobileMoneyDetails?.provider || formData.provider || '').toLowerCase()
+
+  const isStripeConnectSelection =
+    String(accountLocation || '').toLowerCase() === 'united_states' ||
+    String(accountLocation || '').toLowerCase() === 'canada'
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadStripe = async () => {
+      if (!isStripeConnectSelection) return
+      setIsLoadingStripeStatus(true)
+      setStripeStatusError(null)
+      try {
+        const res = await fetch('/api/organizer/stripe/status', { cache: 'no-store' as any })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data?.error || data?.message || 'Failed to load Stripe status')
+        if (!cancelled) setStripeStatus(data)
+      } catch (e: any) {
+        if (!cancelled) setStripeStatusError(e?.message || 'Failed to load Stripe status')
+      } finally {
+        if (!cancelled) setIsLoadingStripeStatus(false)
+      }
+    }
+
+    const loadPrefunding = async () => {
+      if (!isHaiti) return
+      setPrefundingError(null)
+      try {
+        const res = await fetch('/api/organizer/payout-prefunding-status', { cache: 'no-store' as any })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data?.error || data?.message || 'Failed to load prefunding status')
+        if (!cancelled) setPrefunding(data?.prefunding || { enabled: false, available: false })
+      } catch (e: any) {
+        if (!cancelled) setPrefundingError(e?.message || 'Failed to load prefunding status')
+      }
+    }
+
+    void loadStripe()
+    void loadPrefunding()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isStripeConnectSelection, isHaiti])
+
+  const getStripeBadge = () => {
+    const status = String(stripeStatus?.status || '')
+    if (status === 'verified') return { label: 'Verified', tone: 'bg-green-100 text-green-800 border-green-200' }
+    if (status === 'requires_more_info') return { label: 'Needs attention', tone: 'bg-red-100 text-red-800 border-red-200' }
+    if (status === 'incomplete') return { label: 'Incomplete', tone: 'bg-yellow-100 text-yellow-800 border-yellow-200' }
+    if (status === 'in_review') return { label: 'In review', tone: 'bg-blue-100 text-blue-800 border-blue-200' }
+    return { label: 'Not connected', tone: 'bg-gray-100 text-gray-800 border-gray-200' }
+  }
+
+  const startStripeOnboarding = async () => {
+    setError(null)
+    try {
+      const res = await fetch('/api/organizer/stripe/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountLocation: String(accountLocation || '').toLowerCase() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || data?.message || 'Failed to start Stripe onboarding')
+      if (data?.url) {
+        window.location.href = data.url
+        return
+      }
+      throw new Error('Stripe onboarding URL missing')
+    } catch (e: any) {
+      setError(e?.message || 'Failed to start Stripe onboarding')
+    }
+  }
+
+  const openStripeDashboard = async () => {
+    setError(null)
+    try {
+      const res = await fetch('/api/organizer/stripe/login-link', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || data?.message || 'Failed to open Stripe dashboard')
+      if (data?.url) {
+        window.location.href = data.url
+        return
+      }
+      throw new Error('Stripe dashboard URL missing')
+    } catch (e: any) {
+      setError(e?.message || 'Failed to open Stripe dashboard')
+    }
+  }
 
   const statusIcon = (status: 'pending' | 'verified' | 'failed') => {
     if (status === 'verified') return <CheckCircle className="w-4 h-4 text-green-600" />
@@ -585,6 +680,97 @@ export default function PayoutsPageNew({
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
                   Payout setup
                 </h2>
+
+                {isStripeConnectSelection ? (
+                  <div className="mb-4 border border-gray-200 rounded-lg p-3 sm:p-4 bg-white">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">Stripe Connect</p>
+                        <p className="text-[12px] sm:text-sm text-gray-600 mt-1">
+                          Connect your Stripe account to receive payouts to your bank.
+                        </p>
+                      </div>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStripeBadge().tone}`}>
+                        {getStripeBadge().label}
+                      </span>
+                    </div>
+
+                    {stripeStatusError ? (
+                      <div className="mt-3 text-sm text-red-700">{stripeStatusError}</div>
+                    ) : null}
+
+                    <div className="mt-3 flex gap-2">
+                      {!stripeStatus?.connected ? (
+                        <button
+                          onClick={startStripeOnboarding}
+                          className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700"
+                        >
+                          Connect with Stripe
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={startStripeOnboarding}
+                            className="px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+                          >
+                            Continue onboarding
+                          </button>
+                          <button
+                            onClick={openStripeDashboard}
+                            className="px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+                          >
+                            Manage in Stripe
+                          </button>
+                        </>
+                      )}
+
+                      {isLoadingStripeStatus ? (
+                        <span className="text-sm text-gray-500 self-center">Loading…</span>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+
+                {isHaiti &&
+                String(formData.method || '').toLowerCase() === 'mobile_money' &&
+                selectedProvider === 'moncash' ? (
+                  <div className="mb-4 border border-gray-200 rounded-lg p-3 sm:p-4 bg-white">
+                    <p className="text-sm font-semibold text-gray-900">Instant MonCash (prefunding)</p>
+                    <p className="text-[12px] sm:text-sm text-gray-600 mt-1">
+                      Instant payouts depend on platform prefunding availability.
+                    </p>
+
+                    {prefundingError ? (
+                      <div className="mt-2 text-sm text-red-700">{prefundingError}</div>
+                    ) : null}
+
+                    {prefunding ? (
+                      <div className="mt-2 text-[12px] sm:text-sm text-gray-700">
+                        Status: {prefunding.enabled && prefunding.available ? 'Available' : prefunding.enabled ? 'Temporarily unavailable' : 'Disabled'}
+                      </div>
+                    ) : (
+                      <div className="mt-2 text-[12px] sm:text-sm text-gray-500">Loading…</div>
+                    )}
+
+                    <label className="mt-3 flex items-center gap-2 text-sm text-gray-900">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(config?.allowInstantMoncash)}
+                        disabled={!prefunding?.enabled || !prefunding?.available}
+                        onChange={async (e) => {
+                          try {
+                            await updatePayoutConfig({ allowInstantMoncash: e.target.checked } as any)
+                            router.refresh()
+                          } catch {
+                            setError('Failed to update prefunding preference')
+                          }
+                        }}
+                        className="w-4 h-4 text-purple-600"
+                      />
+                      Allow instant MonCash withdrawals when available
+                    </label>
+                  </div>
+                ) : null}
 
                 <div className="mb-4 border border-gray-200 rounded-lg p-3 sm:p-4 bg-white">
                   <p className="text-sm font-semibold text-gray-900">Payout options</p>
