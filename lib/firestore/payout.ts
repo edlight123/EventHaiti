@@ -256,8 +256,8 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
       // For identity: prioritize organizer verification check, then payout-specific verification, then config data
       identity: verificationStatus.identity,
       // For bank/phone: use verification docs first, then config data
-      bank: verificationStatus.bank !== 'pending' ? verificationStatus.bank : (data.verificationStatus?.bank || 'pending'),
-      phone: verificationStatus.phone !== 'pending' ? verificationStatus.phone : (data.verificationStatus?.phone || 'pending'),
+      bank: verificationStatus.bank !== 'pending' ? verificationStatus.bank : (data?.verificationStatus?.bank || 'pending'),
+      phone: verificationStatus.phone !== 'pending' ? verificationStatus.phone : (data?.verificationStatus?.phone || 'pending'),
     }
 
     const baseConfig: PayoutConfig = {
