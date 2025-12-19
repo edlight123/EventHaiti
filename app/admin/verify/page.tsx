@@ -9,6 +9,33 @@ import { adminDb } from '@/lib/firebase/admin'
 
 export const revalidate = 0
 
+function serializeFirestoreValue(value: any): any {
+  if (value == null) return value
+
+  // Firestore Timestamp (admin/client SDK) and other objects that expose toDate()
+  if (typeof value?.toDate === 'function') {
+    try {
+      const date = value.toDate()
+      if (date instanceof Date) return date.toISOString()
+    } catch {
+      // fall through
+    }
+  }
+
+  if (value instanceof Date) return value.toISOString()
+  if (Array.isArray(value)) return value.map(serializeFirestoreValue)
+
+  if (typeof value === 'object') {
+    const output: Record<string, any> = {}
+    for (const [key, val] of Object.entries(value)) {
+      output[key] = serializeFirestoreValue(val)
+    }
+    return output
+  }
+
+  return value
+}
+
 export default async function AdminVerifyPage() {
   const user = await getCurrentUser()
 
@@ -26,30 +53,20 @@ export default async function AdminVerifyPage() {
     const snapshot = await adminDb.collection('verification_requests').get()
     verificationRequests = snapshot.docs.map((doc: any) => {
       const data = doc.data()
-      
-      // Helper to convert Firestore Timestamps to ISO strings
-      const convertTimestamp = (val: any) => {
-        if (val?.toDate) return val.toDate().toISOString()
-        if (val instanceof Date) return val.toISOString()
-        return val
-      }
-      
-      // Serialize all fields to plain objects
+
+      // Deep-serialize Firestore values (timestamps, nested objects, arrays)
+      const serialized = serializeFirestoreValue(data)
+
+      // Normalize key fields while keeping the entire payload intact.
+      const normalizedUserId =
+        serialized?.userId || serialized?.user_id || serialized?.userID || serialized?.uid || doc.id
+
       return {
         id: doc.id,
-        userId: data.userId || null,
-        user_id: data.user_id || null,
-        status: data.status || 'pending',
-        id_front_url: data.id_front_url || null,
-        id_back_url: data.id_back_url || null,
-        face_photo_url: data.face_photo_url || null,
-        reviewed_by: data.reviewed_by || null,
-        rejection_reason: data.rejection_reason || null,
-        reviewNotes: data.reviewNotes || null,
-        created_at: convertTimestamp(data.created_at),
-        updated_at: convertTimestamp(data.updated_at),
-        reviewed_at: convertTimestamp(data.reviewed_at),
-        submittedAt: convertTimestamp(data.submittedAt),
+        ...serialized,
+        userId: normalizedUserId,
+        user_id: serialized?.user_id ?? serialized?.userId ?? null,
+        status: serialized?.status || 'pending',
       }
     })
   } catch (error) {
