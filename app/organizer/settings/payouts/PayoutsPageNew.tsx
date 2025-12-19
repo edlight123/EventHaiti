@@ -95,6 +95,7 @@ export default function PayoutsPageNew({
 
   const accountLocation = config?.bankDetails?.accountLocation || formData.accountLocation
   const isHaiti = String(accountLocation || '').toLowerCase() === 'haiti'
+  const selectedProvider = String(config?.mobileMoneyDetails?.provider || formData.provider || '').toLowerCase()
 
   const statusIcon = (status: 'pending' | 'verified' | 'failed') => {
     if (status === 'verified') return <CheckCircle className="w-4 h-4 text-green-600" />
@@ -518,6 +519,24 @@ export default function PayoutsPageNew({
                   Payout setup
                 </h2>
 
+                <div className="mb-4 border border-gray-200 rounded-lg p-3 sm:p-4 bg-white">
+                  <p className="text-sm font-semibold text-gray-900">Payout options</p>
+                  <div className="mt-2 space-y-2 text-[12px] sm:text-sm text-gray-700">
+                    <div className="flex items-start gap-2">
+                      <span className="mt-0.5">•</span>
+                      <span>
+                        <span className="font-medium text-gray-900">Haiti:</span> Bank transfer or Mobile money (MonCash).
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="mt-0.5">•</span>
+                      <span>
+                        <span className="font-medium text-gray-900">US/Canada:</span> Stripe Connect (shows when Account location is set to United States/Canada).
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Checklist + Setup Guidance */}
                 <div className="mb-4 border border-gray-200 rounded-lg p-3 sm:p-4 bg-gray-50">
                   <p className="text-sm font-semibold text-gray-900">Checklist</p>
@@ -572,7 +591,7 @@ export default function PayoutsPageNew({
                           </div>
                         </div>
 
-                        {String(config?.mobileMoneyDetails?.provider || formData.provider).toLowerCase() === 'moncash' ? (
+                        {selectedProvider === 'moncash' ? (
                           <div className="flex items-start gap-2">
                             <AlertCircle className="w-4 h-4 text-gray-500" />
                             <div className="min-w-0">
@@ -586,13 +605,25 @@ export default function PayoutsPageNew({
                       </>
                     ) : null}
 
-                    {!isHaiti ? (
+                    <div className="flex items-start gap-2">
+                      <Clock className="w-4 h-4 text-yellow-600" />
+                      <div className="min-w-0">
+                        <p className="text-sm text-gray-900 font-medium">Stripe Connect (US/CA)</p>
+                        <p className="text-[12px] sm:text-sm text-gray-600">
+                          {isHaiti
+                            ? 'Set Account location to United States or Canada to see Stripe Connect onboarding.'
+                            : 'Stripe Connect onboarding will appear here for US/CA accounts when enabled.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {isHaiti ? (
                       <div className="flex items-start gap-2">
-                        <Clock className="w-4 h-4 text-yellow-600" />
+                        <AlertCircle className="w-4 h-4 text-gray-500" />
                         <div className="min-w-0">
-                          <p className="text-sm text-gray-900 font-medium">Stripe Connect (US/CA)</p>
+                          <p className="text-sm text-gray-900 font-medium">MonCash setup</p>
                           <p className="text-[12px] sm:text-sm text-gray-600">
-                            Stripe Connect onboarding will appear here for US/CA accounts when enabled.
+                            Choose Payout method → Mobile money, then pick Provider → MonCash.
                           </p>
                         </div>
                       </div>
