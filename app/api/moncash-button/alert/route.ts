@@ -3,6 +3,18 @@ import { createClient } from '@/lib/firebase-db/server'
 
 export const runtime = 'nodejs'
 
+export async function GET(request: Request) {
+  // Digicel portal misconfiguration sometimes points the user-facing redirect at the Alert URL.
+  // Our Alert handler is meant to be server-to-server POST, so a browser GET would otherwise 405.
+  // Redirect GETs to the Return handler which performs verification + ticket creation.
+  const currentUrl = new URL(request.url)
+  const redirectUrl = new URL('/api/moncash-button/return', request.url)
+  currentUrl.searchParams.forEach((value, key) => {
+    redirectUrl.searchParams.set(key, value)
+  })
+  return NextResponse.redirect(redirectUrl)
+}
+
 export async function POST(request: Request) {
   // Digicel "Alert URL" is typically a server-to-server notification.
   // Payload format varies by configuration; accept both form-encoded and JSON.
