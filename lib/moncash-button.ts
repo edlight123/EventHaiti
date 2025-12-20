@@ -111,7 +111,9 @@ function encodeCiphertext(buf: Buffer, encoding: CiphertextEncoding): string {
 
 function getFormCiphertextEncoding(): CiphertextEncoding {
   const configured = (process.env.MONCASH_BUTTON_FORM_CIPHERTEXT_ENCODING || '').toLowerCase()
-  return configured === 'base64url' ? 'base64url' : 'base64'
+  if (configured === 'base64') return 'base64'
+  // Default to base64url to avoid '+' and '/' handling bugs in some form decoders.
+  return 'base64url'
 }
 
 function sha256Short(value: string): string {
