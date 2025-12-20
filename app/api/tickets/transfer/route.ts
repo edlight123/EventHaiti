@@ -24,15 +24,18 @@ export async function POST(req: NextRequest) {
 
     const supabase = await createClient()
 
-    // Verify ticket belongs to current user (check both user_id and attendee_id for compatibility)
+    // Verify ticket exists, then check ownership in application code.
+    // (Firebase DB adapter doesn't support `.or()` the way Supabase does.)
     const { data: ticket, error: ticketError } = await supabase
       .from('tickets')
       .select('*, events(*)')
       .eq('id', ticketId)
-      .or(`user_id.eq.${user.id},attendee_id.eq.${user.id}`)
       .single()
 
-    if (ticketError || !ticket) {
+    const ownedByUser =
+      !!ticket && (ticket.user_id === user.id || ticket.attendee_id === user.id)
+
+    if (ticketError || !ticket || !ownedByUser) {
       return NextResponse.json(
         { error: 'Ticket not found or does not belong to you' },
         { status: 404 }

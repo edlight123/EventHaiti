@@ -54,17 +54,28 @@ export async function GET(request: Request) {
     }
 
     // Cookie-less correlation: Digicel provides transactionId; the payment reference should match our orderId.
+    // NOTE: Our Firebase DB adapter does NOT support `.or()`; using it can accidentally run an unfiltered query.
+    // So we try a couple of explicit equality lookups instead.
     let paymentFromLookup: any = null
     if (!orderId && transactionId) {
-      // If alert webhook already recorded the transaction number, map it back to our order.
-      const { data: txMatch } = await supabase
+      const { data: txMatch1 } = await supabase
         .from('pending_transactions')
         .select('order_id')
-        .or(`transaction_id.eq.${transactionId},moncash_trans_number.eq.${transactionId}`)
+        .eq('transaction_id', transactionId)
         .single()
 
-      if (txMatch?.order_id) {
-        orderId = String(txMatch.order_id)
+      if (txMatch1?.order_id) {
+        orderId = String(txMatch1.order_id)
+      } else {
+        const { data: txMatch2 } = await supabase
+          .from('pending_transactions')
+          .select('order_id')
+          .eq('moncash_trans_number', transactionId)
+          .single()
+
+        if (txMatch2?.order_id) {
+          orderId = String(txMatch2.order_id)
+        }
       }
     }
 
