@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'next/navigation'
 import { firebaseDb as supabase } from '@/lib/firebase-db/client'
@@ -36,6 +36,31 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   const [selectedTierPrice, setSelectedTierPrice] = useState<number>(0)
   const [selectedTiers, setSelectedTiers] = useState<{ tierId: string; quantity: number; price: number; tierName?: string }[]>([])
   const [promoCode, setPromoCode] = useState<string | undefined>()
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return
+      const data: any = event.data
+      if (!data || data.source !== 'eventhaiti' || data.type !== 'purchase_result') return
+
+      if (data.status === 'success') {
+        const ticketId = data.ticketId || data.ticket_id
+        if (ticketId) {
+          router.push(`/purchase/success?ticketId=${encodeURIComponent(String(ticketId))}`)
+        } else {
+          router.push('/purchase/success')
+        }
+      } else if (data.status === 'failed') {
+        const reason = data.reason ? encodeURIComponent(String(data.reason)) : 'unknown'
+        router.push(`/purchase/failed?reason=${reason}`)
+      }
+
+      router.refresh()
+    }
+
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [router])
 
   async function handleClaimFreeTicket() {
     setLoading(true)
@@ -148,7 +173,27 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
           throw new Error('Missing MonCash redirect URL')
         }
 
-        window.location.href = data.redirectUrl
+        const popup = window.open(
+          data.redirectUrl,
+          'moncash_checkout',
+          'popup=yes,width=480,height=720,scrollbars=yes,resizable=yes'
+        )
+
+        if (!popup) {
+          // Popup blocked: fallback to same-tab redirect.
+          window.location.href = data.redirectUrl
+          return
+        }
+
+        popup.focus()
+        showToast({
+          type: 'info',
+          title: 'Complete payment in the popup',
+          message: 'Keep this tab open. We’ll bring you back when payment completes.',
+          duration: 6000,
+        })
+
+        setLoading(false)
       }
     } catch (err: any) {
       setError(err.message || 'Failed to purchase ticket')

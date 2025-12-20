@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import PurchasePopupBridge from '@/components/PurchasePopupBridge'
 
 export default function PurchaseFailedPage({
   searchParams,
@@ -38,6 +39,7 @@ export default function PurchaseFailedPage({
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <PurchasePopupBridge status="failed" reason={reason} />
       <div className="max-w-md w-full">
         <div className="bg-white rounded-xl shadow-md p-6 md:p-8 text-center">
           {/* Error Icon */}

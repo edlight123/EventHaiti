@@ -4,6 +4,7 @@ import { isAdmin } from '@/lib/admin'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { PurchaseSuccessNotificationPrompt } from '@/components/PurchaseSuccessNotificationPrompt'
+import PurchasePopupBridge from '@/components/PurchasePopupBridge'
 import Link from 'next/link'
 import type { Database } from '@/types/database'
 
@@ -14,14 +15,16 @@ export const revalidate = 0
 export default async function PurchaseSuccessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ session_id?: string; ticket_id?: string }>
+  searchParams: Promise<{ session_id?: string; ticket_id?: string; ticketId?: string }>
 }) {
   const user = await getCurrentUser()
   const params = await searchParams
 
+  const ticketId = params.ticket_id || params.ticketId
+
   let ticket: any = null
 
-  if (params.ticket_id) {
+  if (ticketId) {
     const supabase = await createClient()
     const { data } = await supabase
       .from('tickets')
@@ -34,7 +37,7 @@ export default async function PurchaseSuccessPage({
           city
         )
       `)
-      .eq('id', params.ticket_id)
+      .eq('id', ticketId)
       .single()
 
     ticket = data
@@ -42,6 +45,7 @@ export default async function PurchaseSuccessPage({
 
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+      <PurchasePopupBridge status="success" ticketId={ticketId || null} />
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
