@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
+import { getMonCashButtonPaymentByTransactionId } from '@/lib/moncash-button'
 
 export const runtime = 'nodejs'
 
@@ -43,8 +44,20 @@ export async function POST(request: Request) {
       }
     }
 
-    const orderId = payload.orderId || payload.order_id || payload.reference || null
+    let orderId = payload.orderId || payload.order_id || payload.reference || null
     const transactionId = payload.transactionId || payload.transaction_id || payload.transNumber || null
+
+    // Some Digicel alert payloads omit orderId/reference. Best-effort correlation via transaction lookup.
+    if (!orderId && transactionId) {
+      try {
+        const payment = await getMonCashButtonPaymentByTransactionId(String(transactionId))
+        if (payment?.reference) {
+          orderId = String(payment.reference)
+        }
+      } catch (err) {
+        console.error('MonCash Button alert: transaction lookup failed', err)
+      }
+    }
 
     // Best-effort persistence only; the return URL flow is the source of truth.
     if (orderId || transactionId) {

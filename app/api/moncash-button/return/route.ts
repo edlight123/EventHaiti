@@ -56,6 +56,19 @@ export async function GET(request: Request) {
     // Cookie-less correlation: Digicel provides transactionId; the payment reference should match our orderId.
     let paymentFromLookup: any = null
     if (!orderId && transactionId) {
+      // If alert webhook already recorded the transaction number, map it back to our order.
+      const { data: txMatch } = await supabase
+        .from('pending_transactions')
+        .select('order_id')
+        .or(`transaction_id.eq.${transactionId},moncash_trans_number.eq.${transactionId}`)
+        .single()
+
+      if (txMatch?.order_id) {
+        orderId = String(txMatch.order_id)
+      }
+    }
+
+    if (!orderId && transactionId) {
       try {
         paymentFromLookup = await getMonCashButtonPaymentByTransactionId(transactionId)
         if (paymentFromLookup?.reference) {
@@ -67,6 +80,11 @@ export async function GET(request: Request) {
     }
 
     if (!orderId) {
+      console.warn('[moncash_button] return: missing_order', {
+        hasTransactionId: Boolean(transactionId),
+        queryKeys: Array.from(searchParams.keys()),
+        hasCookieOrder: Boolean(cookies().get('moncash_button_order_id')?.value),
+      })
       return NextResponse.redirect(new URL('/purchase/failed?reason=missing_order', request.url))
     }
 
