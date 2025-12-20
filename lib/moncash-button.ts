@@ -139,9 +139,9 @@ function parseRsaPaddingMode(modeRaw: string | undefined, defaultMode: RsaPaddin
 }
 
 function getFormRsaPaddingMode(): RsaPaddingMode {
-  // Hosted Checkout (HTML form POST) frequently expects PKCS#1 padding.
+  // Digicel MonCash Button docs/examples typically use RSA/None/NoPadding.
   // Keep REST token padding controlled by MONCASH_BUTTON_RSA_PADDING.
-  return parseRsaPaddingMode(process.env.MONCASH_BUTTON_FORM_RSA_PADDING, 'pkcs1')
+  return parseRsaPaddingMode(process.env.MONCASH_BUTTON_FORM_RSA_PADDING, 'none')
 }
 
 function getRsaPaddingModesToTry(): RsaPaddingMode[] {
