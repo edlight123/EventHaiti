@@ -4,6 +4,21 @@ import { getMonCashButtonPaymentByTransactionId } from '@/lib/moncash-button'
 
 export const runtime = 'nodejs'
 
+function tryExtractReferenceFromJwtLikeToken(token: string): string | null {
+  const parts = token.split('.')
+  if (parts.length < 2) return null
+  const payload = parts[1]
+  try {
+    const padded = payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '=')
+    const json = Buffer.from(padded, 'base64').toString('utf8')
+    const data = JSON.parse(json)
+    const ref = data?.ref ?? data?.reference ?? null
+    return typeof ref === 'string' && ref.trim() ? ref.trim() : null
+  } catch {
+    return null
+  }
+}
+
 export async function GET(request: Request) {
   // Digicel portal misconfiguration sometimes points the user-facing redirect at the Alert URL.
   // Our Alert handler is meant to be server-to-server POST, so a browser GET would otherwise 405.
@@ -46,6 +61,13 @@ export async function POST(request: Request) {
 
     let orderId = payload.orderId || payload.order_id || payload.reference || null
     const transactionId = payload.transactionId || payload.transaction_id || payload.transNumber || null
+
+    if (!orderId && typeof transactionId === 'string' && transactionId.includes('.')) {
+      const extracted = tryExtractReferenceFromJwtLikeToken(transactionId)
+      if (extracted) {
+        orderId = extracted
+      }
+    }
 
     // Some Digicel alert payloads omit orderId/reference. Best-effort correlation via transaction lookup.
     if (!orderId && transactionId) {

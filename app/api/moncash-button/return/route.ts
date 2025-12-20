@@ -8,6 +8,24 @@ import { generateTicketQRCode } from '@/lib/qrcode'
 
 export const runtime = 'nodejs'
 
+function tryExtractReferenceFromJwtLikeToken(token: string): string | null {
+  // Digicel sometimes passes a JWT-like token as `transactionId`.
+  // We don't need to verify the signature; we only want the embedded `ref`/reference
+  // and we still verify payment via MonCash middleware by orderId afterwards.
+  const parts = token.split('.')
+  if (parts.length < 2) return null
+  const payload = parts[1]
+  try {
+    const padded = payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '=')
+    const json = Buffer.from(padded, 'base64').toString('utf8')
+    const data = JSON.parse(json)
+    const ref = data?.ref ?? data?.reference ?? null
+    return typeof ref === 'string' && ref.trim() ? ref.trim() : null
+  } catch {
+    return null
+  }
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -32,6 +50,14 @@ export async function GET(request: Request) {
     let orderId: string | null = orderIdFromQuery
 
     const supabase = await createClient()
+
+    // If transactionId is a JWT-like token, it may contain the reference/orderId.
+    if (!orderId && transactionId && transactionId.includes('.')) {
+      const extracted = tryExtractReferenceFromJwtLikeToken(transactionId)
+      if (extracted) {
+        orderId = extracted
+      }
+    }
 
     // Attempt to map a token-like transactionId to our stored checkout token.
     // Some portal setups redirect with a token in transactionId (looks like base64/base64url).
