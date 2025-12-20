@@ -246,11 +246,25 @@ export async function POST(request: Request) {
     // (or includes a token-like transactionId that can't be looked up).
     response.cookies.set('moncash_button_order_id', orderId, {
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: 'none',
       secure: true,
       path: '/',
       maxAge: 60 * 60, // 1 hour
     })
+
+    // Domain cookie helps when ReturnUrl host differs (www vs apex).
+    const host = new URL(request.url).hostname
+    const apex = host.startsWith('www.') ? host.slice(4) : host
+    if (apex && apex.includes('.') && !/localhost/i.test(apex) && !/vercel\.app$/i.test(apex)) {
+      response.cookies.set('moncash_button_order_id_domain', orderId, {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+        path: '/',
+        domain: `.${apex}`,
+        maxAge: 60 * 60,
+      })
+    }
     return response
   } catch (error: any) {
     console.error('MonCash Button initiate error:', error)

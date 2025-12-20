@@ -106,6 +106,21 @@ export async function GET(request: Request) {
       maxAge: 60 * 60,
     })
 
+    // Also set a domain cookie to survive www <-> apex ReturnUrl mismatches.
+    // (A __Host- cookie cannot set Domain.)
+    const host = new URL(request.url).hostname
+    const apex = host.startsWith('www.') ? host.slice(4) : host
+    if (apex && apex.includes('.') && !/localhost/i.test(apex) && !/vercel\.app$/i.test(apex)) {
+      response.cookies.set('moncash_button_order_id_domain', orderId, {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+        path: '/',
+        domain: `.${apex}`,
+        maxAge: 60 * 60,
+      })
+    }
+
     return response
   } catch (err: any) {
     console.error('MonCash Button checkout form error:', err)

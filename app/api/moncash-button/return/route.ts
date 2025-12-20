@@ -174,7 +174,10 @@ export async function GET(request: Request) {
     if (!orderId) {
       const jar = cookies()
       const orderIdFromCookie =
-        jar.get('moncash_button_order_id')?.value || jar.get('__Host-moncash_button_order_id')?.value || null
+        jar.get('moncash_button_order_id')?.value ||
+        jar.get('__Host-moncash_button_order_id')?.value ||
+        jar.get('moncash_button_order_id_domain')?.value ||
+        null
       if (orderIdFromCookie) orderId = orderIdFromCookie
     }
 
@@ -226,7 +229,9 @@ export async function GET(request: Request) {
         hasTransactionId: Boolean(transactionIdEncrypted),
         queryKeys: Array.from(searchParams.keys()),
         hasCookieOrder: Boolean(
-          cookies().get('moncash_button_order_id')?.value || cookies().get('__Host-moncash_button_order_id')?.value
+          cookies().get('moncash_button_order_id')?.value ||
+            cookies().get('__Host-moncash_button_order_id')?.value ||
+            cookies().get('moncash_button_order_id_domain')?.value
         ),
       })
       return NextResponse.redirect(new URL('/purchase/failed?reason=missing_order', request.url))
