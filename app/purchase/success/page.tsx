@@ -12,6 +12,8 @@ type Ticket = Database['public']['Tables']['tickets']['Row']
 
 export const revalidate = 0
 
+type TicketEvent = Pick<Database['public']['Tables']['events']['Row'], 'title' | 'start_datetime' | 'venue_name' | 'city'>
+
 export default async function PurchaseSuccessPage({
   searchParams,
 }: {
@@ -23,25 +25,52 @@ export default async function PurchaseSuccessPage({
   const ticketId = params.ticket_id || params.ticketId
 
   let ticket: any = null
+  let event: TicketEvent | null = null
 
   if (ticketId) {
     const supabase = await createClient()
-    const { data } = await supabase
-      .from('tickets')
-      .select(`
-        *,
-        event:events (
-          title,
-          start_datetime,
-          venue,
-          city
-        )
-      `)
-      .eq('id', ticketId)
-      .single()
+    const { data: ticketData } = await supabase.from('tickets').select('*').eq('id', ticketId).single()
+    ticket = ticketData
 
-    ticket = data
+    // Our Firebase "Supabase-like" adapter doesn't reliably support joins.
+    // Fetch the event separately and tolerate missing data.
+    const eventId = (ticketData as any)?.event_id
+    if (eventId) {
+      const { data: eventData } = await supabase
+        .from('events')
+        .select('title,start_datetime,venue_name,city')
+        .eq('id', eventId)
+        .single()
+      event = (eventData as any) || null
+    }
+
+    // Some ticket records are denormalized and may already include event fields.
+    if (!event) {
+      const maybeTitle = (ticketData as any)?.event_title || (ticketData as any)?.title
+      const maybeStart = (ticketData as any)?.start_datetime || (ticketData as any)?.event_date
+      const maybeVenue = (ticketData as any)?.venue_name || (ticketData as any)?.venue
+      const maybeCity = (ticketData as any)?.city
+      if (maybeTitle || maybeStart || maybeVenue || maybeCity) {
+        event = {
+          title: String(maybeTitle || 'Event'),
+          start_datetime: String(maybeStart || ''),
+          venue_name: String(maybeVenue || ''),
+          city: String(maybeCity || ''),
+        }
+      }
+    }
   }
+
+  const safeEventTitle = event?.title || 'Your event'
+  const safeStart = event?.start_datetime ? new Date(event.start_datetime) : null
+  const safeLocation = [event?.venue_name || '', event?.city || ''].filter(Boolean).join(', ')
+  const amountPaid = (() => {
+    const raw = (ticket as any)?.price_paid
+    const value = typeof raw === 'number' ? raw : Number(raw)
+    if (!Number.isFinite(value)) return null
+    return value
+  })()
+  const amountCurrency = (ticket as any)?.currency || null
 
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
@@ -66,16 +95,18 @@ export default async function PurchaseSuccessPage({
         {ticket && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
             <div className="bg-gradient-to-r from-orange-500 to-pink-500 p-4 md:p-6 text-white">
-              <h2 className="text-lg md:text-xl lg:text-2xl font-bold mb-1.5 md:mb-2 line-clamp-2">{ticket.event.title}</h2>
+              <h2 className="text-lg md:text-xl lg:text-2xl font-bold mb-1.5 md:mb-2 line-clamp-2">{safeEventTitle}</h2>
               <p className="text-sm md:text-base text-orange-100">
-                {new Date(ticket.event.start_datetime).toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })}
+                {safeStart
+                  ? safeStart.toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })
+                  : 'Date to be confirmed'}
               </p>
             </div>
 
@@ -87,12 +118,14 @@ export default async function PurchaseSuccessPage({
 
               <div className="flex justify-between items-center pb-3 border-b border-gray-200">
                 <span className="text-[13px] font-medium text-gray-600">Location</span>
-                <span className="text-sm text-gray-900 text-right truncate max-w-[60%]">{ticket.event.venue}, {ticket.event.city}</span>
+                <span className="text-sm text-gray-900 text-right truncate max-w-[60%]">{safeLocation || '—'}</span>
               </div>
 
               <div className="flex justify-between items-center pb-3 border-b border-gray-200">
                 <span className="text-[13px] font-medium text-gray-600">Amount Paid</span>
-                <span className="text-base md:text-lg font-bold text-gray-900">${ticket.price_paid.toFixed(2)}</span>
+                <span className="text-base md:text-lg font-bold text-gray-900">
+                  {amountPaid === null ? '—' : `${amountCurrency ? `${amountCurrency} ` : '$'}${amountPaid.toFixed(2)}`}
+                </span>
               </div>
 
               <div className="flex justify-between items-center">
