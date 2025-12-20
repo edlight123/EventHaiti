@@ -67,6 +67,25 @@ function parseMonCashPublicKeyFromEnv(value: string): crypto.KeyObject {
   }
 }
 
+function parseMonCashPrivateKeyFromEnv(value: string): crypto.KeyObject {
+  const normalized = normalizePem(value).trim()
+
+  // If it's PEM (PRIVATE KEY or RSA PRIVATE KEY), let Node parse it.
+  if (normalized.includes('BEGIN')) {
+    return crypto.createPrivateKey(normalized)
+  }
+
+  // Otherwise treat as base64 DER. Try common private key containers.
+  const der = Buffer.from(normalized.replace(/\s+/g, ''), 'base64')
+  try {
+    // PKCS#8
+    return crypto.createPrivateKey({ key: der, format: 'der', type: 'pkcs8' })
+  } catch {
+    // PKCS#1
+    return crypto.createPrivateKey({ key: der, format: 'der', type: 'pkcs1' })
+  }
+}
+
 function getMonCashButtonKeyPem(): string {
   // Digicel docs call this the "Secret API KEY". In practice it is usually a PEM key.
   const key = (process.env.MONCASH_BUTTON_SECRET_API_KEY || '').trim()
@@ -78,6 +97,17 @@ function getMonCashButtonKeyPem(): string {
   return keyObject.export({ format: 'pem', type: 'spki' }).toString()
 }
 
+function getMonCashButtonPrivateKeyPemMaybe(): string | null {
+  const raw = (process.env.MONCASH_BUTTON_SECRET_API_KEY || '').trim()
+  if (!raw) return null
+  try {
+    const keyObject = parseMonCashPrivateKeyFromEnv(raw)
+    return keyObject.export({ format: 'pem', type: 'pkcs8' }).toString()
+  } catch {
+    return null
+  }
+}
+
 function getMonCashFormKeyPem(): string {
   const key = (process.env.MONCASH_BUTTON_FORM_SECRET_API_KEY || process.env.MONCASH_BUTTON_SECRET_API_KEY || '').trim()
   if (!key) {
@@ -85,6 +115,98 @@ function getMonCashFormKeyPem(): string {
   }
   const keyObject = parseMonCashPublicKeyFromEnv(key)
   return keyObject.export({ format: 'pem', type: 'spki' }).toString()
+}
+
+function getMonCashFormPrivateKeyPemMaybe(): string | null {
+  const raw = (process.env.MONCASH_BUTTON_FORM_SECRET_API_KEY || process.env.MONCASH_BUTTON_SECRET_API_KEY || '').trim()
+  if (!raw) return null
+  try {
+    const keyObject = parseMonCashPrivateKeyFromEnv(raw)
+    return keyObject.export({ format: 'pem', type: 'pkcs8' }).toString()
+  } catch {
+    return null
+  }
+}
+
+function decodeBase64OrBase64UrlToBuffer(value: string): Buffer | null {
+  const raw = String(value || '').trim()
+  if (!raw) return null
+  const normalized = raw.replace(/-/g, '+').replace(/_/g, '/')
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
+  try {
+    return Buffer.from(padded, 'base64')
+  } catch {
+    return null
+  }
+}
+
+function stripNonPrintableAndNulls(text: string): string {
+  // Remove null padding + trim; keep conservative printable ASCII.
+  const cleaned = text.replace(/\u0000+/g, '').trim()
+  return cleaned
+}
+
+function looksLikeDecryptedTransactionId(text: string): boolean {
+  const t = text.trim()
+  if (!t) return false
+  if (t.length > 128) return false
+  // Typically digits, but be tolerant.
+  if (/\s/.test(t)) return false
+  // Only printable-ish
+  return /^[\x20-\x7E]+$/.test(t)
+}
+
+export function decryptMonCashButtonReturnTransactionId(encryptedTransactionId: string): string | null {
+  // Digicel docs:
+  // transactionId = decrypt(base64_decode(GET(transactionId)))
+  // We attempt best-effort RSA private decryption when a private key is available.
+  const cipherBytes = decodeBase64OrBase64UrlToBuffer(encryptedTransactionId)
+  if (!cipherBytes || cipherBytes.length === 0) return null
+
+  const keyCandidates: Array<{ name: 'primary' | 'form'; keyPem: string | null }> = [
+    { name: 'primary', keyPem: getMonCashButtonPrivateKeyPemMaybe() },
+    { name: 'form', keyPem: getMonCashFormPrivateKeyPemMaybe() },
+  ]
+
+  const paddingModes: RsaPaddingMode[] = ['none', 'pkcs1', 'oaep-sha1', 'oaep-sha256']
+
+  for (const key of keyCandidates) {
+    if (!key.keyPem) continue
+    for (const paddingMode of paddingModes) {
+      const decryptOptions: crypto.RsaPrivateKey = {
+        key: key.keyPem,
+        padding:
+          paddingMode === 'none'
+            ? (crypto.constants as any).RSA_NO_PADDING
+            : paddingMode === 'pkcs1'
+              ? crypto.constants.RSA_PKCS1_PADDING
+              : crypto.constants.RSA_PKCS1_OAEP_PADDING,
+      }
+      if (paddingMode === 'oaep-sha256') {
+        ;(decryptOptions as any).oaepHash = 'sha256'
+      }
+
+      try {
+        const plain = crypto.privateDecrypt(decryptOptions as any, cipherBytes)
+        const asUtf8 = stripNonPrintableAndNulls(plain.toString('utf8'))
+        if (looksLikeDecryptedTransactionId(asUtf8)) {
+          return asUtf8
+        }
+
+        // Some deployments may return binary/plaintext that's actually digits but contains leading nulls.
+        // Try interpreting as latin1 as a fallback.
+        const asLatin1 = stripNonPrintableAndNulls(plain.toString('latin1'))
+        if (looksLikeDecryptedTransactionId(asLatin1)) {
+          return asLatin1
+        }
+      } catch {
+        // Try other padding/key candidates.
+        continue
+      }
+    }
+  }
+
+  return null
 }
 
 type RsaPaddingMode = 'none' | 'pkcs1' | 'oaep-sha1' | 'oaep-sha256'

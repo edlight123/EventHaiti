@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/firebase-db/server'
-import { getMonCashButtonPaymentByOrderId, getMonCashButtonPaymentByTransactionId } from '@/lib/moncash-button'
+import {
+  decryptMonCashButtonReturnTransactionId,
+  getMonCashButtonPaymentByOrderId,
+  getMonCashButtonPaymentByTransactionId,
+} from '@/lib/moncash-button'
 import { sendEmail, getTicketConfirmationEmail } from '@/lib/email'
 import { sendWhatsAppMessage, getTicketConfirmationWhatsApp } from '@/lib/whatsapp'
 import { generateTicketQRCode } from '@/lib/qrcode'
@@ -87,13 +91,21 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
 
     // Digicel parameter names can vary depending on configuration.
-    const transactionId =
+    const transactionIdEncrypted =
       searchParams.get('transactionId') ||
       searchParams.get('transaction_id') ||
       searchParams.get('transNumber') ||
       searchParams.get('trans_number') ||
       searchParams.get('trans') ||
       null
+
+    // Per Digicel docs, ReturnUrl transactionId is encrypted.
+    // Decrypt it (best-effort) to obtain the real transaction id used for Payment/Transaction lookup.
+    const transactionIdDecrypted = transactionIdEncrypted
+      ? decryptMonCashButtonReturnTransactionId(transactionIdEncrypted)
+      : null
+
+    const transactionId = transactionIdDecrypted || transactionIdEncrypted
 
     // Prefer explicit orderId if provided.
     const orderIdFromQuery =
@@ -108,8 +120,8 @@ export async function GET(request: Request) {
     const supabase = await createClient()
 
     // If transactionId is a JWT-like token, it may contain the reference/orderId.
-    if (!orderId && transactionId && transactionId.includes('.')) {
-      const extracted = tryExtractReferenceFromJwtLikeToken(transactionId)
+    if (!orderId && transactionIdEncrypted && transactionIdEncrypted.includes('.')) {
+      const extracted = tryExtractReferenceFromJwtLikeToken(transactionIdEncrypted)
       if (extracted) {
         orderId = extracted
       }
@@ -117,8 +129,8 @@ export async function GET(request: Request) {
 
     // Attempt to map a token-like transactionId to our stored checkout token.
     // Some portal setups redirect with a token in transactionId (looks like base64/base64url).
-    if (!orderId && transactionId) {
-      for (const candidate of buildTokenVariants(transactionId)) {
+    if (!orderId && transactionIdEncrypted) {
+      for (const candidate of buildTokenVariants(transactionIdEncrypted)) {
         const { data: tokenTx } = await supabase
           .from('pending_transactions')
           .select('order_id')
@@ -153,8 +165,8 @@ export async function GET(request: Request) {
     }
 
     // Alert-based correlation fallback: the Alert endpoint can arrive before (or instead of) a usable cookie.
-    if (!orderId && transactionId) {
-      const fromAlerts = await tryResolveOrderIdFromAlerts(supabase, transactionId)
+    if (!orderId && transactionIdEncrypted) {
+      const fromAlerts = await tryResolveOrderIdFromAlerts(supabase, transactionIdEncrypted)
       if (fromAlerts) orderId = fromAlerts
     }
 
@@ -197,7 +209,7 @@ export async function GET(request: Request) {
 
     if (!orderId) {
       console.warn('[moncash_button] return: missing_order', {
-        hasTransactionId: Boolean(transactionId),
+        hasTransactionId: Boolean(transactionIdEncrypted),
         queryKeys: Array.from(searchParams.keys()),
         hasCookieOrder: Boolean(
           cookies().get('moncash_button_order_id')?.value || cookies().get('__Host-moncash_button_order_id')?.value

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
-import { getMonCashButtonPaymentByTransactionId } from '@/lib/moncash-button'
+import { decryptMonCashButtonReturnTransactionId, getMonCashButtonPaymentByTransactionId } from '@/lib/moncash-button'
 
 export const runtime = 'nodejs'
 
@@ -115,7 +115,12 @@ export async function POST(request: Request) {
     }
 
     let orderId = payload.orderId || payload.order_id || payload.reference || null
-    const transactionId = payload.transactionId || payload.transaction_id || payload.transNumber || null
+    const transactionIdEncrypted = payload.transactionId || payload.transaction_id || payload.transNumber || null
+
+    const transactionIdDecrypted =
+      typeof transactionIdEncrypted === 'string' ? decryptMonCashButtonReturnTransactionId(transactionIdEncrypted) : null
+
+    const transactionId = transactionIdDecrypted || transactionIdEncrypted
 
     if (!orderId && typeof transactionId === 'string' && transactionId.includes('.')) {
       const extracted = tryExtractReferenceFromJwtLikeToken(transactionId)
@@ -167,10 +172,10 @@ export async function POST(request: Request) {
 
     // Always persist the alert (best-effort) so the Return handler can recover correlation
     // even when we can't update pending_transactions yet (because transaction_id isn't set until completion).
-    if (transactionId) {
+    if (transactionIdEncrypted) {
       try {
         await upsertAlertRecord({
-          transactionId: String(transactionId),
+          transactionId: String(transactionIdEncrypted),
           orderId: orderId ? String(orderId) : null,
           payload,
         })
