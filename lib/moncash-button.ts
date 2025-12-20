@@ -146,6 +146,59 @@ function decodeBase64OrBase64UrlToBuffer(value: string): Buffer | null {
   }
 }
 
+function buildTokenVariants(token: string): string[] {
+  const raw = String(token || '').trim()
+  if (!raw) return []
+
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(raw)
+    } catch {
+      return raw
+    }
+  })()
+
+  const stripPadding = (v: string) => v.replace(/=+$/g, '')
+  const toBase64 = (v: string) => v.replace(/-/g, '+').replace(/_/g, '/')
+  const toBase64Url = (v: string) => v.replace(/\+/g, '-').replace(/\//g, '_')
+
+  const candidates = [
+    raw,
+    decoded,
+    stripPadding(raw),
+    stripPadding(decoded),
+    toBase64(raw),
+    toBase64(decoded),
+    stripPadding(toBase64(raw)),
+    stripPadding(toBase64(decoded)),
+    toBase64Url(raw),
+    toBase64Url(decoded),
+    stripPadding(toBase64Url(raw)),
+    stripPadding(toBase64Url(decoded)),
+  ]
+
+  return Array.from(new Set(candidates.map((c) => c.trim()).filter(Boolean)))
+}
+
+function maybeDecodeReturnTransactionIdWithoutKey(encryptedTransactionId: string): string | null {
+  // Some Digicel environments appear to return a value that is only base64/base64url encoded
+  // (or otherwise doesn't require private-key decryption).
+  // Try decoding and extracting a plausible token/id.
+  const buf = decodeBase64OrBase64UrlToBuffer(encryptedTransactionId)
+  if (!buf) return null
+
+  const utf8 = stripNonPrintableAndNulls(buf.toString('utf8'))
+  if (looksLikeDecryptedTransactionId(utf8)) return utf8
+
+  const latin1 = stripNonPrintableAndNulls(buf.toString('latin1'))
+  if (looksLikeDecryptedTransactionId(latin1)) return latin1
+
+  const extracted = extractAsciiTokenFromBytes(buf)
+  if (extracted && looksLikeDecryptedTransactionId(extracted)) return extracted
+
+  return null
+}
+
 function stripNonPrintableAndNulls(text: string): string {
   // Remove null padding + trim; keep conservative printable ASCII.
   const cleaned = text.replace(/\u0000+/g, '').trim()
@@ -951,16 +1004,71 @@ export async function getMonCashButtonPaymentByTransactionId(
     return /system\s*error/i.test(rawText) || /could\s*not\s*pars/i.test(rawText)
   }
 
+  const looksLikeCiphertextFromReturnUrl = (() => {
+    const raw = String(transactionId || '').trim()
+    if (!raw) return false
+    // Most observed ReturnUrl values are base64/base64url-ish and ~44 chars.
+    if (raw.length >= 40 && raw.length <= 200 && /^[A-Za-z0-9+/_=-]+$/.test(raw)) return true
+    return false
+  })()
+
+  async function postLookupRawCiphertextForMode(
+    mode: 'sandbox' | 'production',
+    businessKeySegment: string,
+    transactionIdCiphertext: string
+  ): Promise<Response> {
+    const modeBaseUrl = getMonCashMiddlewareBaseUrlForMode(mode)
+    return fetch(`${modeBaseUrl}/Checkout/${businessKeySegment}/Payment/Transaction/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        transactionId: transactionIdCiphertext,
+      }).toString(),
+    })
+  }
+
+  async function tryLookupUsingRawCiphertext(mode: 'sandbox' | 'production', keySegments: Array<{ segment: string; kind: string }>) {
+    const candidates = Array.from(
+      new Set([
+        String(transactionId || '').trim(),
+        ...buildTokenVariants(String(transactionId || '').trim()),
+      ].filter(Boolean))
+    )
+
+    for (const candidate of candidates) {
+      for (const segmentInfo of keySegments) {
+        const response = await postLookupRawCiphertextForMode(mode, segmentInfo.segment, candidate)
+        const parsed = await parsePaymentResponse(response)
+        if (response.ok && parsed.data?.success) return parsed.data
+
+        const rawText = parsed.rawText || ''
+        const shouldRetry =
+          !response.ok
+            ? (response.status === 500 ? true : retryableHttpStatuses.has(response.status))
+            : !parsed.data?.success && retryableGatewayError(rawText)
+
+        if (!shouldRetry) {
+          // Return the first definitive failure to keep behavior consistent.
+          if (parsed.data) return parsed.data
+        }
+      }
+    }
+    return null
+  }
+
   async function postLookupForMode(
     keyPem: string,
     mode: 'sandbox' | 'production',
     businessKeySegment: string,
+    transactionIdPlaintext: string,
     paddingMode: RsaPaddingMode,
     ciphertextEncoding: CiphertextEncoding
   ): Promise<Response> {
     const modeBaseUrl = getMonCashMiddlewareBaseUrlForMode(mode)
     const encryptedTransactionId = encryptToMonCashButtonCiphertextWithKeyPem(
-      transactionId,
+      transactionIdPlaintext,
       keyPem,
       paddingMode,
       ciphertextEncoding
@@ -990,6 +1098,7 @@ export async function getMonCashButtonPaymentByTransactionId(
 
   async function tryLookupForMode(
     keyPem: string,
+    transactionIdPlaintext: string,
     businessKeySegments: Array<{ segment: string; kind: string }>,
     mode: 'sandbox' | 'production'
   ) {
@@ -1011,7 +1120,14 @@ export async function getMonCashButtonPaymentByTransactionId(
         for (const segmentInfo of businessKeySegments) {
           try {
             attempts += 1
-            const response = await postLookupForMode(keyPem, mode, segmentInfo.segment, paddingMode, ciphertextEncoding)
+            const response = await postLookupForMode(
+              keyPem,
+              mode,
+              segmentInfo.segment,
+              transactionIdPlaintext,
+              paddingMode,
+              ciphertextEncoding
+            )
             const parsed = await parsePaymentResponse(response)
 
             lastAttempt = {
@@ -1063,7 +1179,32 @@ export async function getMonCashButtonPaymentByTransactionId(
     const configuredMode = config.configuredMode
     const fallbackMode: 'sandbox' | 'production' = configuredMode === 'sandbox' ? 'production' : 'sandbox'
 
-    let bestAttempt: any = await tryLookupForMode(keyPem, config.businessKeySegments, configuredMode)
+    // If the ReturnUrl transactionId is already an encrypted/base64 value, some middleware deployments
+    // accept it directly (without us re-encrypting). Try that first.
+    if (looksLikeCiphertextFromReturnUrl) {
+      try {
+        const direct = await tryLookupUsingRawCiphertext(configuredMode, config.businessKeySegments)
+        if (direct && direct.success) return direct
+      } catch (err) {
+        lastError = err
+      }
+
+      if (!(isButtonModeExplicit() && config.name === 'primary')) {
+        try {
+          const directFallback = await tryLookupUsingRawCiphertext(fallbackMode, config.businessKeySegments)
+          if (directFallback && directFallback.success) return directFallback
+        } catch (err) {
+          lastError = err
+        }
+      }
+    }
+
+    // If we can decode the ReturnUrl value into a plausible plaintext transaction id without keys,
+    // prefer that for encryption attempts.
+    const decodedPlaintext = looksLikeCiphertextFromReturnUrl ? maybeDecodeReturnTransactionIdWithoutKey(transactionId) : null
+    const effectiveTransactionId = decodedPlaintext || transactionId
+
+    let bestAttempt: any = await tryLookupForMode(keyPem, effectiveTransactionId, config.businessKeySegments, configuredMode)
     let bestAttemptMode: 'sandbox' | 'production' = configuredMode
 
     // Preserve the previous behavior: if MONCASH_BUTTON_MODE is explicitly set, don't probe the other mode.
@@ -1071,7 +1212,7 @@ export async function getMonCashButtonPaymentByTransactionId(
     if (allowModeFallback) {
       const configuredOk = !!bestAttempt?.response?.ok && !!bestAttempt?.parsed?.data?.success
       if (!configuredOk) {
-        const attemptFallback = await tryLookupForMode(keyPem, config.businessKeySegments, fallbackMode)
+        const attemptFallback = await tryLookupForMode(keyPem, effectiveTransactionId, config.businessKeySegments, fallbackMode)
         const fallbackOk = !!attemptFallback?.response?.ok && !!attemptFallback?.parsed?.data?.success
         if (fallbackOk) {
           bestAttempt = attemptFallback
