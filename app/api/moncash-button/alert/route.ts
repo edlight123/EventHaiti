@@ -53,6 +53,27 @@ function buildTokenVariants(token: string): string[] {
   return Array.from(new Set(candidates.map((c) => c.trim()).filter(Boolean)))
 }
 
+async function upsertAlertRecord(params: {
+  transactionId: string
+  orderId: string | null
+  payload: Record<string, any>
+}) {
+  const supabase = await createClient()
+  const tx = params.transactionId.trim()
+  if (!tx) return
+
+  // Store a best-effort log keyed by transactionId.
+  // Firestore collections are created implicitly, so this works even if the collection doesn't exist yet.
+  // Keep payload as-is (no secrets expected) to help correlate mismatched portal configs.
+  await supabase.from('moncash_button_alerts').insert({
+    transaction_id: tx,
+    transaction_id_variants: buildTokenVariants(tx),
+    reference: params.orderId,
+    received_at: new Date().toISOString(),
+    payload: params.payload,
+  })
+}
+
 export async function GET(request: Request) {
   // Digicel portal misconfiguration sometimes points the user-facing redirect at the Alert URL.
   // Our Alert handler is meant to be server-to-server POST, so a browser GET would otherwise 405.
@@ -141,6 +162,20 @@ export async function POST(request: Request) {
         }
       } catch (err) {
         console.error('MonCash Button alert: transaction lookup failed', err)
+      }
+    }
+
+    // Always persist the alert (best-effort) so the Return handler can recover correlation
+    // even when we can't update pending_transactions yet (because transaction_id isn't set until completion).
+    if (transactionId) {
+      try {
+        await upsertAlertRecord({
+          transactionId: String(transactionId),
+          orderId: orderId ? String(orderId) : null,
+          payload,
+        })
+      } catch (err) {
+        console.error('MonCash Button alert: failed to persist alert record', err)
       }
     }
 

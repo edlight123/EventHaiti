@@ -78,13 +78,35 @@ export async function GET(request: Request) {
 </body>
 </html>`
 
-    return new NextResponse(html, {
+    const response = new NextResponse(html, {
       status: 200,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
         'Cache-Control': 'no-store',
       },
     })
+
+    // IMPORTANT: Set correlation cookies here as well.
+    // This endpoint is a top-level navigation, so cookies are much more likely to stick
+    // than when setting them on a fetch() JSON response.
+    //
+    // Use an __Host- cookie to avoid domain mismatch issues.
+    response.cookies.set('moncash_button_order_id', orderId, {
+      httpOnly: true,
+      sameSite: 'none',
+      secure: true,
+      path: '/',
+      maxAge: 60 * 60,
+    })
+    response.cookies.set('__Host-moncash_button_order_id', orderId, {
+      httpOnly: true,
+      sameSite: 'none',
+      secure: true,
+      path: '/',
+      maxAge: 60 * 60,
+    })
+
+    return response
   } catch (err: any) {
     console.error('MonCash Button checkout form error:', err)
     return new NextResponse('Failed to render MonCash checkout', { status: 500 })

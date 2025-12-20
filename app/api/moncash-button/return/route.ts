@@ -60,6 +60,28 @@ function buildTokenVariants(token: string): string[] {
   return Array.from(new Set(candidates.map((c) => c.trim()).filter(Boolean)))
 }
 
+async function tryResolveOrderIdFromAlerts(supabase: any, transactionId: string): Promise<string | null> {
+  const candidates = buildTokenVariants(transactionId)
+  for (const candidate of candidates) {
+    const { data } = await supabase
+      .from('moncash_button_alerts')
+      .select('reference')
+      .eq('transaction_id', candidate)
+      .single()
+
+    if (data?.reference) return String(data.reference)
+
+    const { data: data2 } = await supabase
+      .from('moncash_button_alerts')
+      .select('reference')
+      .contains('transaction_id_variants', candidate)
+      .single()
+
+    if (data2?.reference) return String(data2.reference)
+  }
+  return null
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -124,8 +146,16 @@ export async function GET(request: Request) {
 
     // Cookie correlation fallback (set during /api/moncash-button/initiate).
     if (!orderId) {
-      const orderIdFromCookie = cookies().get('moncash_button_order_id')?.value
+      const jar = cookies()
+      const orderIdFromCookie =
+        jar.get('moncash_button_order_id')?.value || jar.get('__Host-moncash_button_order_id')?.value || null
       if (orderIdFromCookie) orderId = orderIdFromCookie
+    }
+
+    // Alert-based correlation fallback: the Alert endpoint can arrive before (or instead of) a usable cookie.
+    if (!orderId && transactionId) {
+      const fromAlerts = await tryResolveOrderIdFromAlerts(supabase, transactionId)
+      if (fromAlerts) orderId = fromAlerts
     }
 
     // Cookie-less correlation: Digicel provides transactionId; the payment reference should match our orderId.
@@ -169,7 +199,9 @@ export async function GET(request: Request) {
       console.warn('[moncash_button] return: missing_order', {
         hasTransactionId: Boolean(transactionId),
         queryKeys: Array.from(searchParams.keys()),
-        hasCookieOrder: Boolean(cookies().get('moncash_button_order_id')?.value),
+        hasCookieOrder: Boolean(
+          cookies().get('moncash_button_order_id')?.value || cookies().get('__Host-moncash_button_order_id')?.value
+        ),
       })
       return NextResponse.redirect(new URL('/purchase/failed?reason=missing_order', request.url))
     }
