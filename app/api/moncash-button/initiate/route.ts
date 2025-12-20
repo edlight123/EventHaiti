@@ -203,7 +203,18 @@ export async function POST(request: Request) {
       redirectUrl = `${origin}/api/moncash-button/checkout?orderId=${encodeURIComponent(orderId)}`
     }
 
-    return NextResponse.json({ redirectUrl })
+    const response = NextResponse.json({ redirectUrl })
+    // Correlate browser redirect back from MonCash to our pending transaction.
+    // This prevents false "missing_order" failures when the gateway doesn't include orderId
+    // (or includes a token-like transactionId that can't be looked up).
+    response.cookies.set('moncash_button_order_id', orderId, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      path: '/',
+      maxAge: 60 * 60, // 1 hour
+    })
+    return response
   } catch (error: any) {
     console.error('MonCash Button initiate error:', error)
     return NextResponse.json(

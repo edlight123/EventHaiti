@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/firebase-db/server'
 import { getMonCashButtonPaymentByOrderId, getMonCashButtonPaymentByTransactionId } from '@/lib/moncash-button'
 import { sendEmail, getTicketConfirmationEmail } from '@/lib/email'
@@ -11,12 +12,46 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
 
-    // MonCash appends this to the configured Return URL (per Digicel docs)
-    const transactionId = searchParams.get('transactionId')
+    // Digicel parameter names can vary depending on configuration.
+    const transactionId =
+      searchParams.get('transactionId') ||
+      searchParams.get('transaction_id') ||
+      searchParams.get('transNumber') ||
+      searchParams.get('trans_number') ||
+      searchParams.get('trans') ||
+      null
 
-    // Prefer explicit orderId if you configure Return URL like /api/moncash-button/return?orderId=...
-    const orderIdFromQuery = searchParams.get('orderId')
-    let orderId = orderIdFromQuery
+    // Prefer explicit orderId if provided.
+    const orderIdFromQuery =
+      searchParams.get('orderId') ||
+      searchParams.get('order_id') ||
+      searchParams.get('reference') ||
+      searchParams.get('ref') ||
+      null
+
+    let orderId: string | null = orderIdFromQuery
+
+    const supabase = await createClient()
+
+    // Attempt to map a token-like transactionId to our stored checkout token.
+    // Some portal setups redirect with a token in transactionId (looks like base64/base64url).
+    if (!orderId && transactionId) {
+      const { data: tokenTx } = await supabase
+        .from('pending_transactions')
+        .select('order_id')
+        .eq('moncash_button_token', transactionId)
+        .single()
+
+      if (tokenTx?.order_id) {
+        orderId = String(tokenTx.order_id)
+      }
+    }
+
+    // Cookie correlation fallback (set during /api/moncash-button/initiate).
+    if (!orderId) {
+      const orderIdFromCookie = cookies().get('moncash_button_order_id')?.value
+      if (orderIdFromCookie) orderId = orderIdFromCookie
+    }
 
     // Cookie-less correlation: Digicel provides transactionId; the payment reference should match our orderId.
     let paymentFromLookup: any = null
@@ -35,8 +70,6 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL('/purchase/failed?reason=missing_order', request.url))
     }
 
-    const supabase = await createClient()
-
     const { data: pendingTx, error: txError } = await supabase
       .from('pending_transactions')
       .select('*')
@@ -45,6 +78,11 @@ export async function GET(request: Request) {
 
     if (txError || !pendingTx) {
       return NextResponse.redirect(new URL('/purchase/failed?reason=transaction_not_found', request.url))
+    }
+
+    // Idempotency: if the transaction is already completed and has a ticket id, don't create duplicates.
+    if (pendingTx.status === 'completed' && pendingTx.ticket_id) {
+      return NextResponse.redirect(new URL(`/purchase/success?ticketId=${pendingTx.ticket_id}`, request.url))
     }
 
     // Verify payment via MonCash Button middleware
