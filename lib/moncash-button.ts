@@ -541,6 +541,15 @@ function encryptToMonCashButtonCiphertext(value: string, paddingMode: RsaPadding
   return encodeCiphertext(publicEncryptBytes(value, paddingMode), encoding)
 }
 
+function encryptToMonCashButtonCiphertextWithKeyPem(
+  value: string,
+  keyPem: string,
+  paddingMode: RsaPaddingMode,
+  encoding: CiphertextEncoding
+): string {
+  return encodeCiphertext(publicEncryptBytesWithKey(value, keyPem, paddingMode), encoding)
+}
+
 type MonCashButtonTokenResponse = {
   success: boolean
   token?: string
@@ -748,11 +757,37 @@ type MonCashButtonPaymentResponse = {
 export async function getMonCashButtonPaymentByTransactionId(
   transactionId: string
 ): Promise<MonCashButtonPaymentResponse> {
-  const configuredMode = getMonCashMode()
-  const baseUrl = getMonCashMiddlewareBaseUrl()
-  const businessKeySegments = getBusinessKeyPathSegmentMeta()
   const paddingModes = getRsaPaddingModesToTry()
   const ciphertextEncodings = getCiphertextEncodingsToTry()
+
+  const lookupConfigs: Array<{
+    name: 'primary' | 'form'
+    configuredMode: 'sandbox' | 'production'
+    businessKeySegments: Array<{ segment: string; kind: string }>
+    getKeyPem: () => string
+  }> = [
+    {
+      name: 'primary',
+      configuredMode: getMonCashMode(),
+      businessKeySegments: getBusinessKeyPathSegmentMeta(),
+      getKeyPem: getMonCashButtonKeyPem,
+    },
+  ]
+
+  // Form fallback: checkout can succeed via createMonCashButtonCheckoutFormPost(),
+  // but lookups will fail unless we also try FORM credentials.
+  try {
+    getMonCashFormBusinessKey()
+    getMonCashFormKeyPem()
+    lookupConfigs.push({
+      name: 'form',
+      configuredMode: getMonCashFormMode(),
+      businessKeySegments: getFormBusinessKeyPathSegmentMeta(),
+      getKeyPem: getMonCashFormKeyPem,
+    })
+  } catch {
+    // ignore
+  }
 
   const retryableHttpStatuses = new Set([404, 410])
   const retryableGatewayError = (rawText?: string) => {
@@ -761,13 +796,19 @@ export async function getMonCashButtonPaymentByTransactionId(
   }
 
   async function postLookupForMode(
+    keyPem: string,
     mode: 'sandbox' | 'production',
     businessKeySegment: string,
     paddingMode: RsaPaddingMode,
     ciphertextEncoding: CiphertextEncoding
   ): Promise<Response> {
-    const modeBaseUrl = mode === configuredMode ? baseUrl : getMonCashMiddlewareBaseUrlForMode(mode)
-    const encryptedTransactionId = encryptToMonCashButtonCiphertext(transactionId, paddingMode, ciphertextEncoding)
+    const modeBaseUrl = getMonCashMiddlewareBaseUrlForMode(mode)
+    const encryptedTransactionId = encryptToMonCashButtonCiphertextWithKeyPem(
+      transactionId,
+      keyPem,
+      paddingMode,
+      ciphertextEncoding
+    )
     return fetch(`${modeBaseUrl}/Checkout/${businessKeySegment}/Payment/Transaction/`, {
       method: 'POST',
       headers: {
@@ -791,7 +832,11 @@ export async function getMonCashButtonPaymentByTransactionId(
     return { data, rawText }
   }
 
-  async function tryLookupForMode(mode: 'sandbox' | 'production') {
+  async function tryLookupForMode(
+    keyPem: string,
+    businessKeySegments: Array<{ segment: string; kind: string }>,
+    mode: 'sandbox' | 'production'
+  ) {
     let lastAttempt:
       | {
           response: Response
@@ -810,7 +855,7 @@ export async function getMonCashButtonPaymentByTransactionId(
         for (const segmentInfo of businessKeySegments) {
           try {
             attempts += 1
-            const response = await postLookupForMode(mode, segmentInfo.segment, paddingMode, ciphertextEncoding)
+            const response = await postLookupForMode(keyPem, mode, segmentInfo.segment, paddingMode, ciphertextEncoding)
             const parsed = await parsePaymentResponse(response)
 
             lastAttempt = {
@@ -848,60 +893,109 @@ export async function getMonCashButtonPaymentByTransactionId(
     return lastAttempt ? { ...lastAttempt, attempts } : null
   }
 
-  let bestAttempt: any = await tryLookupForMode(configuredMode)
-  let bestAttemptMode: 'sandbox' | 'production' = configuredMode
+  let lastError: any = null
 
-  if (!isButtonModeExplicit()) {
+  for (const config of lookupConfigs) {
+    let keyPem: string
+    try {
+      keyPem = config.getKeyPem()
+    } catch (err) {
+      lastError = err
+      continue
+    }
+
+    const configuredMode = config.configuredMode
     const fallbackMode: 'sandbox' | 'production' = configuredMode === 'sandbox' ? 'production' : 'sandbox'
-    const configuredOk = !!bestAttempt?.response?.ok && !!bestAttempt?.parsed?.data?.success
-    if (!configuredOk) {
-      const attemptFallback = await tryLookupForMode(fallbackMode)
-      const fallbackOk = !!attemptFallback?.response?.ok && !!attemptFallback?.parsed?.data?.success
-      if (fallbackOk) {
-        bestAttempt = attemptFallback
-        bestAttemptMode = fallbackMode
-      } else if (!bestAttempt && attemptFallback) {
-        bestAttempt = attemptFallback
-        bestAttemptMode = fallbackMode
+
+    let bestAttempt: any = await tryLookupForMode(keyPem, config.businessKeySegments, configuredMode)
+    let bestAttemptMode: 'sandbox' | 'production' = configuredMode
+
+    // Preserve the previous behavior: if MONCASH_BUTTON_MODE is explicitly set, don't probe the other mode.
+    const allowModeFallback = !(isButtonModeExplicit() && config.name === 'primary')
+    if (allowModeFallback) {
+      const configuredOk = !!bestAttempt?.response?.ok && !!bestAttempt?.parsed?.data?.success
+      if (!configuredOk) {
+        const attemptFallback = await tryLookupForMode(keyPem, config.businessKeySegments, fallbackMode)
+        const fallbackOk = !!attemptFallback?.response?.ok && !!attemptFallback?.parsed?.data?.success
+        if (fallbackOk) {
+          bestAttempt = attemptFallback
+          bestAttemptMode = fallbackMode
+        } else if (!bestAttempt && attemptFallback) {
+          bestAttempt = attemptFallback
+          bestAttemptMode = fallbackMode
+        }
       }
     }
+
+    if (!bestAttempt) {
+      lastError = new Error('MonCash Button transaction lookup failed: unable to perform any attempts')
+      continue
+    }
+
+    const { response, parsed } = bestAttempt
+    const data = parsed.data
+    if (!data) {
+      lastError = new Error(
+        `MonCash Button transaction lookup failed (${response.status}): ${parsed.rawText || 'Invalid JSON response'}`
+      )
+      continue
+    }
+
+    if (!response.ok) {
+      console.error('[MonCash Button] Transaction lookup error:', {
+        status: response.status,
+        mode: configuredMode,
+        attemptedMode: bestAttemptMode,
+        config: config.name,
+        helperVersion: MONCASH_BUTTON_HELPER_VERSION,
+        modeExplicit: isButtonModeExplicit(),
+        rsaPaddingExplicit: isRsaPaddingExplicit(),
+        businessKeySegments: config.businessKeySegments.length,
+        paddingModes: paddingModes.length,
+        ciphertextEncodings: ciphertextEncodings.length,
+        attempts: (bestAttempt as any)?.attempts,
+        lastAttempt: (bestAttempt as any)?.meta,
+      })
+      lastError = new Error(data?.message || `MonCash Button transaction lookup failed (${response.status})`)
+      continue
+    }
+
+    return data
   }
 
-  if (!bestAttempt) throw new Error('MonCash Button transaction lookup failed: unable to perform any attempts')
-
-  const { response, parsed } = bestAttempt
-  const data = parsed.data
-  if (!data) {
-    const text = parsed.rawText || ''
-    throw new Error(`MonCash Button transaction lookup failed (${response.status}): ${text || 'Invalid JSON response'}`)
-  }
-
-  if (!response.ok) {
-    console.error('[MonCash Button] Transaction lookup error:', {
-      status: response.status,
-      mode: configuredMode,
-      attemptedMode: bestAttemptMode,
-      helperVersion: MONCASH_BUTTON_HELPER_VERSION,
-      modeExplicit: isButtonModeExplicit(),
-      rsaPaddingExplicit: isRsaPaddingExplicit(),
-      businessKeySegments: businessKeySegments.length,
-      paddingModes: paddingModes.length,
-      ciphertextEncodings: ciphertextEncodings.length,
-      attempts: (bestAttempt as any)?.attempts,
-      lastAttempt: (bestAttempt as any)?.meta,
-    })
-    throw new Error(data?.message || `MonCash Button transaction lookup failed (${response.status})`)
-  }
-
-  return data
+  throw lastError || new Error('MonCash Button transaction lookup failed')
 }
 
 export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise<MonCashButtonPaymentResponse> {
-  const configuredMode = getMonCashMode()
-  const baseUrl = getMonCashMiddlewareBaseUrl()
-  const businessKeySegments = getBusinessKeyPathSegmentMeta()
   const paddingModes = getRsaPaddingModesToTry()
   const ciphertextEncodings = getCiphertextEncodingsToTry()
+
+  const lookupConfigs: Array<{
+    name: 'primary' | 'form'
+    configuredMode: 'sandbox' | 'production'
+    businessKeySegments: Array<{ segment: string; kind: string }>
+    getKeyPem: () => string
+  }> = [
+    {
+      name: 'primary',
+      configuredMode: getMonCashMode(),
+      businessKeySegments: getBusinessKeyPathSegmentMeta(),
+      getKeyPem: getMonCashButtonKeyPem,
+    },
+  ]
+
+  try {
+    getMonCashFormBusinessKey()
+    getMonCashFormKeyPem()
+    lookupConfigs.push({
+      name: 'form',
+      configuredMode: getMonCashFormMode(),
+      businessKeySegments: getFormBusinessKeyPathSegmentMeta(),
+      getKeyPem: getMonCashFormKeyPem,
+    })
+  } catch {
+    // ignore
+  }
 
   const retryableHttpStatuses = new Set([404, 410])
   const retryableGatewayError = (rawText?: string) => {
@@ -910,13 +1004,14 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
   }
 
   async function postLookupForMode(
+    keyPem: string,
     mode: 'sandbox' | 'production',
     businessKeySegment: string,
     paddingMode: RsaPaddingMode,
     ciphertextEncoding: CiphertextEncoding
   ): Promise<Response> {
-    const modeBaseUrl = mode === configuredMode ? baseUrl : getMonCashMiddlewareBaseUrlForMode(mode)
-    const encryptedOrderId = encryptToMonCashButtonCiphertext(orderId, paddingMode, ciphertextEncoding)
+    const modeBaseUrl = getMonCashMiddlewareBaseUrlForMode(mode)
+    const encryptedOrderId = encryptToMonCashButtonCiphertextWithKeyPem(orderId, keyPem, paddingMode, ciphertextEncoding)
     return fetch(`${modeBaseUrl}/Checkout/${businessKeySegment}/Payment/Order/`, {
       method: 'POST',
       headers: {
@@ -940,7 +1035,11 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
     return { data, rawText }
   }
 
-  async function tryLookupForMode(mode: 'sandbox' | 'production') {
+  async function tryLookupForMode(
+    keyPem: string,
+    businessKeySegments: Array<{ segment: string; kind: string }>,
+    mode: 'sandbox' | 'production'
+  ) {
     let lastAttempt:
       | {
           response: Response
@@ -954,7 +1053,7 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
         for (const segmentInfo of businessKeySegments) {
           try {
             attempts += 1
-            const response = await postLookupForMode(mode, segmentInfo.segment, paddingMode, ciphertextEncoding)
+            const response = await postLookupForMode(keyPem, mode, segmentInfo.segment, paddingMode, ciphertextEncoding)
             const parsed = await parsePaymentResponse(response)
 
             lastAttempt = {
@@ -992,54 +1091,86 @@ export async function getMonCashButtonPaymentByOrderId(orderId: string): Promise
     return lastAttempt ? { ...lastAttempt, attempts } : null
   }
 
-  let bestAttempt: any = await tryLookupForMode(configuredMode)
-  let bestAttemptMode: 'sandbox' | 'production' = configuredMode
+  let lastError: any = null
 
-  if (!isButtonModeExplicit()) {
+  for (const config of lookupConfigs) {
+    let keyPem: string
+    try {
+      keyPem = config.getKeyPem()
+    } catch (err) {
+      lastError = err
+      continue
+    }
+
+    const configuredMode = config.configuredMode
     const fallbackMode: 'sandbox' | 'production' = configuredMode === 'sandbox' ? 'production' : 'sandbox'
-    const configuredOk = !!bestAttempt?.response?.ok && !!bestAttempt?.parsed?.data?.success
-    if (!configuredOk) {
-      const attemptFallback = await tryLookupForMode(fallbackMode)
-      const fallbackOk = !!attemptFallback?.response?.ok && !!attemptFallback?.parsed?.data?.success
-      if (fallbackOk) {
-        bestAttempt = attemptFallback
-        bestAttemptMode = fallbackMode
-      } else if (!bestAttempt && attemptFallback) {
-        bestAttempt = attemptFallback
-        bestAttemptMode = fallbackMode
+
+    let bestAttempt: any = await tryLookupForMode(keyPem, config.businessKeySegments, configuredMode)
+    let bestAttemptMode: 'sandbox' | 'production' = configuredMode
+
+    const allowModeFallback = !(isButtonModeExplicit() && config.name === 'primary')
+    if (allowModeFallback) {
+      const configuredOk = !!bestAttempt?.response?.ok && !!bestAttempt?.parsed?.data?.success
+      if (!configuredOk) {
+        const attemptFallback = await tryLookupForMode(keyPem, config.businessKeySegments, fallbackMode)
+        const fallbackOk = !!attemptFallback?.response?.ok && !!attemptFallback?.parsed?.data?.success
+        if (fallbackOk) {
+          bestAttempt = attemptFallback
+          bestAttemptMode = fallbackMode
+        } else if (!bestAttempt && attemptFallback) {
+          bestAttempt = attemptFallback
+          bestAttemptMode = fallbackMode
+        }
       }
     }
+
+    if (!bestAttempt) {
+      lastError = new Error('MonCash Button payment lookup failed: unable to perform any attempts')
+      continue
+    }
+
+    const { response, parsed } = bestAttempt
+    const data = parsed.data
+    if (!data) {
+      lastError = new Error(
+        `MonCash Button payment lookup failed (${response.status}): ${parsed.rawText || 'Invalid JSON response'}`
+      )
+      continue
+    }
+
+    if (!response.ok) {
+      console.error('[MonCash Button] Payment lookup error:', {
+        status: response.status,
+        mode: configuredMode,
+        attemptedMode: bestAttemptMode,
+        config: config.name,
+        helperVersion: MONCASH_BUTTON_HELPER_VERSION,
+        modeExplicit: isButtonModeExplicit(),
+        rsaPaddingExplicit: isRsaPaddingExplicit(),
+        businessKeySegments: config.businessKeySegments.length,
+        paddingModes: paddingModes.length,
+        ciphertextEncodings: ciphertextEncodings.length,
+        attempts: (bestAttempt as any)?.attempts,
+        lastAttempt: (bestAttempt as any)?.meta,
+      })
+      lastError = new Error(data?.message || `MonCash Button payment lookup failed (${response.status})`)
+      continue
+    }
+
+    return data
   }
 
-  if (!bestAttempt) throw new Error('MonCash Button payment lookup failed: unable to perform any attempts')
-
-  const { response, parsed } = bestAttempt
-  const data = parsed.data
-  if (!data) {
-    const text = parsed.rawText || ''
-    throw new Error(`MonCash Button payment lookup failed (${response.status}): ${text || 'Invalid JSON response'}`)
-  }
-
-  if (!response.ok) {
-    console.error('[MonCash Button] Payment lookup error:', {
-      status: response.status,
-      mode: configuredMode,
-      attemptedMode: bestAttemptMode,
-      helperVersion: MONCASH_BUTTON_HELPER_VERSION,
-      modeExplicit: isButtonModeExplicit(),
-      rsaPaddingExplicit: isRsaPaddingExplicit(),
-      businessKeySegments: businessKeySegments.length,
-      paddingModes: paddingModes.length,
-      ciphertextEncodings: ciphertextEncodings.length,
-      attempts: (bestAttempt as any)?.attempts,
-      lastAttempt: (bestAttempt as any)?.meta,
-    })
-    throw new Error(data?.message || `MonCash Button payment lookup failed (${response.status})`)
-  }
-
-  return data
+  throw lastError || new Error('MonCash Button payment lookup failed')
 }
 
 export function isMonCashButtonConfigured(): boolean {
-  return !!(process.env.MONCASH_BUTTON_BUSINESS_KEY && process.env.MONCASH_BUTTON_SECRET_API_KEY)
+  const primaryOk =
+    !!(process.env.MONCASH_BUTTON_BUSINESS_KEY && String(process.env.MONCASH_BUTTON_BUSINESS_KEY).trim()) &&
+    !!(process.env.MONCASH_BUTTON_SECRET_API_KEY && String(process.env.MONCASH_BUTTON_SECRET_API_KEY).trim())
+
+  const formBusiness = process.env.MONCASH_BUTTON_FORM_BUSINESS_KEY || process.env.MONCASH_BUTTON_BUSINESS_KEY
+  const formSecret = process.env.MONCASH_BUTTON_FORM_SECRET_API_KEY || process.env.MONCASH_BUTTON_SECRET_API_KEY
+  const formOk = !!(formBusiness && String(formBusiness).trim()) && !!(formSecret && String(formSecret).trim())
+
+  return primaryOk || formOk
 }
