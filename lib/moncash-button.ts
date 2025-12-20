@@ -233,6 +233,16 @@ export function decryptMonCashButtonReturnTransactionId(encryptedTransactionId: 
   return null
 }
 
+export function getMonCashButtonReturnDecryptConfig(): {
+  hasPrimaryPrivateKey: boolean
+  hasFormPrivateKey: boolean
+} {
+  return {
+    hasPrimaryPrivateKey: Boolean(getMonCashButtonPrivateKeyPemMaybe()),
+    hasFormPrivateKey: Boolean(getMonCashFormPrivateKeyPemMaybe()),
+  }
+}
+
 type RsaPaddingMode = 'none' | 'pkcs1' | 'oaep-sha1' | 'oaep-sha256'
 
 type CiphertextEncoding = 'base64' | 'base64url'

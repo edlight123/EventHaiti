@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/firebase-db/server'
 import {
   decryptMonCashButtonReturnTransactionId,
+  getMonCashButtonReturnDecryptConfig,
   getMonCashButtonPaymentByOrderId,
   getMonCashButtonPaymentByTransactionId,
 } from '@/lib/moncash-button'
@@ -110,11 +111,13 @@ export async function GET(request: Request) {
     if (transactionIdEncrypted) {
       const encLen = String(transactionIdEncrypted).length
       const decLen = transactionIdDecrypted ? String(transactionIdDecrypted).length : null
+      const decryptCfg = getMonCashButtonReturnDecryptConfig()
       console.info('[moncash_button] return: transactionId decrypt', {
         hasEncrypted: true,
         encryptedLen: encLen,
         decrypted: Boolean(transactionIdDecrypted),
         decryptedLen: decLen,
+        ...decryptCfg,
       })
     }
 
