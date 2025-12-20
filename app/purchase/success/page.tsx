@@ -7,6 +7,7 @@ import { PurchaseSuccessNotificationPrompt } from '@/components/PurchaseSuccessN
 import PurchasePopupBridge from '@/components/PurchasePopupBridge'
 import Link from 'next/link'
 import type { Database } from '@/types/database'
+import { generateTicketQRCode } from '@/lib/qrcode'
 
 type Ticket = Database['public']['Tables']['tickets']['Row']
 
@@ -26,11 +27,20 @@ export default async function PurchaseSuccessPage({
 
   let ticket: any = null
   let event: TicketEvent | null = null
+  let qrCodeDataUrl: string | null = null
 
   if (ticketId) {
     const supabase = await createClient()
     const { data: ticketData } = await supabase.from('tickets').select('*').eq('id', ticketId).single()
     ticket = ticketData
+
+    // Generate QR code for on-page display (best-effort; never crash the page).
+    try {
+      const qrPayload = String((ticketData as any)?.qr_code_data || (ticketData as any)?.qrCodeData || ticketId)
+      qrCodeDataUrl = await generateTicketQRCode(qrPayload)
+    } catch {
+      qrCodeDataUrl = null
+    }
 
     // Our Firebase "Supabase-like" adapter doesn't reliably support joins.
     // Fetch the event separately and tolerate missing data.
@@ -136,17 +146,39 @@ export default async function PurchaseSuccessPage({
               </div>
             </div>
 
-            {/* QR Code Placeholder */}
+            {/* QR Code */}
             <div className="p-4 md:p-6 bg-gray-50 border-t border-gray-200">
-              <div className="flex items-center justify-center h-40 md:h-48 bg-white rounded-lg border-2 border-dashed border-gray-300">
-                <div className="text-center">
-                  <svg className="w-12 h-12 md:w-16 md:h-16 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                  </svg>
-                  <p className="text-sm text-gray-600">Your QR Code</p>
+              {qrCodeDataUrl ? (
+                <div className="flex flex-col items-center justify-center bg-white rounded-lg border border-gray-200 p-4 md:p-6">
+                  <img
+                    src={qrCodeDataUrl}
+                    alt="Ticket QR Code"
+                    className="w-44 h-44 md:w-52 md:h-52 border-4 border-gray-100 rounded-xl"
+                  />
+                  <p className="text-sm text-gray-600 mt-3">Your QR Code</p>
                   <p className="text-[11px] md:text-xs text-gray-500 mt-1">Show this at the entrance</p>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-center justify-center h-40 md:h-48 bg-white rounded-lg border-2 border-dashed border-gray-300">
+                  <div className="text-center">
+                    <svg
+                      className="w-12 h-12 md:w-16 md:h-16 mx-auto text-gray-400 mb-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+                      />
+                    </svg>
+                    <p className="text-sm text-gray-600">Your QR Code</p>
+                    <p className="text-[11px] md:text-xs text-gray-500 mt-1">Show this at the entrance</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
