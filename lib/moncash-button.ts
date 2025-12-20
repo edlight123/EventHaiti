@@ -98,7 +98,8 @@ function getMonCashButtonKeyPem(): string {
 }
 
 function getMonCashButtonPrivateKeyPemMaybe(): string | null {
-  const raw = (process.env.MONCASH_BUTTON_SECRET_API_KEY || '').trim()
+  // Prefer explicit private key env var if present (keeps public encryption key separate).
+  const raw = (process.env.MONCASH_BUTTON_PRIVATE_KEY || process.env.MONCASH_BUTTON_SECRET_API_KEY || '').trim()
   if (!raw) return null
   try {
     const keyObject = parseMonCashPrivateKeyFromEnv(raw)
@@ -118,7 +119,12 @@ function getMonCashFormKeyPem(): string {
 }
 
 function getMonCashFormPrivateKeyPemMaybe(): string | null {
-  const raw = (process.env.MONCASH_BUTTON_FORM_SECRET_API_KEY || process.env.MONCASH_BUTTON_SECRET_API_KEY || '').trim()
+  const raw = (
+    process.env.MONCASH_BUTTON_FORM_PRIVATE_KEY ||
+    process.env.MONCASH_BUTTON_FORM_SECRET_API_KEY ||
+    process.env.MONCASH_BUTTON_SECRET_API_KEY ||
+    ''
+  ).trim()
   if (!raw) return null
   try {
     const keyObject = parseMonCashPrivateKeyFromEnv(raw)
@@ -144,6 +150,27 @@ function stripNonPrintableAndNulls(text: string): string {
   // Remove null padding + trim; keep conservative printable ASCII.
   const cleaned = text.replace(/\u0000+/g, '').trim()
   return cleaned
+}
+
+function extractAsciiTokenFromBytes(buf: Buffer): string | null {
+  // For RSA_NO_PADDING, plaintext is often left-padded with zeros and may contain garbage.
+  // Try to recover a meaningful token by extracting the longest run of printable ASCII.
+  const ascii = buf.toString('latin1')
+  // Prefer digit runs (transaction ids are often numeric after decrypt).
+  const digitMatches = ascii.match(/[0-9]{6,}/g)
+  if (digitMatches && digitMatches.length > 0) {
+    const best = digitMatches.sort((a, b) => b.length - a.length)[0]
+    return best || null
+  }
+
+  // Otherwise, extract a run of safe URL-ish chars.
+  const tokenMatches = ascii.match(/[A-Za-z0-9._-]{8,}/g)
+  if (tokenMatches && tokenMatches.length > 0) {
+    const best = tokenMatches.sort((a, b) => b.length - a.length)[0]
+    return best || null
+  }
+
+  return null
 }
 
 function looksLikeDecryptedTransactionId(text: string): boolean {
@@ -189,16 +216,13 @@ export function decryptMonCashButtonReturnTransactionId(encryptedTransactionId: 
       try {
         const plain = crypto.privateDecrypt(decryptOptions as any, cipherBytes)
         const asUtf8 = stripNonPrintableAndNulls(plain.toString('utf8'))
-        if (looksLikeDecryptedTransactionId(asUtf8)) {
-          return asUtf8
-        }
+        if (looksLikeDecryptedTransactionId(asUtf8)) return asUtf8
 
-        // Some deployments may return binary/plaintext that's actually digits but contains leading nulls.
-        // Try interpreting as latin1 as a fallback.
         const asLatin1 = stripNonPrintableAndNulls(plain.toString('latin1'))
-        if (looksLikeDecryptedTransactionId(asLatin1)) {
-          return asLatin1
-        }
+        if (looksLikeDecryptedTransactionId(asLatin1)) return asLatin1
+
+        const extracted = extractAsciiTokenFromBytes(plain)
+        if (extracted && looksLikeDecryptedTransactionId(extracted)) return extracted
       } catch {
         // Try other padding/key candidates.
         continue

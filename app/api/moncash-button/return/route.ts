@@ -107,6 +107,17 @@ export async function GET(request: Request) {
 
     const transactionId = transactionIdDecrypted || transactionIdEncrypted
 
+    if (transactionIdEncrypted) {
+      const encLen = String(transactionIdEncrypted).length
+      const decLen = transactionIdDecrypted ? String(transactionIdDecrypted).length : null
+      console.info('[moncash_button] return: transactionId decrypt', {
+        hasEncrypted: true,
+        encryptedLen: encLen,
+        decrypted: Boolean(transactionIdDecrypted),
+        decryptedLen: decLen,
+      })
+    }
+
     // Prefer explicit orderId if provided.
     const orderIdFromQuery =
       searchParams.get('orderId') ||
