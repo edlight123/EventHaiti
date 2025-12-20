@@ -144,6 +144,9 @@ export async function POST(request: Request) {
     }
 
     // Create Stripe checkout session
+    // IMPORTANT: derive origin from the incoming request to avoid redirects to stale/deleted deployments
+    // when NEXT_PUBLIC_APP_URL is misconfigured.
+    const origin = new URL(request.url).origin
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -161,8 +164,8 @@ export async function POST(request: Request) {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/purchase/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/events/${eventId}`,
+      success_url: `${origin}/purchase/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/events/${eventId}`,
       client_reference_id: user.id,
       metadata: {
         eventId,
