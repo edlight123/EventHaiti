@@ -12,6 +12,40 @@ import crypto from 'crypto'
 
 export const runtime = 'nodejs'
 
+function buildTokenVariants(token: string): string[] {
+  const raw = String(token || '').trim()
+  if (!raw) return []
+
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(raw)
+    } catch {
+      return raw
+    }
+  })()
+
+  const stripPadding = (v: string) => v.replace(/=+$/g, '')
+  const toBase64 = (v: string) => v.replace(/-/g, '+').replace(/_/g, '/')
+  const toBase64Url = (v: string) => v.replace(/\+/g, '-').replace(/\//g, '_')
+
+  const candidates = [
+    raw,
+    decoded,
+    stripPadding(raw),
+    stripPadding(decoded),
+    toBase64(raw),
+    toBase64(decoded),
+    stripPadding(toBase64(raw)),
+    stripPadding(toBase64(decoded)),
+    toBase64Url(raw),
+    toBase64Url(decoded),
+    stripPadding(toBase64Url(raw)),
+    stripPadding(toBase64Url(decoded)),
+  ]
+
+  return Array.from(new Set(candidates.map((c) => c.trim()).filter(Boolean)))
+}
+
 type TierSelection = { tierId: string; quantity: number }
 
 export async function POST(request: Request) {
@@ -180,7 +214,10 @@ export async function POST(request: Request) {
 
         const { error: pendingUpdateError } = await supabase
           .from('pending_transactions')
-          .update({ moncash_button_token: token })
+          .update({
+            moncash_button_token: token,
+            moncash_button_token_variants: buildTokenVariants(token),
+          })
           .eq('order_id', orderId)
 
         if (pendingUpdateError) {

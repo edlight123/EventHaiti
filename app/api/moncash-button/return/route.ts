@@ -26,6 +26,40 @@ function tryExtractReferenceFromJwtLikeToken(token: string): string | null {
   }
 }
 
+function buildTokenVariants(token: string): string[] {
+  const raw = String(token || '').trim()
+  if (!raw) return []
+
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(raw)
+    } catch {
+      return raw
+    }
+  })()
+
+  const stripPadding = (v: string) => v.replace(/=+$/g, '')
+  const toBase64 = (v: string) => v.replace(/-/g, '+').replace(/_/g, '/')
+  const toBase64Url = (v: string) => v.replace(/\+/g, '-').replace(/\//g, '_')
+
+  const candidates = [
+    raw,
+    decoded,
+    stripPadding(raw),
+    stripPadding(decoded),
+    toBase64(raw),
+    toBase64(decoded),
+    stripPadding(toBase64(raw)),
+    stripPadding(toBase64(decoded)),
+    toBase64Url(raw),
+    toBase64Url(decoded),
+    stripPadding(toBase64Url(raw)),
+    stripPadding(toBase64Url(decoded)),
+  ]
+
+  return Array.from(new Set(candidates.map((c) => c.trim()).filter(Boolean)))
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -62,14 +96,29 @@ export async function GET(request: Request) {
     // Attempt to map a token-like transactionId to our stored checkout token.
     // Some portal setups redirect with a token in transactionId (looks like base64/base64url).
     if (!orderId && transactionId) {
-      const { data: tokenTx } = await supabase
-        .from('pending_transactions')
-        .select('order_id')
-        .eq('moncash_button_token', transactionId)
-        .single()
+      for (const candidate of buildTokenVariants(transactionId)) {
+        const { data: tokenTx } = await supabase
+          .from('pending_transactions')
+          .select('order_id')
+          .eq('moncash_button_token', candidate)
+          .single()
 
-      if (tokenTx?.order_id) {
-        orderId = String(tokenTx.order_id)
+        if (tokenTx?.order_id) {
+          orderId = String(tokenTx.order_id)
+          break
+        }
+
+        // Also check optional variants array if present.
+        const { data: tokenTx2 } = await supabase
+          .from('pending_transactions')
+          .select('order_id')
+          .contains('moncash_button_token_variants', candidate)
+          .single()
+
+        if (tokenTx2?.order_id) {
+          orderId = String(tokenTx2.order_id)
+          break
+        }
       }
     }
 

@@ -69,7 +69,7 @@ function parseMonCashPublicKeyFromEnv(value: string): crypto.KeyObject {
 
 function getMonCashButtonKeyPem(): string {
   // Digicel docs call this the "Secret API KEY". In practice it is usually a PEM key.
-  const key = process.env.MONCASH_BUTTON_SECRET_API_KEY
+  const key = (process.env.MONCASH_BUTTON_SECRET_API_KEY || '').trim()
   if (!key) {
     throw new Error('MONCASH_BUTTON_SECRET_API_KEY is not configured')
   }
@@ -79,7 +79,7 @@ function getMonCashButtonKeyPem(): string {
 }
 
 function getMonCashFormKeyPem(): string {
-  const key = process.env.MONCASH_BUTTON_FORM_SECRET_API_KEY || process.env.MONCASH_BUTTON_SECRET_API_KEY
+  const key = (process.env.MONCASH_BUTTON_FORM_SECRET_API_KEY || process.env.MONCASH_BUTTON_SECRET_API_KEY || '').trim()
   if (!key) {
     throw new Error('MONCASH_BUTTON_SECRET_API_KEY is not configured')
   }
@@ -249,7 +249,7 @@ function formatAmountForGateway(amount: number): string {
 }
 
 function getBusinessKey(): string {
-  const businessKey = process.env.MONCASH_BUTTON_BUSINESS_KEY
+  const businessKey = (process.env.MONCASH_BUTTON_BUSINESS_KEY || '').trim()
   if (!businessKey) {
     throw new Error('MONCASH_BUTTON_BUSINESS_KEY is not configured')
   }
@@ -257,7 +257,7 @@ function getBusinessKey(): string {
 }
 
 function getMonCashFormBusinessKey(): string {
-  const businessKey = process.env.MONCASH_BUTTON_FORM_BUSINESS_KEY || process.env.MONCASH_BUTTON_BUSINESS_KEY
+  const businessKey = (process.env.MONCASH_BUTTON_FORM_BUSINESS_KEY || process.env.MONCASH_BUTTON_BUSINESS_KEY || '').trim()
   if (!businessKey) {
     throw new Error('MONCASH_BUTTON_BUSINESS_KEY is not configured')
   }
