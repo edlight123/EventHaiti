@@ -7,6 +7,7 @@ import {
   getMonCashButtonPaymentByOrderId,
   getMonCashButtonPaymentByTransactionId,
 } from '@/lib/moncash-button'
+import { notifyTicketPurchase as notifyTicketPurchaseNotification } from '@/lib/notifications/helpers'
 import { sendEmail, getTicketConfirmationEmail } from '@/lib/email'
 import { sendWhatsAppMessage, getTicketConfirmationWhatsApp } from '@/lib/whatsapp'
 import { generateTicketQRCode } from '@/lib/qrcode'
@@ -303,8 +304,8 @@ export async function GET(request: Request) {
           attendee_name: attendee?.full_name || attendee?.email || 'Guest',
           price_paid: selection.unitPrice,
           currency: pendingTx.currency || 'HTG',
-          original_currency: pendingTx.currency || 'HTG',
-          exchange_rate_used: null,
+          original_currency: pendingTx.original_currency || pendingTx.currency || 'HTG',
+          exchange_rate_used: pendingTx.exchange_rate_used ?? null,
           payment_method: 'moncash',
           payment_id: transactionId || payment.transNumber || orderId,
           status: 'valid',
@@ -372,6 +373,20 @@ export async function GET(request: Request) {
     // Generate QR code + notify
     if (ticket?.id) {
       const qrCodeDataURL = await generateTicketQRCode(ticket.id)
+
+      // In-app + push notification (same pipeline as Stripe purchases)
+      if (pendingTx.user_id && pendingTx.event_id && eventDetails?.title) {
+        try {
+          await notifyTicketPurchaseNotification(
+            String(pendingTx.user_id),
+            String(pendingTx.event_id),
+            String(eventDetails.title),
+            createdTickets.length || (pendingTx.quantity || 1)
+          )
+        } catch (error) {
+          console.error('MonCash Button: failed to send purchase notification', error)
+        }
+      }
 
       if (ticket.attendee && ticket.event) {
         const quantity = pendingTx.quantity || 1

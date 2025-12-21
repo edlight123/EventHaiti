@@ -33,7 +33,8 @@
     "language": "Language",
     "language_en": "English",
     "language_fr": "Français",
-    "language_ht": "Kreyòl"
+    "language_ht": "Kreyòl",
+    "timezone": "Timezone"
   },
   "notifications": {
     "title": "Notifications",

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/firebase-db/server'
 import { checkPaymentStatus } from '@/lib/moncash'
+import { notifyTicketPurchase as notifyTicketPurchaseNotification } from '@/lib/notifications/helpers'
 import { sendEmail, getTicketConfirmationEmail } from '@/lib/email'
 import { sendWhatsAppMessage, getTicketConfirmationWhatsApp } from '@/lib/whatsapp'
 import { generateTicketQRCode } from '@/lib/qrcode'
@@ -77,8 +78,8 @@ export async function GET(request: Request) {
         attendee_name: attendee?.full_name || attendee?.email || 'Guest',
         price_paid: pricePerTicket,
         currency: pendingTx.currency || 'HTG',
-        original_currency: pendingTx.currency || 'HTG',
-        exchange_rate_used: null,
+        original_currency: pendingTx.original_currency || pendingTx.currency || 'HTG',
+        exchange_rate_used: pendingTx.exchange_rate_used ?? null,
         payment_method: 'moncash',
         payment_id: transactionId,
         status: 'valid',
@@ -151,6 +152,20 @@ export async function GET(request: Request) {
 
     // Generate QR code
     const qrCodeDataURL = await generateTicketQRCode(ticket.id)
+
+    // In-app + push notification (same pipeline as Stripe purchases)
+    if (pendingTx.user_id && pendingTx.event_id) {
+      try {
+        await notifyTicketPurchaseNotification(
+          String(pendingTx.user_id),
+          String(pendingTx.event_id),
+          String(eventDetails?.title || 'Event'),
+          createdTickets.length || quantity
+        )
+      } catch (error) {
+        console.error('MonCash callback: failed to send purchase notification', error)
+      }
+    }
 
     // Send confirmation email
     if (ticket.attendee && ticket.event) {

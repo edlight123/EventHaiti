@@ -15,6 +15,7 @@
   },
   "common": {
     "free": "GRATIS",
+    "free_event": "Evènman gratis",
     "from": "De",
     "search": "Chèche",
     "filter": "Filtre",
@@ -87,6 +88,10 @@
     "date": "Dat",
     "area": "Zòn",
     "all_areas": "Tout zòn",
+    "commune": "Komin",
+    "neighborhood": "Katye",
+    "active_filters": "Filt ki aktif",
+    "clear_all": "Efase tout",
     "reset": "Remèt",
     "apply_filters": "Aplike filt",
     "active": "aktif",
@@ -218,6 +223,30 @@
     "payment_details": "Detay peman",
     "secure_payment_stripe": "Peman sekirize pa Stripe",
     "pay": "Peye"
+  },
+  "favorites": {
+    "title": "Favori mwen",
+    "subtitle": "Evènman ou sove pou pita",
+    "no_favorites": "Pa gen evènman favori ankò",
+    "no_favorites_desc": "Kòmanse eksplore evènman epi sove favori ou yo isit la",
+    "discover_events": "Dekouvri evènman"
+  },
+  "notifications": {
+    "title": "Notifikasyon",
+    "subtitle": "Rete okouran sou evènman ou yo",
+    "mark_all_read": "Make tout kòm li",
+    "no_notifications": "Pa gen notifikasyon",
+    "no_notifications_desc": "Ou gentan ajou!",
+    "time_ago": "gen {{time}}"
+  },
+  "organizer_dashboard": {
+    "title": "Tablo òganizatè",
+    "subtitle": "Jere evènman ou yo ak tikè yo",
+    "create_event": "Kreye evènman",
+    "my_events": "Evènman mwen",
+    "analytics": "Analiz",
+    "payouts": "Peman",
+    "settings": "Paramèt"
   },
   "organizer": {
     "action_center": {

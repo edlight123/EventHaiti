@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'next/navigation'
 import { firebaseDb as supabase } from '@/lib/firebase-db/client'
@@ -36,12 +36,74 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   const [selectedTierPrice, setSelectedTierPrice] = useState<number>(0)
   const [selectedTiers, setSelectedTiers] = useState<{ tierId: string; quantity: number; price: number; tierName?: string }[]>([])
   const [promoCode, setPromoCode] = useState<string | undefined>()
+  const [isMonCashPopupOpen, setIsMonCashPopupOpen] = useState(false)
+  const moncashPopupRef = useRef<Window | null>(null)
+
+  const [usdHtgQuote, setUsdHtgQuote] = useState<null | {
+    baseRate: number
+    effectiveRate: number
+    spreadPercent: number
+    provider: string
+    fetchedAtIso: string
+    amountUsd: number
+    amountHtg: number
+    chargeCurrency: string
+  }>(null)
+  const [usdHtgQuoteError, setUsdHtgQuoteError] = useState<string | null>(null)
+  const [usdHtgQuoteLoading, setUsdHtgQuoteLoading] = useState(false)
+
+  const totalAmountDisplay = useMemo(() => {
+    return selectedTiers.length > 0
+      ? selectedTiers.reduce((sum, t) => sum + t.price * t.quantity, 0)
+      : (selectedTierPrice || ticketPrice) * quantity
+  }, [quantity, selectedTierPrice, selectedTiers, ticketPrice])
+
+  useEffect(() => {
+    if (!showModal) return
+    if (String(currency || 'HTG').toUpperCase() !== 'USD') {
+      setUsdHtgQuote(null)
+      setUsdHtgQuoteError(null)
+      setUsdHtgQuoteLoading(false)
+      return
+    }
+
+    const amountUsd = Number(totalAmountDisplay)
+    if (!Number.isFinite(amountUsd) || amountUsd <= 0) return
+
+    const controller = new AbortController()
+    const run = async () => {
+      setUsdHtgQuoteLoading(true)
+      setUsdHtgQuoteError(null)
+      try {
+        const url = `/api/fx/usd-htg-quote?amount=${encodeURIComponent(String(amountUsd))}`
+        const res = await fetch(url, { signal: controller.signal })
+        const data = await res.json()
+        if (!res.ok) {
+          throw new Error(data?.error || 'Failed to fetch exchange rate')
+        }
+        setUsdHtgQuote(data)
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return
+        setUsdHtgQuote(null)
+        setUsdHtgQuoteError(err?.message || 'Failed to fetch exchange rate')
+      } finally {
+        setUsdHtgQuoteLoading(false)
+      }
+    }
+
+    run()
+    return () => controller.abort()
+  }, [currency, showModal, totalAmountDisplay])
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return
       const data: any = event.data
       if (!data || data.source !== 'eventhaiti' || data.type !== 'purchase_result') return
+
+      // Payment completed in the popup; remove blurred backdrop.
+      setIsMonCashPopupOpen(false)
+      moncashPopupRef.current = null
 
       if (data.status === 'success') {
         const ticketId = data.ticketId || data.ticket_id
@@ -61,6 +123,20 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
   }, [router])
+
+  // If the user closes the MonCash popup manually, remove blurred backdrop.
+  useEffect(() => {
+    if (!isMonCashPopupOpen) return
+    const id = window.setInterval(() => {
+      const popup = moncashPopupRef.current
+      if (popup && popup.closed) {
+        moncashPopupRef.current = null
+        setIsMonCashPopupOpen(false)
+      }
+    }, 500)
+
+    return () => window.clearInterval(id)
+  }, [isMonCashPopupOpen])
 
   async function handleClaimFreeTicket() {
     setLoading(true)
@@ -173,19 +249,35 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
           throw new Error('Missing MonCash redirect URL')
         }
 
+        const popupWidth = 480
+        const popupHeight = 720
+        const dualScreenLeft = (window as any).screenLeft ?? window.screenX ?? 0
+        const dualScreenTop = (window as any).screenTop ?? window.screenY ?? 0
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || screen.width
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || screen.height
+        const left = Math.max(0, Math.floor(dualScreenLeft + (viewportWidth - popupWidth) / 2))
+        const top = Math.max(0, Math.floor(dualScreenTop + (viewportHeight - popupHeight) / 2))
+
         const popup = window.open(
           data.redirectUrl,
           'moncash_checkout',
-          'popup=yes,width=480,height=720,scrollbars=yes,resizable=yes'
+          `popup=yes,width=${popupWidth},height=${popupHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`
         )
 
         if (!popup) {
           // Popup blocked: fallback to same-tab redirect.
+          setIsMonCashPopupOpen(false)
+          moncashPopupRef.current = null
           window.location.href = data.redirectUrl
           return
         }
 
         popup.focus()
+
+        // Blur the opener background while the popup is open.
+        moncashPopupRef.current = popup
+        setIsMonCashPopupOpen(true)
+
         showToast({
           type: 'info',
           title: 'Complete payment in the popup',
@@ -228,6 +320,12 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
 
   return (
     <>
+      {isMonCashPopupOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+          aria-hidden="true"
+        />
+      )}
       {isFree ? (
         <div className="space-y-4">
           {/* Quantity Selector for Free Tickets */}
@@ -369,6 +467,26 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                   </span>
                 </div>
               )}
+
+              {String(currency || 'HTG').toUpperCase() === 'USD' && (
+                <div className="mt-3 text-sm text-gray-600">
+                  {usdHtgQuoteLoading && <span>Estimating MonCash total in HTG…</span>}
+                  {!usdHtgQuoteLoading && usdHtgQuote && (
+                    <div className="space-y-1">
+                      <div>
+                        Estimated MonCash charge: <span className="font-semibold text-gray-900">{usdHtgQuote.amountHtg.toLocaleString()} HTG</span>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Rate: {usdHtgQuote.baseRate.toFixed(2)} HTG/USD + {(usdHtgQuote.spreadPercent * 100).toFixed(0)}% spread
+                      </div>
+                    </div>
+                  )}
+                  {!usdHtgQuoteLoading && usdHtgQuoteError && (
+                    <span className="text-red-700">Unable to estimate HTG total right now.</span>
+                  )}
+                </div>
+              )}
+
               {promoCode && (
                 <div className="mt-2 text-sm text-green-600">
                   ✓ Promo code {promoCode} applied

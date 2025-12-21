@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { calculateDiscount } from '@/lib/promo-codes'
+import { convertUsdToHtgAmount, getUsdToHtgRateWithSpread } from '@/lib/fx/usd-htg'
 import {
   createMonCashButtonCheckoutToken,
   getMonCashButtonRedirectUrl,
@@ -166,7 +167,43 @@ export async function POST(request: Request) {
     }
 
     const totalQuantity = normalizedSelections.reduce((sum, s) => sum + s.quantity, 0)
-    const totalAmount = normalizedSelections.reduce((sum, s) => sum + s.quantity * s.unitPrice, 0)
+    const originalCurrency = String(event.currency || 'HTG').toUpperCase()
+    const originalAmount = normalizedSelections.reduce((sum, s) => sum + s.quantity * s.unitPrice, 0)
+
+    // MonCash settles in HTG. If the event is priced in USD, convert to HTG using a live rate + spread.
+    // We do NOT scrape Google; we use a proper JSON rate endpoint.
+    let chargeCurrency = originalCurrency
+    let chargeSelections = normalizedSelections
+    let chargeAmount = originalAmount
+    let exchangeRateUsed: number | null = null
+    let exchangeRateProvider: string | null = null
+    let exchangeRateFetchedAt: string | null = null
+    let exchangeRateBase: number | null = null
+    let exchangeRateSpreadPercent: number | null = null
+
+    if (originalCurrency === 'USD') {
+      const { baseRate, effectiveRate, spreadPercent, provider, fetchedAtIso } = await getUsdToHtgRateWithSpread({
+        spreadPercent: 0.05,
+      })
+
+      exchangeRateBase = baseRate
+      exchangeRateUsed = effectiveRate
+      exchangeRateSpreadPercent = spreadPercent
+      exchangeRateProvider = provider
+      exchangeRateFetchedAt = fetchedAtIso
+      chargeCurrency = 'HTG'
+
+      chargeSelections = normalizedSelections.map((s) => ({
+        ...s,
+        unitPrice: convertUsdToHtgAmount(s.unitPrice, effectiveRate),
+      }))
+      chargeAmount = chargeSelections.reduce((sum, s) => sum + s.quantity * s.unitPrice, 0)
+    } else if (originalCurrency !== 'HTG') {
+      return NextResponse.json(
+        { error: `MonCash only supports HTG. Event currency ${originalCurrency} is not supported for MonCash.` },
+        { status: 400 }
+      )
+    }
 
     // Create a gateway order ID.
     // Keep it short to fit sandbox RSA encryption limits (Digicel sandbox keys can be tiny).
@@ -182,11 +219,18 @@ export async function POST(request: Request) {
       user_id: user.id,
       event_id: eventId,
       quantity: totalQuantity,
-      amount: totalAmount,
+      amount: chargeAmount,
       payment_method: 'moncash_button',
       status: 'pending',
-      currency: event.currency || 'HTG',
-      tier_selections: normalizedSelections,
+      currency: chargeCurrency,
+      original_currency: originalCurrency,
+      original_amount: originalAmount,
+      exchange_rate_used: exchangeRateUsed,
+      exchange_rate_base: exchangeRateBase,
+      exchange_rate_spread_percent: exchangeRateSpreadPercent,
+      exchange_rate_provider: exchangeRateProvider,
+      exchange_rate_fetched_at: exchangeRateFetchedAt,
+      tier_selections: chargeSelections,
       promo_code_id: promoCode || null,
       moncash_button_token: null,
     })
@@ -203,7 +247,7 @@ export async function POST(request: Request) {
     if (restTokenEnabled) {
       try {
         const { token } = await createMonCashButtonCheckoutToken({
-          amount: totalAmount,
+          amount: chargeAmount,
           orderId,
         })
 

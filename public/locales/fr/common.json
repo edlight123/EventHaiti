@@ -224,6 +224,30 @@
     "secure_payment_stripe": "Paiement sécurisé propulsé par Stripe",
     "pay": "Payer"
   },
+  "favorites": {
+    "title": "Mes favoris",
+    "subtitle": "Événements enregistrés pour plus tard",
+    "no_favorites": "Aucun événement favori",
+    "no_favorites_desc": "Commencez à explorer des événements et enregistrez vos favoris ici",
+    "discover_events": "Découvrir des événements"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Restez informé de vos événements",
+    "mark_all_read": "Tout marquer comme lu",
+    "no_notifications": "Aucune notification",
+    "no_notifications_desc": "Vous êtes à jour !",
+    "time_ago": "il y a {{time}}"
+  },
+  "organizer_dashboard": {
+    "title": "Tableau de bord organisateur",
+    "subtitle": "Gérez vos événements et billets",
+    "create_event": "Créer un événement",
+    "my_events": "Mes événements",
+    "analytics": "Analyses",
+    "payouts": "Paiements",
+    "settings": "Paramètres"
+  },
   "organizer": {
     "action_center": {
       "title": "Centre d'action",
