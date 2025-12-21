@@ -110,5 +110,27 @@
     "all_my_tickets": "Tous mes billets",
     "back_to_tickets": "← Retour à tous les billets",
     "add_to_calendar": "Ajouter au calendrier"
+  },
+  "purchase_success": {
+    "title": "Achat réussi !",
+    "subtitle": "Votre billet a été confirmé",
+    "date_tba": "Date à confirmer",
+    "ticket_id_label": "ID du billet",
+    "location_label": "Lieu",
+    "amount_paid_label": "Montant payé",
+    "status_label": "Statut",
+    "status_confirmed": "Confirmé",
+    "qr_title": "Votre code QR",
+    "qr_subtitle": "Montrez-le à l'entrée",
+    "qr_alt": "Code QR du billet",
+    "no_ticket_message": "Un e-mail de confirmation a été envoyé à votre boîte de réception avec les détails de votre billet.",
+    "view_tickets": "Voir mes billets",
+    "find_more_events": "Trouver d'autres événements",
+    "next_steps_title": "Et maintenant ?",
+    "next_steps": {
+      "check_email": "Vérifiez votre e-mail pour la confirmation du billet et les détails de l'événement",
+      "save_ticket": "Enregistrez votre billet sur votre téléphone pour un accès facile le jour de l'événement",
+      "arrive_early": "Arrivez tôt et présentez votre code QR à l'entrée"
+    }
   }
 }

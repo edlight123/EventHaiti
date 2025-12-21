@@ -110,5 +110,27 @@
     "all_my_tickets": "All My Tickets",
     "back_to_tickets": "← Back to All Tickets",
     "add_to_calendar": "Add to Calendar"
+  },
+  "purchase_success": {
+    "title": "Purchase Successful!",
+    "subtitle": "Your ticket has been confirmed",
+    "date_tba": "Date to be confirmed",
+    "ticket_id_label": "Ticket ID",
+    "location_label": "Location",
+    "amount_paid_label": "Amount Paid",
+    "status_label": "Status",
+    "status_confirmed": "Confirmed",
+    "qr_title": "Your QR Code",
+    "qr_subtitle": "Show this at the entrance",
+    "qr_alt": "Ticket QR Code",
+    "no_ticket_message": "A confirmation email has been sent to your inbox with your ticket details.",
+    "view_tickets": "View My Tickets",
+    "find_more_events": "Find More Events",
+    "next_steps_title": "What's Next?",
+    "next_steps": {
+      "check_email": "Check your email for ticket confirmation and event details",
+      "save_ticket": "Save your ticket to your phone for easy access at the event",
+      "arrive_early": "Arrive early and present your QR code at the entrance"
+    }
   }
 }

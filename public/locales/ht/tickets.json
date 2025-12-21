@@ -110,5 +110,27 @@
     "all_my_tickets": "Tout tikè mwen",
     "back_to_tickets": "← Retounen nan tout tikè",
     "add_to_calendar": "Ajoute nan kalandriye"
+  },
+  "purchase_success": {
+    "title": "Acha a reyisi!",
+    "subtitle": "Biyè ou a konfime",
+    "date_tba": "Dat pou konfime",
+    "ticket_id_label": "ID biyè",
+    "location_label": "Kote",
+    "amount_paid_label": "Kantite ou peye",
+    "status_label": "Estati",
+    "status_confirmed": "Konfime",
+    "qr_title": "Kòd QR ou",
+    "qr_subtitle": "Montre sa nan antre a",
+    "qr_alt": "Kòd QR biyè a",
+    "no_ticket_message": "Nou voye yon imel konfimasyon nan bwat imel ou ak detay biyè ou.",
+    "view_tickets": "Gade biyè mwen",
+    "find_more_events": "Jwenn lòt evènman",
+    "next_steps_title": "Kisa pou w fè apre?",
+    "next_steps": {
+      "check_email": "Tcheke imel ou pou konfimasyon biyè a ak detay evènman an",
+      "save_ticket": "Sove biyè ou sou telefòn ou pou ou jwenn li fasil jou evènman an",
+      "arrive_early": "Rive bonè epi montre kòd QR ou nan antre a"
+    }
   }
 }
