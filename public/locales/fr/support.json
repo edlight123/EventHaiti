@@ -57,6 +57,9 @@
   "request_form": {
     "title": "Soumettre une demande de support",
     "description": "Remplissez le formulaire ci-dessous et nous vous répondrons dans les 24 heures.",
+    "user_type_label": "Je suis...",
+    "user_type_attendee": "Participant",
+    "user_type_organizer": "Organisateur",
     "name": "Nom",
     "name_placeholder": "Votre nom complet",
     "email": "Email",
@@ -75,5 +78,28 @@
     "error_message": "Une erreur s'est produite lors de la soumission de votre demande. Veuillez réessayer ou nous envoyer un email directement à support@eventhaiti.com",
     "try_again": "Réessayer",
     "back_to_support": "Retour au centre d'aide"
+  },
+  "contact_cards": {
+    "email_title": "Support par email",
+    "email_desc": "Réponse sous 24 heures",
+    "whatsapp_title": "WhatsApp",
+    "whatsapp_desc": "Discutez directement avec nous",
+    "request_title": "Soumettre une demande",
+    "request_desc": "Formulaire de support détaillé"
+  },
+  "nav": {
+    "back_to_support": "Retour au support"
+  },
+  "toast": {
+    "submitted_title": "Demande envoyée",
+    "submitted_message": "Nous vous répondrons dans les 24 heures.",
+    "error_title": "Erreur",
+    "error_message": "Échec de l'envoi. Veuillez réessayer."
+  },
+  "tip": {
+    "title": "Astuce",
+    "body_prefix": "Pour une aide plus rapide, consultez notre ",
+    "body_link": "section FAQ",
+    "body_suffix": " d'abord. Beaucoup de questions courantes y sont répondues !"
   }
 }

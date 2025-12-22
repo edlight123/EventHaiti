@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Send, Loader2 } from 'lucide-react'
+import { ArrowLeft, Send, Loader2, Ticket, CalendarDays, Info } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/Toast'
 
@@ -43,8 +43,8 @@ export default function SupportRequestForm() {
       await new Promise(resolve => setTimeout(resolve, 1500))
       
       showToast({
-        title: 'Request submitted',
-        message: 'We\'ll get back to you within 24 hours.',
+        title: t('toast.submitted_title'),
+        message: t('toast.submitted_message'),
         type: 'success'
       })
 
@@ -52,8 +52,8 @@ export default function SupportRequestForm() {
       router.push('/support')
     } catch (error) {
       showToast({
-        title: 'Error',
-        message: 'Failed to submit request. Please try again.',
+        title: t('toast.error_title'),
+        message: t('toast.error_message'),
         type: 'error'
       })
     } finally {
@@ -70,7 +70,7 @@ export default function SupportRequestForm() {
           className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Support
+          {t('nav.back_to_support')}
         </Link>
 
         {/* Header */}
@@ -88,7 +88,7 @@ export default function SupportRequestForm() {
           {/* User Type */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">
-              I am a...
+              {t('request_form.user_type_label')}
             </label>
             <div className="flex gap-4">
               <button
@@ -100,7 +100,10 @@ export default function SupportRequestForm() {
                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                 }`}
               >
-                🎫 Attendee
+                <span className="inline-flex items-center justify-center gap-2">
+                  <Ticket className="w-4 h-4" />
+                  {t('request_form.user_type_attendee')}
+                </span>
               </button>
               <button
                 type="button"
@@ -111,7 +114,10 @@ export default function SupportRequestForm() {
                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                 }`}
               >
-                📅 Organizer
+                <span className="inline-flex items-center justify-center gap-2">
+                  <CalendarDays className="w-4 h-4" />
+                  {t('request_form.user_type_organizer')}
+                </span>
               </button>
             </div>
           </div>
@@ -227,11 +233,15 @@ export default function SupportRequestForm() {
         {/* Info Box */}
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-800">
-            <strong>💡 Tip:</strong> For faster assistance, check our{' '}
+            <strong className="inline-flex items-center gap-2">
+              <Info className="w-4 h-4" />
+              {t('tip.title')}:
+            </strong>{' '}
+            {t('tip.body_prefix')}
             <Link href="/support" className="underline hover:text-blue-900">
-              FAQ section
+              {t('tip.body_link')}
             </Link>
-            {' '}first. Many common questions are answered there!
+            {t('tip.body_suffix')}
           </p>
         </div>
       </div>

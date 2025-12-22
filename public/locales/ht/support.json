@@ -57,6 +57,9 @@
   "request_form": {
     "title": "Soumèt yon demann sipò",
     "description": "Ranpli fòmilè a epi n ap reponn ou nan 24 èdtan.",
+    "user_type_label": "Mwen se...",
+    "user_type_attendee": "Patisipan",
+    "user_type_organizer": "Òganizatè",
     "name": "Non",
     "name_placeholder": "Non konplè ou",
     "email": "Email",
@@ -75,5 +78,28 @@
     "error_message": "Te gen yon erè nan soumèt demann ou. Tanpri eseye ankò oswa voye nou yon email dirèkteman nan support@eventhaiti.com",
     "try_again": "Eseye ankò",
     "back_to_support": "Retounen nan sant èd"
+  },
+  "contact_cards": {
+    "email_title": "Sipò pa email",
+    "email_desc": "Repons nan 24 èdtan",
+    "whatsapp_title": "WhatsApp",
+    "whatsapp_desc": "Chat avèk nou dirèk",
+    "request_title": "Soumèt yon demann",
+    "request_desc": "Fòm sipò detaye"
+  },
+  "nav": {
+    "back_to_support": "Retounen nan sipò"
+  },
+  "toast": {
+    "submitted_title": "Demann soumèt",
+    "submitted_message": "N ap reponn ou nan 24 èdtan.",
+    "error_title": "Erè",
+    "error_message": "Nou pa t ka soumèt demann lan. Tanpri eseye ankò."
+  },
+  "tip": {
+    "title": "Ti konsèy",
+    "body_prefix": "Pou jwenn èd pi vit, gade ",
+    "body_link": "seksyon FAQ la",
+    "body_suffix": " anvan. Anpil kesyon komen gen repons la!"
   }
 }

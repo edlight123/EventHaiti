@@ -19,6 +19,8 @@
     "submit_request": "Submit a Request"
   },
   "categories": {
+    "title": "Top Help Topics",
+    "subtitle": "Browse by category or search for specific questions",
     "tickets_orders": {
       "title": "Tickets & Orders",
       "description": "Purchase tickets, view orders, and manage your bookings"
@@ -55,6 +57,9 @@
   "request_form": {
     "title": "Submit a Support Request",
     "description": "Fill out the form below and we'll get back to you within 24 hours.",
+    "user_type_label": "I am a...",
+    "user_type_attendee": "Attendee",
+    "user_type_organizer": "Organizer",
     "name": "Name",
     "name_placeholder": "Your full name",
     "email": "Email",
@@ -73,5 +78,28 @@
     "error_message": "There was an error submitting your request. Please try again or email us directly at support@eventhaiti.com",
     "try_again": "Try Again",
     "back_to_support": "Back to Help Center"
+  },
+  "contact_cards": {
+    "email_title": "Email Support",
+    "email_desc": "Get a response within 24 hours",
+    "whatsapp_title": "WhatsApp",
+    "whatsapp_desc": "Chat with us directly",
+    "request_title": "Submit a Request",
+    "request_desc": "Detailed support form"
+  },
+  "nav": {
+    "back_to_support": "Back to Support"
+  },
+  "toast": {
+    "submitted_title": "Request submitted",
+    "submitted_message": "We'll get back to you within 24 hours.",
+    "error_title": "Error",
+    "error_message": "Failed to submit request. Please try again."
+  },
+  "tip": {
+    "title": "Tip",
+    "body_prefix": "For faster assistance, check our ",
+    "body_link": "FAQ section",
+    "body_suffix": " first. Many common questions are answered there!"
   }
 }

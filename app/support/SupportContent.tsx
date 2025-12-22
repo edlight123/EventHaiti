@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Search, Mail, MessageCircle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
+import Link from 'next/link'
+import { Search, Mail, MessageCircle, ChevronDown, ChevronUp, ExternalLink, Ticket, CalendarDays, FileText } from 'lucide-react'
 import { attendeeFAQs, organizerFAQs, type UserRole, type FAQCategory } from './faqData'
 
 export default function SupportContent() {
@@ -53,7 +54,7 @@ export default function SupportContent() {
           <div className="text-center max-w-3xl mx-auto">
             {/* Pill Label */}
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full text-sm font-medium mb-4">
-              <span>💬</span>
+              <MessageCircle className="w-4 h-4 text-white/90" />
               <span>{t('hero.title')}</span>
             </div>
 
@@ -98,7 +99,10 @@ export default function SupportContent() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              🎫 {t('role_toggle.attendee')}
+              <span className="inline-flex items-center gap-2">
+                <Ticket className="w-4 h-4" />
+                {t('role_toggle.attendee')}
+              </span>
             </button>
             <button
               onClick={() => {
@@ -112,7 +116,10 @@ export default function SupportContent() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              📅 {t('role_toggle.organizer')}
+              <span className="inline-flex items-center gap-2">
+                <CalendarDays className="w-4 h-4" />
+                {t('role_toggle.organizer')}
+              </span>
             </button>
           </div>
         </div>
@@ -154,7 +161,9 @@ export default function SupportContent() {
         <div className="space-y-12">
           {searchQuery && filteredFAQs.length === 0 && (
             <div className="text-center py-16">
-              <div className="text-6xl mb-4">🔍</div>
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white border border-gray-200 shadow-soft flex items-center justify-center">
+                <Search className="w-7 h-7 text-gray-500" />
+              </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2">
                 {t('search.no_results')}
               </h3>
@@ -230,9 +239,9 @@ export default function SupportContent() {
                 <Mail className="w-6 h-6 text-purple-600" />
                 <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-purple-600 transition-colors" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-1">Email Support</h3>
+              <h3 className="font-semibold text-gray-900 mb-1">{t('contact_cards.email_title')}</h3>
               <p className="text-sm text-gray-600">
-                Get a response within 24 hours
+                {t('contact_cards.email_desc')}
               </p>
             </a>
 
@@ -247,26 +256,26 @@ export default function SupportContent() {
                 <MessageCircle className="w-6 h-6 text-green-600" />
                 <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-purple-600 transition-colors" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-1">WhatsApp</h3>
+              <h3 className="font-semibold text-gray-900 mb-1">{t('contact_cards.whatsapp_title')}</h3>
               <p className="text-sm text-gray-600">
-                Chat with us directly
+                {t('contact_cards.whatsapp_desc')}
               </p>
             </a>
 
             {/* Submit a Request */}
-            <a
+            <Link
               href="/support/request"
               className="bg-white p-6 rounded-xl border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all group"
             >
               <div className="flex items-center justify-between mb-3">
-                <span className="text-2xl">📝</span>
+                <FileText className="w-6 h-6 text-indigo-600" />
                 <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-purple-600 transition-colors" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-1">Submit a Request</h3>
+              <h3 className="font-semibold text-gray-900 mb-1">{t('contact_cards.request_title')}</h3>
               <p className="text-sm text-gray-600">
-                Detailed support form
+                {t('contact_cards.request_desc')}
               </p>
-            </a>
+            </Link>
           </div>
         </div>
       </div>
