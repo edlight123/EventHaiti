@@ -168,18 +168,6 @@ export default function VerifyOrganizerPage() {
     setViewMode('overview')
   }
 
-  const handleSkipPayoutSetup = async () => {
-    if (!user || !request) return
-
-    await updateVerificationStep(user.id, 'payoutSetup', {
-      status: 'complete',
-      fields: { skipped: true },
-      missingFields: []
-    })
-
-    await reloadRequest()
-  }
-
   const handleSubmit = async () => {
     if (!user || !request) return
 
@@ -221,7 +209,6 @@ export default function VerifyOrganizerPage() {
       governmentId: 'governmentId',
       selfie: 'selfie',
       businessDetails: 'businessDetails',
-      payoutSetup: 'overview' // Links to /organizer/settings/payouts
     }
 
     setViewMode(viewModes[stepId] || 'overview')
@@ -318,7 +305,6 @@ export default function VerifyOrganizerPage() {
             <VerificationStepper
               request={request}
               onEditStep={handleEditStep}
-              onSkipPayoutSetup={handleSkipPayoutSetup}
               isReadOnly={isReadOnly}
             />
 

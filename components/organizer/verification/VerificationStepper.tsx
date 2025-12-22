@@ -4,23 +4,20 @@
  */
 
 import { type VerificationRequest, type VerificationStep } from '@/lib/verification'
-import Link from 'next/link'
 
 interface Props {
   request: VerificationRequest
   onEditStep: (stepId: keyof VerificationRequest['steps']) => void
-  onSkipPayoutSetup?: () => void
   isReadOnly?: boolean
 }
 
-export default function VerificationStepper({ request, onEditStep, onSkipPayoutSetup, isReadOnly = false }: Props) {
+export default function VerificationStepper({ request, onEditStep, isReadOnly = false }: Props) {
   // Fixed order of steps to prevent random ordering
   const stepOrder: (keyof VerificationRequest['steps'])[] = [
     'organizerInfo',
     'governmentId', 
     'selfie',
-    'businessDetails',
-    'payoutSetup'
+    'businessDetails'
   ]
   
   const steps = stepOrder.map(stepId => [stepId, request.steps[stepId]] as [keyof VerificationRequest['steps'], VerificationStep])
@@ -39,7 +36,6 @@ export default function VerificationStepper({ request, onEditStep, onSkipPayoutS
             step={step}
             stepNumber={index + 1}
             onEdit={() => onEditStep(stepId)}
-            onSkip={stepId === 'payoutSetup' ? onSkipPayoutSetup : undefined}
             isReadOnly={isReadOnly}
           />
         ))}
@@ -100,104 +96,14 @@ function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: Step
 
   const config = statusConfig[step.status]
 
-  // Special handling for payout setup step (links to external page)
-  const isPayoutStep = stepId === 'payoutSetup'
-  
   // Determine if card should be clickable
-  const isClickable = !isReadOnly && (isPayoutStep || step.status !== 'complete')
+  const isClickable = !isReadOnly && step.status !== 'complete'
 
   // Handle card click
   const handleCardClick = () => {
     if (!isReadOnly) {
       onEdit()
     }
-  }
-
-  // For payout step, wrap in Link
-  if (isPayoutStep && !isReadOnly) {
-    return (
-      <Link
-        href="/organizer/settings/payouts"
-        className={`${config.bgColor} border ${config.borderColor} rounded-lg p-4 transition-all hover:shadow-md cursor-pointer block`}
-      >
-        <div className="flex items-start gap-4">
-          {/* Step icon */}
-          <div className={`${config.iconBgColor} rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-0.5`}>
-            {config.icon}
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-4 mb-2">
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-gray-900 text-sm md:text-base mb-1">
-                  {step.title}
-                  {step.required && (
-                    <span className="text-red-500 ml-1" aria-label="Required">
-                      *
-                    </span>
-                  )}
-                </h3>
-                <p className="text-xs md:text-sm text-gray-600">
-                  {step.description}
-                </p>
-              </div>
-
-              {/* Status badge */}
-              <span className={`${config.badgeColor} px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0`}>
-                {config.badgeText}
-              </span>
-            </div>
-
-            {/* Missing fields / Error message */}
-            {step.status !== 'complete' && step.missingFields && step.missingFields.length > 0 && (
-              <div className="mt-2 mb-3">
-                <p className="text-xs text-gray-600 mb-1">Missing:</p>
-                <ul className="list-disc list-inside text-xs text-gray-700 space-y-0.5">
-                  {step.missingFields.map((field) => (
-                    <li key={field}>
-                      {formatFieldName(field)}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {step.errorMessage && (
-              <div className="mt-2 mb-3 text-xs text-red-600">
-                {step.errorMessage}
-              </div>
-            )}
-
-            {/* Action indicator */}
-            <div className="mt-3">
-              <span className="inline-flex items-center gap-2 text-sm font-medium text-teal-600">
-                <span>Configure Payout Settings</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </span>
-            </div>
-
-            {/* Skip button for incomplete optional payout step */}
-            {!step.required && step.status !== 'complete' && onSkip && (
-              <div className="mt-2">
-                <button
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    onSkip()
-                  }}
-                  className="text-xs text-gray-600 hover:text-gray-700 underline"
-                >
-                  Skip for now (can set up later)
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </Link>
-    )
   }
 
   return (

@@ -79,7 +79,7 @@ export default function SelfieForm({ userId, initialData, onSave, onCancel }: Pr
 
         {/* Instructions */}
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
-          <h4 className="font-semibold text-purple-900 text-sm mb-2">🤳 Instructions:</h4>
+          <h4 className="font-semibold text-purple-900 text-sm mb-2">Instructions:</h4>
           <ul className="text-sm text-purple-800 space-y-1 list-disc list-inside">
             <li>Hold your ID next to your face</li>
             <li>Make sure your face is clearly visible</li>

@@ -72,15 +72,6 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
             fields={request.steps.businessDetails.fields}
           />
         )}
-
-        {/* Payout Setup */}
-        {request.steps.payoutSetup.status === 'complete' && (
-          <SummarySection
-            title="Payout Setup"
-            icon="💰"
-            fields={request.steps.payoutSetup.fields}
-          />
-        )}
       </div>
 
       {/* Blocking Issues */}
