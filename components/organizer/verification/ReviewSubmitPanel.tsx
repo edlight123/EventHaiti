@@ -4,6 +4,7 @@
  */
 
 import { type VerificationRequest, canSubmitForReview, getBlockingIssues } from '@/lib/verification'
+import { Building2, Fingerprint, IdCard, UserRound } from 'lucide-react'
 
 interface Props {
   request: VerificationRequest
@@ -34,7 +35,7 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
         {request.steps.organizerInfo.status === 'complete' && (
           <SummarySection
             title="Organizer Information"
-            icon="👤"
+            icon={<UserRound className="w-5 h-5 text-gray-700" />}
             fields={request.steps.organizerInfo.fields}
           />
         )}
@@ -43,7 +44,7 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
         {request.steps.governmentId.status === 'complete' && (
           <SummarySection
             title="Government ID"
-            icon="🪪"
+            icon={<IdCard className="w-5 h-5 text-gray-700" />}
             fields={{
               ...request.steps.governmentId.fields,
               'ID Front': request.files.governmentId?.front ? '✓ Uploaded' : 'Not uploaded',
@@ -56,7 +57,7 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
         {request.steps.selfie.status === 'complete' && (
           <SummarySection
             title="Identity Verification"
-            icon="🤳"
+            icon={<Fingerprint className="w-5 h-5 text-gray-700" />}
             fields={{
               ...request.steps.selfie.fields,
               'Selfie Photo': request.files.selfie?.path ? '✓ Uploaded' : 'Not uploaded'
@@ -68,7 +69,7 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
         {request.steps.businessDetails.status === 'complete' && (
           <SummarySection
             title="Business Details"
-            icon="🏢"
+            icon={<Building2 className="w-5 h-5 text-gray-700" />}
             fields={request.steps.businessDetails.fields}
           />
         )}
@@ -168,7 +169,7 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
 
 interface SummarySectionProps {
   title: string
-  icon: string
+  icon: React.ReactNode
   fields: Record<string, any>
 }
 
@@ -180,9 +181,7 @@ function SummarySection({ title, icon, fields }: SummarySectionProps) {
   return (
     <div className="pb-6 border-b border-gray-200 last:border-b-0">
       <div className="flex items-center gap-2 mb-4">
-        <span className="text-2xl" role="img" aria-label={title}>
-          {icon}
-        </span>
+        <span aria-hidden="true">{icon}</span>
         <h3 className="font-semibold text-gray-900 text-base md:text-lg">
           {title}
         </h3>

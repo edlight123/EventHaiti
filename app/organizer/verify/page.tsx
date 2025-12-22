@@ -277,7 +277,6 @@ export default function VerifyOrganizerPage() {
           status={request.status}
           completionPercentage={completionPercentage}
           reviewNotes={request.reviewNotes}
-          onContinue={() => setViewMode('overview')}
           onRestart={handleRestart}
           isRestarting={restarting}
         />
@@ -301,23 +300,66 @@ export default function VerifyOrganizerPage() {
 
         {/* Main Content */}
         {viewMode === 'overview' && (
-          <div className="space-y-6">
-            <VerificationStepper
-              request={request}
-              onEditStep={handleEditStep}
-              isReadOnly={isReadOnly}
-            />
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-6">
+              <VerificationStepper
+                request={request}
+                onEditStep={handleEditStep}
+                isReadOnly={isReadOnly}
+              />
+            </div>
 
-            {!isReadOnly && canSubmit && (
-              <div className="text-center">
-                <button
-                  onClick={() => setViewMode('review')}
-                  className="px-8 py-4 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white rounded-lg font-bold text-lg shadow-lg hover:shadow-xl transition-all"
-                >
-                  Review & Submit →
-                </button>
+            <aside className="lg:col-span-1">
+              <div className="bg-white border border-gray-200 rounded-xl p-5 md:p-6 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-base md:text-lg font-bold text-gray-900">Submission</h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {isReadOnly
+                        ? 'Your verification is submitted. You can view the details anytime.'
+                        : canSubmit
+                          ? 'Everything required is complete. Review your details and submit for approval.'
+                          : 'Complete the required steps to unlock submission.'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-gray-500">Progress</div>
+                    <div className="text-sm font-semibold text-gray-900">{completionPercentage}%</div>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="w-full bg-gray-100 rounded-full h-2">
+                    <div
+                      className="bg-gradient-to-r from-teal-600 to-blue-600 h-2 rounded-full transition-all"
+                      style={{ width: `${completionPercentage}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  <button
+                    onClick={() => setViewMode('review')}
+                    className={`w-full px-4 py-3 rounded-lg font-semibold transition-all shadow-sm ${
+                      isReadOnly
+                        ? 'bg-gray-900 hover:bg-gray-800 text-white'
+                        : canSubmit
+                          ? 'bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white'
+                          : 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                    }`}
+                    disabled={!isReadOnly && !canSubmit}
+                  >
+                    {isReadOnly ? 'View Submission Details' : canSubmit ? 'Review & Submit' : 'Complete Required Steps'}
+                  </button>
+
+                  {!isReadOnly ? (
+                    <p className="text-xs text-gray-600">
+                      Submissions are typically reviewed within 24–48 hours.
+                    </p>
+                  ) : null}
+                </div>
               </div>
-            )}
+            </aside>
           </div>
         )}
 

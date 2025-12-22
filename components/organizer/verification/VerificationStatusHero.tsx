@@ -5,12 +5,20 @@
 
 import { type VerificationStatus } from '@/lib/verification'
 import Link from 'next/link'
+import {
+  BadgeCheck,
+  CircleX,
+  Clock,
+  Eye,
+  FileText,
+  RefreshCw,
+  TriangleAlert
+} from 'lucide-react'
 
 interface Props {
   status: VerificationStatus
   completionPercentage: number
   reviewNotes?: string
-  onContinue?: () => void
   onRestart?: () => void
   isRestarting?: boolean
 }
@@ -19,124 +27,102 @@ export default function VerificationStatusHero({
   status,
   completionPercentage,
   reviewNotes,
-  onContinue,
   onRestart,
   isRestarting = false
 }: Props) {
   // Status configuration
   const statusConfig: Record<VerificationStatus, {
-    icon: string
+    icon: React.ComponentType<{ className?: string }>
     bgColor: string
     borderColor: string
     iconBgColor: string
     iconColor: string
     title: string
     description: string
-    ctaText: string
-    ctaColor: string
     readonly?: boolean
     ctaHref?: string
-    actionType?: 'continue' | 'restart' | 'link'
+    actionType?: 'restart' | 'link'
   }> = {
     not_started: {
-      icon: '📝',
+      icon: FileText,
       bgColor: 'bg-blue-50',
       borderColor: 'border-blue-200',
       iconBgColor: 'bg-blue-100',
       iconColor: 'text-blue-600',
       title: 'Start Verification',
-      description: 'Complete identity verification to publish paid events and receive payouts.',
-      ctaText: 'Begin Verification',
-      ctaColor: 'bg-gradient-to-r from-blue-600 to-teal-600 hover:from-blue-700 hover:to-teal-700',
-      actionType: 'continue'
+      description: 'Complete identity verification to publish paid events and receive payouts.'
     },
     in_progress: {
-      icon: '⏳',
+      icon: Clock,
       bgColor: 'bg-amber-50',
       borderColor: 'border-amber-200',
       iconBgColor: 'bg-amber-100',
       iconColor: 'text-amber-600',
       title: 'Complete Your Verification',
-      description: `You're ${completionPercentage}% complete. Finish the required steps to submit for review.`,
-      ctaText: 'Continue',
-      ctaColor: 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700',
-      actionType: 'continue'
+      description: `You're ${completionPercentage}% complete. Finish the required steps to submit for review.`
     },
     pending: {
-      icon: '⏰',
+      icon: Eye,
       bgColor: 'bg-yellow-50',
       borderColor: 'border-yellow-200',
       iconBgColor: 'bg-yellow-100',
       iconColor: 'text-yellow-600',
       title: 'Verification Submitted',
       description: 'Your verification is pending review. Our team will review within 24-48 hours.',
-      ctaText: 'View Submission',
-      ctaColor: 'bg-gray-600 hover:bg-gray-700',
-      readonly: true,
-      actionType: 'continue'
+      readonly: true
     },
     in_review: {
-      icon: '👀',
+      icon: Eye,
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-200',
       iconBgColor: 'bg-purple-100',
       iconColor: 'text-purple-600',
       title: 'Under Review',
       description: 'Our team is currently reviewing your verification documents.',
-      ctaText: 'View Status',
-      ctaColor: 'bg-gray-600 hover:bg-gray-700',
-      readonly: true,
-      actionType: 'continue'
+      readonly: true
     },
     approved: {
-      icon: '✅',
+      icon: BadgeCheck,
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200',
       iconBgColor: 'bg-green-100',
       iconColor: 'text-green-600',
       title: 'Verification Approved!',
       description: 'Your account is verified. You can now publish paid events and request payouts.',
-      ctaText: 'Create Event',
-      ctaColor: 'bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700',
       ctaHref: '/organizer/events/new',
       actionType: 'link'
     },
     changes_requested: {
-      icon: '⚠️',
+      icon: TriangleAlert,
       bgColor: 'bg-orange-50',
       borderColor: 'border-orange-200',
       iconBgColor: 'bg-orange-100',
       iconColor: 'text-orange-600',
       title: 'Changes Requested',
-      description: 'We need some additional information. Please review the notes below and update your submission.',
-      ctaText: 'Review & Update',
-      ctaColor: 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700',
-      actionType: 'continue'
+      description: 'We need some additional information. Please review the notes below and update your submission.'
     },
     rejected: {
-      icon: '❌',
+      icon: CircleX,
       bgColor: 'bg-red-50',
       borderColor: 'border-red-200',
       iconBgColor: 'bg-red-100',
       iconColor: 'text-red-600',
       title: 'Verification Declined',
       description: 'Your verification was not approved. Click below to start a fresh application with all fields cleared.',
-      ctaText: 'Start Fresh Application',
-      ctaColor: 'bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700',
       actionType: 'restart'
     }
   }
 
   const config = statusConfig[status]
 
+  const Icon = config.icon
+
   return (
     <div className={`${config.bgColor} border ${config.borderColor} rounded-xl p-6 md:p-8 mb-6`}>
       <div className="flex items-start gap-4">
         {/* Icon */}
         <div className={`${config.iconBgColor} rounded-full p-3 md:p-4 flex-shrink-0`}>
-          <span className="text-2xl md:text-3xl" role="img" aria-label="Status icon">
-            {config.icon}
-          </span>
+          <Icon className={`w-6 h-6 md:w-7 md:h-7 ${config.iconColor}`} />
         </div>
 
         {/* Content */}
@@ -180,39 +166,60 @@ export default function VerificationStatusHero({
             </div>
           )}
 
-          {/* CTA Button */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            {config.ctaHref ? (
+          {/* Actions (only when meaningful) */}
+          {config.actionType === 'link' && config.ctaHref ? (
+            <div className="flex flex-col sm:flex-row gap-3">
               <Link
                 href={config.ctaHref}
-                className={`${config.ctaColor} text-white px-6 py-3 rounded-lg font-semibold text-sm md:text-base text-center transition-all shadow-md hover:shadow-lg`}
+                className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white px-6 py-3 rounded-lg font-semibold text-sm md:text-base text-center transition-all shadow-md hover:shadow-lg"
               >
-                {config.ctaText}
+                Create Event
               </Link>
-            ) : (
-              <button
-                  onClick={config.actionType === 'restart' ? onRestart : onContinue}
-                  disabled={isRestarting && config.actionType === 'restart'}
-                className={`${config.ctaColor} ${
-                    isRestarting && config.actionType === 'restart' ? 'opacity-50 cursor-not-allowed' : ''
-                } text-white px-6 py-3 rounded-lg font-semibold text-sm md:text-base transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2`}
-              >
-                {isRestarting && config.actionType === 'restart' && (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                )}
-                {config.ctaText}
-              </button>
-            )}
-
-            {status === 'pending' || status === 'in_review' ? (
               <Link
-                href="/organizer/events"
+                href="/organizer"
                 className="text-gray-700 hover:text-gray-900 px-6 py-3 rounded-lg font-medium text-sm md:text-base text-center border-2 border-gray-300 hover:border-gray-400 transition-all"
               >
+                Back to Dashboard
+              </Link>
+            </div>
+          ) : null}
+
+          {config.actionType === 'restart' ? (
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={onRestart}
+                disabled={isRestarting}
+                className={`bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 ${
+                  isRestarting ? 'opacity-50 cursor-not-allowed' : ''
+                } text-white px-6 py-3 rounded-lg font-semibold text-sm md:text-base transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2`}
+              >
+                {isRestarting ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+                Start Fresh Application
+              </button>
+              <Link
+                href="/organizer"
+                className="text-gray-700 hover:text-gray-900 px-6 py-3 rounded-lg font-medium text-sm md:text-base text-center border-2 border-gray-300 hover:border-gray-400 transition-all"
+              >
+                Back to Dashboard
+              </Link>
+            </div>
+          ) : null}
+
+          {status === 'pending' || status === 'in_review' ? (
+            <div className="mt-4">
+              <Link
+                href="/organizer/events"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900"
+              >
+                <Eye className="w-4 h-4" />
                 Go to Events
               </Link>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
       </div>
 
