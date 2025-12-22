@@ -7,6 +7,7 @@ import { SalesSnapshot } from '@/components/organizer/SalesSnapshot'
 import { OrganizerEventCard } from '@/components/organizer/OrganizerEventCard'
 import { PayoutsWidget } from '@/components/organizer/PayoutsWidget'
 import Link from 'next/link'
+import { CalendarPlus, DollarSign, CalendarDays, Wallet } from 'lucide-react'
 
 interface Alert {
   id: string
@@ -23,6 +24,7 @@ interface OrganizerDashboardClientProps {
   hasPayoutSetup: boolean
   payoutWidgetStatus: 'not-setup' | 'setup' | 'pending' | 'active'
   pendingBalance: number
+  payoutCurrency: string
   salesData: any
   events: any[]
   tickets: any[]
@@ -34,6 +36,7 @@ export default function OrganizerDashboardClient({
   hasPayoutSetup,
   payoutWidgetStatus,
   pendingBalance,
+  payoutCurrency,
   salesData,
   events,
   tickets
@@ -62,6 +65,7 @@ export default function OrganizerDashboardClient({
             <PayoutsWidget
               status={payoutWidgetStatus}
               pendingBalance={pendingBalance}
+              currency={payoutCurrency}
             />
           </div>
         )}
@@ -69,7 +73,7 @@ export default function OrganizerDashboardClient({
 
       {/* Sales Snapshot */}
       <div className="mb-6">
-        <SalesSnapshot data={salesData} />
+        <SalesSnapshot data={salesData} currency={payoutCurrency} />
       </div>
 
       {/* Quick Actions */}
@@ -81,7 +85,7 @@ export default function OrganizerDashboardClient({
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-teal-50 rounded-lg flex items-center justify-center group-hover:bg-teal-100 transition-colors">
-                <span className="text-xl">💰</span>
+                <DollarSign className="w-5 h-5 text-teal-700" />
               </div>
               <div>
                 <div className="font-semibold text-gray-900">View Earnings</div>
@@ -96,7 +100,7 @@ export default function OrganizerDashboardClient({
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors">
-                <span className="text-xl">📅</span>
+                <CalendarDays className="w-5 h-5 text-purple-700" />
               </div>
               <div>
                 <div className="font-semibold text-gray-900">Manage Events</div>
@@ -111,7 +115,7 @@ export default function OrganizerDashboardClient({
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                <span className="text-xl">💸</span>
+                <Wallet className="w-5 h-5 text-blue-700" />
               </div>
               <div>
                 <div className="font-semibold text-gray-900">Payouts</div>
@@ -120,20 +124,20 @@ export default function OrganizerDashboardClient({
             </div>
           </Link>
 
-          <a
+          <Link
             href="/organizer/events/new"
             className="bg-gradient-to-br from-teal-500 to-purple-600 p-4 rounded-xl hover:shadow-lg transition-all group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                <span className="text-xl">✨</span>
+                <CalendarPlus className="w-5 h-5 text-white" />
               </div>
               <div>
                 <div className="font-semibold text-white">Create Event</div>
                 <div className="text-xs text-white/80">Start selling tickets</div>
               </div>
             </div>
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -149,12 +153,12 @@ export default function OrganizerDashboardClient({
               {t('organizer.view_all_events')} →
             </Link>
           </div>
-          <a
+          <Link
             href="/organizer/events/new"
             className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors text-sm"
           >
             + {t('organizer.create_event')}
-          </a>
+          </Link>
         </div>
 
         {events.length > 0 ? (
@@ -162,7 +166,14 @@ export default function OrganizerDashboardClient({
             {events.map((event: any) => {
               const eventTickets = tickets.filter((t: any) => t.event_id === event.id)
               const ticketsSold = eventTickets.length
-              const revenue = eventTickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0)
+              const revenueByCurrencyCents = eventTickets.reduce((acc: Record<string, number>, t: any) => {
+                const currency = String(t.currency || event.currency || 'HTG').trim().toUpperCase() || 'HTG'
+                const cents = Math.round((t.price_paid || 0) * 100)
+                acc[currency] = (acc[currency] || 0) + cents
+                return acc
+              }, {})
+
+              const revenue = Object.values(revenueByCurrencyCents).reduce((sum, cents) => sum + (cents || 0), 0)
               
               return (
                 <OrganizerEventCard
@@ -171,6 +182,7 @@ export default function OrganizerDashboardClient({
                     ...event,
                     ticketsSold,
                     revenue,
+                    revenueByCurrencyCents,
                     capacity: event.total_tickets || event.max_attendees || 0
                   }}
                 />
@@ -180,18 +192,18 @@ export default function OrganizerDashboardClient({
         ) : (
           <div className="bg-white rounded-xl border-2 border-dashed border-gray-300 p-8 md:p-12 text-center">
             <div className="w-16 h-16 bg-gradient-to-br from-teal-50 to-purple-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">🎉</span>
+              <CalendarPlus className="w-7 h-7 text-teal-700" />
             </div>
             <h3 className="text-lg font-bold text-gray-900 mb-2">{t('organizer.no_events.title')}</h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
               {t('organizer.no_events.description')}
             </p>
-            <a
+            <Link
               href="/organizer/events/new"
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-600 to-purple-600 text-white rounded-xl font-bold hover:shadow-lg transition-all"
             >
               + {t('organizer.no_events.cta')}
-            </a>
+            </Link>
           </div>
         )}
       </div>

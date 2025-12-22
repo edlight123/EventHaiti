@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Calendar, Users, DollarSign, TrendingUp } from 'lucide-react'
+import { formatMoneyFromCents, formatMultiCurrencyFromCents } from '@/lib/money'
 
 type TimeRange = '7d' | '30d' | 'lifetime'
 
@@ -11,32 +12,45 @@ interface SalesSnapshotProps {
     '7d': {
       upcomingEvents: number
       ticketsSold: number
-      revenue: number
+      revenueCents: number
+      revenueByCurrencyCents?: Record<string, number>
       avgTicketsPerEvent: number
     }
     '30d': {
       upcomingEvents: number
       ticketsSold: number
-      revenue: number
+      revenueCents: number
+      revenueByCurrencyCents?: Record<string, number>
       avgTicketsPerEvent: number
     }
     lifetime: {
       upcomingEvents: number
       ticketsSold: number
-      revenue: number
+      revenueCents: number
+      revenueByCurrencyCents?: Record<string, number>
       avgTicketsPerEvent: number
     }
   }
+  currency?: string
 }
 
-export function SalesSnapshot({ data }: SalesSnapshotProps) {
+export function SalesSnapshot({ data, currency = 'HTG' }: SalesSnapshotProps) {
   const { t } = useTranslation('common')
   const [range, setRange] = useState<TimeRange>('7d')
   const metrics = data[range]
 
-  const formatRevenue = (cents: number) => {
-    if (cents === 0) return 'No earnings yet'
-    return `$${(cents / 100).toLocaleString()}`
+  const hasMultipleCurrencies = (() => {
+    const breakdown = metrics.revenueByCurrencyCents || {}
+    const nonZeroCurrencies = Object.entries(breakdown).filter(([, cents]) => (cents || 0) !== 0)
+    return nonZeroCurrencies.length > 1
+  })()
+
+  const formatRevenue = () => {
+    if (hasMultipleCurrencies) {
+      return formatMultiCurrencyFromCents(metrics.revenueByCurrencyCents || {})
+    }
+    if (metrics.revenueCents === 0) return 'No earnings yet'
+    return formatMoneyFromCents(metrics.revenueCents, currency)
   }
 
   const getRangeLabel = (r: TimeRange) => {
@@ -96,27 +110,31 @@ export function SalesSnapshot({ data }: SalesSnapshotProps) {
         </div>
 
         <div className={`bg-gradient-to-br rounded-xl p-4 border ${
-          metrics.revenue === 0
+          metrics.revenueCents === 0
             ? 'from-gray-50 to-gray-100 border-gray-200'
             : 'from-purple-50 to-purple-100 border-purple-200'
         }`}>
           <div className="flex items-center gap-2 mb-2">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-              metrics.revenue === 0 ? 'bg-gray-600' : 'bg-purple-600'
+              metrics.revenueCents === 0 ? 'bg-gray-600' : 'bg-purple-600'
             }`}>
               <DollarSign className="w-4 h-4 text-white" />
             </div>
             <p className={`text-xs font-semibold uppercase tracking-wide ${
-              metrics.revenue === 0 ? 'text-gray-900' : 'text-purple-900'
+              metrics.revenueCents === 0 ? 'text-gray-900' : 'text-purple-900'
             }`}>{t('sales_snapshot.revenue')}</p>
           </div>
           <p className={`text-3xl font-bold mb-1 ${
-            metrics.revenue === 0 ? 'text-gray-700 text-xl' : 'text-purple-700'
+            metrics.revenueCents === 0 ? 'text-gray-700 text-xl' : 'text-purple-700'
           }`}>
-            {formatRevenue(metrics.revenue)}
+            {formatRevenue()}
           </p>
-          <p className={`text-xs ${metrics.revenue === 0 ? 'text-gray-600' : 'text-purple-600'}`}>
-            {metrics.revenue === 0 ? 'Start selling tickets' : t('sales_snapshot.earned')}
+          <p className={`text-xs ${metrics.revenueCents === 0 ? 'text-gray-600' : 'text-purple-600'}`}>
+            {metrics.revenueCents === 0
+              ? 'Start selling tickets'
+              : hasMultipleCurrencies
+                ? 'Multiple currencies'
+                : t('sales_snapshot.earned')}
           </p>
         </div>
 

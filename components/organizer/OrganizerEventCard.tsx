@@ -3,8 +3,9 @@
 import { useTranslation } from 'react-i18next'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Calendar, DollarSign, Edit, Eye, QrCode, Share2 } from 'lucide-react'
+import { Calendar, DollarSign, Edit, Eye, QrCode, Share2, Sparkles } from 'lucide-react'
 import Badge from '@/components/ui/Badge'
+import { formatMoneyFromCents, formatMultiCurrencyFromCents } from '@/lib/money'
 
 interface OrganizerEventCardProps {
   event: {
@@ -17,6 +18,9 @@ interface OrganizerEventCardProps {
     capacity: number
     city?: string
     venue_name?: string
+    currency?: string
+    revenue?: number
+    revenueByCurrencyCents?: Record<string, number>
   }
 }
 
@@ -24,6 +28,15 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
   const { t } = useTranslation('common')
   const progress = event.capacity > 0 ? (event.ticketsSold / event.capacity) * 100 : 0
   const startDate = new Date(event.start_datetime)
+
+  const revenueText = (() => {
+    const breakdown = event.revenueByCurrencyCents || {}
+    const nonZero = Object.entries(breakdown).filter(([, cents]) => (cents || 0) !== 0)
+    if (nonZero.length > 1) return formatMultiCurrencyFromCents(breakdown)
+    const cents = typeof event.revenue === 'number' ? event.revenue : 0
+    if (cents === 0) return '—'
+    return formatMoneyFromCents(cents, event.currency || 'HTG')
+  })()
 
   return (
     <Link href={`/organizer/events/${event.id}`} className="block bg-white rounded-xl shadow-soft border border-gray-100 overflow-hidden hover:shadow-medium transition-all group">
@@ -39,7 +52,9 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-5xl">🎉</span>
+            <div className="w-14 h-14 bg-white/40 rounded-2xl flex items-center justify-center">
+              <Sparkles className="w-7 h-7 text-white" />
+            </div>
           </div>
         )}
         <div className="absolute top-3 right-3">
@@ -85,6 +100,13 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
             />
           </div>
           <p className="text-xs text-gray-500 mt-1">{progress.toFixed(0)}% {t('event_card.capacity')}</p>
+        </div>
+
+        {/* Revenue */}
+        <div className="flex items-center gap-2 text-sm text-gray-700 mb-4">
+          <DollarSign className="w-4 h-4 text-gray-400" />
+          <span className="text-gray-600">Revenue:</span>
+          <span className="font-semibold text-gray-900 truncate">{revenueText}</span>
         </div>
 
         {/* Action Buttons */}

@@ -34,6 +34,71 @@ export interface PayoutConfig {
   updatedAt: string
 }
 
+export async function getOrganizerIdentityVerificationStatus(
+  organizerId: string
+): Promise<NonNullable<PayoutConfig['verificationStatus']>['identity']> {
+  // Determine organizer identity verification status (approved/pending/failed)
+  const [userDoc, organizerDoc] = await Promise.all([
+    adminDb.collection('users').doc(organizerId).get(),
+    adminDb.collection('organizers').doc(organizerId).get(),
+  ])
+
+  const userData = userDoc.exists ? userDoc.data() : null
+  const organizerData = organizerDoc.exists ? organizerDoc.data() : null
+
+  const userSaysApproved =
+    userData?.verification_status === 'approved' ||
+    userData?.is_verified === true ||
+    organizerData?.verification_status === 'approved' ||
+    organizerData?.is_verified === true
+
+  // Primary lookup: doc id == organizerId
+  let verificationData: any | null = null
+  const organizerVerificationDoc = await adminDb
+    .collection('verification_requests')
+    .doc(organizerId)
+    .get()
+
+  if (organizerVerificationDoc.exists) {
+    verificationData = organizerVerificationDoc.data()
+  } else {
+    // Fallback for older/migrated data where docId != organizerId
+    const [byUserId, byUser_id] = await Promise.all([
+      adminDb
+        .collection('verification_requests')
+        .where('userId', '==', organizerId)
+        .limit(1)
+        .get(),
+      adminDb
+        .collection('verification_requests')
+        .where('user_id', '==', organizerId)
+        .limit(1)
+        .get(),
+    ])
+
+    const hit =
+      (!byUserId.empty && byUserId.docs[0]) ||
+      (!byUser_id.empty && byUser_id.docs[0]) ||
+      null
+
+    verificationData = hit ? hit.data() : null
+  }
+
+  const requestStatus = String(verificationData?.status || '').trim().toLowerCase()
+  if (userSaysApproved || requestStatus === 'approved') return 'verified'
+  if (requestStatus === 'rejected') return 'failed'
+  if (
+    requestStatus === 'pending' ||
+    requestStatus === 'pending_review' ||
+    requestStatus === 'in_review' ||
+    requestStatus === 'changes_requested'
+  ) {
+    return 'pending'
+  }
+
+  return 'pending'
+}
+
 export interface Payout {
   id: string
   organizerId: string
@@ -170,67 +235,7 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
       }
     }
 
-    // Determine organizer identity verification status (approved/pending/failed)
-    const [userDoc, organizerDoc] = await Promise.all([
-      adminDb.collection('users').doc(organizerId).get(),
-      adminDb.collection('organizers').doc(organizerId).get(),
-    ])
-
-    const userData = userDoc.exists ? userDoc.data() : null
-    const organizerData = organizerDoc.exists ? organizerDoc.data() : null
-
-    const userSaysApproved =
-      userData?.verification_status === 'approved' ||
-      userData?.is_verified === true ||
-      organizerData?.verification_status === 'approved' ||
-      organizerData?.is_verified === true
-
-    // Primary lookup: doc id == organizerId
-    let verificationData: any | null = null
-    const organizerVerificationDoc = await adminDb
-      .collection('verification_requests')
-      .doc(organizerId)
-      .get()
-
-    if (organizerVerificationDoc.exists) {
-      verificationData = organizerVerificationDoc.data()
-    } else {
-      // Fallback for older/migrated data where docId != organizerId
-      const [byUserId, byUser_id] = await Promise.all([
-        adminDb
-          .collection('verification_requests')
-          .where('userId', '==', organizerId)
-          .limit(1)
-          .get(),
-        adminDb
-          .collection('verification_requests')
-          .where('user_id', '==', organizerId)
-          .limit(1)
-          .get(),
-      ])
-
-      const hit =
-        (!byUserId.empty && byUserId.docs[0]) ||
-        (!byUser_id.empty && byUser_id.docs[0]) ||
-        null
-
-      verificationData = hit ? hit.data() : null
-    }
-
-    const requestStatus = String(verificationData?.status || '').trim().toLowerCase()
-    const organizerIdentityStatus: NonNullable<PayoutConfig['verificationStatus']>['identity'] = (() => {
-      if (userSaysApproved || requestStatus === 'approved') return 'verified'
-      if (requestStatus === 'rejected') return 'failed'
-      if (
-        requestStatus === 'pending' ||
-        requestStatus === 'pending_review' ||
-        requestStatus === 'in_review' ||
-        requestStatus === 'changes_requested'
-      ) {
-        return 'pending'
-      }
-      return 'pending'
-    })()
+    const organizerIdentityStatus = await getOrganizerIdentityVerificationStatus(organizerId)
 
     // Get payout-specific verification documents
     const verificationDocs = await adminDb

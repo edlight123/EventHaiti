@@ -1,4 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin'
+import { normalizeCurrency } from '@/lib/money'
 
 /**
  * Get all events for a specific organizer
@@ -45,6 +46,7 @@ export async function getOrganizerEvents(organizerId: string) {
         city: data.city || data.commune || '',
         commune: data.commune || data.city || '',
         price: data.price || 0,
+        currency: normalizeCurrency(data.currency, 'HTG'),
         max_attendees: data.max_attendees || 0,
         total_tickets: data.total_tickets || 0,
         banner_image_url: data.banner_image || data.banner_image_url || '',
@@ -78,6 +80,7 @@ export async function getOrganizerTickets(organizerId: string) {
   try {
     // First get all event IDs for this organizer
     const events = await getOrganizerEvents(organizerId)
+    const eventCurrencyById = new Map<string, string>(events.map((e: any) => [e.id, normalizeCurrency(e.currency, 'HTG')]))
     const eventIds = events.map((e: any) => e.id)
 
     if (eventIds.length === 0) {
@@ -117,13 +120,16 @@ export async function getOrganizerTickets(organizerId: string) {
     batches.forEach(snapshot => {
       snapshot.docs.forEach((doc: any) => {
         const data = doc.data()
+        const eventCurrency = eventCurrencyById.get(String(data.event_id))
+        const currency = normalizeCurrency(data.currency || data.original_currency || eventCurrency, 'HTG')
         
         allTickets.push({
           id: doc.id,
           event_id: data.event_id,
           user_id: data.user_id,
           price_paid: data.price_paid || 0,
-          status: data.status || 'active',
+          currency,
+          status: data.status || 'valid',
           purchased_at: convertTimestamp(data.purchased_at, convertTimestamp(data.created_at)),
           created_at: convertTimestamp(data.created_at),
           updated_at: convertTimestamp(data.updated_at),
@@ -154,15 +160,25 @@ export async function getOrganizerStats(organizerId: string, range: '7d' | '30d'
                       range === '30d' ? new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) :
                       new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
-    // Filter tickets by date range
-    const filteredTickets = tickets.filter((t: any) => new Date(t.purchased_at) >= cutoffDate)
+    // Filter tickets by date range and status
+    const filteredTickets = tickets.filter((t: any) => {
+      if (String(t.status || '').toLowerCase() !== 'valid') return false
+      return new Date(t.purchased_at) >= cutoffDate
+    })
 
     // Calculate stats
     const totalEvents = events.length
     const upcomingEvents = events.filter((e: any) => new Date(e.start_datetime) > now).length
     const draftEvents = events.filter((e: any) => !e.is_published).length
     const ticketsSold = filteredTickets.length
-    const revenue = filteredTickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0)
+    const revenue = filteredTickets.reduce((sum: number, t: any) => sum + Math.round((t.price_paid || 0) * 100), 0)
+
+    const revenueByCurrencyCents = filteredTickets.reduce((acc: Record<string, number>, t: any) => {
+      const currency = normalizeCurrency(t.currency, 'HTG')
+      const cents = Math.round((t.price_paid || 0) * 100)
+      acc[currency] = (acc[currency] || 0) + cents
+      return acc
+    }, {})
     const avgTicketsPerEvent = totalEvents > 0 ? ticketsSold / totalEvents : 0
 
     // Find events with 0 sales starting within 7 days
@@ -181,6 +197,7 @@ export async function getOrganizerStats(organizerId: string, range: '7d' | '30d'
       draftEvents,
       ticketsSold,
       revenue,
+      revenueByCurrencyCents,
       avgTicketsPerEvent,
       upcomingSoonWithNoSales: upcomingSoonWithNoSales.length,
       events,
@@ -228,22 +245,32 @@ export async function getNextEvent(organizerId: string) {
 
     const tickets = ticketsSnapshot.docs.map((doc: any) => {
       const data = doc.data()
+      const currency = normalizeCurrency(data.currency || data.original_currency || nextEvent.currency, 'HTG')
       return {
         id: doc.id,
         price_paid: data.price_paid || 0,
-        status: data.status || 'active',
+        currency,
+        status: data.status || 'valid',
         checked_in: data.checked_in || false
       }
     })
 
-    const ticketsSold = tickets.length
-    const revenue = tickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0)
+    const validTickets = tickets.filter((t: any) => String(t.status || '').toLowerCase() === 'valid')
+    const ticketsSold = validTickets.length
+    const revenue = validTickets.reduce((sum: number, t: any) => sum + Math.round((t.price_paid || 0) * 100), 0)
+    const revenueByCurrencyCents = validTickets.reduce((acc: Record<string, number>, t: any) => {
+      const currency = normalizeCurrency(t.currency, 'HTG')
+      const cents = Math.round((t.price_paid || 0) * 100)
+      acc[currency] = (acc[currency] || 0) + cents
+      return acc
+    }, {})
     const checkedInCount = tickets.filter((t: any) => t.checked_in).length
 
     return {
       ...nextEvent,
       ticketsSold,
       revenue,
+      revenueByCurrencyCents,
       checkedInCount,
       capacity: nextEvent.total_tickets || nextEvent.max_attendees || 0
     }

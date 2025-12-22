@@ -4,7 +4,13 @@ import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { getOrganizerStats, getNextEvent } from '@/lib/firestore/organizer'
-import { determinePayoutStatus, getOrganizerBalance, getPayoutConfig, hasPayoutMethod } from '@/lib/firestore/payout'
+import {
+  determinePayoutStatus,
+  getOrganizerBalance,
+  getOrganizerIdentityVerificationStatus,
+  getPayoutConfig,
+  hasPayoutMethod,
+} from '@/lib/firestore/payout'
 import OrganizerDashboardClient from './OrganizerDashboardClient'
 import OrganizerUpgradePrompt from './OrganizerUpgradePrompt'
 
@@ -43,13 +49,14 @@ export default async function OrganizerDashboard({
   }
 
   // Fetch organizer data
-  const [nextEvent, stats7d, stats30d, statsLifetime, payoutConfig, balanceData] = await Promise.all([
+  const [nextEvent, stats7d, stats30d, statsLifetime, payoutConfig, balanceData, identityStatus] = await Promise.all([
     getNextEvent(user.id),
     getOrganizerStats(user.id, '7d'),
     getOrganizerStats(user.id, '30d'),
     getOrganizerStats(user.id, 'lifetime'),
     getPayoutConfig(user.id),
-    getOrganizerBalance(user.id)
+    getOrganizerBalance(user.id),
+    getOrganizerIdentityVerificationStatus(user.id),
   ])
 
   // Default to 7d stats
@@ -57,7 +64,7 @@ export default async function OrganizerDashboard({
 
   const payoutStatus = determinePayoutStatus(payoutConfig)
   const hasPayoutSetup = hasPayoutMethod(payoutConfig)
-  const isVerified = payoutConfig?.verificationStatus?.identity === 'verified'
+  const isVerified = identityStatus === 'verified'
   const payoutWidgetStatus: 'not-setup' | 'setup' | 'pending' | 'active' = (() => {
     switch (payoutStatus) {
       case 'active':
@@ -139,19 +146,22 @@ export default async function OrganizerDashboard({
     '7d': {
       upcomingEvents: stats7d.upcomingEvents,
       ticketsSold: stats7d.ticketsSold,
-      revenue: stats7d.revenue,
+      revenueCents: stats7d.revenue,
+      revenueByCurrencyCents: stats7d.revenueByCurrencyCents || {},
       avgTicketsPerEvent: stats7d.avgTicketsPerEvent
     },
     '30d': {
       upcomingEvents: stats30d.upcomingEvents,
       ticketsSold: stats30d.ticketsSold,
-      revenue: stats30d.revenue,
+      revenueCents: stats30d.revenue,
+      revenueByCurrencyCents: stats30d.revenueByCurrencyCents || {},
       avgTicketsPerEvent: stats30d.avgTicketsPerEvent
     },
     lifetime: {
       upcomingEvents: statsLifetime.upcomingEvents,
       ticketsSold: statsLifetime.ticketsSold,
-      revenue: statsLifetime.revenue,
+      revenueCents: statsLifetime.revenue,
+      revenueByCurrencyCents: statsLifetime.revenueByCurrencyCents || {},
       avgTicketsPerEvent: statsLifetime.avgTicketsPerEvent
     }
   }
@@ -185,6 +195,7 @@ export default async function OrganizerDashboard({
         hasPayoutSetup={hasPayoutSetup}
         payoutWidgetStatus={payoutWidgetStatus}
         pendingBalance={balanceData.pending}
+        payoutCurrency={balanceData.currency}
         salesData={salesData}
         events={serializedEvents}
         tickets={serializedTickets}

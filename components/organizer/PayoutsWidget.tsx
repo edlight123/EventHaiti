@@ -3,10 +3,12 @@
 import { useTranslation } from 'react-i18next'
 import Link from 'next/link'
 import { CreditCard, AlertCircle, CheckCircle, Clock, DollarSign } from 'lucide-react'
+import { formatMoneyFromCents } from '@/lib/money'
 
 interface PayoutsWidgetProps {
   status: 'not-setup' | 'setup' | 'pending' | 'active'
   pendingBalance?: number
+  currency?: string
   lastPayout?: {
     amount: number
     date: string
@@ -17,7 +19,7 @@ interface PayoutsWidgetProps {
   }
 }
 
-export function PayoutsWidget({ status, pendingBalance = 0, lastPayout, nextPayout }: PayoutsWidgetProps) {
+export function PayoutsWidget({ status, pendingBalance = 0, currency = 'HTG', lastPayout, nextPayout }: PayoutsWidgetProps) {
   const { t } = useTranslation('common')
   
   const getStatusInfo = () => {
@@ -92,7 +94,7 @@ export function PayoutsWidget({ status, pendingBalance = 0, lastPayout, nextPayo
           <div className="bg-gray-50 rounded-xl p-4">
             <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">{t('payouts.pending_balance')}</p>
             <p className="text-2xl font-bold text-gray-900">
-              ${(pendingBalance / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {formatMoneyFromCents(pendingBalance, currency)}
             </p>
           </div>
 
@@ -110,7 +112,7 @@ export function PayoutsWidget({ status, pendingBalance = 0, lastPayout, nextPayo
                 </p>
               </div>
               <p className="text-lg font-bold text-green-600">
-                +${(lastPayout.amount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                +{formatMoneyFromCents(lastPayout.amount, currency)}
               </p>
             </div>
           )}
@@ -129,7 +131,7 @@ export function PayoutsWidget({ status, pendingBalance = 0, lastPayout, nextPayo
                 </p>
               </div>
               <p className="text-lg font-bold text-blue-600">
-                ${(nextPayout.amount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                {formatMoneyFromCents(nextPayout.amount, currency)}
               </p>
             </div>
           )}

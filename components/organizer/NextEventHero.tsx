@@ -3,7 +3,8 @@
 import { useTranslation } from 'react-i18next'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Calendar, MapPin, Users, DollarSign, Edit, Eye, QrCode, Share2 } from 'lucide-react'
+import { Calendar, MapPin, Users, DollarSign, Edit, Eye, QrCode, Share2, Sparkles } from 'lucide-react'
+import { formatMoneyFromCents, formatMultiCurrencyFromCents } from '@/lib/money'
 
 interface NextEventHeroProps {
   event: {
@@ -16,6 +17,8 @@ interface NextEventHeroProps {
     ticketsSold: number
     capacity: number
     revenue: number
+    currency?: string
+    revenueByCurrencyCents?: Record<string, number>
   } | null
 }
 
@@ -46,6 +49,13 @@ export function NextEventHero({ event }: NextEventHeroProps) {
   const daysUntil = Math.ceil((startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
   const progress = event.capacity > 0 ? (event.ticketsSold / event.capacity) * 100 : 0
 
+  const revenueText = (() => {
+    const breakdown = event.revenueByCurrencyCents || {}
+    const nonZero = Object.entries(breakdown).filter(([, cents]) => (cents || 0) !== 0)
+    if (nonZero.length > 1) return formatMultiCurrencyFromCents(breakdown)
+    return formatMoneyFromCents(event.revenue, event.currency || 'HTG')
+  })()
+
   const getCountdownText = () => {
     if (daysUntil < 0) return t('next_event.event_passed')
     if (daysUntil === 0) return t('next_event.today')
@@ -69,7 +79,9 @@ export function NextEventHero({ event }: NextEventHeroProps) {
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-6xl md:text-8xl">🎉</span>
+            <div className="w-20 h-20 md:w-24 md:h-24 bg-white/15 rounded-2xl flex items-center justify-center">
+              <Sparkles className="w-10 h-10 md:w-12 md:h-12 text-white" />
+            </div>
           </div>
         )}
         <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg">
@@ -120,7 +132,9 @@ export function NextEventHero({ event }: NextEventHeroProps) {
               <DollarSign className="w-4 h-4 text-purple-600" />
               <p className="text-xs font-medium text-purple-900">{t('next_event.revenue')}</p>
             </div>
-            <p className="text-2xl font-bold text-purple-700">${(event.revenue / 100).toFixed(0)}</p>
+            <p className="text-2xl font-bold text-purple-700 truncate" title={revenueText}>
+              {revenueText}
+            </p>
             <p className="text-xs text-purple-600">{t('next_event.earned')}</p>
           </div>
 
