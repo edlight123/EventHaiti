@@ -72,6 +72,19 @@ export default async function DiscoverPage({
 
   // Apply filters and sort
   let filteredEvents = applyFiltersAndSort(allEvents, filters)
+
+  // Safety: never show ended events on Discover.
+  const now = new Date()
+  const notEnded = (event: any) => {
+    const start = event?.start_datetime ? new Date(event.start_datetime) : null
+    const end = event?.end_datetime ? new Date(event.end_datetime) : null
+
+    if (end && !Number.isNaN(end.getTime())) return end.getTime() >= now.getTime()
+    if (start && !Number.isNaN(start.getTime())) return start.getTime() >= now.getTime()
+    return false
+  }
+
+  filteredEvents = filteredEvents.filter(notEnded)
   
   // Apply search filter
   const searchQuery = params.search as string | undefined
@@ -105,7 +118,7 @@ export default async function DiscoverPage({
   
   // Near you events (specific city + commune)
   const nearYouEvents = filters.city 
-    ? filterEventsByLocation(allEvents, filters.city, filters.commune)
+    ? filterEventsByLocation(allEvents, filters.city, filters.commune).filter(notEnded)
     : []
 
   const hasActiveFilters: boolean = filters.date !== 'any' || 

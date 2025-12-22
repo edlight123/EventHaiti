@@ -126,6 +126,13 @@ export async function getDiscoverEvents(
   pageSize: number = 20
 ): Promise<Event[]> {
     try {
+      const now = new Date()
+      // Prevent past events from showing on Home/Discover by default.
+      // We still allow currently-running events (end_datetime >= now), so we use a lookback
+      // on start_datetime to ensure we fetch enough candidates, then filter ended events in memory.
+      const lookbackDays = 14
+      const defaultStartDate = new Date(now.getTime() - lookbackDays * 24 * 60 * 60 * 1000)
+
       let queryRef = adminDb.collection('events')
         .where('is_published', '==', true)
         .orderBy('start_datetime', 'asc')
@@ -141,6 +148,8 @@ export async function getDiscoverEvents(
 
       if (filters.startDate) {
         queryRef = queryRef.where('start_datetime', '>=', filters.startDate) as any
+      } else {
+        queryRef = queryRef.where('start_datetime', '>=', defaultStartDate) as any
       }
 
       queryRef = queryRef.limit(pageSize) as any
@@ -184,6 +193,23 @@ export async function getDiscoverEvents(
           event.category?.toLowerCase().includes(searchLower)
         )
       }
+
+      // Final guard: never return ended events.
+      // Include ongoing events when end_datetime is present and in the future.
+      events = events.filter((event: Event) => {
+        const start = new Date(event.start_datetime)
+        const end = event.end_datetime ? new Date(event.end_datetime) : null
+
+        if (end && !Number.isNaN(end.getTime())) {
+          return end.getTime() >= now.getTime()
+        }
+
+        if (!Number.isNaN(start.getTime())) {
+          return start.getTime() >= now.getTime()
+        }
+
+        return false
+      })
 
       return events
     } catch (error) {

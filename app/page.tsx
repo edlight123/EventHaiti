@@ -56,6 +56,19 @@ export default async function HomePage({
 
   // Apply filters and sorting using new filter system
   events = applyFiltersAndSort(events, filters)
+
+  // Safety: never show ended events on Home.
+  const now = new Date()
+  const notEnded = (event: any) => {
+    const start = event?.start_datetime ? new Date(event.start_datetime) : null
+    const end = event?.end_datetime ? new Date(event.end_datetime) : null
+
+    if (end && !Number.isNaN(end.getTime())) return end.getTime() >= now.getTime()
+    if (start && !Number.isNaN(start.getTime())) return start.getTime() >= now.getTime()
+    return false
+  }
+
+  events = events.filter(notEnded)
   
   // Prioritize events from user's country
   const eventsInUserCountry = events.filter(e => e.country === userCountry)
@@ -63,7 +76,6 @@ export default async function HomePage({
   const prioritizedEvents = [...eventsInUserCountry, ...eventsInOtherCountries]
   
   // Organize events into sections
-  const now = new Date()
   
   // Use top events with most tickets sold as "featured" (prioritize user's country)
   const featuredEvents = [...prioritizedEvents]
@@ -82,11 +94,21 @@ export default async function HomePage({
       isVIP: (e.ticket_price || 0) > 100,
     }))
   
-  const trendingEvents = prioritizedEvents.filter(e => (e.tickets_sold || 0) > 10).slice(0, 6)
+  const trendingEvents = prioritizedEvents
+    .filter(notEnded)
+    .filter(e => (e.tickets_sold || 0) > 10)
+    .slice(0, 6)
   const thisWeekEnd = new Date(now)
   thisWeekEnd.setDate(now.getDate() + 7)
-  const upcomingThisWeek = prioritizedEvents.filter(e => new Date(e.start_datetime) <= thisWeekEnd).slice(0, 6)
-  const countryEvents = eventsInUserCountry.slice(0, 6)
+  const upcomingThisWeek = prioritizedEvents
+    .filter(notEnded)
+    .filter(e => {
+      const start = new Date(e.start_datetime)
+      if (Number.isNaN(start.getTime())) return false
+      return start.getTime() <= thisWeekEnd.getTime()
+    })
+    .slice(0, 6)
+  const countryEvents = eventsInUserCountry.filter(notEnded).slice(0, 6)
   
   // Check if we have any active filters
   const hasActiveFilters = filters.date !== 'any' || 
