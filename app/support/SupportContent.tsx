@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import Link from 'next/link'
 import { Search, Mail, MessageCircle, ChevronDown, ChevronUp, ExternalLink, Ticket, CalendarDays, FileText } from 'lucide-react'
-import { attendeeFAQs, organizerFAQs, type UserRole, type FAQCategory } from './faqData'
+import { attendeeFAQCategoryMeta, organizerFAQCategoryMeta, type UserRole, type FAQCategory, type FAQItem } from './faqData'
 
 export default function SupportContent() {
   const { t } = useTranslation('support')
@@ -12,20 +12,40 @@ export default function SupportContent() {
   const [searchQuery, setSearchQuery] = useState('')
   const [openFAQs, setOpenFAQs] = useState<Set<string>>(new Set())
 
-  const currentFAQs = role === 'attendee' ? attendeeFAQs : organizerFAQs
+  const categoryMeta = role === 'attendee' ? attendeeFAQCategoryMeta : organizerFAQCategoryMeta
+
+  const currentFAQs: FAQCategory[] = useMemo(() => {
+    return categoryMeta
+      .map(({ id, icon }) => {
+        const faqsRaw = t(`faq.${role}.categories.${id}.faqs`, { returnObjects: true })
+        const faqs: FAQItem[] = Array.isArray(faqsRaw)
+          ? (faqsRaw as FAQItem[]).filter((item) => Boolean(item?.question) && Boolean(item?.answer))
+          : []
+
+        return {
+          id,
+          icon,
+          title: t(`faq.${role}.categories.${id}.title`),
+          description: t(`faq.${role}.categories.${id}.description`),
+          faqs
+        }
+      })
+      .filter((category) => category.faqs.length > 0)
+  }, [categoryMeta, role, t])
 
   // Filter FAQs based on search query
   const filteredFAQs = useMemo(() => {
     if (!searchQuery.trim()) return currentFAQs
 
     const query = searchQuery.toLowerCase()
-    return currentFAQs.map(category => ({
-      ...category,
-      faqs: category.faqs.filter(faq => 
-        faq.question.toLowerCase().includes(query) ||
-        faq.answer.toLowerCase().includes(query)
-      )
-    })).filter(category => category.faqs.length > 0)
+    return currentFAQs
+      .map((category) => ({
+        ...category,
+        faqs: category.faqs.filter(
+          (faq) => faq.question.toLowerCase().includes(query) || faq.answer.toLowerCase().includes(query)
+        )
+      }))
+      .filter((category) => category.faqs.length > 0)
   }, [currentFAQs, searchQuery])
 
   const toggleFAQ = (categoryId: string, faqIndex: number) => {
@@ -144,7 +164,9 @@ export default function SupportContent() {
                   onClick={() => scrollToCategory(category.id)}
                   className="bg-white p-6 rounded-xl border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all text-left group"
                 >
-                  <div className="text-3xl mb-3">{category.icon}</div>
+                  <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center mb-3">
+                    <category.icon className="w-5 h-5 text-purple-700" />
+                  </div>
                   <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors">
                     {category.title}
                   </h3>
@@ -176,7 +198,9 @@ export default function SupportContent() {
           {filteredFAQs.map((category) => (
             <div key={category.id} id={category.id} className="scroll-mt-20">
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-3xl">{category.icon}</span>
+                <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center">
+                  <category.icon className="w-5 h-5 text-gray-700" />
+                </div>
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">
                     {category.title}

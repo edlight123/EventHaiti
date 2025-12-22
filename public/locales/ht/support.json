@@ -101,5 +101,239 @@
     "body_prefix": "Pou jwenn èd pi vit, gade ",
     "body_link": "seksyon FAQ la",
     "body_suffix": " anvan. Anpil kesyon komen gen repons la!"
+  },
+  "faq": {
+    "attendee": {
+      "categories": {
+        "tickets-orders": {
+          "title": "Tikè ak kòmand",
+          "description": "Achte tikè, gade kòmand, epi jere rezèvasyon ou",
+          "faqs": [
+            {
+              "question": "Kijan pou mwen achte tikè?",
+              "answer": "Gade evènman yo sou paj dakèy la oswa Dekouvri, ouvri evènman an, chwazi kalite tikè ak kantite a, epi klike \"Pran Tikè\". W ap fini ak yon peman an sekirite pa kat oswa MonCash."
+            },
+            {
+              "question": "Ki kote mwen ka jwenn tikè mwen yo?",
+              "answer": "Apre ou achte, tikè yo nan seksyon Tikè nan kont ou (\"Tikè mwen\"). Chak tikè gen yon QR code inik pou antre."
+            },
+            {
+              "question": "Èske mwen ka transfere tikè mwen bay yon lòt moun?",
+              "answer": "Wi. Louvri detay tikè a epi klike \"Transfere Tikè\". Mete imel moun nan, li ap resevwa etap pou reklame tikè a. Li dwe aksepte anvan evènman an kòmanse."
+            },
+            {
+              "question": "Kisa k ap pase si mwen pèdi tikè mwen?",
+              "answer": "Tikè ou yo rete nan kont EventHaiti ou. Antre nan kont ou epi ale nan \"Tikè mwen\" pou wè epi telechaje yo ankò. Ou ka tcheke imel konfimasyon an tou."
+            },
+            {
+              "question": "Èske mwen ka achte tikè san mwen pa kreye kont?",
+              "answer": "Ou bezwen yon kont EventHaiti pou achte tikè. Sa kenbe tikè yo an sekirite epi li pèmèt ou jere transfè, ranbousman, ak demann sipò. Kreye kont lan pran yon minit."
+            }
+          ]
+        },
+        "event-access": {
+          "title": "Aksè nan evènman",
+          "description": "Anrejistreman, kondisyon pou antre, ak prezans nan evènman",
+          "faqs": [
+            {
+              "question": "Kijan pou mwen antre nan evènman an?",
+              "answer": "Montre QR code tikè ou a nan antre a. Ekip la ap eskane l ak zouti EventHaiti. Kenbe telefòn ou chaje epi pare pou montre tikè a nan app la oswa nan imel."
+            },
+            {
+              "question": "Èske mwen ka antre ak yon screenshot tikè a?",
+              "answer": "Screenshot la ka mache, men nou rekòmande tikè orijinal la nan kont ou oswa nan imel ou. Gen kèk evènman ki ka mande QR code nan app la pou sekirite."
+            },
+            {
+              "question": "Kisa pou mwen fè si QR code la pa vle eskane?",
+              "answer": "Monte klète ekran an, asire QR code la klè, epi kenbe telefòn nan byen fiks. Si sa pa mache, montre imel konfimasyon an oswa ID tikè a pou yo verifye manyèlman."
+            },
+            {
+              "question": "Èske mwen ka rive an reta?",
+              "answer": "Règ yo depann de evènman an. Gade detay evènman an oswa kontakte òganizatè a. Pifò evènman aksepte antre an reta, men gen kèk ki gen lè kòmansman strik."
+            },
+            {
+              "question": "Èske mwen bezwen pote ID?",
+              "answer": "Sa depann de evènman an. Evènman ki gen limit laj (18+, 21+) souvan mande yon ID ak foto. Gade paj evènman an pou detay."
+            }
+          ]
+        },
+        "payments-refunds": {
+          "title": "Peman ak ranbousman",
+          "description": "Metòd peman, pri, ak règleman ranbousman",
+          "faqs": [
+            {
+              "question": "Ki metòd peman nou aksepte?",
+              "answer": "Nou aksepte Visa, Mastercard, American Express, ak MonCash (pou itilizatè an Ayiti). Peman yo trete an sekirite atravè patnè nou yo."
+            },
+            {
+              "question": "Poukisa yo chaje m frè sèvis?",
+              "answer": "Frè sèvis yo ede fè platfòm lan mache, bay sipò, epi kouvri pwosesis peman an sekirite. Yo montre frè yo klèman avan ou peye."
+            },
+            {
+              "question": "Kijan pou mwen jwenn ranbousman?",
+              "answer": "Règ ranbousman an depann de òganizatè a. Pou mande ranbousman, ouvri detay tikè a epi chwazi \"Mande Ranbousman\" (si li disponib), oswa kontakte òganizatè a. Ranbousman ki apwouve souvan pran 5–10 jou ouvrab."
+            },
+            {
+              "question": "Èske mwen ka jwenn ranbousman si evènman an anile?",
+              "answer": "Wi. Lè yon evènman anile, ou nòmalman kalifye pou yon ranbousman sou metòd peman orijinal la. Sa souvan pran 5–10 jou ouvrab."
+            },
+            {
+              "question": "Nan ki lajan yo montre pri yo?",
+              "answer": "Pri yo parèt nan lajan òganizatè a chwazi (souvan HTG oswa USD). Ou ap wè lajan an sou paj evènman an ak pandan peman an."
+            }
+          ]
+        },
+        "account-profile": {
+          "title": "Kont ak pwofil",
+          "description": "Jere paramèt kont ou ak preferans ou",
+          "faqs": [
+            {
+              "question": "Kijan pou mwen kreye yon kont?",
+              "answer": "Klike \"Enskri\", mete imel ou ak modpas ou, epi verifye imel la. Ou ka enskri ak Google tou pou pi rapid."
+            },
+            {
+              "question": "Mwen bliye modpas mwen — kisa pou mwen fè?",
+              "answer": "Sou paj koneksyon an, chwazi \"Bliye Modpas\" epi mete imel ou. N ap voye yon lyen pou reyalize modpas la. Gade spam si ou pa wè li."
+            },
+            {
+              "question": "Kijan pou mwen mete ajou enfòmasyon pwofil mwen?",
+              "answer": "Louvri pwofil ou epi modifye enfòmasyon yo. Ou ka chanje non, imel, nimewo telefòn, foto, ak preferans lokalizasyon."
+            },
+            {
+              "question": "Èske mwen ka efase kont mwen?",
+              "answer": "Wi. Ale nan Paramèt > Konfidansyalite & Sekirite > Efase Kont. Sa se yon aksyon final ki efase done ou ak istwa kòmand ou. Telechaje tikè pou evènman k ap vini yo anvan."
+            },
+            {
+              "question": "Kijan pou mwen chanje preferans notifikasyon mwen?",
+              "answer": "Ale nan Paramèt > Notifikasyon pou kontwole imel ak notifikasyon push (rapèl, konfimasyon, mizajou)."
+            }
+          ]
+        }
+      }
+    },
+    "organizer": {
+      "categories": {
+        "create-manage-events": {
+          "title": "Kreye & jere evènman",
+          "description": "Kreye evènman, jere paj yo, epi pibliye pou patisipan",
+          "faqs": [
+            {
+              "question": "Kijan pou mwen kreye yon evènman?",
+              "answer": "Nan dashboard òganizatè a, klike \"Kreye Evènman\". Mete detay (tit, deskripsyon, dat/lè, kote), ajoute yon imaj, mete kalite tikè ak pri, epi pibliye."
+            },
+            {
+              "question": "Èske mwen ka modifye evènman an apre mwen pibliye li?",
+              "answer": "Wi. Ou ka modifye pifò detay nan dashboard la epi chanjman yo parèt sou paj evènman an. Gen kèk chanjman (tankou pri) ki ka afekte moun ki deja achte tikè."
+            },
+            {
+              "question": "Kijan pou mwen fè evènman an prive oswa sou envitasyon?",
+              "answer": "Itilize paramèt Vizibilite tankou \"Pa lis\" (aksè pa lyen) epi kòd promo pou limite lavant lan pou kèk moun."
+            },
+            {
+              "question": "Ki gwosè imaj ki pi bon pou banyè evènman an?",
+              "answer": "Nou rekòmande 1920×1080 (16:9). Kenbe imaj yo anba 5MB. JPG ak PNG sipòte."
+            },
+            {
+              "question": "Èske mwen ka kreye evènman ki repete?",
+              "answer": "Wi. Chwazi \"Evènman ki repete\" epi mete orè a (chak jou/chak semèn/chak mwa). Chak fwa a ap kreye otomatikman epi ou ka modifye yo si sa nesesè."
+            },
+            {
+              "question": "Kijan pou mwen anile oswa ranvwaye yon evènman?",
+              "answer": "Louvri evènman an nan dashboard la epi chwazi anile oswa chanje dat la. Moun ki gen tikè yo ap resevwa notifikasyon. Pou anilasyon, ou ka bezwen trete ranbousman selon règleman ou."
+            }
+          ]
+        },
+        "payments-payouts": {
+          "title": "Peman & retrè",
+          "description": "Konprann frè yo, resevwa peman, epi jere finans",
+          "faqs": [
+            {
+              "question": "Kijan mwen resevwa peman pou lavant tikè yo?",
+              "answer": "Retrè yo ale sou metòd peman ou verifye a. Apre evènman an fini, ou ka mande yon retrè nan dashboard òganizatè a."
+            },
+            {
+              "question": "Ki frè EventHaiti chaje?",
+              "answer": "Frè yo depann de metòd peman an ak konfigirasyon an. Ou ap toujou wè yon detay klè nan dashboard la ak pandan konfigirasyon an."
+            },
+            {
+              "question": "Kilè mwen ka mande yon retrè?",
+              "answer": "Ou ka mande retrè apre evènman an fini (ak nenpòt peryòd blokaj ki aplikab). Sa ede kont fwod epi li bay tan pou ranbousman/dispitis."
+            },
+            {
+              "question": "Kijan pou mwen verifye kont labank mwen pou retrè?",
+              "answer": "Ale nan Paramèt > Retrè epi soumèt detay retrè ou ak dokiman yo mande. Ekip nou an verifye avan retrè yo aktive."
+            },
+            {
+              "question": "Kisa k ap pase ak frè yo si mwen fè ranbousman?",
+              "answer": "Sa depann de founisè peman an. Gen kèk frè pwosesis ki ka pa ranbousab. Dashboard ou ap montre detay egzak pa tranzaksyon."
+            },
+            {
+              "question": "Èske mwen ka wè detay revni mwen?",
+              "answer": "Wi. Dashboard òganizatè a gen analiz sou lavant, frè, revni nèt, ak estati retrè. Ou ka ekspòte rapò tou."
+            }
+          ]
+        },
+        "tickets-checkin": {
+          "title": "Tikè & check-in",
+          "description": "Kalite tikè, pri, epi jere antre nan evènman",
+          "faqs": [
+            {
+              "question": "Kijan pou mwen eskane tikè nan evènman an?",
+              "answer": "Itilize zouti òganizatè yo pou ouvri evènman an epi mete mòd Scan/Check-in. Eskane QR code patisipan yo pou valide epi check-in yo."
+            },
+            {
+              "question": "Èske mwen ka gen plizyè kalite tikè?",
+              "answer": "Wi. Kreye plizyè nivo (Jeneral, VIP, Early Bird, Gwoup, elatriye) ak pri, kantite, ak dat lavant pa yo."
+            },
+            {
+              "question": "Kijan pou mwen kreye tikè gratis?",
+              "answer": "Mete pri tikè a 0 pou kreye tikè gratis. Yo toujou gen QR code valab epi yo ede w suiv prezans lan."
+            },
+            {
+              "question": "Kisa k ap pase si yon moun eseye itilize menm tikè a 2 fwa?",
+              "answer": "Sistèm check-in lan bloke doub itilizasyon. Yon fwa yo eskane li, tikè a make kòm itilize, epi yon lòt eskan ap montre yon avètisman \"Deja Itilize\"."
+            },
+            {
+              "question": "Èske mwen ka ekspòte lis patisipan yo?",
+              "answer": "Wi. Nan dashboard evènman an, ale nan Patisipan epi ekspòte CSV (non, imel, kalite tikè, estati check-in)."
+            },
+            {
+              "question": "Kijan rabè gwoup yo mache?",
+              "answer": "Kreye yon rabè gwoup lè ou mete yon kantite minimòm ak yon pousantaj rabè. Rabè a aplike otomatikman nan peman an lè kantite minimòm nan reyalize."
+            }
+          ]
+        },
+        "organizer-account": {
+          "title": "Kont òganizatè & ekip",
+          "description": "Verifikasyon, jesyon ekip, ak paramèt",
+          "faqs": [
+            {
+              "question": "Kijan pou mwen vin yon òganizatè verifye?",
+              "answer": "Ale nan Paramèt > Verifikasyon epi soumèt dokiman idantite ou ak yon selfie. Tan revizyon an ka varye selon kantite demann ak konplè dosye a."
+            },
+            {
+              "question": "Èske mwen ka ajoute manm ekip pou ede m?",
+              "answer": "Wi. Ale nan Paramèt > Ekip pou envite moun pa imel epi bay wòl (Admin/Manadjè/Scanner)."
+            },
+            {
+              "question": "Kijan pou mwen ajoute logo ak mak òganizasyon mwen?",
+              "answer": "Ale nan Paramèt > Òganizasyon pou telechaje logo, mete non òganizasyon an, epi ajoute yon bio."
+            },
+            {
+              "question": "Ki kondisyon pou kòmanse vann tikè?",
+              "answer": "Kondisyon yo depann de kalite evènman an ak metòd retrè a. An jeneral, ou bezwen yon kont òganizatè epi ou ka bezwen verifikasyon ak konfigirasyon retrè pou vann tikè ki gen pri."
+            },
+            {
+              "question": "Kijan pou mwen kontakte patisipan yo?",
+              "answer": "Nan dashboard evènman an, itilize zouti mesaj yo pou voye mizajou bay moun ki gen tikè yo."
+            },
+            {
+              "question": "Èske mwen ka wè estatistik pou evènman mwen yo?",
+              "answer": "Wi. Dashboard la montre analiz sou lavant ak revni, detay pa kalite tikè, ak lòt enfòmasyon pou ede w amelyore pwochen evènman yo."
+            }
+          ]
+        }
+      }
+    }
   }
 }

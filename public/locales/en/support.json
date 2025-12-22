@@ -101,5 +101,239 @@
     "body_prefix": "For faster assistance, check our ",
     "body_link": "FAQ section",
     "body_suffix": " first. Many common questions are answered there!"
+  },
+  "faq": {
+    "attendee": {
+      "categories": {
+        "tickets-orders": {
+          "title": "Tickets & Orders",
+          "description": "Purchase tickets, view orders, and manage your bookings",
+          "faqs": [
+            {
+              "question": "How do I purchase tickets?",
+              "answer": "Browse events on the homepage or Discover page, open an event, select your ticket type and quantity, then click \"Get Tickets\". You’ll complete a secure checkout where you can pay by card or MonCash."
+            },
+            {
+              "question": "Where can I find my tickets?",
+              "answer": "After purchase, your tickets are available in the Tickets section of your account (\"My Tickets\"). Each ticket includes a unique QR code for entry."
+            },
+            {
+              "question": "Can I transfer my ticket to someone else?",
+              "answer": "Yes. Open your ticket details and click \"Transfer Ticket\". Enter the recipient’s email and they’ll receive instructions to claim the ticket. Transfers must be accepted before the event starts."
+            },
+            {
+              "question": "What happens if I lose my ticket?",
+              "answer": "Your tickets stay in your EventHaiti account. Log in and go to \"My Tickets\" to view and download them again. You can also check your email confirmation."
+            },
+            {
+              "question": "Can I buy tickets without creating an account?",
+              "answer": "You need an EventHaiti account to purchase tickets. This keeps tickets secure and lets you manage transfers, refunds, and support requests. Creating an account only takes a minute."
+            }
+          ]
+        },
+        "event-access": {
+          "title": "Event Access",
+          "description": "Check-in, entry requirements, and event attendance",
+          "faqs": [
+            {
+              "question": "How do I get into an event?",
+              "answer": "Present your ticket QR code at the entrance. Staff will scan it using EventHaiti tools. Keep your phone charged and have your ticket ready in the app or email."
+            },
+            {
+              "question": "Can I enter with a screenshot of my ticket?",
+              "answer": "A screenshot may work, but we recommend using the original ticket from your account or email. Some events may require the in-app QR code for security."
+            },
+            {
+              "question": "What if my QR code won’t scan?",
+              "answer": "Increase screen brightness, make sure the QR code is clear, and hold your phone steady. If needed, show the confirmation email or ticket ID so staff can verify manually."
+            },
+            {
+              "question": "Can I arrive late to an event?",
+              "answer": "Policies vary by event. Check the event details or contact the organizer. Most events allow late entry, but some experiences may have strict start times."
+            },
+            {
+              "question": "Do I need to bring ID to the event?",
+              "answer": "ID requirements depend on the event. Age-restricted events (18+, 21+) usually require government-issued photo ID. Check the event page for details."
+            }
+          ]
+        },
+        "payments-refunds": {
+          "title": "Payments & Refunds",
+          "description": "Payment methods, pricing, and refund policies",
+          "faqs": [
+            {
+              "question": "What payment methods do you accept?",
+              "answer": "We accept Visa, Mastercard, American Express, and MonCash (for users in Haiti). Payments are processed securely through our partners."
+            },
+            {
+              "question": "Why was I charged a service fee?",
+              "answer": "Service fees help operate the platform, provide support, and cover secure payment processing. Fees are shown clearly during checkout before you pay."
+            },
+            {
+              "question": "How do I get a refund?",
+              "answer": "Refund policies are set by each organizer. To request a refund, open your ticket details and select \"Request Refund\" (if available), or contact the organizer. Approved refunds typically take 5–10 business days."
+            },
+            {
+              "question": "Can I get a refund if the event is cancelled?",
+              "answer": "Yes. If an event is cancelled, you’re generally eligible for a refund to the original payment method. Processing typically takes 5–10 business days."
+            },
+            {
+              "question": "What currency are prices shown in?",
+              "answer": "Prices are shown in the currency selected by the organizer (commonly HTG or USD). The currency is displayed on the event page and during checkout."
+            }
+          ]
+        },
+        "account-profile": {
+          "title": "Account & Profile",
+          "description": "Manage your account settings and preferences",
+          "faqs": [
+            {
+              "question": "How do I create an account?",
+              "answer": "Click \"Sign Up\", enter your email and password, then verify your email. You can also sign up with Google for faster access."
+            },
+            {
+              "question": "I forgot my password — what should I do?",
+              "answer": "On the login screen, choose \"Forgot Password\" and enter your email. We’ll send a reset link. Check spam/junk folders if you don’t see it."
+            },
+            {
+              "question": "How do I update my profile information?",
+              "answer": "Open your profile and edit your details. You can update your name, email, phone number, photo, and location preferences."
+            },
+            {
+              "question": "Can I delete my account?",
+              "answer": "Yes. Go to Settings > Privacy & Security > Delete Account. This is permanent and removes your data and order history. Download any upcoming tickets first."
+            },
+            {
+              "question": "How do I change my notification preferences?",
+              "answer": "Go to Settings > Notifications to manage email and push preferences for reminders, confirmations, and updates."
+            }
+          ]
+        }
+      }
+    },
+    "organizer": {
+      "categories": {
+        "create-manage-events": {
+          "title": "Create & Manage Events",
+          "description": "Create events, manage listings, and publish to attendees",
+          "faqs": [
+            {
+              "question": "How do I create an event?",
+              "answer": "From your organizer dashboard, click \"Create Event\". Add details (title, description, date/time, location), upload a banner, set ticket types and pricing, then preview and publish."
+            },
+            {
+              "question": "Can I edit my event after publishing?",
+              "answer": "Yes. You can edit most details from the organizer dashboard and changes show on the event page. Some changes (like pricing) may impact existing ticket holders."
+            },
+            {
+              "question": "How do I make my event private or invite-only?",
+              "answer": "Use Visibility settings like \"Unlisted\" (access by link) and promo codes to limit sales to specific people."
+            },
+            {
+              "question": "What image sizes work best for event banners?",
+              "answer": "We recommend 1920×1080 (16:9). Keep images under 5MB. JPG and PNG are supported."
+            },
+            {
+              "question": "Can I create recurring events?",
+              "answer": "Yes. Choose \"Recurring Event\" and select a schedule (daily/weekly/monthly). Each occurrence is created automatically and can be edited if needed."
+            },
+            {
+              "question": "How do I cancel or postpone an event?",
+              "answer": "Open the event in your dashboard and choose cancel or edit the date. Ticket holders are notified. For cancellations, you may need to process refunds depending on your policy."
+            }
+          ]
+        },
+        "payments-payouts": {
+          "title": "Payments & Payouts",
+          "description": "Understand fees, receive payouts, and manage finances",
+          "faqs": [
+            {
+              "question": "How do I get paid for ticket sales?",
+              "answer": "Payouts are deposited to your verified payout method. After your event ends, you can request a payout from your organizer dashboard."
+            },
+            {
+              "question": "What fees does EventHaiti charge?",
+              "answer": "Fees depend on payment method and configuration. You’ll always see a transparent breakdown in your dashboard and during setup."
+            },
+            {
+              "question": "When can I request a payout?",
+              "answer": "You can request a payout after the event ends (and any applicable holding period). This helps protect against fraud and allows time for refunds/chargebacks."
+            },
+            {
+              "question": "How do I verify my bank account for payouts?",
+              "answer": "Go to Settings > Payouts and submit your payout details and required documents. Our team reviews and verifies before payouts are enabled."
+            },
+            {
+              "question": "What happens to fees if I issue a refund?",
+              "answer": "Refund handling depends on the payment provider. Some processing fees may be non-refundable. Your dashboard shows the exact breakdown per transaction."
+            },
+            {
+              "question": "Can I see a breakdown of my earnings?",
+              "answer": "Yes. Your organizer dashboard includes analytics for sales, fees, net revenue, and payout status. You can also export reports."
+            }
+          ]
+        },
+        "tickets-checkin": {
+          "title": "Tickets & Check-in",
+          "description": "Ticket types, pricing, and managing event entry",
+          "faqs": [
+            {
+              "question": "How do I scan tickets at my event?",
+              "answer": "Use the organizer tools to open your event and start Scan/Check-in mode. Scan attendee QR codes to validate and check them in."
+            },
+            {
+              "question": "Can I have multiple ticket types?",
+              "answer": "Yes. Create multiple tiers (General, VIP, Early Bird, Group, etc.) with their own price, quantity, and sales dates."
+            },
+            {
+              "question": "How do I create free tickets?",
+              "answer": "Set a ticket price to 0 to create free tickets. They still generate valid QR codes and help track attendance."
+            },
+            {
+              "question": "What happens if someone tries to use a ticket twice?",
+              "answer": "The check-in system prevents duplicates. Once scanned, the ticket shows as used and repeat scans will show an \"Already Used\" warning."
+            },
+            {
+              "question": "Can I export my attendee list?",
+              "answer": "Yes. Open your event dashboard, go to Attendees, and export to CSV for names, emails, ticket types, and check-in status."
+            },
+            {
+              "question": "How do group discounts work?",
+              "answer": "Create a group discount by setting a minimum quantity and a discount percentage. The discount applies automatically at checkout when the minimum is met."
+            }
+          ]
+        },
+        "organizer-account": {
+          "title": "Organizer Account & Team",
+          "description": "Account verification, team management, and settings",
+          "faqs": [
+            {
+              "question": "How do I become a verified organizer?",
+              "answer": "Go to Settings > Verification and submit your identity documents and a selfie. Verification review time can vary depending on volume and completeness."
+            },
+            {
+              "question": "Can I add team members to help manage my events?",
+              "answer": "Yes. Go to Settings > Team to invite teammates by email and assign roles (Admin/Manager/Scanner)."
+            },
+            {
+              "question": "How do I add my organization’s logo and branding?",
+              "answer": "Go to Settings > Organization to upload a logo, set your organization name, and add a bio."
+            },
+            {
+              "question": "What are the requirements to start selling tickets?",
+              "answer": "Requirements depend on the event type and payout method. In general, you’ll need an organizer account and may need verification and payout setup to sell paid tickets."
+            },
+            {
+              "question": "How do I contact attendees?",
+              "answer": "From your event dashboard, use attendee messaging tools to send updates to ticket holders."
+            },
+            {
+              "question": "Can I see analytics for my events?",
+              "answer": "Yes. Your dashboard shows sales and revenue analytics, ticket breakdowns, and other insights to help you improve future events."
+            }
+          ]
+        }
+      }
+    }
   }
 }
