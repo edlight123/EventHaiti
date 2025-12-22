@@ -21,9 +21,12 @@ export async function updatePayoutConfig(updates: Partial<PayoutConfig>) {
     }
     return { success: true }
   } catch (error) {
-    console.error('Error updating payout config:', error)
-    // Preserve sentinel errors so the client can trigger step-up verification.
     const message = (error as any)?.message
+    // This error is expected when the user must complete step-up verification.
+    if (!String(message || '').includes('PAYOUT_CHANGE_VERIFICATION_REQUIRED')) {
+      console.error('Error updating payout config:', error)
+    }
+    // Preserve sentinel errors so the client can trigger step-up verification.
     throw new Error(message || 'Failed to update payout configuration')
   }
 }

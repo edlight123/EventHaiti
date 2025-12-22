@@ -245,11 +245,27 @@ export default function PayoutsPageNew({
     // Stripe Connect flow (US/CA): redirect to Stripe onboarding instead of collecting bank fields here.
     if (!isHaiti && wantsStripeConnect) {
       try {
-        await updatePayoutConfig({
-          accountLocation: normalizedLocation,
-          payoutProvider: 'stripe_connect',
-          method: 'bank_transfer',
-        } as any)
+        try {
+          await updatePayoutConfig({
+            accountLocation: normalizedLocation,
+            payoutProvider: 'stripe_connect',
+            method: 'bank_transfer',
+          } as any)
+        } catch (e: any) {
+          const message = String(e?.message || '')
+          if (message.includes('PAYOUT_CHANGE_VERIFICATION_REQUIRED')) {
+            setPendingSensitiveUpdate({
+              accountLocation: normalizedLocation,
+              payoutProvider: 'stripe_connect',
+              method: 'bank_transfer',
+            })
+            setPayoutChangeVerificationRequired(true)
+            setPayoutChangeMessage('For your security, confirm this payout change with the code we email you.')
+            setIsSaving(false)
+            return
+          }
+          throw e
+        }
 
         const res = await fetch('/api/organizer/stripe/connect', {
           method: 'POST',

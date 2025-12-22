@@ -468,7 +468,11 @@ export async function updatePayoutConfig(
 
     return { success: true }
   } catch (error: any) {
-    console.error('Error updating payout config:', error)
+    const message = String(error?.message || '')
+    // Expected sentinel for step-up verification.
+    if (!message.includes('PAYOUT_CHANGE_VERIFICATION_REQUIRED')) {
+      console.error('Error updating payout config:', error)
+    }
     return { success: false, error: error.message }
   }
 }

@@ -107,7 +107,14 @@ export function PayoutSetupStepper({ currentConfig, onClose, onComplete }: Payou
       onComplete()
     } catch (err) {
       console.error('Error saving payout config:', err)
-      setError(err instanceof Error ? err.message : 'Failed to save payout settings')
+      const message = err instanceof Error ? err.message : ''
+      if (String(message || '').includes('PAYOUT_CHANGE_VERIFICATION_REQUIRED')) {
+        setError(
+          'For your security, payout destination changes require email confirmation. Please update payout details from the payouts settings page.'
+        )
+      } else {
+        setError(message || 'Failed to save payout settings')
+      }
       setLoading(false)
     }
   }
