@@ -5,8 +5,9 @@
 
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Image from 'next/image'
+import { getDocumentDownloadURL } from '@/lib/verification'
 
 interface Props {
   title: string
@@ -33,10 +34,41 @@ export default function DocumentUploadCard({
 }: Props) {
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  const [previewUrl, setPreviewUrl] = useState<string | undefined>(existingFileUrl)
+  const [previewUrl, setPreviewUrl] = useState<string | undefined>(undefined)
   const [error, setError] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const hydratePreview = async () => {
+      if (!existingFileUrl) {
+        if (!cancelled) setPreviewUrl(undefined)
+        return
+      }
+
+      // If this is already a URL, use it directly.
+      if (/^https?:\/\//i.test(existingFileUrl) || existingFileUrl.startsWith('data:')) {
+        if (!cancelled) setPreviewUrl(existingFileUrl)
+        return
+      }
+
+      // Otherwise treat it as a Firebase Storage path and resolve to a download URL.
+      try {
+        const url = await getDocumentDownloadURL(existingFileUrl)
+        if (!cancelled) setPreviewUrl(url)
+      } catch {
+        // If we can't resolve it (rules, missing file, etc.), avoid broken <Image />.
+        if (!cancelled) setPreviewUrl(undefined)
+      }
+    }
+
+    void hydratePreview()
+    return () => {
+      cancelled = true
+    }
+  }, [existingFileUrl])
 
   const validateFile = (file: File): string | null => {
     // Check file type

@@ -42,9 +42,11 @@ export default function SelfieForm({ userId, initialData, onSave, onCancel }: Pr
 
   const handleRemove = async () => {
     setSelfiePath(undefined)
+    // Avoid writing `undefined` into Firestore (can throw). Clearing locally is enough;
+    // the user can re-upload before submission.
     await updateVerificationFiles(userId, {
       selfie: {
-        path: undefined
+        uploadedAt: new Date()
       }
     })
   }

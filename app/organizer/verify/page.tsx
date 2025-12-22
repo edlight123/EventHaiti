@@ -11,6 +11,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebase/client'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
+import Link from 'next/link'
 import VerificationStatusHero from '@/components/organizer/verification/VerificationStatusHero'
 import VerificationStepper from '@/components/organizer/verification/VerificationStepper'
 import ReviewSubmitPanel from '@/components/organizer/verification/ReviewSubmitPanel'
@@ -74,12 +75,6 @@ export default function VerifyOrganizerPage() {
         }
 
         setRequest(verificationRequest)
-
-        // Redirect if already approved
-        if (verificationRequest.status === 'approved') {
-          router.push('/organizer/events')
-          return
-        }
       } catch (err: any) {
         console.error('Error loading verification:', err)
         setError(err.message || 'Failed to load verification data')
@@ -104,6 +99,8 @@ export default function VerifyOrganizerPage() {
       console.error('Error reloading verification:', err)
     }
   }
+
+  const dismissError = () => setError('')
 
   // Handle step completion
   const handleSaveOrganizerInfo = async (data: Record<string, any>) => {
@@ -187,6 +184,7 @@ export default function VerifyOrganizerPage() {
     if (!user || !request) return
 
     try {
+      setError('')
       await submitVerificationForReview(user.id)
       await reloadRequest()
       setViewMode('overview')
@@ -212,6 +210,12 @@ export default function VerifyOrganizerPage() {
   }
 
   const handleEditStep = (stepId: keyof VerificationRequest['steps']) => {
+    // During pending/review, keep the flow read-only and show the submitted details instead.
+    if (['pending', 'in_review'].includes(request?.status || '')) {
+      setViewMode('review')
+      return
+    }
+
     const viewModes: Record<string, ViewMode> = {
       organizerInfo: 'organizerInfo',
       governmentId: 'governmentId',
@@ -266,6 +270,21 @@ export default function VerifyOrganizerPage() {
       <Navbar user={user} />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+            <Link href="/organizer" className="hover:text-gray-900">
+              Organizer
+            </Link>
+            <span className="text-gray-400">/</span>
+            <span className="text-gray-900 font-medium">Verification</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Verification</h1>
+          <p className="text-gray-600 mt-1">
+            Verify your identity to publish paid events and receive payouts.
+          </p>
+        </div>
+
         {/* Status Hero */}
         <VerificationStatusHero
           status={request.status}
@@ -275,6 +294,23 @@ export default function VerifyOrganizerPage() {
           onRestart={handleRestart}
           isRestarting={restarting}
         />
+
+        {error ? (
+          <div className="bg-white border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-sm font-semibold text-red-900">Something went wrong</div>
+                <div className="text-sm text-red-700 mt-1">{error}</div>
+              </div>
+              <button
+                onClick={dismissError}
+                className="text-sm font-medium text-gray-700 hover:text-gray-900"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {/* Main Content */}
         {viewMode === 'overview' && (

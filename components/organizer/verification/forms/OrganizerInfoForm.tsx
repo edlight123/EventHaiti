@@ -41,13 +41,15 @@ export default function OrganizerInfoForm({ initialData, onSave, onCancel }: Pro
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {}
 
+    const normalizedPhone = String(formData.phone || '').replace(/[\s\-()]/g, '')
+
     if (!formData.full_name.trim()) {
       newErrors.full_name = 'Full name is required'
     }
 
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required'
-    } else if (!/^\+?[\d\s-()]{10,}$/.test(formData.phone)) {
+    } else if (!/^\+?\d{10,}$/.test(normalizedPhone)) {
       newErrors.phone = 'Invalid phone number format'
     }
 
