@@ -331,3 +331,170 @@ export function getMonCashStatus(): string {
   }
   return process.env.MONCASH_MODE || 'sandbox'
 }
+
+// ============================================================================
+// Prefunded / Payout (REST API)
+// ============================================================================
+
+function getMonCashRestApiBaseUrl(): string {
+  // Docs: HOST_REST_API is moncashbutton.digicelgroup.com/Api (live)
+  // and sandbox.moncashbutton.digicelgroup.com/Api (test).
+  // Our getMonCashBaseUrl() returns https://<host>, so append /Api.
+  return `${getMonCashBaseUrl()}/Api`
+}
+
+export interface MonCashPrefundedTransferParams {
+  amount: number
+  receiver: string
+  desc: string
+  reference: string
+}
+
+export interface MonCashPrefundedTransferResult {
+  transactionId: string
+  amount: number
+  receiver: string
+  message?: string
+  desc?: string
+  raw: any
+}
+
+export interface MonCashPrefundedBalanceResult {
+  balance: number
+  message?: string
+  raw: any
+}
+
+export interface MonCashPrefundedStatusResult {
+  transStatus: string
+  raw: any
+}
+
+async function monCashRestRequest(path: string, init: RequestInit & { method: string }): Promise<Response> {
+  const baseUrl = getMonCashRestApiBaseUrl()
+  const url = `${baseUrl}${path}`
+
+  const doRequest = async (): Promise<Response> => {
+    const token = await getAccessToken()
+    return fetch(url, {
+      ...init,
+      headers: {
+        'Accept': 'application/json',
+        ...(init.headers || {}),
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+  }
+
+  let response = await doRequest()
+  if (!response.ok) {
+    const text = await response.text()
+    if (shouldRetryWithFreshToken(response.status, text)) {
+      cachedToken = null
+      response = await doRequest()
+      if (!response.ok) {
+        const text2 = await response.text()
+        throw new Error(`MonCash REST request failed (${response.status}): ${text2}`)
+      }
+      return response
+    }
+
+    throw new Error(`MonCash REST request failed (${response.status}): ${text}`)
+  }
+
+  return response
+}
+
+/**
+ * Send money from your MonCash prefunded balance to a customer.
+ * Docs endpoint: POST /v1/Transfert
+ */
+export async function moncashPrefundedTransfer(
+  params: MonCashPrefundedTransferParams
+): Promise<MonCashPrefundedTransferResult> {
+  const payload = {
+    amount: Number(params.amount),
+    receiver: String(params.receiver),
+    desc: String(params.desc),
+    reference: String(params.reference),
+  }
+
+  const response = await monCashRestRequest('/v1/Transfert', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const data = await response.json().catch(() => ({}))
+
+  const transfer = data?.transfer || data?.transfert || data
+  const transactionId = String(transfer?.transaction_id || transfer?.transactionId || '')
+  const receiver = String(transfer?.receiver || payload.receiver)
+  const amount = Number(transfer?.amount ?? payload.amount)
+
+  if (!transactionId) {
+    throw new Error(`Unexpected MonCash prefunded transfer response: ${JSON.stringify(data)}`)
+  }
+
+  return {
+    transactionId,
+    receiver,
+    amount,
+    message: transfer?.message,
+    desc: transfer?.desc,
+    raw: data,
+  }
+}
+
+/**
+ * Check status of a prefunded transaction.
+ * Docs endpoint: POST /v1/PrefundedTransactionStatus
+ */
+export async function moncashPrefundedTransactionStatus(reference: string): Promise<MonCashPrefundedStatusResult> {
+  const payload = { reference: String(reference) }
+  const response = await monCashRestRequest('/v1/PrefundedTransactionStatus', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const data = await response.json().catch(() => ({}))
+  const transStatus = String(data?.transStatus || data?.status || data?.message || '')
+
+  if (!transStatus) {
+    throw new Error(`Unexpected MonCash prefunded status response: ${JSON.stringify(data)}`)
+  }
+
+  return {
+    transStatus,
+    raw: data,
+  }
+}
+
+/**
+ * Retrieve current prefunded balance.
+ * Docs endpoint: GET /v1/PrefundedBalance
+ */
+export async function moncashPrefundedBalance(): Promise<MonCashPrefundedBalanceResult> {
+  const response = await monCashRestRequest('/v1/PrefundedBalance', {
+    method: 'GET',
+  })
+
+  const data = await response.json().catch(() => ({}))
+  const balanceNode = data?.balance || data
+  const balance = Number(balanceNode?.balance)
+
+  if (!Number.isFinite(balance)) {
+    throw new Error(`Unexpected MonCash prefunded balance response: ${JSON.stringify(data)}`)
+  }
+
+  return {
+    balance,
+    message: balanceNode?.message,
+    raw: data,
+  }
+}

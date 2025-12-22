@@ -102,6 +102,34 @@ MONCASH_BUTTON_SECRET_API_KEY='-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC 
 MONCASH_BUTTON_RSA_PADDING=none
 ```
 
+### Prefunded (Payout) Setup (Optional)
+
+MonCash also supports a **prefunded** balance that can be used to **pay out** customers/organizers via API (Digicel docs call this `Prefunded/Payout`).
+
+Important notes:
+- This is **not automatic** just because you can accept MonCash payments.
+- Digicel must enable the prefunded feature on your business account and you must **fund** the prefunded balance in the portal.
+- EventHaiti uses the same `MONCASH_CLIENT_ID` / `MONCASH_SECRET_KEY` OAuth token to call the prefunded endpoints.
+
+Admin-only API endpoints (server-to-server):
+- `GET /api/admin/moncash-prefunded/balance`
+- `POST /api/admin/moncash-prefunded/transfer` body: `{ amount, receiver, desc, reference }`
+- `POST /api/admin/moncash-prefunded/status` body: `{ reference }`
+
+These endpoints require:
+- An authenticated admin session
+- `ADMIN_EMAILS` configured
+
+Example transfer body:
+```json
+{
+   "amount": 100.0,
+   "receiver": "50937007294",
+   "desc": "Organizer payout",
+   "reference": "payout_organizer123_2025-12-22"
+}
+```
+
 ### Test Accounts
 
 Sandbox test accounts:

@@ -4,6 +4,27 @@
 
 The payout system allows event organizers to configure how they receive payments from ticket sales. It includes verification workflows, balance tracking, payout history, and comprehensive fee transparency.
 
+## Prefunding (Instant MonCash Payouts)
+
+EventHaiti supports (optional) **instant mobile money payouts** using Digicel MonCash **prefunded** REST API.
+
+How it works:
+- The platform maintains a prefunded MonCash balance (funded in the Digicel business portal).
+- When enabled, the platform can send payouts via `POST /Api/v1/Transfert` (Digicel spelling).
+- Organizers still configure their payout method and phone number under `payoutConfig`.
+
+Operational requirements:
+- Digicel must enable prefunded/payout access for your business account.
+- You must keep sufficient balance in the prefunded account.
+
+Admin endpoints (protected):
+- `GET /api/admin/moncash-prefunded/balance`
+- `POST /api/admin/moncash-prefunded/transfer`
+- `POST /api/admin/moncash-prefunded/status`
+
+Feature flag/status:
+- `config/payouts.prefunding.enabled` and `.available` are exposed to organizers via `GET /api/organizer/payout-prefunding-status`.
+
 ## Pages
 
 ### `/organizer/settings/payouts`
