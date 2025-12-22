@@ -127,15 +127,16 @@ export async function getDiscoverEvents(
 ): Promise<Event[]> {
     try {
       const now = new Date()
-      // Prevent past events from showing on Home/Discover by default.
-      // We still allow currently-running events (end_datetime >= now), so we use a lookback
-      // on start_datetime to ensure we fetch enough candidates, then filter ended events in memory.
-      const lookbackDays = 14
-      const defaultStartDate = new Date(now.getTime() - lookbackDays * 24 * 60 * 60 * 1000)
+
+      // NOTE: We intentionally avoid a default Firestore inequality filter on `start_datetime`.
+      // In this project, historical data may have mixed Firestore field types (Timestamp vs string),
+      // and Firestore queries are type-sensitive; a `>= Date` constraint can return zero docs.
+      // Instead, fetch a larger window of recent events (newest first), then filter in memory.
+      const fetchLimit = Math.max(pageSize * 5, 200)
 
       let queryRef = adminDb.collection('events')
         .where('is_published', '==', true)
-        .orderBy('start_datetime', 'asc')
+        .orderBy('start_datetime', 'desc')
 
       // Apply filters
       if (filters.city) {
@@ -146,13 +147,7 @@ export async function getDiscoverEvents(
         queryRef = queryRef.where('category', '==', filters.category) as any
       }
 
-      if (filters.startDate) {
-        queryRef = queryRef.where('start_datetime', '>=', filters.startDate) as any
-      } else {
-        queryRef = queryRef.where('start_datetime', '>=', defaultStartDate) as any
-      }
-
-      queryRef = queryRef.limit(pageSize) as any
+      queryRef = queryRef.limit(fetchLimit) as any
 
       const snapshot = await queryRef.get()
       
@@ -194,6 +189,20 @@ export async function getDiscoverEvents(
         )
       }
 
+      // Apply startDate in memory (see note above re: mixed Firestore field types)
+      if (filters.startDate) {
+        const startCutoff = filters.startDate instanceof Date
+          ? filters.startDate
+          : new Date(filters.startDate as any)
+
+        if (!Number.isNaN(startCutoff.getTime())) {
+          events = events.filter((event: Event) => {
+            const start = new Date(event.start_datetime)
+            return !Number.isNaN(start.getTime()) && start.getTime() >= startCutoff.getTime()
+          })
+        }
+      }
+
       // Final guard: never return ended events.
       // Include ongoing events when end_datetime is present and in the future.
       events = events.filter((event: Event) => {
@@ -210,6 +219,11 @@ export async function getDiscoverEvents(
 
         return false
       })
+
+      // Return soonest upcoming first
+      events = events
+        .sort((a: Event, b: Event) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
+        .slice(0, pageSize)
 
       return events
     } catch (error) {
