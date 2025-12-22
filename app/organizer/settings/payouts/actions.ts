@@ -15,9 +15,15 @@ export async function updatePayoutConfig(updates: Partial<PayoutConfig>) {
 
   try {
     const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
-    await updatePayoutConfigLib(decodedClaims.uid, updates)
+    const result = await updatePayoutConfigLib(decodedClaims.uid, updates)
+    if (!result?.success) {
+      throw new Error(result?.error || 'Failed to update payout configuration')
+    }
+    return { success: true }
   } catch (error) {
     console.error('Error updating payout config:', error)
-    throw new Error('Failed to update payout configuration')
+    // Preserve sentinel errors so the client can trigger step-up verification.
+    const message = (error as any)?.message
+    throw new Error(message || 'Failed to update payout configuration')
   }
 }

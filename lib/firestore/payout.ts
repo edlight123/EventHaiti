@@ -11,6 +11,10 @@ export interface PayoutConfig {
   stripeAccountId?: string
   allowInstantMoncash?: boolean
   method?: PayoutMethod
+  // When payout details are changed, we can place payouts temporarily on hold.
+  // If this is set and in the future, `status` will remain `on_hold`.
+  // If in the past, status is recomputed normally.
+  payoutHoldUntil?: string
   bankDetails?: {
     accountLocation?: string
     accountName: string
@@ -32,6 +36,95 @@ export interface PayoutConfig {
   }
   createdAt: string
   updatedAt: string
+}
+
+const PAYOUT_CHANGE_VERIFICATION_DOC_ID = 'payoutDetailsChangeVerification'
+const PAYOUT_CHANGE_VERIFICATION_WINDOW_MS = 10 * 60 * 1000 // 10 minutes
+const PAYOUT_DETAILS_CHANGE_HOLD_MS = 24 * 60 * 60 * 1000 // 24 hours
+
+const getPayoutChangeVerificationRef = (organizerId: string) =>
+  adminDb
+    .collection('organizers')
+    .doc(organizerId)
+    .collection('security')
+    .doc(PAYOUT_CHANGE_VERIFICATION_DOC_ID)
+
+const isSensitivePayoutDetailsUpdate = (updates: Partial<PayoutConfig>): boolean => {
+  if (!updates) return false
+
+  // Anything that materially changes where money is sent.
+  if (updates.method) return true
+  if (updates.accountLocation) return true
+  if (updates.payoutProvider) return true
+
+  if (updates.bankDetails) {
+    const bd = updates.bankDetails
+    if (bd.accountName) return true
+    if (bd.accountNumber) return true
+    if (bd.bankName) return true
+    if (bd.routingNumber) return true
+    if (bd.swift) return true
+    if (bd.iban) return true
+    return true
+  }
+
+  if (updates.mobileMoneyDetails) {
+    const mm = updates.mobileMoneyDetails
+    if (mm.provider) return true
+    if (mm.phoneNumber) return true
+    if (mm.accountName) return true
+    return true
+  }
+
+  return false
+}
+
+async function requireRecentPayoutDetailsChangeVerification(organizerId: string) {
+  const ref = getPayoutChangeVerificationRef(organizerId)
+  const snap = await ref.get()
+  const data = snap.exists ? (snap.data() as any) : null
+
+  const verifiedUntilRaw = data?.verifiedUntil
+  const verifiedUntil =
+    verifiedUntilRaw?.toDate && typeof verifiedUntilRaw?.toDate === 'function'
+      ? verifiedUntilRaw.toDate().toISOString()
+      : typeof verifiedUntilRaw === 'string'
+        ? verifiedUntilRaw
+        : null
+
+  if (!verifiedUntil) {
+    throw new Error('PAYOUT_CHANGE_VERIFICATION_REQUIRED')
+  }
+
+  const nowMs = Date.now()
+  const verifiedUntilMs = new Date(verifiedUntil).getTime()
+  if (!Number.isFinite(verifiedUntilMs) || verifiedUntilMs < nowMs) {
+    throw new Error('PAYOUT_CHANGE_VERIFICATION_REQUIRED')
+  }
+
+  // Also cap the window server-side, in case a stale doc is left behind.
+  const capMs = nowMs + PAYOUT_CHANGE_VERIFICATION_WINDOW_MS
+  if (verifiedUntilMs > capMs) {
+    // If it is set too far in the future, treat as invalid.
+    throw new Error('PAYOUT_CHANGE_VERIFICATION_REQUIRED')
+  }
+}
+
+async function consumePayoutDetailsChangeVerification(organizerId: string) {
+  try {
+    await getPayoutChangeVerificationRef(organizerId).set(
+      {
+        consumedAt: new Date().toISOString(),
+        verifiedUntil: null,
+        codeHash: null,
+        salt: null,
+      },
+      { merge: true }
+    )
+  } catch (e) {
+    // Best-effort; don't fail a successful update because cleanup failed.
+    console.warn('Failed to consume payout change verification token:', e)
+  }
 }
 
 export async function getOrganizerIdentityVerificationStatus(
@@ -160,7 +253,14 @@ export function determinePayoutStatus(config: PayoutConfig | null): PayoutStatus
   }
 
   if (config.status === 'on_hold') {
-    return 'on_hold'
+    const holdUntil = config.payoutHoldUntil ? new Date(config.payoutHoldUntil).getTime() : NaN
+    const now = Date.now()
+    // If the hold has expired, allow the status to recompute normally.
+    if (Number.isFinite(holdUntil) && holdUntil <= now) {
+      // fallthrough
+    } else {
+      return 'on_hold'
+    }
   }
 
   if (identityVerified(config) && bankVerified(config) && phoneVerified(config)) {
@@ -277,6 +377,7 @@ export async function getPayoutConfig(organizerId: string): Promise<PayoutConfig
       stripeAccountId: data?.stripeAccountId,
       allowInstantMoncash: typeof data?.allowInstantMoncash === 'boolean' ? data.allowInstantMoncash : undefined,
       method: data?.method,
+      payoutHoldUntil: data?.payoutHoldUntil ? convertTimestamp(data.payoutHoldUntil) : undefined,
       bankDetails: data?.bankDetails,
       mobileMoneyDetails: data?.mobileMoneyDetails,
       verificationStatus: finalVerificationStatus,
@@ -309,11 +410,28 @@ export async function updatePayoutConfig(
       .doc('main')
 
     const now = new Date().toISOString()
+
+    const configDoc = await configRef.get()
+    const current = configDoc.exists ? (configDoc.data() as PayoutConfig) : null
+
+    const sensitiveUpdate = isSensitivePayoutDetailsUpdate(updates)
+    const existingHasMethod = hasPayoutMethod(current)
+    const shouldRequireStepUp = Boolean(configDoc.exists && existingHasMethod && sensitiveUpdate)
+
+    if (shouldRequireStepUp) {
+      await requireRecentPayoutDetailsChangeVerification(organizerId)
+    }
     
     // Mask sensitive data before saving
     const updateData: any = {
       ...updates,
       updatedAt: now,
+    }
+
+    // If payout destination details are changed after initial setup, place payouts on hold briefly.
+    if (shouldRequireStepUp) {
+      updateData.status = 'on_hold'
+      updateData.payoutHoldUntil = new Date(Date.now() + PAYOUT_DETAILS_CHANGE_HOLD_MS).toISOString()
     }
 
     // If bank details are being updated, mask the account number
@@ -336,12 +454,15 @@ export async function updatePayoutConfig(
       }
     }
 
-    const configDoc = await configRef.get()
     if (!configDoc.exists) {
       updateData.createdAt = now
     }
 
     await configRef.set(updateData, { merge: true })
+
+    if (shouldRequireStepUp) {
+      await consumePayoutDetailsChangeVerification(organizerId)
+    }
 
     await recomputePayoutStatus(organizerId)
 

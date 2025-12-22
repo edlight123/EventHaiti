@@ -69,6 +69,12 @@ export default function PayoutsPageNew({
   const [isEditing, setIsEditing] = useState(!config)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [payoutChangeVerificationRequired, setPayoutChangeVerificationRequired] = useState(false)
+  const [payoutChangeCode, setPayoutChangeCode] = useState('')
+  const [payoutChangeMessage, setPayoutChangeMessage] = useState<string | null>(null)
+  const [isSendingPayoutChangeCode, setIsSendingPayoutChangeCode] = useState(false)
+  const [isVerifyingPayoutChangeCode, setIsVerifyingPayoutChangeCode] = useState(false)
+  const [pendingSensitiveUpdate, setPendingSensitiveUpdate] = useState<any | null>(null)
   const [period, setPeriod] = useState<'this_month' | 'last_3_months' | 'all_time'>('all_time')
   const [isSendingPhoneCode, setIsSendingPhoneCode] = useState(false)
   const [isSubmittingPhoneCode, setIsSubmittingPhoneCode] = useState(false)
@@ -230,6 +236,7 @@ export default function PayoutsPageNew({
   const handleSavePayoutDetails = async () => {
     setIsSaving(true)
     setError(null)
+    setPayoutChangeMessage(null)
 
     const normalizedLocation = String(formData.accountLocation || '').toLowerCase()
     const wantsStripeConnect = normalizedLocation === 'united_states' || normalizedLocation === 'canada'
@@ -340,9 +347,24 @@ export default function PayoutsPageNew({
         updates.payoutProvider = String(formData.provider || '').toLowerCase() === 'natcash' ? 'natcash' : 'moncash'
       }
 
-      await updatePayoutConfig(updates)
-      setIsEditing(false)
-      router.refresh()
+      try {
+        await updatePayoutConfig(updates)
+        setIsEditing(false)
+        setPayoutChangeVerificationRequired(false)
+        setPendingSensitiveUpdate(null)
+        setPayoutChangeCode('')
+        router.refresh()
+      } catch (e: any) {
+        const message = String(e?.message || '')
+        if (message.includes('PAYOUT_CHANGE_VERIFICATION_REQUIRED')) {
+          setPendingSensitiveUpdate(updates)
+          setPayoutChangeVerificationRequired(true)
+          setPayoutChangeMessage('For your security, confirm this payout change with the code we email you.')
+          setIsSaving(false)
+          return
+        }
+        throw e
+      }
     } catch (err) {
       setError('Failed to save payout details. Please try again.')
       console.error('Error saving payout details:', err)
@@ -350,6 +372,65 @@ export default function PayoutsPageNew({
       setIsSaving(false)
     }
   }
+
+  const sendPayoutChangeEmailCode = async () => {
+    setPayoutChangeMessage(null)
+    setError(null)
+    setIsSendingPayoutChangeCode(true)
+    try {
+      const res = await fetch('/api/organizer/payout-details-change/send-email-code', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Failed to send code')
+
+      const devCode = data?.debugCode
+      if (process.env.NODE_ENV === 'development' && devCode) {
+        setPayoutChangeMessage(`Code sent. Dev code: ${devCode}`)
+      } else {
+        setPayoutChangeMessage('Code sent. Check your email.')
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Failed to send code')
+    } finally {
+      setIsSendingPayoutChangeCode(false)
+    }
+  }
+
+  const verifyPayoutChangeEmailCode = async () => {
+    setPayoutChangeMessage(null)
+    setError(null)
+    setIsVerifyingPayoutChangeCode(true)
+    try {
+      const res = await fetch('/api/organizer/payout-details-change/verify-email-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: payoutChangeCode }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Failed to verify code')
+
+      setPayoutChangeMessage('Verified. Saving your payout details…')
+      if (pendingSensitiveUpdate) {
+        await updatePayoutConfig(pendingSensitiveUpdate)
+        setIsEditing(false)
+        setPayoutChangeVerificationRequired(false)
+        setPendingSensitiveUpdate(null)
+        setPayoutChangeCode('')
+        router.refresh()
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Failed to verify code')
+    } finally {
+      setIsVerifyingPayoutChangeCode(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!payoutChangeVerificationRequired) return
+    if (isSendingPayoutChangeCode) return
+    // Auto-send once when the server requires step-up verification.
+    void sendPayoutChangeEmailCode()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payoutChangeVerificationRequired])
 
   const formatCurrency = (amount: number) => {
     const normalized = amount / 100
@@ -1084,10 +1165,52 @@ export default function PayoutsPageNew({
                       </div>
                     )}
 
+                    {payoutChangeVerificationRequired && (
+                      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 text-yellow-700 flex-shrink-0 mt-0.5" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-yellow-900">Confirm payout details change</p>
+                            <p className="text-sm text-yellow-800 mt-1">
+                              {payoutChangeMessage ||
+                                'For your security, confirm this change with the 6-digit code sent to your email.'}
+                            </p>
+
+                            <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={payoutChangeCode}
+                                onChange={(e) => setPayoutChangeCode(e.target.value)}
+                                placeholder="6-digit code"
+                                className="w-full sm:w-48 px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              />
+                              <button
+                                type="button"
+                                onClick={verifyPayoutChangeEmailCode}
+                                disabled={isVerifyingPayoutChangeCode || !/^\d{6}$/.test(payoutChangeCode)}
+                                className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                              >
+                                {isVerifyingPayoutChangeCode ? 'Verifying…' : 'Verify & save'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={sendPayoutChangeEmailCode}
+                                disabled={isSendingPayoutChangeCode}
+                                className="px-4 py-2 bg-white border border-yellow-300 text-yellow-900 rounded-lg font-medium hover:bg-yellow-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {isSendingPayoutChangeCode ? 'Sending…' : 'Resend code'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex gap-3 pt-2">
                       <button
                         onClick={handleSavePayoutDetails}
-                        disabled={isSaving}
+                        disabled={isSaving || payoutChangeVerificationRequired}
                         className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                       >
                         {isSaving ? 'Saving...' : 'Save payout details'}
@@ -1097,6 +1220,10 @@ export default function PayoutsPageNew({
                           onClick={() => {
                             setIsEditing(false)
                             setError(null)
+                            setPayoutChangeVerificationRequired(false)
+                            setPendingSensitiveUpdate(null)
+                            setPayoutChangeCode('')
+                            setPayoutChangeMessage(null)
                           }}
                           disabled={isSaving}
                           className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
