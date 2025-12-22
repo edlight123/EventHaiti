@@ -136,7 +136,7 @@ export async function getDiscoverEvents(
 
       let queryRef = adminDb.collection('events')
         .where('is_published', '==', true)
-        .orderBy('start_datetime', 'desc')
+        .orderBy('start_datetime', 'asc')
 
       // Apply filters
       if (filters.city) {
@@ -220,7 +220,7 @@ export async function getDiscoverEvents(
         return false
       })
 
-      // Return soonest upcoming first
+      // Return soonest upcoming first (query is already ASC, but keep this deterministic)
       events = events
         .sort((a: Event, b: Event) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
         .slice(0, pageSize)
