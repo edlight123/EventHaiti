@@ -6,7 +6,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebase/client'
 import Navbar from '@/components/Navbar'
@@ -34,12 +34,38 @@ type ViewMode = 'overview' | 'organizerInfo' | 'governmentId' | 'selfie' | 'busi
 
 export default function VerifyOrganizerPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [restarting, setRestarting] = useState(false)
   const [request, setRequest] = useState<VerificationRequest | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('overview')
   const [error, setError] = useState('')
+
+  const wantsDetails = searchParams.get('details') === '1'
+
+  // If already approved, default to the organizer dashboard unless the user explicitly requests details.
+  useEffect(() => {
+    if (!request) return
+    if (request.status !== 'approved') return
+    if (wantsDetails) return
+
+    const timeoutId = window.setTimeout(() => {
+      router.replace('/organizer')
+    }, 1200)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [request, wantsDetails, router])
+
+  // If details are requested, show the submitted details view immediately (read-only statuses).
+  useEffect(() => {
+    if (!request) return
+    if (!wantsDetails) return
+    if (!['pending', 'in_review', 'approved', 'rejected'].includes(request.status)) return
+    setViewMode('review')
+  }, [request, wantsDetails])
 
   // Load verification request
   useEffect(() => {
@@ -198,8 +224,8 @@ export default function VerifyOrganizerPage() {
   }
 
   const handleEditStep = (stepId: keyof VerificationRequest['steps']) => {
-    // During pending/review, keep the flow read-only and show the submitted details instead.
-    if (['pending', 'in_review'].includes(request?.status || '')) {
+    // During read-only states, keep the flow read-only and show the submitted details instead.
+    if (['pending', 'in_review', 'approved', 'rejected'].includes(request?.status || '')) {
       setViewMode('review')
       return
     }
@@ -249,7 +275,7 @@ export default function VerifyOrganizerPage() {
   }
 
   const completionPercentage = calculateCompletionPercentage(request)
-  const isReadOnly = ['pending', 'in_review'].includes(request.status)
+  const isReadOnly = ['pending', 'in_review', 'approved', 'rejected'].includes(request.status)
   const canSubmit = canSubmitForReview(request)
 
   return (
@@ -280,6 +306,31 @@ export default function VerifyOrganizerPage() {
           onRestart={handleRestart}
           isRestarting={restarting}
         />
+
+        {request.status === 'approved' && !wantsDetails ? (
+          <div className="bg-white border border-green-200 rounded-xl p-4 md:p-5 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-gray-900">You’re already verified</div>
+                <div className="text-sm text-gray-600 mt-1">Redirecting you to your organizer dashboard…</div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Link
+                  href="/organizer/verify?details=1"
+                  className="px-4 py-2 rounded-lg font-semibold text-sm text-gray-900 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all text-center"
+                >
+                  View Verification Details
+                </Link>
+                <Link
+                  href="/organizer"
+                  className="px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gray-900 hover:bg-gray-800 transition-all text-center"
+                >
+                  Go to Dashboard
+                </Link>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {error ? (
           <div className="bg-white border border-red-200 rounded-lg p-4 mb-6">
@@ -315,11 +366,13 @@ export default function VerifyOrganizerPage() {
                   <div>
                     <h2 className="text-base md:text-lg font-bold text-gray-900">Submission</h2>
                     <p className="text-sm text-gray-600 mt-1">
-                      {isReadOnly
-                        ? 'Your verification is submitted. You can view the details anytime.'
-                        : canSubmit
-                          ? 'Everything required is complete. Review your details and submit for approval.'
-                          : 'Complete the required steps to unlock submission.'}
+                      {request.status === 'approved'
+                        ? 'Your verification is approved. You can view the details anytime.'
+                        : isReadOnly
+                          ? 'Your verification is submitted. You can view the details anytime.'
+                          : canSubmit
+                            ? 'Everything required is complete. Review your details and submit for approval.'
+                            : 'Complete the required steps to unlock submission.'}
                     </p>
                   </div>
                   <div className="text-right">
@@ -349,7 +402,13 @@ export default function VerifyOrganizerPage() {
                     }`}
                     disabled={!isReadOnly && !canSubmit}
                   >
-                    {isReadOnly ? 'View Submission Details' : canSubmit ? 'Review & Submit' : 'Complete Required Steps'}
+                    {request.status === 'approved'
+                      ? 'View Verification Details'
+                      : isReadOnly
+                        ? 'View Submission Details'
+                        : canSubmit
+                          ? 'Review & Submit'
+                          : 'Complete Required Steps'}
                   </button>
 
                   {!isReadOnly ? (
