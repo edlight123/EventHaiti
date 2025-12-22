@@ -59,11 +59,12 @@ export default function VerifyOrganizerPage() {
     }
   }, [request, wantsDetails, router])
 
-  // If details are requested, show the submitted details view immediately (read-only statuses).
+  // If details are requested for an in-flight review state, jump straight to the submitted view.
+  // For approved, keep the step overview visible so the user can browse sections.
   useEffect(() => {
     if (!request) return
     if (!wantsDetails) return
-    if (!['pending', 'in_review', 'approved', 'rejected'].includes(request.status)) return
+    if (!['pending', 'in_review'].includes(request.status)) return
     setViewMode('review')
   }, [request, wantsDetails])
 

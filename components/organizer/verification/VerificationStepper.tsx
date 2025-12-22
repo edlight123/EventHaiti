@@ -97,11 +97,13 @@ function StepCard({ stepId, step, stepNumber, onEdit, onSkip, isReadOnly }: Step
   const config = statusConfig[step.status]
 
   // Determine if card should be clickable
-  const isClickable = !isReadOnly && step.status !== 'complete'
+  // - Editable flow: only incomplete steps open the form.
+  // - Read-only flow: completed steps should still open the details view.
+  const isClickable = (!isReadOnly && step.status !== 'complete') || (isReadOnly && step.status === 'complete')
 
   // Handle card click
   const handleCardClick = () => {
-    if (!isReadOnly) {
+    if (isClickable) {
       onEdit()
     }
   }

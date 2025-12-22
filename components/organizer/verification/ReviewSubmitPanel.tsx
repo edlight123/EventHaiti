@@ -18,6 +18,12 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
   const blockingIssues = getBlockingIssues(request)
   const isSubmitted = ['pending', 'in_review', 'approved'].includes(request.status)
 
+  const hasAnyDetails =
+    Object.values(request.steps || {}).some((step) => step?.status === 'complete') ||
+    Boolean(request.reviewNotes) ||
+    Boolean(request.submittedAt) ||
+    Boolean(request.reviewedAt)
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6 md:p-8">
       <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
@@ -31,6 +37,16 @@ export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnl
 
       {/* Summary Sections */}
       <div className="space-y-6">
+        {!hasAnyDetails && isReadOnly ? (
+          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className="text-sm font-semibold text-gray-900">No verification details available</div>
+            <div className="text-sm text-gray-600 mt-1">
+              This account is marked as verified, but no submitted verification fields/files were found.
+              This can happen if verification was granted manually by an admin or if the record predates the current verification flow.
+            </div>
+          </div>
+        ) : null}
+
         {/* Organizer Info */}
         {request.steps.organizerInfo.status === 'complete' && (
           <SummarySection
