@@ -8,7 +8,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { onAuthStateChanged } from 'firebase/auth'
-import { auth } from '@/lib/firebase/client'
+import { auth, db } from '@/lib/firebase/client'
+import { doc, getDoc } from 'firebase/firestore'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import Link from 'next/link'
@@ -41,13 +42,17 @@ export default function VerifyOrganizerPage() {
   const [request, setRequest] = useState<VerificationRequest | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('overview')
   const [error, setError] = useState('')
+  const [userVerification, setUserVerification] = useState<{ is_verified?: boolean; verification_status?: string } | null>(null)
 
   const wantsDetails = searchParams.get('details') === '1'
+
+  const userIsVerified = Boolean(userVerification?.is_verified) || userVerification?.verification_status === 'approved'
+  const effectiveStatus = request ? (userIsVerified ? 'approved' : request.status) : null
 
   // If already approved, default to the organizer dashboard unless the user explicitly requests details.
   useEffect(() => {
     if (!request) return
-    if (request.status !== 'approved') return
+    if (effectiveStatus !== 'approved') return
     if (wantsDetails) return
 
     const timeoutId = window.setTimeout(() => {
@@ -57,7 +62,7 @@ export default function VerifyOrganizerPage() {
     return () => {
       window.clearTimeout(timeoutId)
     }
-  }, [request, wantsDetails, router])
+  }, [request, effectiveStatus, wantsDetails, router])
 
   // If details are requested for an in-flight review state, jump straight to the submitted view.
   // For approved, keep the step overview visible so the user can browse sections.
@@ -84,6 +89,23 @@ export default function VerifyOrganizerPage() {
       })
 
       try {
+        // Fetch user profile verification flag (source of truth for "already verified").
+        try {
+          const userDoc = await getDoc(doc(db, 'users', authUser.uid))
+          if (userDoc.exists()) {
+            const userData = userDoc.data() as any
+            setUserVerification({
+              is_verified: userData?.is_verified ?? false,
+              verification_status: userData?.verification_status ?? undefined,
+            })
+          } else {
+            setUserVerification(null)
+          }
+        } catch (e) {
+          // If rules prevent reads or doc is missing, fall back to verification_requests only.
+          setUserVerification(null)
+        }
+
         let verificationRequest = await getVerificationRequest(authUser.uid)
         
         // Initialize if doesn't exist
@@ -226,7 +248,8 @@ export default function VerifyOrganizerPage() {
 
   const handleEditStep = (stepId: keyof VerificationRequest['steps']) => {
     // During read-only states, keep the flow read-only and show the submitted details instead.
-    if (['pending', 'in_review', 'approved', 'rejected'].includes(request?.status || '')) {
+    const statusToUse = request ? (userIsVerified ? 'approved' : request.status) : null
+    if (statusToUse && ['pending', 'in_review', 'approved', 'rejected'].includes(statusToUse)) {
       setViewMode('review')
       return
     }
@@ -275,9 +298,11 @@ export default function VerifyOrganizerPage() {
     return null
   }
 
-  const completionPercentage = calculateCompletionPercentage(request)
-  const isReadOnly = ['pending', 'in_review', 'approved', 'rejected'].includes(request.status)
-  const canSubmit = canSubmitForReview(request)
+  const statusForUI = effectiveStatus || request.status
+  const requestForUI: VerificationRequest = statusForUI === request.status ? request : ({ ...request, status: statusForUI } as VerificationRequest)
+  const completionPercentage = statusForUI === 'approved' ? 100 : calculateCompletionPercentage(requestForUI)
+  const isReadOnly = ['pending', 'in_review', 'approved', 'rejected'].includes(statusForUI)
+  const canSubmit = canSubmitForReview(requestForUI)
 
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
@@ -301,14 +326,14 @@ export default function VerifyOrganizerPage() {
 
         {/* Status Hero */}
         <VerificationStatusHero
-          status={request.status}
+          status={statusForUI}
           completionPercentage={completionPercentage}
           reviewNotes={request.reviewNotes}
           onRestart={handleRestart}
           isRestarting={restarting}
         />
 
-        {request.status === 'approved' && !wantsDetails ? (
+        {statusForUI === 'approved' && !wantsDetails ? (
           <div className="bg-white border border-green-200 rounded-xl p-4 md:p-5 mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
@@ -355,7 +380,7 @@ export default function VerifyOrganizerPage() {
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-6">
               <VerificationStepper
-                request={request}
+                request={requestForUI}
                 onEditStep={handleEditStep}
                 isReadOnly={isReadOnly}
               />
@@ -367,7 +392,7 @@ export default function VerifyOrganizerPage() {
                   <div>
                     <h2 className="text-base md:text-lg font-bold text-gray-900">Submission</h2>
                     <p className="text-sm text-gray-600 mt-1">
-                      {request.status === 'approved'
+                      {statusForUI === 'approved'
                         ? 'Your verification is approved. You can view the details anytime.'
                         : isReadOnly
                           ? 'Your verification is submitted. You can view the details anytime.'
@@ -403,7 +428,7 @@ export default function VerifyOrganizerPage() {
                     }`}
                     disabled={!isReadOnly && !canSubmit}
                   >
-                    {request.status === 'approved'
+                    {statusForUI === 'approved'
                       ? 'View Verification Details'
                       : isReadOnly
                         ? 'View Submission Details'
@@ -465,7 +490,7 @@ export default function VerifyOrganizerPage() {
 
         {viewMode === 'review' && (
           <ReviewSubmitPanel
-            request={request}
+            request={requestForUI}
             onSubmit={handleSubmit}
             onBack={() => setViewMode('overview')}
             isReadOnly={isReadOnly}
