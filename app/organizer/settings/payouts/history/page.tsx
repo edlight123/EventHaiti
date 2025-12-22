@@ -17,11 +17,13 @@ interface PayoutHistoryItem {
 
 function PayoutHistoryClient({ payouts }: { payouts: PayoutHistoryItem[] }) {
   const formatCurrency = (amount: number) => {
+    const normalized = amount / 100
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'HTG',
-      minimumFractionDigits: 0
-    }).format(amount)
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(normalized)
   }
 
   const formatDate = (dateString: string) => {
@@ -133,11 +135,7 @@ function PayoutHistoryClient({ payouts }: { payouts: PayoutHistoryItem[] }) {
                   payouts.map((payout) => (
                     <tr
                       key={payout.id}
-                      className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => {
-                        // TODO: Navigate to payout detail page
-                        console.log('View payout details:', payout.id)
-                      }}
+                      className="hover:bg-gray-50"
                     >
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {formatDate(payout.date)}
@@ -175,12 +173,8 @@ function PayoutHistoryClient({ payouts }: { payouts: PayoutHistoryItem[] }) {
               </div>
             ) : (
               payouts.map((payout) => (
-                <button
+                <div
                   key={payout.id}
-                  onClick={() => {
-                    // TODO: Navigate to payout detail page
-                    console.log('View payout details:', payout.id)
-                  }}
                   className="w-full p-6 text-left hover:bg-gray-50"
                 >
                   <div className="flex items-start justify-between mb-2">
@@ -197,7 +191,7 @@ function PayoutHistoryClient({ payouts }: { payouts: PayoutHistoryItem[] }) {
                     <span>·</span>
                     <span className="capitalize">{payout.method}</span>
                   </div>
-                </button>
+                </div>
               ))
             )}
           </div>
@@ -256,7 +250,14 @@ export default async function PayoutHistoryPage() {
     id: payout.id,
     date: payout.createdAt || new Date().toISOString(),
     amount: payout.amount || 0,
-    status: payout.status === 'completed' ? 'completed' : payout.status === 'processing' ? 'processing' : 'failed',
+    status:
+      payout.status === 'completed'
+        ? 'completed'
+        : payout.status === 'processing'
+          ? 'processing'
+          : payout.status === 'cancelled'
+            ? 'cancelled'
+            : 'failed',
     eventCount: payout.ticketIds?.length || 0,
     method: payout.method || 'bank_transfer'
   }))

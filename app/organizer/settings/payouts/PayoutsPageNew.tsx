@@ -102,13 +102,15 @@ export default function PayoutsPageNew({
   const bankStatus = config?.verificationStatus?.bank || 'pending'
   const phoneStatus = config?.verificationStatus?.phone || 'pending'
 
-  const accountLocation = config?.accountLocation || config?.bankDetails?.accountLocation || formData.accountLocation
-  const isHaiti = String(accountLocation || '').toLowerCase() === 'haiti'
-  const selectedProvider = String(config?.mobileMoneyDetails?.provider || formData.provider || '').toLowerCase()
+  const effectiveAccountLocation = (isEditing
+    ? formData.accountLocation
+    : (config?.accountLocation || config?.bankDetails?.accountLocation || formData.accountLocation))
+  const isHaiti = String(effectiveAccountLocation || '').toLowerCase() === 'haiti'
+  const selectedProvider = String((isEditing ? formData.provider : config?.mobileMoneyDetails?.provider) || formData.provider || '').toLowerCase()
 
   const isStripeConnectSelection =
-    String(accountLocation || '').toLowerCase() === 'united_states' ||
-    String(accountLocation || '').toLowerCase() === 'canada'
+    String(effectiveAccountLocation || '').toLowerCase() === 'united_states' ||
+    String(effectiveAccountLocation || '').toLowerCase() === 'canada'
 
   useEffect(() => {
     let cancelled = false
@@ -150,6 +152,19 @@ export default function PayoutsPageNew({
     }
   }, [isStripeConnectSelection, isHaiti])
 
+  const normalizeHaitiPhone = (raw: string) => {
+    const compact = String(raw || '').replace(/[\s\-()]/g, '')
+    if (!compact) return ''
+    if (compact.startsWith('+')) return compact
+    if (compact.startsWith('509')) return `+${compact}`
+    return compact
+  }
+
+  const isValidHaitiPhone = (raw: string) => {
+    const phone = normalizeHaitiPhone(raw)
+    return /^\+509\d{8}$/.test(phone)
+  }
+
   const getStripeBadge = () => {
     const status = String(stripeStatus?.status || '')
     if (status === 'verified') return { label: 'Verified', tone: 'bg-green-100 text-green-800 border-green-200' }
@@ -165,7 +180,7 @@ export default function PayoutsPageNew({
       const res = await fetch('/api/organizer/stripe/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountLocation: String(accountLocation || '').toLowerCase() }),
+        body: JSON.stringify({ accountLocation: String(effectiveAccountLocation || '').toLowerCase() }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || data?.message || 'Failed to start Stripe onboarding')
@@ -288,6 +303,12 @@ export default function PayoutsPageNew({
         setIsSaving(false)
         return
       }
+
+      if (isHaiti && !isValidHaitiPhone(formData.phoneNumber)) {
+        setError('Please enter a valid Haiti phone number (example: +50912345678)')
+        setIsSaving(false)
+        return
+      }
     }
     
     try {
@@ -313,7 +334,7 @@ export default function PayoutsPageNew({
       } else {
         updates.mobileMoneyDetails = {
           provider: formData.provider,
-          phoneNumber: formData.phoneNumber,
+          phoneNumber: isHaiti ? normalizeHaitiPhone(formData.phoneNumber) : formData.phoneNumber,
           accountName: formData.accountName || formData.phoneNumber
         }
         updates.payoutProvider = String(formData.provider || '').toLowerCase() === 'natcash' ? 'natcash' : 'moncash'
@@ -530,31 +551,11 @@ export default function PayoutsPageNew({
                   </div>
 
                   <div className="pt-3 border-t border-gray-200">
-                    <div className="text-sm font-medium text-gray-900">Payout rails</div>
-                    <div className="mt-1 space-y-2">
-                      <div className="flex items-start gap-2">
-                        <Clock className="w-4 h-4 text-yellow-600 mt-0.5" />
-                        <div className="min-w-0">
-                          <div className="text-sm text-gray-900">Stripe Connect (US/CA)</div>
-                          <div className="text-xs text-gray-600">
-                            {isHaiti
-                              ? 'Set Account location to United States/Canada to use Stripe Connect.'
-                              : 'Stripe Connect onboarding will appear for US/CA accounts when enabled.'}
-                          </div>
-                        </div>
-                      </div>
-
-                      {isHaiti ? (
-                        <div className="flex items-start gap-2">
-                          <AlertCircle className="w-4 h-4 text-gray-500 mt-0.5" />
-                          <div className="min-w-0">
-                            <div className="text-sm text-gray-900">MonCash setup</div>
-                            <div className="text-xs text-gray-600">
-                              Choose Payout setup → Mobile money, then Provider → MonCash.
-                            </div>
-                          </div>
-                        </div>
-                      ) : null}
+                    <div className="text-sm font-medium text-gray-900">Payout availability</div>
+                    <div className="mt-1 text-xs text-gray-600">
+                      {isHaiti
+                        ? 'Use Haiti bank transfer or Mobile money (MonCash/NatCash).'
+                        : 'US/Canada accounts use Stripe Connect.'}
                     </div>
                   </div>
 
@@ -810,98 +811,7 @@ export default function PayoutsPageNew({
                 </div>
 
                 {/* Checklist + Setup Guidance */}
-                <div className="mb-4 border border-gray-200 rounded-lg p-3 sm:p-4 bg-gray-50">
-                  <p className="text-sm font-semibold text-gray-900">Checklist</p>
-                  <p className="text-[12px] sm:text-sm text-gray-600 mt-1">
-                    This is what needs to be ready before you can receive payouts.
-                  </p>
 
-                  <div className="mt-3 space-y-2">
-                    <div className="flex items-start gap-2">
-                      {statusIcon(identityStatus)}
-                      <div className="min-w-0">
-                        <p className="text-sm text-gray-900 font-medium">Organizer identity verification</p>
-                        <p className="text-[12px] sm:text-sm text-gray-600">Complete your verification in /organizer/verify.</p>
-                      </div>
-                    </div>
-
-                    {hasPayoutSetup ? (
-                      <div className="flex items-start gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        <div className="min-w-0">
-                          <p className="text-sm text-gray-900 font-medium">Payout method selected</p>
-                          <p className="text-[12px] sm:text-sm text-gray-600">Bank transfer or mobile money.</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-start gap-2">
-                        <Clock className="w-4 h-4 text-yellow-600" />
-                        <div className="min-w-0">
-                          <p className="text-sm text-gray-900 font-medium">Choose payout method</p>
-                          <p className="text-[12px] sm:text-sm text-gray-600">Set up a bank account or mobile money to receive payouts.</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {hasPayoutSetup && config?.method === 'bank_transfer' ? (
-                      <div className="flex items-start gap-2">
-                        {statusIcon(bankStatus)}
-                        <div className="min-w-0">
-                          <p className="text-sm text-gray-900 font-medium">Bank account verification</p>
-                          <p className="text-[12px] sm:text-sm text-gray-600">Upload a statement/check to verify your bank details.</p>
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {hasPayoutSetup && config?.method === 'mobile_money' ? (
-                      <>
-                        <div className="flex items-start gap-2">
-                          {statusIcon(phoneStatus)}
-                          <div className="min-w-0">
-                            <p className="text-sm text-gray-900 font-medium">Phone verification</p>
-                            <p className="text-[12px] sm:text-sm text-gray-600">Verify the phone number that will receive mobile money payouts.</p>
-                          </div>
-                        </div>
-
-                        {selectedProvider === 'moncash' ? (
-                          <div className="flex items-start gap-2">
-                            <AlertCircle className="w-4 h-4 text-gray-500" />
-                            <div className="min-w-0">
-                              <p className="text-sm text-gray-900 font-medium">MonCash prefunding</p>
-                              <p className="text-[12px] sm:text-sm text-gray-600">
-                                MonCash payouts are processed as transfers. If payouts are temporarily delayed, it may be due to platform prefunding/availability.
-                              </p>
-                            </div>
-                          </div>
-                        ) : null}
-                      </>
-                    ) : null}
-
-                    <div className="flex items-start gap-2">
-                      <Clock className="w-4 h-4 text-yellow-600" />
-                      <div className="min-w-0">
-                        <p className="text-sm text-gray-900 font-medium">Stripe Connect (US/CA)</p>
-                        <p className="text-[12px] sm:text-sm text-gray-600">
-                          {isHaiti
-                            ? 'Set Account location to United States or Canada to see Stripe Connect onboarding.'
-                            : 'Stripe Connect onboarding will appear here for US/CA accounts when enabled.'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {isHaiti ? (
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-gray-500" />
-                        <div className="min-w-0">
-                          <p className="text-sm text-gray-900 font-medium">MonCash setup</p>
-                          <p className="text-[12px] sm:text-sm text-gray-600">
-                            Choose Payout method → Mobile money, then pick Provider → MonCash.
-                          </p>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
 
                 {!isEditing && hasPayoutSetup ? (
                   // Summary View
@@ -957,7 +867,15 @@ export default function PayoutsPageNew({
                       </label>
                       <select
                         value={formData.accountLocation}
-                        onChange={(e) => setFormData({ ...formData, accountLocation: e.target.value })}
+                        onChange={(e) => {
+                          const nextLocation = e.target.value
+                          const wantsStripe = nextLocation === 'united_states' || nextLocation === 'canada'
+                          setFormData({
+                            ...formData,
+                            accountLocation: nextLocation,
+                            method: wantsStripe ? 'bank_transfer' : formData.method,
+                          })
+                        }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       >
                         <option value="haiti">Haiti</option>
@@ -965,6 +883,12 @@ export default function PayoutsPageNew({
                         <option value="united_states">United States</option>
                         <option value="other">Other…</option>
                       </select>
+
+                      {(formData.accountLocation === 'united_states' || formData.accountLocation === 'canada') ? (
+                        <p className="mt-1 text-xs text-gray-500">
+                          US/Canada payouts are handled via Stripe Connect (no bank details required here).
+                        </p>
+                      ) : null}
                     </div>
 
                     {/* Payout Method */}
@@ -981,6 +905,7 @@ export default function PayoutsPageNew({
                             checked={formData.method === 'bank_transfer'}
                             onChange={(e) => setFormData({ ...formData, method: e.target.value as any })}
                             className="w-4 h-4 text-purple-600"
+                            disabled={formData.accountLocation === 'united_states' || formData.accountLocation === 'canada'}
                           />
                           <span className="text-sm font-medium text-gray-900">Bank transfer</span>
                         </label>
@@ -992,6 +917,7 @@ export default function PayoutsPageNew({
                             checked={formData.method === 'mobile_money'}
                             onChange={(e) => setFormData({ ...formData, method: e.target.value as any })}
                             className="w-4 h-4 text-purple-600"
+                            disabled={formData.accountLocation === 'united_states' || formData.accountLocation === 'canada'}
                           />
                           <span className="text-sm font-medium text-gray-900">Mobile money</span>
                         </label>
@@ -999,7 +925,7 @@ export default function PayoutsPageNew({
                     </div>
 
                     {/* Bank Transfer Fields */}
-                    {formData.method === 'bank_transfer' && (
+                    {formData.method === 'bank_transfer' && !['united_states', 'canada'].includes(formData.accountLocation) && (
                       <>
                         {/* Bank Name */}
                         <div>
@@ -1145,7 +1071,7 @@ export default function PayoutsPageNew({
                             type="tel"
                             value={formData.phoneNumber}
                             onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                            placeholder="+509 1234 5678"
+                            placeholder="+50912345678"
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           />
                         </div>
