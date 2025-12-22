@@ -10,7 +10,6 @@ import {
   Alert,
   Linking,
   Platform,
-  TextInput,
 } from 'react-native';
 import { X, CreditCard, Lock, Smartphone, AlertCircle } from 'lucide-react-native';
 import { COLORS } from '../config/brand';
@@ -74,7 +73,6 @@ function PaymentForm({
     isExpoGo || !StripeProvider ? 'moncash' : 'stripe'
   );
   const [cardComplete, setCardComplete] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState('');
 
   // Stripe Payment
   const handleStripePayment = async () => {
@@ -315,25 +313,11 @@ function PaymentForm({
         {/* Phone Number Input for Mobile Money */}
         {(paymentMethod === 'moncash' || paymentMethod === 'natcash') && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {paymentMethod === 'moncash' ? 'MonCash' : 'NatCash'} Phone Number
-            </Text>
-            <TextInput
-              style={styles.phoneInput}
-              placeholder="e.g., 50938662809"
-              placeholderTextColor={COLORS.textSecondary}
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
-              keyboardType="phone-pad"
-              maxLength={11}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
             <View style={styles.infoBox}>
               <AlertCircle size={18} color={COLORS.primary} />
               <Text style={styles.infoText}>
-                A payment request will be sent to your {paymentMethod === 'moncash' ? 'MonCash' : 'NatCash'} phone.
-                Please approve it to complete your purchase.
+                You’ll be redirected to {paymentMethod === 'moncash' ? 'MonCash' : 'NatCash'} to complete payment.
+                After payment, return to the app and check your Tickets.
               </Text>
             </View>
           </View>
