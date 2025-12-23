@@ -19,6 +19,56 @@ type BackfillRequest = {
   startAfterId?: string
 }
 
+export async function GET() {
+  try {
+    const { user, error } = await requireAuth()
+    const authenticated = Boolean(!error && user)
+    const admin = Boolean(authenticated && isAdmin(user?.email))
+
+    if (!admin) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: authenticated ? 'Unauthorized' : 'Unauthorized',
+          authenticated,
+          admin,
+          message:
+            'This endpoint requires an admin session. Log in with an admin account and ensure ADMIN_EMAILS includes your email.',
+          usage: {
+            method: 'POST',
+            url: '/api/admin/events/backfill-country',
+            bodyExamples: [
+              { dryRun: true, onlyPublished: true, limit: 500 },
+              { dryRun: false, onlyPublished: true, limit: 500 },
+            ],
+          },
+        },
+        { status: 401 }
+      )
+    }
+
+    return NextResponse.json({
+      ok: true,
+      authenticated,
+      admin,
+      message:
+        'Use POST to run the backfill. Start with dryRun=true. For pagination, pass startAfterId from the previous response.',
+      usage: {
+        method: 'POST',
+        url: '/api/admin/events/backfill-country',
+        bodyExamples: [
+          { dryRun: true, onlyPublished: true, limit: 500 },
+          { dryRun: false, onlyPublished: true, limit: 500 },
+          { dryRun: true, onlyPublished: false, limit: 500, startAfterId: 'lastDocIdFromPreviousRun' },
+        ],
+      },
+    })
+  } catch (err: any) {
+    console.error('Backfill country GET error:', err)
+    return NextResponse.json({ ok: false, error: err?.message || 'Internal server error' }, { status: 500 })
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { user, error } = await requireAuth()
