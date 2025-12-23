@@ -89,7 +89,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         notFound()
       }
 
-      if (eventData.status !== 'published' && eventData.organizer_id !== user?.id) {
+      const isPubliclyPublished = Boolean(eventData.is_published || eventData.status === 'published')
+      if (!isPubliclyPublished && eventData.organizer_id !== user?.id) {
         console.log('Event not published and user is not organizer, returning 404')
         notFound()
       }

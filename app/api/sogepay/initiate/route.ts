@@ -1,10 +1,30 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
-import { getPaymentProviderForEventCountry } from '@/lib/payment-provider'
+import { getPaymentProviderForEventCountry, normalizeCountryCode } from '@/lib/payment-provider'
 import { calculateDiscount } from '@/lib/promo-codes'
 
 export const runtime = 'nodejs'
+
+function inferCountryFromEventRow(event: any): string {
+  const normalized = normalizeCountryCode(event?.country)
+  if (normalized) return normalized
+
+  const currency = String(event?.currency || '').trim().toUpperCase()
+  if (currency === 'HTG') return 'HT'
+
+  const haystack = [event?.city, event?.commune, event?.address, event?.venue_address, event?.venue_name]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  // Minimal Haiti heuristics for legacy rows missing explicit country.
+  if (haystack.includes('haiti')) return 'HT'
+  if (haystack.includes('port-au-prince') || haystack.includes('port au prince')) return 'HT'
+  if (haystack.includes('cap-haitien') || haystack.includes('cap haitien')) return 'HT'
+
+  return ''
+}
 
 function isSogepayConfigured(): boolean {
   // Placeholder: wire these to real Sogepay credentials once provided.
@@ -32,7 +52,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
-    const provider = getPaymentProviderForEventCountry(event.country)
+    const eventCountry = inferCountryFromEventRow(event)
+    const provider = getPaymentProviderForEventCountry(eventCountry)
     if (provider !== 'sogepay') {
       return NextResponse.json(
         { error: 'This event does not use Sogepay. Please choose the appropriate payment method.' },
