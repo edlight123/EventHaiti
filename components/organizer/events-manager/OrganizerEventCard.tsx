@@ -6,7 +6,7 @@ import { format } from 'date-fns'
 import { MoreVertical, Eye, Edit, Copy, Trash2, AlertCircle, CheckCircle, Users } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { formatMoneyFromCents, formatMultiCurrencyFromCents, normalizeCurrency } from '@/lib/money'
+import { formatMoneyFromCents, formatPrimaryMoneyFromCentsByCurrency, normalizeCurrency } from '@/lib/money'
 
 interface EventData {
   id: string
@@ -54,11 +54,7 @@ export default function OrganizerEventCard({
   const revenueText = (() => {
     const breakdown = event.revenueByCurrencyCents || {}
     const nonZero = Object.entries(breakdown).filter(([, cents]) => (cents || 0) !== 0)
-    if (nonZero.length > 1) return formatMultiCurrencyFromCents(breakdown)
-    if (nonZero.length === 1) {
-      const [currency, cents] = nonZero[0]
-      return formatMoneyFromCents(Number(cents || 0), currency)
-    }
+    if (nonZero.length >= 1) return formatPrimaryMoneyFromCentsByCurrency(breakdown, event.currency)
 
     const major = typeof revenue === 'number' ? revenue : Number(revenue || 0)
     if (!Number.isFinite(major) || major === 0) return '—'

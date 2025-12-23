@@ -37,3 +37,38 @@ export function formatMultiCurrencyFromCents(
 
   return entries.map(([currency, cents]) => `${currency} ${((cents as number) / 100).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`).join(' + ')
 }
+
+export function formatPrimaryMoneyFromCentsByCurrency(
+  centsByCurrency: Record<string, number>,
+  preferredCurrency?: string | null,
+  locale: string = 'en-US'
+): string {
+  const normalized: Record<string, number> = {}
+
+  for (const [rawCurrency, rawCents] of Object.entries(centsByCurrency || {})) {
+    const currency = normalizeCurrency(rawCurrency)
+    const cents = Number(rawCents || 0)
+    if (!Number.isFinite(cents) || cents === 0) continue
+    normalized[currency] = (normalized[currency] || 0) + cents
+  }
+
+  const entries = Object.entries(normalized)
+  if (entries.length === 0) return '—'
+
+  const preferred = normalizeCurrency(preferredCurrency || '')
+  if (preferred && Number.isFinite(normalized[preferred]) && normalized[preferred] !== 0) {
+    return formatMoneyFromCents(normalized[preferred], preferred, locale)
+  }
+
+  // Fallback: show the dominant currency by absolute value.
+  let bestCurrency = entries[0][0]
+  let bestCents = entries[0][1]
+  for (const [currency, cents] of entries) {
+    if (Math.abs(cents) > Math.abs(bestCents)) {
+      bestCurrency = currency
+      bestCents = cents
+    }
+  }
+
+  return formatMoneyFromCents(bestCents, bestCurrency, locale)
+}

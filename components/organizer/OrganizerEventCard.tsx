@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Calendar, DollarSign, Edit, Eye, QrCode, Share2, Sparkles } from 'lucide-react'
 import Badge from '@/components/ui/Badge'
-import { formatMoneyFromCents, formatMultiCurrencyFromCents } from '@/lib/money'
+import { formatMoneyFromCents, formatPrimaryMoneyFromCentsByCurrency } from '@/lib/money'
 
 interface OrganizerEventCardProps {
   event: {
@@ -34,11 +34,7 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
   const revenueText = (() => {
     const breakdown = event.revenueByCurrencyCents || {}
     const nonZero = Object.entries(breakdown).filter(([, cents]) => (cents || 0) !== 0)
-    if (nonZero.length > 1) return formatMultiCurrencyFromCents(breakdown)
-    if (nonZero.length === 1) {
-      const [currency, cents] = nonZero[0]
-      return formatMoneyFromCents(Number(cents || 0), currency)
-    }
+    if (nonZero.length >= 1) return formatPrimaryMoneyFromCentsByCurrency(breakdown, event.currency)
 
     const cents = typeof event.revenue === 'number' ? event.revenue : Number(event.revenue || 0)
     if (!Number.isFinite(cents) || cents === 0) return '—'
