@@ -190,7 +190,6 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 eventTitle={event.title}
                 currency={event.currency || 'HTG'}
                 country={event.country}
-                        country={event.country}
               />
             ) : (
               <a
