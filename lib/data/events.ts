@@ -6,6 +6,7 @@
  */
 
 import { adminDb } from '@/lib/firebase/admin'
+import { normalizeCountryCode } from '@/lib/payment-provider'
 import { db } from '@/lib/firebase/client'
 import {
   collection,
@@ -80,11 +81,85 @@ export async function getEventById(eventId: string): Promise<Event | null> {
 
       const data = eventDoc.data()
 
-      const country =
+      const inferCountryFromAccountLocation = (raw: unknown): string => {
+        const value = String(raw || '').trim().toLowerCase()
+        if (!value) return ''
+        if (value === 'haiti' || value === 'haïti' || value === 'ht') return 'HT'
+        if (
+          value === 'united_states' ||
+          value === 'united states' ||
+          value === 'usa' ||
+          value === 'us'
+        )
+          return 'US'
+        if (value === 'canada' || value === 'ca') return 'CA'
+        return ''
+      }
+
+      const inferCountryFromTextLocation = (raw: unknown): string => {
+        const text = String(raw || '').toLowerCase()
+        if (!text) return ''
+        // Very conservative heuristics for Haiti-only inference.
+        if (text.includes('haiti')) return 'HT'
+        if (text.includes('port-au-prince') || text.includes('port au prince')) return 'HT'
+        return ''
+      }
+
+      const directCountry =
         data?.country ??
         data?.location?.country ??
         data?.location?.countryCode ??
         data?.location?.country_code
+
+      let country = normalizeCountryCode(directCountry)
+
+      // Fallback: infer from organizer profile/payout config if event country is missing.
+      if (!country) {
+        const organizerId = String(data?.organizer_id || '').trim()
+        if (organizerId) {
+          try {
+            const [organizerDoc, payoutConfigDoc] = await Promise.all([
+              adminDb.collection('organizers').doc(organizerId).get(),
+              adminDb
+                .collection('organizers')
+                .doc(organizerId)
+                .collection('payoutConfig')
+                .doc('main')
+                .get(),
+            ])
+
+            const organizerData = organizerDoc.exists ? (organizerDoc.data() as any) : null
+            const payoutConfig = payoutConfigDoc.exists ? (payoutConfigDoc.data() as any) : null
+
+            country =
+              normalizeCountryCode(
+                organizerData?.country ??
+                  organizerData?.location?.country ??
+                  organizerData?.location?.countryCode ??
+                  organizerData?.location?.country_code
+              ) ||
+              inferCountryFromAccountLocation(
+                payoutConfig?.accountLocation ?? payoutConfig?.bankDetails?.accountLocation
+              ) ||
+              inferCountryFromAccountLocation(organizerData?.accountLocation) ||
+              inferCountryFromTextLocation(
+                [organizerData?.default_city, organizerData?.city, organizerData?.address]
+                  .filter(Boolean)
+                  .join(' ')
+              )
+          } catch (e) {
+            // Non-fatal; we'll fall back to event text below.
+            console.warn('Country inference fallback failed for organizer:', organizerId, e)
+          }
+        }
+      }
+
+      // Last resort: infer from event text fields (venue/address/city).
+      if (!country) {
+        country = inferCountryFromTextLocation(
+          [data?.venue_name, data?.address, data?.commune, data?.city].filter(Boolean).join(' ')
+        )
+      }
       
       // Explicitly construct event object to exclude problematic fields like ticket_tiers
       // (ticket_tiers array in event doc can cause React render errors if passed to client)
