@@ -103,18 +103,23 @@ export function PayoutSetupStepper({ currentConfig, onClose, onComplete }: Payou
         updates.bankDetails = undefined
       }
 
-      await updatePayoutConfig(updates)
+      const result = await updatePayoutConfig(updates)
+      if (!result?.success) {
+        if (result?.requiresVerification) {
+          setError(
+            'For your security, payout destination changes require email confirmation. Please update payout details from the payouts settings page.'
+          )
+          setLoading(false)
+          return
+        }
+        setError(result?.error || 'Failed to save payout settings')
+        setLoading(false)
+        return
+      }
+
       onComplete()
     } catch (err) {
       console.error('Error saving payout config:', err)
-      const message = err instanceof Error ? err.message : ''
-      if (String(message || '').includes('PAYOUT_CHANGE_VERIFICATION_REQUIRED')) {
-        setError(
-          'For your security, payout destination changes require email confirmation. Please update payout details from the payouts settings page.'
-        )
-      } else {
-        setError(message || 'Failed to save payout settings')
-      }
       setLoading(false)
     }
   }

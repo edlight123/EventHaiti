@@ -245,26 +245,21 @@ export default function PayoutsPageNew({
     // Stripe Connect flow (US/CA): redirect to Stripe onboarding instead of collecting bank fields here.
     if (!isHaiti && wantsStripeConnect) {
       try {
-        try {
-          await updatePayoutConfig({
-            accountLocation: normalizedLocation,
-            payoutProvider: 'stripe_connect',
-            method: 'bank_transfer',
-          } as any)
-        } catch (e: any) {
-          const message = String(e?.message || '')
-          if (message.includes('PAYOUT_CHANGE_VERIFICATION_REQUIRED')) {
-            setPendingSensitiveUpdate({
-              accountLocation: normalizedLocation,
-              payoutProvider: 'stripe_connect',
-              method: 'bank_transfer',
-            })
+        const stripeSetupUpdate = {
+          accountLocation: normalizedLocation,
+          payoutProvider: 'stripe_connect',
+          method: 'bank_transfer',
+        }
+        const updateResult = await updatePayoutConfig(stripeSetupUpdate as any)
+        if (!updateResult?.success) {
+          if (updateResult?.requiresVerification) {
+            setPendingSensitiveUpdate(stripeSetupUpdate)
             setPayoutChangeVerificationRequired(true)
             setPayoutChangeMessage('For your security, confirm this payout change with the code we email you.')
             setIsSaving(false)
             return
           }
-          throw e
+          throw new Error(updateResult?.error || 'Failed to save payout details. Please try again.')
         }
 
         const res = await fetch('/api/organizer/stripe/connect', {
@@ -363,24 +358,23 @@ export default function PayoutsPageNew({
         updates.payoutProvider = String(formData.provider || '').toLowerCase() === 'natcash' ? 'natcash' : 'moncash'
       }
 
-      try {
-        await updatePayoutConfig(updates)
-        setIsEditing(false)
-        setPayoutChangeVerificationRequired(false)
-        setPendingSensitiveUpdate(null)
-        setPayoutChangeCode('')
-        router.refresh()
-      } catch (e: any) {
-        const message = String(e?.message || '')
-        if (message.includes('PAYOUT_CHANGE_VERIFICATION_REQUIRED')) {
+      const result = await updatePayoutConfig(updates)
+      if (!result?.success) {
+        if (result?.requiresVerification) {
           setPendingSensitiveUpdate(updates)
           setPayoutChangeVerificationRequired(true)
           setPayoutChangeMessage('For your security, confirm this payout change with the code we email you.')
           setIsSaving(false)
           return
         }
-        throw e
+        throw new Error(result?.error || 'Failed to save payout details. Please try again.')
       }
+
+      setIsEditing(false)
+      setPayoutChangeVerificationRequired(false)
+      setPendingSensitiveUpdate(null)
+      setPayoutChangeCode('')
+      router.refresh()
     } catch (err) {
       setError('Failed to save payout details. Please try again.')
       console.error('Error saving payout details:', err)
@@ -426,7 +420,14 @@ export default function PayoutsPageNew({
 
       setPayoutChangeMessage('Verified. Saving your payout details…')
       if (pendingSensitiveUpdate) {
-        await updatePayoutConfig(pendingSensitiveUpdate)
+        const result = await updatePayoutConfig(pendingSensitiveUpdate)
+        if (!result?.success) {
+          if (result?.requiresVerification) {
+            setPayoutChangeMessage('Verification expired. Please request a new code.')
+            return
+          }
+          throw new Error(result?.error || 'Failed to save payout details. Please try again.')
+        }
         setIsEditing(false)
         setPayoutChangeVerificationRequired(false)
         setPendingSensitiveUpdate(null)
@@ -857,7 +858,16 @@ export default function PayoutsPageNew({
                         disabled={!prefunding?.enabled || !prefunding?.available}
                         onChange={async (e) => {
                           try {
-                            await updatePayoutConfig({ allowInstantMoncash: e.target.checked } as any)
+                            const result = await updatePayoutConfig({ allowInstantMoncash: e.target.checked } as any)
+                            if (!result?.success) {
+                              if (result?.requiresVerification) {
+                                setPendingSensitiveUpdate({ allowInstantMoncash: e.target.checked })
+                                setPayoutChangeVerificationRequired(true)
+                                setPayoutChangeMessage('For your security, confirm this payout change with the code we email you.')
+                                return
+                              }
+                              throw new Error(result?.error || 'Failed to update setting')
+                            }
                             router.refresh()
                           } catch {
                             setError('Failed to update prefunding preference')
