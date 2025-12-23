@@ -41,6 +41,14 @@ export async function POST(req: NextRequest) {
     const withdrawal = withdrawalDoc.data()!
     const now = new Date()
 
+    const normalizeAmountToCents = (raw: any): number => {
+      const n = Number(raw)
+      if (!Number.isFinite(n)) return 0
+      if (!Number.isInteger(n)) return Math.round(n * 100)
+      if (n > 0 && n < 5000) return n * 100
+      return n
+    }
+
     let updates: any = {
       updatedAt: now
     }
@@ -82,8 +90,7 @@ export async function POST(req: NextRequest) {
           const earningsDoc = earningsSnapshot.docs[0]
           const earnings = earningsDoc.data()
           
-          // Convert dollars to cents
-          const amountInCents = Math.round(withdrawal.amount * 100)
+          const amountInCents = normalizeAmountToCents(withdrawal.amount)
           
           await earningsDoc.ref.update({
             availableToWithdraw: earnings.availableToWithdraw + amountInCents,
@@ -127,8 +134,7 @@ export async function POST(req: NextRequest) {
           const earningsDoc = earningsSnapshot2.docs[0]
           const earnings = earningsDoc.data()
           
-          // Convert dollars to cents
-          const amountInCents = Math.round(withdrawal.amount * 100)
+          const amountInCents = normalizeAmountToCents(withdrawal.amount)
           
           await earningsDoc.ref.update({
             availableToWithdraw: earnings.availableToWithdraw + amountInCents,

@@ -30,9 +30,20 @@ export async function GET(req: NextRequest) {
 
     const snapshot = await query.get()
 
+    const normalizeAmountToCents = (raw: any): number => {
+      const n = Number(raw)
+      if (!Number.isFinite(n)) return 0
+      // Legacy: some records stored dollars. New: cents.
+      // Heuristic: valid withdrawals are >= 5000 cents ($50.00). If integer < 5000, treat as dollars.
+      if (!Number.isInteger(n)) return Math.round(n * 100)
+      if (n > 0 && n < 5000) return n * 100
+      return n
+    }
+
     const withdrawals = await Promise.all(
       snapshot.docs.map(async (doc: FirebaseFirestore.QueryDocumentSnapshot) => {
         const data = doc.data()
+        const amount = normalizeAmountToCents(data.amount)
         
         // Fetch event details
         const eventDoc = await adminDb.collection('events').doc(data.eventId).get()
@@ -45,6 +56,7 @@ export async function GET(req: NextRequest) {
         return {
           id: doc.id,
           ...data,
+          amount,
           createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
           updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt,
           processedAt: data.processedAt?.toDate?.()?.toISOString() || data.processedAt,

@@ -160,12 +160,23 @@ export interface WithdrawalRequest {
   id?: string
   organizerId: string
   eventId: string
-  amount: number                       // Amount in USD (not cents)
+  amount: number                       // Amount in cents (deducted from event earnings)
+  currency?: 'HTG' | 'USD'
   method: 'moncash' | 'bank'
   status: 'pending' | 'processing' | 'completed' | 'failed'
+
+  // Fees (all in cents)
+  feeCents?: number
+  payoutAmountCents?: number
+  prefundingUsed?: boolean
+  prefundingFeePercent?: number
+
+  // Bank destination selection
+  bankDestinationId?: string
   
   // Method-specific details
   moncashNumber?: string
+  moncashTransactionId?: string
   bankDetails?: {
     accountNumber: string
     bankName: string

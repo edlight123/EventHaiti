@@ -90,6 +90,10 @@ export default function OrganizerEventManagementScreen() {
     navigation.navigate('EventAttendees', { eventId });
   };
 
+  const handleViewEarnings = () => {
+    navigation.navigate('OrganizerEventEarnings', { eventId });
+  };
+
   const handleEditEvent = () => {
     navigation.navigate('EditEvent', { eventId });
   };
@@ -236,6 +240,10 @@ export default function OrganizerEventManagementScreen() {
           <TouchableOpacity style={styles.actionCard} onPress={handleViewAttendees}>
             <Ionicons name="people-outline" size={32} color={COLORS.primary} />
             <Text style={styles.actionText}>View Attendees</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionCard} onPress={handleViewEarnings}>
+            <Ionicons name="cash-outline" size={32} color={COLORS.primary} />
+            <Text style={styles.actionText}>Earnings</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionCard} onPress={handleEditEvent}>
             <Ionicons name="create-outline" size={32} color={COLORS.primary} />

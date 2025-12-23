@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { calculateFees, formatCurrency, calculateSettlementDate } from '@/lib/fees'
 import type { EventEarnings } from '@/types/earnings'
@@ -16,9 +16,37 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
   const [withdrawMethod, setWithdrawMethod] = useState<'moncash' | 'bank' | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [payoutChangeVerificationRequired, setPayoutChangeVerificationRequired] = useState(false)
+  const [verificationCode, setVerificationCode] = useState('')
+  const [verificationMessage, setVerificationMessage] = useState<string | null>(null)
+  const [verificationError, setVerificationError] = useState<string | null>(null)
+  const [isSendingVerificationCode, setIsSendingVerificationCode] = useState(false)
+  const [isVerifyingVerificationCode, setIsVerifyingVerificationCode] = useState(false)
+  const [pendingEndpoint, setPendingEndpoint] = useState<string | null>(null)
+  const [pendingPayload, setPendingPayload] = useState<any | null>(null)
+  const [debugVerificationCode, setDebugVerificationCode] = useState<string | null>(null)
   
   // Form states
   const [moncashNumber, setMoncashNumber] = useState('')
+
+  const [prefunding, setPrefunding] = useState<{ enabled: boolean; available: boolean } | null>(null)
+  const [allowInstantMoncash, setAllowInstantMoncash] = useState(false)
+
+  type BankDestination = {
+    id: string
+    bankName: string
+    accountName: string
+    accountNumberLast4: string
+    isPrimary: boolean
+  }
+
+  const [bankDestinations, setBankDestinations] = useState<BankDestination[] | null>(null)
+  const [bankDestinationsError, setBankDestinationsError] = useState<string | null>(null)
+  const [bankMode, setBankMode] = useState<'on_file' | 'saved' | 'new'>('on_file')
+  const [selectedBankDestinationId, setSelectedBankDestinationId] = useState<string>('')
+  const [saveNewBankDestination, setSaveNewBankDestination] = useState(true)
+
   const [bankDetails, setBankDetails] = useState({
     accountNumber: '',
     bankName: '',
@@ -26,6 +54,100 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
     swiftCode: '',
     routingNumber: ''
   })
+
+  const availableToWithdraw = useMemo(() => {
+    if (!earnings) return 0
+    if (earnings.settlementStatus !== 'ready') return 0
+    return Math.max(0, Number(earnings.netAmount || 0) - Number(earnings.withdrawnAmount || 0))
+  }, [earnings])
+
+  const isInstantPrefundingAvailable = useMemo(() => {
+    return Boolean(prefunding?.enabled && prefunding?.available && allowInstantMoncash)
+  }, [prefunding, allowInstantMoncash])
+
+  const prefundingFeeCents = useMemo(() => {
+    if (!isInstantPrefundingAvailable) return 0
+    return Math.max(0, Math.round(availableToWithdraw * 0.03))
+  }, [availableToWithdraw, isInstantPrefundingAvailable])
+
+  const prefundingPayoutCents = useMemo(() => {
+    if (!isInstantPrefundingAvailable) return 0
+    return Math.max(0, availableToWithdraw - prefundingFeeCents)
+  }, [availableToWithdraw, prefundingFeeCents, isInstantPrefundingAvailable])
+
+  const selectedBankDestination = useMemo(() => {
+    if (!bankDestinations || !selectedBankDestinationId) return null
+    return bankDestinations.find((d) => d.id === selectedBankDestinationId) || null
+  }, [bankDestinations, selectedBankDestinationId])
+
+  useEffect(() => {
+    if (!showWithdrawModal || !withdrawMethod) return
+
+    const run = async () => {
+      setError(null)
+      setVerificationError(null)
+      setVerificationMessage(null)
+      setDebugVerificationCode(null)
+
+      if (withdrawMethod === 'bank') {
+        setBankDestinationsError(null)
+        try {
+          const res = await fetch('/api/organizer/payout-destinations/bank', { cache: 'no-store' as any })
+          const data = await res.json()
+          if (!res.ok) throw new Error(data?.error || data?.message || 'Failed to load bank accounts')
+
+          const destinations = (data?.destinations || []) as BankDestination[]
+          setBankDestinations(destinations)
+
+          const primary = destinations.find((d) => d.isPrimary)
+          if (primary) {
+            setBankMode('on_file')
+            setSelectedBankDestinationId(primary.id)
+          } else if (destinations.length > 0) {
+            setBankMode('saved')
+            setSelectedBankDestinationId(destinations[0].id)
+          } else {
+            setBankMode('new')
+            setSelectedBankDestinationId('')
+          }
+        } catch (e: any) {
+          setBankDestinations(null)
+          setBankDestinationsError(e?.message || 'Failed to load bank accounts')
+          setBankMode('new')
+          setSelectedBankDestinationId('')
+        }
+      }
+
+      if (withdrawMethod === 'moncash') {
+        try {
+          const [prefundingRes, configRes] = await Promise.all([
+            fetch('/api/organizer/payout-prefunding-status', { cache: 'no-store' as any }),
+            fetch('/api/organizer/payout-config-summary', { cache: 'no-store' as any }),
+          ])
+
+          const prefundingData = await prefundingRes.json().catch(() => ({}))
+          const configData = await configRes.json().catch(() => ({}))
+
+          if (prefundingRes.ok) {
+            setPrefunding(prefundingData?.prefunding || { enabled: false, available: false })
+          } else {
+            setPrefunding({ enabled: false, available: false })
+          }
+
+          if (configRes.ok) {
+            setAllowInstantMoncash(Boolean(configData?.allowInstantMoncash))
+          } else {
+            setAllowInstantMoncash(false)
+          }
+        } catch {
+          setPrefunding({ enabled: false, available: false })
+          setAllowInstantMoncash(false)
+        }
+      }
+    }
+
+    void run()
+  }, [showWithdrawModal, withdrawMethod])
 
   if (!earnings) {
     return (
@@ -64,11 +186,6 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
       ? calculateSettlementDate(eventDate)
       : null
 
-  const availableToWithdraw =
-    earnings.settlementStatus === 'ready'
-      ? Math.max(0, Number(earnings.netAmount || 0) - Number(earnings.withdrawnAmount || 0))
-      : 0
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'ready':
@@ -86,6 +203,101 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
     setWithdrawMethod(method)
     setShowWithdrawModal(true)
     setError(null)
+    setPayoutChangeVerificationRequired(false)
+    setPendingEndpoint(null)
+    setPendingPayload(null)
+  }
+
+  const sendVerificationCode = async () => {
+    setIsSendingVerificationCode(true)
+    setVerificationError(null)
+    setVerificationMessage(null)
+    setDebugVerificationCode(null)
+
+    try {
+      const res = await fetch('/api/organizer/payout-details-change/send-email-code', { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || data?.message || 'Failed to send code')
+      setVerificationMessage('Verification code sent. Check your email.')
+      if (data?.debugCode) setDebugVerificationCode(String(data.debugCode))
+    } catch (e: any) {
+      setVerificationError(e?.message || 'Failed to send verification code')
+    } finally {
+      setIsSendingVerificationCode(false)
+    }
+  }
+
+  const verifyCode = async () => {
+    setIsVerifyingVerificationCode(true)
+    setVerificationError(null)
+
+    try {
+      const res = await fetch('/api/organizer/payout-details-change/verify-email-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: verificationCode }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || data?.message || 'Failed to verify code')
+
+      setPayoutChangeVerificationRequired(false)
+      setVerificationMessage('Verified. Continuing…')
+
+      // Retry the pending action once verified.
+      if (pendingEndpoint && pendingPayload) {
+        const endpoint = pendingEndpoint
+        const payload = pendingPayload
+        setPendingEndpoint(null)
+        setPendingPayload(null)
+        setVerificationCode('')
+        await attemptWithdrawal(endpoint, payload)
+      }
+    } catch (e: any) {
+      setVerificationError(e?.message || 'Invalid verification code')
+    } finally {
+      setIsVerifyingVerificationCode(false)
+    }
+  }
+
+  const attemptWithdrawal = async (endpoint: string, payload: any) => {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      if (data?.requiresVerification || data?.code === 'PAYOUT_CHANGE_VERIFICATION_REQUIRED') {
+        setPendingEndpoint(endpoint)
+        setPendingPayload(payload)
+        setPayoutChangeVerificationRequired(true)
+        setVerificationMessage(
+          data?.message ||
+            'For your security, confirm this withdrawal change with the code we email you.'
+        )
+        return
+      }
+      throw new Error(data?.error || data?.message || 'Failed to submit withdrawal')
+    }
+
+    // Success - reload page to show updated balance
+    if (withdrawMethod === 'moncash' && data?.instant) {
+      alert(
+        `✅ Instant MonCash sent! Fee: ${formatCurrency(data?.feeCents || 0, earnings.currency)}. You received: ${formatCurrency(
+          data?.payoutAmountCents || 0,
+          earnings.currency
+        )}.`
+      )
+    } else {
+      alert(
+        `✅ Withdrawal request submitted successfully! You'll receive your funds within ${
+          withdrawMethod === 'moncash' ? '24 hours' : '3-5 business days'
+        }.`
+      )
+    }
+    window.location.reload()
   }
 
   const submitWithdrawal = async () => {
@@ -97,25 +309,27 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
         ? '/api/organizer/withdraw-moncash'
         : '/api/organizer/withdraw-bank'
 
-      const payload = withdrawMethod === 'moncash'
-        ? { eventId: event.id, amount: availableToWithdraw, moncashNumber }
-        : { eventId: event.id, amount: availableToWithdraw, bankDetails }
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to submit withdrawal')
+      let payload: any
+      if (withdrawMethod === 'moncash') {
+        payload = { eventId: event.id, amount: availableToWithdraw, moncashNumber }
+      } else {
+        if (bankMode === 'new') {
+          payload = {
+            eventId: event.id,
+            amount: availableToWithdraw,
+            bankDetails,
+            saveDestination: saveNewBankDestination,
+          }
+        } else {
+          payload = {
+            eventId: event.id,
+            amount: availableToWithdraw,
+            bankDestinationId: selectedBankDestinationId,
+          }
+        }
       }
 
-      // Success - reload page to show updated balance
-      alert(`✅ Withdrawal request submitted successfully! You'll receive your funds within ${withdrawMethod === 'moncash' ? '24 hours' : '3-5 business days'}.`)
-      window.location.reload()
+      await attemptWithdrawal(endpoint, payload)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -342,83 +556,248 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
                       required
                     />
                   </div>
-                  <p className="text-sm text-gray-600">
-                    Your withdrawal will be sent to your MonCash account within 24 hours.
-                  </p>
+                  {isInstantPrefundingAvailable ? (
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                      <p className="text-sm font-medium text-purple-900">Instant MonCash (prefunding)</p>
+                      <p className="text-xs text-purple-800 mt-1">
+                        This withdrawal will be sent instantly using platform prefunding.
+                      </p>
+                      <div className="mt-2 text-xs text-purple-900 space-y-1">
+                        <div className="flex justify-between">
+                          <span>Prefunding fee (3%)</span>
+                          <span>-{formatCurrency(prefundingFeeCents, earnings.currency)}</span>
+                        </div>
+                        <div className="flex justify-between font-semibold">
+                          <span>You receive</span>
+                          <span>{formatCurrency(prefundingPayoutCents, earnings.currency)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600">
+                      Your withdrawal will be sent to your MonCash account within 24 hours.
+                    </p>
+                  )}
                 </div>
               )}
 
               {/* Bank Form */}
               {withdrawMethod === 'bank' && (
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Account Holder Name
+                  {bankDestinationsError ? (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+                      {bankDestinationsError}
+                    </div>
+                  ) : null}
+
+                  <div className="space-y-2">
+                    <label className="flex items-start gap-2 text-sm text-gray-900">
+                      <input
+                        type="radio"
+                        checked={bankMode === 'on_file'}
+                        onChange={() => setBankMode('on_file')}
+                        disabled={!bankDestinations?.some((d) => d.isPrimary)}
+                        className="mt-1"
+                      />
+                      <span>
+                        <span className="font-semibold">Use bank on file</span>
+                        <span className="block text-xs text-gray-500">
+                          {bankDestinations?.some((d) => d.isPrimary)
+                            ? 'Uses your primary bank from payout settings.'
+                            : 'No bank on file yet. Add a bank account below.'}
+                        </span>
+                      </span>
                     </label>
-                    <input
-                      type="text"
-                      value={bankDetails.accountHolder}
-                      onChange={(e) => setBankDetails({ ...bankDetails, accountHolder: e.target.value })}
-                      placeholder="Full name on account"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bank Name
+
+                    {bankDestinations && bankDestinations.length > 1 ? (
+                      <label className="flex items-start gap-2 text-sm text-gray-900">
+                        <input
+                          type="radio"
+                          checked={bankMode === 'saved'}
+                          onChange={() => setBankMode('saved')}
+                          className="mt-1"
+                        />
+                        <span>
+                          <span className="font-semibold">Use a saved bank account</span>
+                          <span className="block text-xs text-gray-500">Choose from your saved accounts.</span>
+                        </span>
+                      </label>
+                    ) : null}
+
+                    <label className="flex items-start gap-2 text-sm text-gray-900">
+                      <input
+                        type="radio"
+                        checked={bankMode === 'new'}
+                        onChange={() => setBankMode('new')}
+                        className="mt-1"
+                      />
+                      <span>
+                        <span className="font-semibold">Use a new bank account (add second account)</span>
+                        <span className="block text-xs text-gray-500">
+                          Using a new bank account requires email verification.
+                        </span>
+                      </span>
                     </label>
-                    <input
-                      type="text"
-                      value={bankDetails.bankName}
-                      onChange={(e) => setBankDetails({ ...bankDetails, bankName: e.target.value })}
-                      placeholder="e.g., Unibank"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                      required
-                    />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Account Number
-                    </label>
-                    <input
-                      type="text"
-                      value={bankDetails.accountNumber}
-                      onChange={(e) => setBankDetails({ ...bankDetails, accountNumber: e.target.value })}
-                      placeholder="Account number"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Routing Number (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={bankDetails.routingNumber}
-                      onChange={(e) => setBankDetails({ ...bankDetails, routingNumber: e.target.value })}
-                      placeholder="For international transfers"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      SWIFT Code (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={bankDetails.swiftCode}
-                      onChange={(e) => setBankDetails({ ...bankDetails, swiftCode: e.target.value })}
-                      placeholder="For international transfers"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    />
-                  </div>
+
+                  {(bankMode === 'on_file' || bankMode === 'saved') && bankDestinations ? (
+                    <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                      {bankMode === 'saved' ? (
+                        <div className="mb-2">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Select account</label>
+                          <select
+                            value={selectedBankDestinationId}
+                            onChange={(e) => setSelectedBankDestinationId(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          >
+                            {bankDestinations.map((d) => (
+                              <option key={d.id} value={d.id}>
+                                {d.isPrimary ? 'Primary — ' : ''}{d.bankName} (****{d.accountNumberLast4})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : null}
+
+                      {selectedBankDestination ? (
+                        <div className="text-sm text-gray-900">
+                          <div className="font-semibold">{selectedBankDestination.bankName}</div>
+                          <div className="text-xs text-gray-600">
+                            {selectedBankDestination.accountName} • ****{selectedBankDestination.accountNumberLast4}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-600">Select a bank account.</div>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {bankMode === 'new' ? (
+                    <div className="space-y-3">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-sm text-blue-900 font-medium">Verification required</p>
+                        <p className="text-xs text-blue-800 mt-1">
+                          Adding a new bank account requires email verification. The account holder name should match your organizer name.
+                        </p>
+                      </div>
+
+                      <label className="flex items-center gap-2 text-sm text-gray-900">
+                        <input
+                          type="checkbox"
+                          checked={saveNewBankDestination}
+                          onChange={(e) => setSaveNewBankDestination(e.target.checked)}
+                          className="w-4 h-4"
+                        />
+                        Save this as a second bank account
+                      </label>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Account Holder Name</label>
+                        <input
+                          type="text"
+                          value={bankDetails.accountHolder}
+                          onChange={(e) => setBankDetails({ ...bankDetails, accountHolder: e.target.value })}
+                          placeholder="Full name on account"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Bank Name</label>
+                        <input
+                          type="text"
+                          value={bankDetails.bankName}
+                          onChange={(e) => setBankDetails({ ...bankDetails, bankName: e.target.value })}
+                          placeholder="e.g., Unibank"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Account Number</label>
+                        <input
+                          type="text"
+                          value={bankDetails.accountNumber}
+                          onChange={(e) => setBankDetails({ ...bankDetails, accountNumber: e.target.value })}
+                          placeholder="Account number"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Routing Number (Optional)</label>
+                        <input
+                          type="text"
+                          value={bankDetails.routingNumber}
+                          onChange={(e) => setBankDetails({ ...bankDetails, routingNumber: e.target.value })}
+                          placeholder="For international transfers"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">SWIFT Code (Optional)</label>
+                        <input
+                          type="text"
+                          value={bankDetails.swiftCode}
+                          onChange={(e) => setBankDetails({ ...bankDetails, swiftCode: e.target.value })}
+                          placeholder="For international transfers"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+
                   <p className="text-sm text-gray-600">
                     Your withdrawal will be deposited to your bank account within 3-5 business days.
                   </p>
                 </div>
               )}
+
+              {payoutChangeVerificationRequired ? (
+                <div className="mt-4 border border-purple-200 bg-purple-50 rounded-lg p-3">
+                  <p className="text-sm font-semibold text-purple-900">Email verification</p>
+                  <p className="text-xs text-purple-800 mt-1">
+                    {verificationMessage || 'For your security, confirm this change with the code we email you.'}
+                  </p>
+
+                  {debugVerificationCode ? (
+                    <p className="text-xs text-purple-900 mt-2">Dev code: {debugVerificationCode}</p>
+                  ) : null}
+
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={sendVerificationCode}
+                      disabled={isSendingVerificationCode}
+                      className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium disabled:bg-purple-300"
+                    >
+                      {isSendingVerificationCode ? 'Sending…' : 'Send code'}
+                    </button>
+                    <input
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value)}
+                      placeholder="6-digit code"
+                      className="flex-1 px-3 py-2 border border-purple-200 rounded-lg text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={verifyCode}
+                      disabled={isVerifyingVerificationCode || !/^\d{6}$/.test(verificationCode)}
+                      className="px-3 py-2 bg-white border border-purple-300 text-purple-900 rounded-lg text-sm font-medium disabled:opacity-50"
+                    >
+                      {isVerifyingVerificationCode ? 'Verifying…' : 'Verify'}
+                    </button>
+                  </div>
+
+                  {verificationError ? (
+                    <div className="mt-2 text-sm text-red-700">{verificationError}</div>
+                  ) : null}
+                </div>
+              ) : null}
 
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
@@ -430,7 +809,13 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
             <div className="flex gap-3">
               <button
                 onClick={submitWithdrawal}
-                disabled={isSubmitting || (withdrawMethod === 'moncash' && !moncashNumber) || (withdrawMethod === 'bank' && (!bankDetails.accountHolder || !bankDetails.bankName || !bankDetails.accountNumber))}
+                disabled={
+                  isSubmitting ||
+                  (withdrawMethod === 'moncash' && !moncashNumber) ||
+                  (withdrawMethod === 'bank' &&
+                    ((bankMode === 'new' && (!bankDetails.accountHolder || !bankDetails.bankName || !bankDetails.accountNumber)) ||
+                      (bankMode !== 'new' && !selectedBankDestinationId)))
+                }
                 className="flex-1 px-4 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Submitting...' : 'Confirm Withdrawal'}
@@ -439,6 +824,13 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
                 onClick={() => {
                   setShowWithdrawModal(false)
                   setError(null)
+                  setPayoutChangeVerificationRequired(false)
+                  setPendingEndpoint(null)
+                  setPendingPayload(null)
+                  setVerificationCode('')
+                  setVerificationMessage(null)
+                  setVerificationError(null)
+                  setDebugVerificationCode(null)
                   setMoncashNumber('')
                   setBankDetails({
                     accountNumber: '',

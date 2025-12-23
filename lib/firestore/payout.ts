@@ -1,4 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin'
+import { upsertPrimaryBankDestinationFromPayoutSettings } from '@/lib/firestore/payout-destinations'
 
 export type PayoutStatus = 'not_setup' | 'pending_verification' | 'active' | 'on_hold'
 export type PayoutMethod = 'bank_transfer' | 'mobile_money'
@@ -79,7 +80,7 @@ const isSensitivePayoutDetailsUpdate = (updates: Partial<PayoutConfig>): boolean
   return false
 }
 
-async function requireRecentPayoutDetailsChangeVerification(organizerId: string) {
+export async function requireRecentPayoutDetailsChangeVerification(organizerId: string) {
   const ref = getPayoutChangeVerificationRef(organizerId)
   const snap = await ref.get()
   const data = snap.exists ? (snap.data() as any) : null
@@ -110,7 +111,7 @@ async function requireRecentPayoutDetailsChangeVerification(organizerId: string)
   }
 }
 
-async function consumePayoutDetailsChangeVerification(organizerId: string) {
+export async function consumePayoutDetailsChangeVerification(organizerId: string) {
   try {
     await getPayoutChangeVerificationRef(organizerId).set(
       {
@@ -437,6 +438,28 @@ export async function updatePayoutConfig(
     // If bank details are being updated, mask the account number
     if (updates.bankDetails?.accountNumber) {
       const accountNumber = updates.bankDetails.accountNumber
+
+      // Best-effort: store encrypted full details for future withdrawals.
+      try {
+        if (process.env.PAYOUT_DETAILS_ENCRYPTION_KEY) {
+          await upsertPrimaryBankDestinationFromPayoutSettings({
+            organizerId,
+            bankDetails: {
+              accountNumber,
+              bankName: updates.bankDetails.bankName,
+              accountHolder: updates.bankDetails.accountName,
+              routingNumber: updates.bankDetails.routingNumber,
+              swiftCode: updates.bankDetails.swift,
+              iban: updates.bankDetails.iban,
+            },
+          })
+        } else {
+          console.warn('PAYOUT_DETAILS_ENCRYPTION_KEY not set; bank on-file withdrawals will be disabled.')
+        }
+      } catch (e) {
+        console.warn('Failed to persist encrypted bank destination:', e)
+      }
+
       updateData.bankDetails = {
         ...updates.bankDetails,
         accountNumber: maskAccountNumber(accountNumber),

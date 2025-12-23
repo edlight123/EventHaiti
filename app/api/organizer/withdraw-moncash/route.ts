@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { withdrawFromEarnings } from '@/lib/earnings'
+import { moncashPrefundedTransfer } from '@/lib/moncash'
 import type { WithdrawalRequest } from '@/types/earnings'
+
+const PREFUNDING_FEE_PERCENT = 0.03
 
 export async function POST(req: NextRequest) {
   try {
@@ -69,28 +72,111 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Create withdrawal request
-    const withdrawalRequest: WithdrawalRequest = {
+    const currency = (String(earnings.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG') as 'HTG' | 'USD'
+
+    // Check if instant MonCash (prefunding) is available and allowed.
+    const [platformConfigDoc, payoutConfigDoc] = await Promise.all([
+      adminDb.collection('config').doc('payouts').get(),
+      adminDb.collection('organizers').doc(user.id).collection('payoutConfig').doc('main').get(),
+    ])
+
+    const prefunding = platformConfigDoc.exists ? (platformConfigDoc.data() as any)?.prefunding : null
+    const prefundingEnabled = Boolean(prefunding?.enabled)
+    const prefundingAvailable = Boolean(prefunding?.available)
+
+    const payoutConfig = payoutConfigDoc.exists ? (payoutConfigDoc.data() as any) : null
+    const allowInstantMoncash = Boolean(payoutConfig?.allowInstantMoncash)
+
+    const shouldUsePrefunding = prefundingEnabled && prefundingAvailable && allowInstantMoncash
+
+    // Prefunding only makes sense for HTG transfers.
+    if (shouldUsePrefunding && currency !== 'HTG') {
+      return NextResponse.json(
+        { error: 'Instant MonCash is only available for HTG withdrawals' },
+        { status: 400 }
+      )
+    }
+
+    const feeCents = shouldUsePrefunding ? Math.max(0, Math.round(Number(amount) * PREFUNDING_FEE_PERCENT)) : 0
+    const payoutAmountCents = Math.max(0, Number(amount) - feeCents)
+
+    // Create withdrawal request first.
+    const withdrawalRef = adminDb.collection('withdrawal_requests').doc()
+
+    const baseWithdrawalRequest: WithdrawalRequest = {
       organizerId: user.id,
       eventId,
       amount,
+      currency,
       method: 'moncash',
-      status: 'pending',
+      status: shouldUsePrefunding ? 'processing' : 'pending',
       moncashNumber,
+      feeCents: feeCents || undefined,
+      payoutAmountCents: payoutAmountCents || undefined,
+      prefundingUsed: shouldUsePrefunding || undefined,
+      prefundingFeePercent: shouldUsePrefunding ? PREFUNDING_FEE_PERCENT : undefined,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     }
 
-    const withdrawalRef = await adminDb
-      .collection('withdrawal_requests')
-      .add(withdrawalRequest)
+    await withdrawalRef.set(baseWithdrawalRequest)
 
-    // Update earnings record (amount is already in cents)
+    if (shouldUsePrefunding) {
+      try {
+        const payoutAmount = Number((payoutAmountCents / 100).toFixed(2))
+        const result = await moncashPrefundedTransfer({
+          amount: payoutAmount,
+          receiver: String(moncashNumber),
+          desc: `EventHaiti instant withdrawal (${eventId})`,
+          reference: withdrawalRef.id,
+        })
+
+        await withdrawalRef.set(
+          {
+            status: 'completed',
+            completedAt: new Date(),
+            processedAt: new Date(),
+            moncashTransactionId: result.transactionId,
+            updatedAt: new Date(),
+          },
+          { merge: true }
+        )
+
+        // Deduct gross amount from earnings after successful transfer.
+        await withdrawFromEarnings(eventId, amount, withdrawalRef.id)
+
+        return NextResponse.json({
+          success: true,
+          withdrawalId: withdrawalRef.id,
+          instant: true,
+          feeCents,
+          payoutAmountCents,
+          message: 'Instant MonCash withdrawal completed successfully'
+        })
+      } catch (e: any) {
+        await withdrawalRef.set(
+          {
+            status: 'failed',
+            failureReason: e?.message || String(e),
+            updatedAt: new Date(),
+          },
+          { merge: true }
+        )
+
+        return NextResponse.json(
+          { error: 'Instant MonCash transfer failed', message: e?.message || String(e) },
+          { status: 502 }
+        )
+      }
+    }
+
+    // Standard (manual) MonCash request.
     await withdrawFromEarnings(eventId, amount, withdrawalRef.id)
 
     return NextResponse.json({
       success: true,
       withdrawalId: withdrawalRef.id,
+      instant: false,
       message: 'MonCash withdrawal request submitted successfully'
     })
   } catch (err: any) {

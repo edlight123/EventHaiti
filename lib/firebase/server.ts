@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { adminAuth } from './admin'
 
 export async function getServerSession() {
@@ -6,8 +6,31 @@ export async function getServerSession() {
     const cookieStore = await cookies()
     const sessionCookie = cookieStore.get('session')?.value
 
+    // Mobile app support: allow Firebase ID token auth.
+    // The mobile client can send `Authorization: Bearer <firebase_id_token>`.
     if (!sessionCookie) {
-      return { user: null, error: 'No session cookie' }
+      const headerStore = await headers()
+      const authHeader = headerStore.get('authorization') || headerStore.get('Authorization')
+      const bearer = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length).trim() : null
+
+      if (!bearer) {
+        return { user: null, error: 'No session cookie' }
+      }
+
+      const decodedClaims = await adminAuth.verifyIdToken(bearer, true)
+      const user = await adminAuth.getUser(decodedClaims.uid)
+
+      return {
+        user: {
+          id: user.uid,
+          email: user.email || '',
+          user_metadata: {
+            full_name: user.displayName || '',
+            phone: user.phoneNumber || '',
+          },
+        },
+        error: null,
+      }
     }
 
     // Verify the session cookie

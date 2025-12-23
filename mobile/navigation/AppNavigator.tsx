@@ -24,6 +24,7 @@ import OrganizerDashboardScreen from '../screens/organizer/OrganizerDashboardScr
 import OrganizerEventsScreen from '../screens/organizer/OrganizerEventsScreen';
 import OrganizerScanScreen from '../screens/organizer/OrganizerScanScreen';
 import OrganizerEventManagementScreen from '../screens/organizer/OrganizerEventManagementScreen';
+import OrganizerEventEarningsScreen from '../screens/organizer/OrganizerEventEarningsScreen';
 import CreateEventFlowRefactored from '../screens/organizer/CreateEventFlowRefactored';
 import TicketScannerScreen from '../screens/organizer/TicketScannerScreen';
 import EventAttendeesScreen from '../screens/organizer/EventAttendeesScreen';
@@ -51,6 +52,7 @@ export type RootStackParamList = {
   OrganizerProfile: { organizerId: string };
   Notifications: { userId: string };
   OrganizerEventManagement: { eventId: string };
+  OrganizerEventEarnings: { eventId: string };
   OrganizerVerification: undefined;
   OrganizerInfoForm: { onComplete?: () => void };
   GovernmentIDUpload: { onComplete?: () => void };
@@ -239,6 +241,7 @@ export default function AppNavigator() {
               options={{ headerShown: false }} 
             />
             <Stack.Screen name="OrganizerEventManagement" component={OrganizerEventManagementScreen} options={{ headerShown: true, headerTitle: 'Manage Event' }} />
+            <Stack.Screen name="OrganizerEventEarnings" component={OrganizerEventEarningsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CreateEvent" component={CreateEventFlowRefactored} options={{ headerShown: false }} />
             <Stack.Screen name="TicketScanner" component={TicketScannerScreen} options={{ headerShown: false }} />
             <Stack.Screen name="EventAttendees" component={EventAttendeesScreen} options={{ headerShown: false }} />

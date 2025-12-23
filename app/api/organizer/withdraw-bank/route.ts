@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { withdrawFromEarnings } from '@/lib/earnings'
+import {
+  addSecondaryBankDestination,
+  getDecryptedBankDestination,
+  type BankDestinationDetails,
+} from '@/lib/firestore/payout-destinations'
+import {
+  consumePayoutDetailsChangeVerification,
+  requireRecentPayoutDetailsChangeVerification,
+} from '@/lib/firestore/payout'
 import type { WithdrawalRequest } from '@/types/earnings'
 
 export async function POST(req: NextRequest) {
@@ -12,21 +21,63 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { eventId, amount, bankDetails } = body
+    const { eventId, amount, bankDetails, bankDestinationId, saveDestination } = body
 
     // Validate inputs
-    if (!eventId || !amount || !bankDetails) {
+    if (!eventId || !amount || (!bankDestinationId && !bankDetails)) {
       return NextResponse.json(
-        { error: 'Missing required fields: eventId, amount, bankDetails' },
+        { error: 'Missing required fields: eventId, amount, bankDetails or bankDestinationId' },
         { status: 400 }
       )
     }
 
-    if (!bankDetails.accountNumber || !bankDetails.bankName || !bankDetails.accountHolder) {
-      return NextResponse.json(
-        { error: 'Incomplete bank details' },
-        { status: 400 }
-      )
+    let resolvedBankDetails: BankDestinationDetails | null = null
+    let resolvedDestinationId: string | null = null
+
+    if (bankDestinationId) {
+      resolvedDestinationId = String(bankDestinationId)
+      resolvedBankDetails = await getDecryptedBankDestination({
+        organizerId: user.id,
+        destinationId: resolvedDestinationId,
+      })
+
+      if (!resolvedBankDetails) {
+        return NextResponse.json({ error: 'Bank destination not found' }, { status: 404 })
+      }
+    } else {
+      resolvedBankDetails = bankDetails as BankDestinationDetails
+
+      if (!resolvedBankDetails?.accountNumber || !resolvedBankDetails?.bankName || !resolvedBankDetails?.accountHolder) {
+        return NextResponse.json({ error: 'Incomplete bank details' }, { status: 400 })
+      }
+
+      // Using a new bank account requires OTP step-up.
+      try {
+        await requireRecentPayoutDetailsChangeVerification(user.id)
+      } catch (e: any) {
+        const message = String(e?.message || '')
+        if (message.includes('PAYOUT_CHANGE_VERIFICATION_REQUIRED')) {
+          return NextResponse.json(
+            {
+              error: 'Verification required',
+              code: 'PAYOUT_CHANGE_VERIFICATION_REQUIRED',
+              requiresVerification: true,
+              message:
+                'For your security, confirm this new bank account with the code we email you before using it for withdrawals.',
+            },
+            { status: 403 }
+          )
+        }
+        throw e
+      }
+
+      // Optionally save as a second account.
+      if (saveDestination) {
+        const created = await addSecondaryBankDestination({ organizerId: user.id, bankDetails: resolvedBankDetails })
+        resolvedDestinationId = created.id
+      }
+
+      await consumePayoutDetailsChangeVerification(user.id)
     }
 
     // Minimum withdrawal amount (in cents)
@@ -77,19 +128,27 @@ export async function POST(req: NextRequest) {
     }
 
     // Create withdrawal request
+    const currency = (String(earnings.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG') as 'HTG' | 'USD'
+
+    const accountNumber = String(resolvedBankDetails.accountNumber)
+    const maskedAccountNumber = accountNumber.length > 4 ? `****${accountNumber.slice(-4)}` : accountNumber
+
     const withdrawalRequest: WithdrawalRequest = {
       organizerId: user.id,
       eventId,
       amount,
+      currency,
       method: 'bank',
       status: 'pending',
       bankDetails: {
-        accountNumber: bankDetails.accountNumber,
-        bankName: bankDetails.bankName,
-        accountHolder: bankDetails.accountHolder,
-        swiftCode: bankDetails.swiftCode,
-        routingNumber: bankDetails.routingNumber
+        // Avoid storing full bank account number when it is saved as a destination.
+        accountNumber: resolvedDestinationId ? maskedAccountNumber : accountNumber,
+        bankName: String(resolvedBankDetails.bankName),
+        accountHolder: String(resolvedBankDetails.accountHolder),
+        swiftCode: resolvedBankDetails.swiftCode,
+        routingNumber: resolvedBankDetails.routingNumber,
       },
+      bankDestinationId: resolvedDestinationId || undefined,
       createdAt: new Date(),
       updatedAt: new Date()
     }

@@ -15,7 +15,20 @@ CRON_SECRET=SDhk0LptE2CEchml2DKJl5pFONQrzi+/SjDl9bHv9lg=
 
 ---
 
-### 2. Existing Environment Variables (Verify These Exist)
+### 2. PAYOUT_DETAILS_ENCRYPTION_KEY (New - Required for "Bank on file")
+
+```bash
+# 32 bytes key (base64). Generate one:
+PAYOUT_DETAILS_ENCRYPTION_KEY=$(openssl rand -base64 32)
+```
+
+**Purpose:** Encrypts saved payout destination details (bank account numbers) stored in Firestore.  
+**Used by:** Saved bank destinations + withdrawals using “bank on file”.  
+**Security:** Treat like a secret. Do not rotate without a migration plan (old encrypted destinations become unreadable).
+
+---
+
+### 3. Existing Environment Variables (Verify These Exist)
 
 ```bash
 # Stripe
