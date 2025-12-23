@@ -121,7 +121,12 @@ export async function getOrganizerTickets(organizerId: string) {
       snapshot.docs.forEach((doc: any) => {
         const data = doc.data()
         const eventCurrency = eventCurrencyById.get(String(data.event_id))
-        const currency = normalizeCurrency(data.currency || data.original_currency || eventCurrency, 'HTG')
+        // IMPORTANT: For organizer-facing revenue, use the event currency (aka original currency)
+        // when available, regardless of what currency the customer was charged.
+        const currency = normalizeCurrency(
+          data.original_currency || data.originalCurrency || data.currency || eventCurrency,
+          'HTG'
+        )
         
         allTickets.push({
           id: doc.id,
@@ -245,7 +250,11 @@ export async function getNextEvent(organizerId: string) {
 
     const tickets = ticketsSnapshot.docs.map((doc: any) => {
       const data = doc.data()
-      const currency = normalizeCurrency(data.currency || data.original_currency || nextEvent.currency, 'HTG')
+      // Prefer original currency (event currency) over charged currency.
+      const currency = normalizeCurrency(
+        data.original_currency || data.originalCurrency || data.currency || nextEvent.currency,
+        'HTG'
+      )
       return {
         id: doc.id,
         price_paid: data.price_paid || 0,
