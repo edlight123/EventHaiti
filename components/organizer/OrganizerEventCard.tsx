@@ -26,15 +26,22 @@ interface OrganizerEventCardProps {
 
 export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
   const { t } = useTranslation('common')
-  const progress = event.capacity > 0 ? (event.ticketsSold / event.capacity) * 100 : 0
+  const safeCapacity = Number.isFinite(event.capacity) ? event.capacity : Number(event.capacity || 0)
+  const safeTicketsSold = Number.isFinite(event.ticketsSold) ? event.ticketsSold : Number(event.ticketsSold || 0)
+  const progress = safeCapacity > 0 ? (safeTicketsSold / safeCapacity) * 100 : 0
   const startDate = new Date(event.start_datetime)
 
   const revenueText = (() => {
     const breakdown = event.revenueByCurrencyCents || {}
     const nonZero = Object.entries(breakdown).filter(([, cents]) => (cents || 0) !== 0)
     if (nonZero.length > 1) return formatMultiCurrencyFromCents(breakdown)
-    const cents = typeof event.revenue === 'number' ? event.revenue : 0
-    if (cents === 0) return '—'
+    if (nonZero.length === 1) {
+      const [currency, cents] = nonZero[0]
+      return formatMoneyFromCents(Number(cents || 0), currency)
+    }
+
+    const cents = typeof event.revenue === 'number' ? event.revenue : Number(event.revenue || 0)
+    if (!Number.isFinite(cents) || cents === 0) return '—'
     return formatMoneyFromCents(cents, event.currency || 'HTG')
   })()
 
@@ -90,7 +97,7 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
           <div className="flex items-center justify-between text-sm mb-2">
             <span className="text-gray-600">{t('event_card.tickets_sold')}</span>
             <span className="font-semibold text-gray-900">
-              {event.ticketsSold} / {event.capacity}
+              {safeTicketsSold} / {safeCapacity}
             </span>
           </div>
           <div className="h-2 bg-gray-100 rounded-full overflow-hidden">

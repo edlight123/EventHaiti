@@ -113,6 +113,7 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
         ticket_type: ticketData.ticket_type || 'General Admission',
         ticket_tier_id: ticketData.ticket_tier_id || '',
         price_paid: ticketData.price_paid || 0,
+        currency: ticketData.currency || null,
         quantity: ticketData.quantity || 1,
         checked_in: ticketData.checked_in || false,
         qr_code: ticketData.qr_code || ticketData.qr_code_data || '',

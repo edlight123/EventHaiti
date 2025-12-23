@@ -27,7 +27,7 @@ interface OrganizerDashboardClientProps {
   payoutCurrency: string
   salesData: any
   events: any[]
-  tickets: any[]
+  eventStatsById: Record<string, { ticketsSold: number; revenueByCurrencyCents: Record<string, number> }>
 }
 
 export default function OrganizerDashboardClient({
@@ -39,7 +39,7 @@ export default function OrganizerDashboardClient({
   payoutCurrency,
   salesData,
   events,
-  tickets
+  eventStatsById
 }: OrganizerDashboardClientProps) {
   const { t } = useTranslation('common')
 
@@ -164,15 +164,9 @@ export default function OrganizerDashboardClient({
         {events.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {events.map((event: any) => {
-              const eventTickets = tickets.filter((t: any) => t.event_id === event.id)
-              const ticketsSold = eventTickets.length
-              const revenueByCurrencyCents = eventTickets.reduce((acc: Record<string, number>, t: any) => {
-                const currency = String(t.currency || event.currency || 'HTG').trim().toUpperCase() || 'HTG'
-                const cents = Math.round((t.price_paid || 0) * 100)
-                acc[currency] = (acc[currency] || 0) + cents
-                return acc
-              }, {})
-
+              const stats = eventStatsById[String(event.id)]
+              const ticketsSold = stats?.ticketsSold || 0
+              const revenueByCurrencyCents = stats?.revenueByCurrencyCents || {}
               const revenue = Object.values(revenueByCurrencyCents).reduce((sum, cents) => sum + (cents || 0), 0)
               
               return (

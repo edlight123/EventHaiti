@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { getOrganizerStats, getNextEvent } from '@/lib/firestore/organizer'
+import { normalizeCurrency } from '@/lib/money'
 import {
   determinePayoutStatus,
   getOrganizerBalance,
@@ -183,7 +184,30 @@ export default async function OrganizerDashboard({
 
   const serializedNextEvent = serializeData(nextEvent)
   const serializedEvents = serializeData(currentStats.events)
-  const serializedTickets = serializeData(currentStats.tickets)
+
+  // Build lifetime per-event stats for event cards (tickets sold + revenue) without shipping raw tickets
+  // to the client. This avoids the dashboard cards showing only the current time-range totals.
+  const eventStatsById: Record<
+    string,
+    { ticketsSold: number; revenueByCurrencyCents: Record<string, number> }
+  > = {}
+
+  for (const t of statsLifetime.tickets || []) {
+    const eventId = String(t?.event_id || '')
+    if (!eventId) continue
+    if (String(t?.status || '').toLowerCase() !== 'valid') continue
+
+    const currency = normalizeCurrency(t?.currency, 'HTG')
+    const cents = Math.round((Number(t?.price_paid || 0) || 0) * 100)
+
+    if (!eventStatsById[eventId]) {
+      eventStatsById[eventId] = { ticketsSold: 0, revenueByCurrencyCents: {} }
+    }
+
+    eventStatsById[eventId].ticketsSold += 1
+    eventStatsById[eventId].revenueByCurrencyCents[currency] =
+      (eventStatsById[eventId].revenueByCurrencyCents[currency] || 0) + cents
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
@@ -198,7 +222,7 @@ export default async function OrganizerDashboard({
         payoutCurrency={balanceData.currency}
         salesData={salesData}
         events={serializedEvents}
-        tickets={serializedTickets}
+        eventStatsById={eventStatsById}
       />
 
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />

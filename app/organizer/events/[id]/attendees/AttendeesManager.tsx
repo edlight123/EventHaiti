@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { Search, Download, Mail, Filter, X, User, CreditCard, Calendar, Check, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
+import { formatMoneyFromCents, normalizeCurrency } from '@/lib/money'
 
 interface Ticket {
   id: string
@@ -12,6 +13,7 @@ interface Ticket {
   event_id: string
   ticket_tier_id?: string
   price_paid: number
+  currency?: string | null
   quantity: number
   checked_in_at?: string
   purchased_at: string
@@ -499,7 +501,12 @@ function AttendeeDetailSheet({ ticket, eventId, onClose }: AttendeeDetailSheetPr
                 </svg>
                 <div>
                   <p className="text-xs text-gray-500">Price Paid</p>
-                  <p className="font-semibold text-gray-900">${(ticket.price_paid / 100).toFixed(2)}</p>
+                  <p className="font-semibold text-gray-900">
+                    {formatMoneyFromCents(
+                      Math.round((Number(ticket.price_paid || 0) || 0) * 100),
+                      normalizeCurrency(ticket.currency, 'HTG')
+                    )}
+                  </p>
                 </div>
               </div>
             </div>

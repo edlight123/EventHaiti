@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 import { MoreVertical, Eye, Edit, Copy, Trash2, AlertCircle, CheckCircle, Users } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { formatMoneyFromCents, formatMultiCurrencyFromCents, normalizeCurrency } from '@/lib/money'
 
 interface EventData {
   id: string
@@ -19,6 +20,8 @@ interface EventData {
   tickets_sold?: number
   total_tickets?: number
   revenue?: number
+  revenueByCurrencyCents?: Record<string, number>
+  currency?: string
   checked_in?: number
   ticket_tiers?: any[]
   location_name?: string
@@ -45,12 +48,28 @@ export default function OrganizerEventCard({
   const totalTickets = event.total_tickets || 0
   const salesPercentage = totalTickets > 0 ? (ticketsSold / totalTickets) * 100 : 0
   const isSoldOut = ticketsSold >= totalTickets && totalTickets > 0
-  const revenue = event.revenue || 0
+  const revenue = event.revenue
   const checkedIn = event.checked_in || 0
+
+  const revenueText = (() => {
+    const breakdown = event.revenueByCurrencyCents || {}
+    const nonZero = Object.entries(breakdown).filter(([, cents]) => (cents || 0) !== 0)
+    if (nonZero.length > 1) return formatMultiCurrencyFromCents(breakdown)
+    if (nonZero.length === 1) {
+      const [currency, cents] = nonZero[0]
+      return formatMoneyFromCents(Number(cents || 0), currency)
+    }
+
+    const major = typeof revenue === 'number' ? revenue : Number(revenue || 0)
+    if (!Number.isFinite(major) || major === 0) return '—'
+    return formatMoneyFromCents(Math.round(major * 100), normalizeCurrency(event.currency, 'HTG'))
+  })()
 
   // Needs attention logic
   const missingCover = !event.banner_image_url
-  const missingTickets = !event.ticket_tiers || event.ticket_tiers.length === 0
+  // In Firestore-backed list views, `ticket_tiers` is often not embedded on the event.
+  // Avoid showing a false “needs attention” warning in that case.
+  const missingTickets = Array.isArray(event.ticket_tiers) ? event.ticket_tiers.length === 0 : false
   const isDraft = !event.is_published
   const noSales = ticketsSold === 0 && event.is_published
 
@@ -194,7 +213,7 @@ export default function OrganizerEventCard({
           <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 border border-green-200">
             <p className="text-xs text-green-700 font-medium mb-0.5">{t('event_card_detail.revenue')}</p>
             <p className="text-lg font-bold text-green-800">
-              ${revenue.toLocaleString()}
+              {revenueText}
             </p>
           </div>
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 border border-blue-200">

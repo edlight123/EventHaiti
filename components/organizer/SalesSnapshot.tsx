@@ -46,9 +46,19 @@ export function SalesSnapshot({ data, currency = 'HTG' }: SalesSnapshotProps) {
   })()
 
   const formatRevenue = () => {
+    const breakdown = metrics.revenueByCurrencyCents || {}
+    const nonZero = Object.entries(breakdown).filter(([, cents]) => (cents || 0) !== 0)
+
     if (hasMultipleCurrencies) {
-      return formatMultiCurrencyFromCents(metrics.revenueByCurrencyCents || {})
+      return formatMultiCurrencyFromCents(breakdown)
     }
+
+    if (nonZero.length === 1) {
+      const [onlyCurrency, cents] = nonZero[0]
+      if ((cents || 0) === 0) return 'No earnings yet'
+      return formatMoneyFromCents(Number(cents || 0), onlyCurrency)
+    }
+
     if (metrics.revenueCents === 0) return 'No earnings yet'
     return formatMoneyFromCents(metrics.revenueCents, currency)
   }

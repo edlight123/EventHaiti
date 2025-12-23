@@ -53,6 +53,11 @@ export function NextEventHero({ event }: NextEventHeroProps) {
     const breakdown = event.revenueByCurrencyCents || {}
     const nonZero = Object.entries(breakdown).filter(([, cents]) => (cents || 0) !== 0)
     if (nonZero.length > 1) return formatMultiCurrencyFromCents(breakdown)
+    if (nonZero.length === 1) {
+      const [currency, cents] = nonZero[0]
+      return formatMoneyFromCents(Number(cents || 0), currency)
+    }
+
     return formatMoneyFromCents(event.revenue, event.currency || 'HTG')
   })()
 
