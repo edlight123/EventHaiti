@@ -287,8 +287,9 @@ export async function getEventTierSalesBreakdown(eventId: string): Promise<Event
       const groupKey = String(tierId || tierName)
 
       const quantity = Math.max(1, Number(data.quantity || 1) || 1)
-      const pricePaid = Number(data.price_paid ?? data.pricePaid ?? 0) || 0
-      const grossSales = Math.max(0, Math.round(pricePaid)) * quantity
+      const pricePaidMajor = Number(data.price_paid ?? data.pricePaid ?? 0) || 0
+      const unitPriceCents = Math.max(0, Math.round(pricePaidMajor * 100))
+      const grossSales = unitPriceCents * quantity
 
       const existing = tiers.get(groupKey)
       if (existing) {

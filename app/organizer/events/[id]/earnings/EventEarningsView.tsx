@@ -424,6 +424,20 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
             <h2 className="text-xl font-bold text-gray-900">🎟️ Ticket Tier Breakdown</h2>
             <p className="text-sm text-gray-600">Totals use the listed price at the time of purchase (no FX-adjusted amounts).</p>
           </div>
+          <div className="flex items-center gap-3">
+            <a
+              href={`/api/organizer/events/${event.id}/earnings/audit?format=csv`}
+              className="text-sm text-teal-600 hover:underline"
+            >
+              Download audit (CSV)
+            </a>
+            <a
+              href={`/api/organizer/events/${event.id}/earnings/audit?format=json`}
+              className="text-sm text-gray-600 hover:underline"
+            >
+              JSON
+            </a>
+          </div>
         </div>
 
         {!tierBreakdown || tierBreakdown.length === 0 ? (
