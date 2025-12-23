@@ -189,6 +189,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                 ticketPrice={event.price || 0}
                 eventTitle={event.title}
                 currency={event.currency || 'HTG'}
+                country={event.country}
+                        country={event.country}
               />
             ) : (
               <a

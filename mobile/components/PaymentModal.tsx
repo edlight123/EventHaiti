@@ -45,6 +45,7 @@ interface PaymentModalProps {
   quantity: number;
   totalAmount: number;
   currency: string;
+  country?: string;
   tierId?: string;
   promoCodeId?: string;
   onSuccess: (paymentMethod: string, transactionId: string) => void;
@@ -57,6 +58,7 @@ function PaymentForm({
   quantity,
   totalAmount,
   currency,
+  country,
   tierId,
   promoCodeId,
   onSuccess,
@@ -68,14 +70,26 @@ function PaymentForm({
   
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const countryCode = String(country || '').toUpperCase();
+  const isHaitiEvent = countryCode === 'HT' || countryCode === 'HAITI';
   // Default to MonCash if Stripe not available (Expo Go)
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'moncash' | 'natcash'>(
-    isExpoGo || !StripeProvider ? 'moncash' : 'stripe'
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'moncash' | 'natcash' | 'sogepay'>(
+    isHaitiEvent ? 'moncash' : 'stripe'
   );
   const [cardComplete, setCardComplete] = useState(false);
 
   // Stripe Payment
   const handleStripePayment = async () => {
+    if (isHaitiEvent) {
+      setError('Card payments for Haiti events use Sogepay.');
+      return;
+    }
+
+    if (!confirmPayment) {
+      setError('Credit card payments require a development build with the Stripe SDK enabled.');
+      return;
+    }
     setProcessing(true);
     setError(null);
 
@@ -116,6 +130,44 @@ function PaymentForm({
     } catch (err: any) {
       setError(err.message || 'Payment failed. Please try again.');
     } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Sogepay Payment (Haiti card processing)
+  const handleSogepayPayment = async () => {
+    setProcessing(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_URL}/api/sogepay/initiate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId,
+          quantity,
+          tierId,
+          promoCode: promoCodeId,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to initiate Sogepay payment');
+      }
+
+      if (!data.redirectUrl) {
+        throw new Error('Missing Sogepay redirect URL');
+      }
+
+      await Linking.openURL(data.redirectUrl);
+      Alert.alert(
+        'Continue in Browser',
+        'Complete the Sogepay payment in your browser. After payment, return to the app and check your Tickets.'
+      );
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Sogepay payment failed');
       setProcessing(false);
     }
   };
@@ -195,6 +247,8 @@ function PaymentForm({
   const handlePayment = () => {
     if (paymentMethod === 'stripe') {
       handleStripePayment();
+    } else if (paymentMethod === 'sogepay') {
+      handleSogepayPayment();
     } else if (paymentMethod === 'moncash') {
       handleMonCashPayment();
     } else if (paymentMethod === 'natcash') {
@@ -222,8 +276,8 @@ function PaymentForm({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Select Payment Method</Text>
 
-          {/* Stripe Card Payment - Only show if Stripe is available */}
-          {!isExpoGo && StripeProvider && (
+          {/* Stripe Card Payment - Only show if Stripe is available and not Haiti */}
+          {!isHaitiEvent && !isExpoGo && StripeProvider && (
             <TouchableOpacity
               style={[
                 styles.methodButton,
@@ -240,50 +294,74 @@ function PaymentForm({
               </View>
             </TouchableOpacity>
           )}
+
+          {/* Sogepay Card Payment (Haiti) */}
+          {isHaitiEvent && (
+            <TouchableOpacity
+              style={[
+                styles.methodButton,
+                paymentMethod === 'sogepay' && styles.methodButtonActive,
+              ]}
+              onPress={() => setPaymentMethod('sogepay')}
+            >
+              <View style={styles.methodIcon}>
+                <CreditCard size={24} color={paymentMethod === 'sogepay' ? COLORS.primary : COLORS.textSecondary} />
+              </View>
+              <View style={styles.methodContent}>
+                <Text style={styles.methodTitle}>Credit/Debit Card</Text>
+                <Text style={styles.methodSubtitle}>Sogepay</Text>
+              </View>
+            </TouchableOpacity>
+          )}
           
           {/* Show message if in Expo Go */}
           {isExpoGo && (
             <View style={styles.expoGoWarning}>
               <AlertCircle size={18} color={COLORS.warning} />
               <Text style={styles.expoGoWarningText}>
-                Credit card payments require a development build. Use MonCash or NatCash to test in Expo Go.
+                Credit card payments require a development build.
+                {isHaitiEvent ? ' Use MonCash or NatCash to test in Expo Go.' : ''}
               </Text>
             </View>
           )}
 
-          {/* MonCash */}
-          <TouchableOpacity
-            style={[
-              styles.methodButton,
-              paymentMethod === 'moncash' && styles.methodButtonActive,
-            ]}
-            onPress={() => setPaymentMethod('moncash')}
-          >
-            <View style={styles.methodIcon}>
-              <Smartphone size={24} color={paymentMethod === 'moncash' ? COLORS.primary : COLORS.textSecondary} />
-            </View>
-            <View style={styles.methodContent}>
-              <Text style={styles.methodTitle}>MonCash</Text>
-              <Text style={styles.methodSubtitle}>Haiti Mobile Money 🇭🇹</Text>
-            </View>
-          </TouchableOpacity>
+          {/* MonCash (Haiti only) */}
+          {isHaitiEvent && (
+            <TouchableOpacity
+              style={[
+                styles.methodButton,
+                paymentMethod === 'moncash' && styles.methodButtonActive,
+              ]}
+              onPress={() => setPaymentMethod('moncash')}
+            >
+              <View style={styles.methodIcon}>
+                <Smartphone size={24} color={paymentMethod === 'moncash' ? COLORS.primary : COLORS.textSecondary} />
+              </View>
+              <View style={styles.methodContent}>
+                <Text style={styles.methodTitle}>MonCash</Text>
+                <Text style={styles.methodSubtitle}>Haiti Mobile Money 🇭🇹</Text>
+              </View>
+            </TouchableOpacity>
+          )}
 
-          {/* NatCash */}
-          <TouchableOpacity
-            style={[
-              styles.methodButton,
-              paymentMethod === 'natcash' && styles.methodButtonActive,
-            ]}
-            onPress={() => setPaymentMethod('natcash')}
-          >
-            <View style={styles.methodIcon}>
-              <Smartphone size={24} color={paymentMethod === 'natcash' ? COLORS.primary : COLORS.textSecondary} />
-            </View>
-            <View style={styles.methodContent}>
-              <Text style={styles.methodTitle}>NatCash</Text>
-              <Text style={styles.methodSubtitle}>Haiti Mobile Money 🇭🇹</Text>
-            </View>
-          </TouchableOpacity>
+          {/* NatCash (Haiti only) */}
+          {isHaitiEvent && (
+            <TouchableOpacity
+              style={[
+                styles.methodButton,
+                paymentMethod === 'natcash' && styles.methodButtonActive,
+              ]}
+              onPress={() => setPaymentMethod('natcash')}
+            >
+              <View style={styles.methodIcon}>
+                <Smartphone size={24} color={paymentMethod === 'natcash' ? COLORS.primary : COLORS.textSecondary} />
+              </View>
+              <View style={styles.methodContent}>
+                <Text style={styles.methodTitle}>NatCash</Text>
+                <Text style={styles.methodSubtitle}>Haiti Mobile Money 🇭🇹</Text>
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Stripe Card Input */}

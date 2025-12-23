@@ -28,12 +28,32 @@ PAYOUT_DETAILS_ENCRYPTION_KEY=$(openssl rand -base64 32)
 
 ---
 
-### 3. Existing Environment Variables (Verify These Exist)
+### 3. SOGEPAY (New - Required for Haiti card payments)
+
+Haiti-based events (event `country = HT`) must use **Sogepay** for card payments (Stripe card flows are blocked for HT).
+
+```bash
+SOGEPAY_ENABLED=true
+
+# Hosted checkout URL provided by Sogepay (format depends on your Sogepay integration).
+# The app will append `orderId` and `eventId` as query params.
+SOGEPAY_CHECKOUT_URL=https://<sogepay-hosted-checkout-url>
+```
+
+**Purpose:** Routes Haiti card payments to Sogepay instead of Stripe.
+
+---
+
+### 4. Existing Environment Variables (Verify These Exist)
 
 ```bash
 # Stripe
 STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Stripe Connect (Required for USA/Canada events)
+# USA/Canada events (event country US/CA) use Stripe Connect destination charges.
+# Ensure Stripe Connect is enabled in your Stripe dashboard and organizers complete onboarding.
 
 # Firebase Admin SDK
 FIREBASE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}

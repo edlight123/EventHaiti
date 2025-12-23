@@ -19,9 +19,10 @@ interface BuyTicketButtonProps {
   ticketPrice: number
   eventTitle?: string
   currency?: string
+  country?: string
 }
 
-export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, eventTitle = 'Event', currency = 'HTG' }: BuyTicketButtonProps) {
+export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, eventTitle = 'Event', currency = 'HTG', country }: BuyTicketButtonProps) {
   const { t } = useTranslation('common')
   const router = useRouter()
   const { showToast } = useToast()
@@ -30,7 +31,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   const [showEmbeddedPayment, setShowEmbeddedPayment] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'moncash'>('stripe')
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'moncash' | 'sogepay'>('stripe')
   const [quantity, setQuantity] = useState(1)
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
   const [selectedTierPrice, setSelectedTierPrice] = useState<number>(0)
@@ -38,6 +39,9 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   const [promoCode, setPromoCode] = useState<string | undefined>()
   const [isMonCashPopupOpen, setIsMonCashPopupOpen] = useState(false)
   const moncashPopupRef = useRef<Window | null>(null)
+
+  const countryCode = String(country || '').toUpperCase()
+  const isHaitiEvent = countryCode === 'HT' || countryCode === 'HAITI'
 
   const [usdHtgQuote, setUsdHtgQuote] = useState<null | {
     baseRate: number
@@ -194,7 +198,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
     }
   }
 
-  async function handlePurchase(method: 'stripe' | 'moncash') {
+  async function handlePurchase(method: 'stripe' | 'moncash' | 'sogepay') {
     setLoading(true)
     setError(null)
 
@@ -216,12 +220,84 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
       }
 
       if (method === 'stripe') {
+        if (isHaitiEvent) {
+          throw new Error('Card payments for Haiti events use Sogepay.')
+        }
         // Use embedded payment instead of redirect
         setShowModal(false)
         setShowEmbeddedPayment(true)
         setLoading(false)
+      } else if (method === 'sogepay') {
+        if (!isHaitiEvent) {
+          throw new Error('Sogepay is only available for Haiti events.')
+        }
+
+        setShowModal(false)
+
+        const tiers = selectedTiers.length
+          ? selectedTiers.map(t => ({ tierId: t.tierId, quantity: t.quantity }))
+          : undefined
+
+        const response = await fetch('/api/sogepay/initiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventId,
+            quantity,
+            tierId: selectedTierId,
+            promoCode,
+            tiers,
+          }),
+        })
+
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to initiate Sogepay payment')
+        }
+
+        if (!data.redirectUrl) {
+          throw new Error('Missing Sogepay redirect URL')
+        }
+
+        const popupWidth = 480
+        const popupHeight = 720
+        const dualScreenLeft = (window as any).screenLeft ?? window.screenX ?? 0
+        const dualScreenTop = (window as any).screenTop ?? window.screenY ?? 0
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || screen.width
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || screen.height
+        const left = Math.max(0, Math.floor(dualScreenLeft + (viewportWidth - popupWidth) / 2))
+        const top = Math.max(0, Math.floor(dualScreenTop + (viewportHeight - popupHeight) / 2))
+
+        const popup = window.open(
+          data.redirectUrl,
+          'sogepay_checkout',
+          `popup=yes,width=${popupWidth},height=${popupHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`
+        )
+
+        if (!popup) {
+          setIsMonCashPopupOpen(false)
+          moncashPopupRef.current = null
+          window.location.href = data.redirectUrl
+          return
+        }
+
+        popup.focus()
+        moncashPopupRef.current = popup
+        setIsMonCashPopupOpen(true)
+
+        showToast({
+          type: 'info',
+          title: 'Complete payment in the popup',
+          message: 'Keep this tab open. We’ll bring you back when payment completes.',
+          duration: 6000,
+        })
+
+        setLoading(false)
       } else {
         // MonCash Button checkout (hosted redirect)
+        if (!isHaitiEvent) {
+          throw new Error('MonCash is only available for Haiti events.')
+        }
         setShowModal(false)
 
         const tiers = selectedTiers.length
@@ -501,9 +577,9 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             )}
 
             <div className="space-y-3">
-              {/* Stripe Option */}
+              {/* Card Option (Stripe for US/CA and others; Sogepay for Haiti) */}
               <button
-                onClick={() => handlePurchase('stripe')}
+                onClick={() => handlePurchase(isHaitiEvent ? 'sogepay' : 'stripe')}
                 disabled={loading}
                 className="w-full flex items-center justify-between px-4 py-4 border-2 border-gray-200 rounded-lg hover:border-teal-600 hover:bg-teal-50 transition disabled:opacity-50"
               >
@@ -515,7 +591,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                   </div>
                   <div className="text-left">
                     <div className="font-semibold text-gray-900">{t('events.credit_debit_card')}</div>
-                    <div className="text-sm text-gray-500">{t('events.visa_mastercard_amex')}</div>
+                    <div className="text-sm text-gray-500">{isHaitiEvent ? 'Sogepay' : t('events.visa_mastercard_amex')}</div>
                   </div>
                 </div>
                 <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -523,27 +599,29 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                 </svg>
               </button>
 
-              {/* MonCash Option */}
-              <button
-                onClick={() => handlePurchase('moncash')}
-                disabled={loading}
-                className="w-full flex items-center justify-between px-4 py-4 border-2 border-gray-200 rounded-lg hover:border-teal-600 hover:bg-teal-50 transition disabled:opacity-50"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/>
-                    </svg>
+              {/* MonCash Option (Haiti only) */}
+              {isHaitiEvent && (
+                <button
+                  onClick={() => handlePurchase('moncash')}
+                  disabled={loading}
+                  className="w-full flex items-center justify-between px-4 py-4 border-2 border-gray-200 rounded-lg hover:border-teal-600 hover:bg-teal-50 transition disabled:opacity-50"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/>
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <div className="font-semibold text-gray-900">MonCash</div>
+                      <div className="text-sm text-gray-500">{t('events.mobile_money_haiti')}</div>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <div className="font-semibold text-gray-900">MonCash</div>
-                    <div className="text-sm text-gray-500">{t('events.mobile_money_haiti')}</div>
-                  </div>
-                </div>
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              )}
             </div>
 
             <button

@@ -8,7 +8,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { calculateFees, calculateSettlementDate, isSettlementReady } from '@/lib/fees'
 import type { EventEarnings, SettlementStatus, EarningsSummary } from '@/types/earnings'
 
-type PaymentMethod = 'stripe' | 'moncash' | 'moncash_button' | 'natcash' | 'unknown'
+type PaymentMethod = 'stripe' | 'stripe_connect' | 'moncash' | 'moncash_button' | 'natcash' | 'sogepay' | 'unknown'
 
 function normalizeCurrency(raw: unknown): 'HTG' | 'USD' {
   const upper = String(raw || '').toUpperCase()
@@ -18,9 +18,11 @@ function normalizeCurrency(raw: unknown): 'HTG' | 'USD' {
 function normalizePaymentMethod(raw: unknown): PaymentMethod {
   const value = String(raw || '').toLowerCase()
   if (value === 'stripe') return 'stripe'
+  if (value === 'stripe_connect') return 'stripe_connect'
   if (value === 'moncash_button') return 'moncash_button'
   if (value === 'moncash') return 'moncash'
   if (value === 'natcash') return 'natcash'
+  if (value === 'sogepay') return 'sogepay'
   return 'unknown'
 }
 
@@ -42,7 +44,7 @@ function calculateEventCurrencyFees(options: {
   // Processing fee depends on the payment rail.
   // Stripe fees are in charged/settlement currency, so convert them back to event currency when needed.
   let processingFeeEventCents = 0
-  if (options.paymentMethod === 'stripe') {
+  if (options.paymentMethod === 'stripe' || options.paymentMethod === 'stripe_connect') {
     const charged = Math.max(0, Math.round(options.chargedAmountCents ?? grossEventCents))
     const stripeFees = calculateFees(charged)
     const stripeProcessingFeeChargedCents = stripeFees.processingFee

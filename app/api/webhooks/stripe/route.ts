@@ -44,6 +44,8 @@ export async function POST(request: Request) {
       const originalCurrency = String(session.metadata.originalCurrency || '').toUpperCase() || 'USD'
       const priceInOriginalCurrency = Number(session.metadata.priceInOriginalCurrency || session.metadata.finalPrice || 0)
       const exchangeRateUsed = session.metadata.exchangeRate ? parseFloat(session.metadata.exchangeRate) : null
+      const payoutProvider = String(session.metadata.payoutProvider || '').toLowerCase()
+      const paymentMethod = payoutProvider === 'stripe_connect' ? 'stripe_connect' : 'stripe'
       
       // Create tickets one at a time to ensure each gets unique ID
       const createdTickets = []
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
           original_currency: originalCurrency === 'HTG' ? 'HTG' : 'USD',
           // settlement-per-event rate (USD per HTG for Stripe when event is HTG)
           exchange_rate_used: exchangeRateUsed,
-          payment_method: 'stripe',
+          payment_method: paymentMethod,
           payment_id: session.payment_intent,
           status: 'valid',
           qr_code_data: qrCodeData,
@@ -93,7 +95,7 @@ export async function POST(request: Request) {
                 exchange_rate_used: ticketData.exchange_rate_used ?? null,
                 charged_amount: pricePerTicket,
                 charged_currency: String(session.currency || 'usd').toUpperCase(),
-                payment_method: 'stripe',
+                payment_method: paymentMethod,
                 payment_id: session.payment_intent,
                 purchased_at: new Date().toISOString(),
                 created_at: new Date().toISOString(),
@@ -169,7 +171,7 @@ export async function POST(request: Request) {
         )
         await addTicketToEarnings(session.metadata.eventId, eventGrossCents, quantity, {
           currency: originalCurrency,
-          paymentMethod: 'stripe',
+          paymentMethod,
           chargedAmountCents: session.amount_total,
           fxRate: exchangeRateUsed,
           chargedCurrency: String(session.currency || 'usd').toUpperCase(),
@@ -268,6 +270,8 @@ export async function POST(request: Request) {
       const originalCurrency = String(paymentIntent.metadata.originalCurrency || '').toUpperCase() || 'USD'
       const priceInOriginalCurrency = Number(paymentIntent.metadata.priceInOriginalCurrency || paymentIntent.metadata.finalPrice || 0)
       const exchangeRateUsed = paymentIntent.metadata.exchangeRate ? parseFloat(paymentIntent.metadata.exchangeRate) : null
+      const payoutProvider = String(paymentIntent.metadata.payoutProvider || '').toLowerCase()
+      const paymentMethod = payoutProvider === 'stripe_connect' ? 'stripe_connect' : 'stripe'
       
       // Create tickets
       const createdTickets = []
@@ -280,7 +284,7 @@ export async function POST(request: Request) {
           currency: originalCurrency === 'HTG' ? 'HTG' : 'USD',
           original_currency: originalCurrency === 'HTG' ? 'HTG' : 'USD',
           exchange_rate_used: exchangeRateUsed,
-          payment_method: 'stripe',
+          payment_method: paymentMethod,
           payment_id: paymentIntent.id,
           status: 'valid',
           qr_code_data: qrCodeData,
@@ -322,7 +326,7 @@ export async function POST(request: Request) {
                 exchange_rate_used: ticketData.exchange_rate_used ?? null,
                 charged_amount: pricePerTicket,
                 charged_currency: String(paymentIntent.currency || 'usd').toUpperCase(),
-                payment_method: 'stripe',
+                payment_method: paymentMethod,
                 payment_id: paymentIntent.id,
                 purchased_at: new Date().toISOString(),
                 created_at: new Date().toISOString(),
@@ -350,7 +354,7 @@ export async function POST(request: Request) {
         )
         await addTicketToEarnings(paymentIntent.metadata.eventId, eventGrossCents, quantity, {
           currency: originalCurrency,
-          paymentMethod: 'stripe',
+          paymentMethod,
           chargedAmountCents: paymentIntent.amount,
           fxRate: exchangeRateUsed,
           chargedCurrency: String(paymentIntent.currency || 'usd').toUpperCase(),

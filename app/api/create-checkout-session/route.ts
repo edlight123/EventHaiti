@@ -12,6 +12,9 @@ import {
   detectBotBehavior,
   logSuspiciousActivity 
 } from '@/lib/security'
+import { adminDb } from '@/lib/firebase/admin'
+import { getPaymentProviderForEventCountry } from '@/lib/payment-provider'
+import { calculateFees } from '@/lib/fees'
 
 // Lazy load Stripe to avoid build-time initialization
 function getStripe() {
@@ -99,6 +102,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
+    const provider = getPaymentProviderForEventCountry(event.country)
+    if (provider === 'sogepay') {
+      await logPurchaseAttempt({ userId: user.id, eventId, ipAddress, quantity, fingerprint }, false)
+      return NextResponse.json(
+        { error: 'Card payments for Haiti events use Sogepay. Please use the Sogepay checkout flow.' },
+        { status: 400 }
+      )
+    }
+
     // 6. Check per-event ticket limit
     const ticketLimit = await checkTicketLimit(user.id, eventId)
     if (ticketLimit.exceeded) {
@@ -147,6 +159,44 @@ export async function POST(request: Request) {
     // IMPORTANT: derive origin from the incoming request to avoid redirects to stale/deleted deployments
     // when NEXT_PUBLIC_APP_URL is misconfigured.
     const origin = new URL(request.url).origin
+
+    const unitAmountCents = Math.round(finalPrice * 100)
+    const totalAmountCents = unitAmountCents * quantity
+    let stripeConnectAccountId: string | null = null
+    let applicationFeeAmount: number | null = null
+
+    if (provider === 'stripe_connect') {
+      const organizerId = String(event.organizer_id || '')
+      if (!organizerId) {
+        await logPurchaseAttempt({ userId: user.id, eventId, ipAddress, quantity, fingerprint }, false)
+        return NextResponse.json({ error: 'Event organizer is missing.' }, { status: 400 })
+      }
+
+      const configSnap = await adminDb
+        .collection('organizers')
+        .doc(organizerId)
+        .collection('payoutConfig')
+        .doc('main')
+        .get()
+
+      const stripeAccountId = configSnap.exists ? (configSnap.data()?.stripeAccountId as string | undefined) : undefined
+      if (!stripeAccountId) {
+        await logPurchaseAttempt({ userId: user.id, eventId, ipAddress, quantity, fingerprint }, false)
+        return NextResponse.json(
+          { error: 'Organizer has not connected Stripe Connect yet.' },
+          { status: 400 }
+        )
+      }
+
+      stripeConnectAccountId = stripeAccountId
+
+      const feeBreakdown = calculateFees(totalAmountCents)
+      applicationFeeAmount = Math.max(
+        0,
+        Math.min(totalAmountCents, feeBreakdown.platformFee + feeBreakdown.processingFee)
+      )
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -158,7 +208,7 @@ export async function POST(request: Request) {
               description: event.description?.substring(0, 200),
               images: event.banner_image_url ? [event.banner_image_url] : [],
             },
-            unit_amount: Math.round(finalPrice * 100), // Convert to cents
+            unit_amount: unitAmountCents, // Convert to cents
           },
           quantity,
         },
@@ -167,12 +217,24 @@ export async function POST(request: Request) {
       success_url: `${origin}/purchase/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/events/${eventId}`,
       client_reference_id: user.id,
+      ...(stripeConnectAccountId
+        ? {
+            payment_intent_data: {
+              transfer_data: {
+                destination: stripeConnectAccountId,
+              },
+              application_fee_amount: applicationFeeAmount || undefined,
+            },
+          }
+        : {}),
       metadata: {
         eventId,
         userId: user.id,
         quantity: quantity.toString(),
         promoCodeId: promoCodeId || '',
         originalPrice: event.ticket_price.toString(),
+        payoutProvider: provider,
+        stripeConnectAccountId: stripeConnectAccountId || '',
       },
     })
 

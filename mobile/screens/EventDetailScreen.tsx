@@ -663,6 +663,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
         quantity={ticketQuantity}
         totalAmount={selectedTierPrice || event?.ticket_price || 0}
         currency={event?.currency || 'HTG'}
+        country={event?.country || ''}
         tierId={selectedTierId || undefined}
         promoCodeId={promoCode}
         onSuccess={handlePaymentSuccess}

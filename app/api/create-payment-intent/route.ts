@@ -10,6 +10,9 @@ import {
   detectBotBehavior,
   logSuspiciousActivity 
 } from '@/lib/security'
+import { adminDb } from '@/lib/firebase/admin'
+import { getPaymentProviderForEventCountry } from '@/lib/payment-provider'
+import { calculateFees } from '@/lib/fees'
 
 // Lazy load Stripe
 function getStripe() {
@@ -90,6 +93,15 @@ export async function POST(request: Request) {
     if (eventError || !event) {
       await logPurchaseAttempt({ userId: user.id, eventId, ipAddress, quantity, fingerprint }, false)
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+    }
+
+    const provider = getPaymentProviderForEventCountry(event.country)
+    if (provider === 'sogepay') {
+      await logPurchaseAttempt({ userId: user.id, eventId, ipAddress, quantity, fingerprint }, false)
+      return NextResponse.json(
+        { error: 'Card payments for Haiti events use Sogepay. Please use the Sogepay checkout flow.' },
+        { status: 400 }
+      )
     }
 
     // Check ticket limit
@@ -189,9 +201,52 @@ export async function POST(request: Request) {
     }
 
     // Create PaymentIntent
+    const amountCents = Math.round(stripeAmount * quantity * 100)
+    let stripeConnectAccountId: string | null = null
+    let applicationFeeAmount: number | null = null
+
+    if (provider === 'stripe_connect') {
+      const organizerId = String(event.organizer_id || '')
+      if (!organizerId) {
+        await logPurchaseAttempt({ userId: user.id, eventId, ipAddress, quantity, fingerprint }, false)
+        return NextResponse.json({ error: 'Event organizer is missing.' }, { status: 400 })
+      }
+
+      const configSnap = await adminDb
+        .collection('organizers')
+        .doc(organizerId)
+        .collection('payoutConfig')
+        .doc('main')
+        .get()
+
+      const stripeAccountId = configSnap.exists ? (configSnap.data()?.stripeAccountId as string | undefined) : undefined
+      if (!stripeAccountId) {
+        await logPurchaseAttempt({ userId: user.id, eventId, ipAddress, quantity, fingerprint }, false)
+        return NextResponse.json(
+          { error: 'Organizer has not connected Stripe Connect yet.' },
+          { status: 400 }
+        )
+      }
+
+      stripeConnectAccountId = stripeAccountId
+
+      // Keep the organizer net consistent with our fee model by collecting
+      // platform fee + processing fee as the Connect application fee.
+      const feeBreakdown = calculateFees(amountCents)
+      applicationFeeAmount = Math.max(0, Math.min(amountCents, feeBreakdown.platformFee + feeBreakdown.processingFee))
+    }
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(stripeAmount * quantity * 100), // Convert to cents
+      amount: amountCents, // Convert to cents
       currency: stripeCurrency,
+      ...(stripeConnectAccountId
+        ? {
+            transfer_data: {
+              destination: stripeConnectAccountId,
+            },
+            application_fee_amount: applicationFeeAmount || undefined,
+          }
+        : {}),
       metadata: {
         eventId,
         userId: user.id,
@@ -206,6 +261,8 @@ export async function POST(request: Request) {
         originalCurrency: originalCurrency,
         exchangeRate: exchangeRateUsed?.toString() || '',
         priceInOriginalCurrency: finalPrice.toString(),
+        payoutProvider: provider,
+        stripeConnectAccountId: stripeConnectAccountId || '',
       },
       description: `${quantity}x ${event.title} - ${tierName}`,
       receipt_email: user.email,
