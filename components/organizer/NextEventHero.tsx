@@ -55,10 +55,10 @@ export function NextEventHero({ event }: NextEventHeroProps) {
     if (nonZero.length > 1) return formatMultiCurrencyFromCents(breakdown)
     if (nonZero.length === 1) {
       const [currency, cents] = nonZero[0]
-      return formatMoneyFromCents(Number(cents || 0), currency)
+      return formatMoneyFromCents(Number(cents || 0), currency, 'en-US', { currencyDisplay: 'code' })
     }
 
-    return formatMoneyFromCents(event.revenue, event.currency || 'HTG')
+    return formatMoneyFromCents(event.revenue, event.currency || 'HTG', 'en-US', { currencyDisplay: 'code' })
   })()
 
   const getCountdownText = () => {

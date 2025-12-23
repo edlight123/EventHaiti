@@ -30,9 +30,9 @@ export function EventKpis({ stats }: EventKpisProps) {
     if (nonZero.length > 1) return formatMultiCurrencyFromCents(breakdown)
     if (nonZero.length === 1) {
       const [currency, cents] = nonZero[0]
-      return formatMoneyFromCents(Number(cents || 0), currency)
+      return formatMoneyFromCents(Number(cents || 0), currency, 'en-US', { currencyDisplay: 'code' })
     }
-    return formatMoneyFromCents(Number(stats.revenueCents || 0), normalizeCurrency(stats.currency, 'HTG'))
+    return formatMoneyFromCents(Number(stats.revenueCents || 0), normalizeCurrency(stats.currency, 'HTG'), 'en-US', { currencyDisplay: 'code' })
   })()
 
   const netRevenueText = (() => {
@@ -42,9 +42,9 @@ export function EventKpis({ stats }: EventKpisProps) {
     if (nonZero.length > 1) return formatMultiCurrencyFromCents(breakdown)
     if (nonZero.length === 1) {
       const [currency, cents] = nonZero[0]
-      return formatMoneyFromCents(Number(cents || 0), currency)
+      return formatMoneyFromCents(Number(cents || 0), currency, 'en-US', { currencyDisplay: 'code' })
     }
-    return formatMoneyFromCents(Number(stats.netRevenueCents || 0), normalizeCurrency(stats.currency, 'HTG'))
+    return formatMoneyFromCents(Number(stats.netRevenueCents || 0), normalizeCurrency(stats.currency, 'HTG'), 'en-US', { currencyDisplay: 'code' })
   })()
 
   return (

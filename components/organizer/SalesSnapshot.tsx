@@ -56,11 +56,11 @@ export function SalesSnapshot({ data, currency = 'HTG' }: SalesSnapshotProps) {
     if (nonZero.length === 1) {
       const [onlyCurrency, cents] = nonZero[0]
       if ((cents || 0) === 0) return 'No earnings yet'
-      return formatMoneyFromCents(Number(cents || 0), onlyCurrency)
+      return formatMoneyFromCents(Number(cents || 0), onlyCurrency, 'en-US', { currencyDisplay: 'code' })
     }
 
     if (metrics.revenueCents === 0) return 'No earnings yet'
-    return formatMoneyFromCents(metrics.revenueCents, currency)
+    return formatMoneyFromCents(metrics.revenueCents, currency, 'en-US', { currencyDisplay: 'code' })
   }
 
   const getRangeLabel = (r: TimeRange) => {

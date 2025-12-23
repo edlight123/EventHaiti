@@ -6,7 +6,10 @@ export function normalizeCurrency(code: string | null | undefined, fallback = 'H
 export function formatMoneyFromCents(
   cents: number,
   currency: string = 'HTG',
-  locale: string = 'en-US'
+  locale: string = 'en-US',
+  options?: {
+    currencyDisplay?: Intl.NumberFormatOptions['currencyDisplay']
+  }
 ): string {
   const code = normalizeCurrency(currency)
   const amount = (Number.isFinite(cents) ? cents : 0) / 100
@@ -15,6 +18,7 @@ export function formatMoneyFromCents(
     return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: code,
+      currencyDisplay: options?.currencyDisplay,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount)
@@ -41,7 +45,10 @@ export function formatMultiCurrencyFromCents(
 export function formatPrimaryMoneyFromCentsByCurrency(
   centsByCurrency: Record<string, number>,
   preferredCurrency?: string | null,
-  locale: string = 'en-US'
+  locale: string = 'en-US',
+  options?: {
+    currencyDisplay?: Intl.NumberFormatOptions['currencyDisplay']
+  }
 ): string {
   const normalized: Record<string, number> = {}
 
@@ -57,7 +64,7 @@ export function formatPrimaryMoneyFromCentsByCurrency(
 
   const preferred = normalizeCurrency(preferredCurrency || '')
   if (preferred && Number.isFinite(normalized[preferred]) && normalized[preferred] !== 0) {
-    return formatMoneyFromCents(normalized[preferred], preferred, locale)
+    return formatMoneyFromCents(normalized[preferred], preferred, locale, options)
   }
 
   // Fallback: show the dominant currency by absolute value.
@@ -70,5 +77,5 @@ export function formatPrimaryMoneyFromCentsByCurrency(
     }
   }
 
-  return formatMoneyFromCents(bestCents, bestCurrency, locale)
+  return formatMoneyFromCents(bestCents, bestCurrency, locale, options)
 }

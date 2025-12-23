@@ -34,11 +34,13 @@ export function OrganizerEventCard({ event }: OrganizerEventCardProps) {
   const revenueText = (() => {
     const breakdown = event.revenueByCurrencyCents || {}
     const nonZero = Object.entries(breakdown).filter(([, cents]) => (cents || 0) !== 0)
-    if (nonZero.length >= 1) return formatPrimaryMoneyFromCentsByCurrency(breakdown, event.currency)
+    if (nonZero.length >= 1) {
+      return formatPrimaryMoneyFromCentsByCurrency(breakdown, event.currency, 'en-US', { currencyDisplay: 'code' })
+    }
 
     const cents = typeof event.revenue === 'number' ? event.revenue : Number(event.revenue || 0)
     if (!Number.isFinite(cents) || cents === 0) return '—'
-    return formatMoneyFromCents(cents, event.currency || 'HTG')
+    return formatMoneyFromCents(cents, event.currency || 'HTG', 'en-US', { currencyDisplay: 'code' })
   })()
 
   return (

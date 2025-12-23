@@ -54,11 +54,18 @@ export default function OrganizerEventCard({
   const revenueText = (() => {
     const breakdown = event.revenueByCurrencyCents || {}
     const nonZero = Object.entries(breakdown).filter(([, cents]) => (cents || 0) !== 0)
-    if (nonZero.length >= 1) return formatPrimaryMoneyFromCentsByCurrency(breakdown, event.currency)
+    if (nonZero.length >= 1) {
+      return formatPrimaryMoneyFromCentsByCurrency(breakdown, event.currency, 'en-US', { currencyDisplay: 'code' })
+    }
 
     const major = typeof revenue === 'number' ? revenue : Number(revenue || 0)
     if (!Number.isFinite(major) || major === 0) return '—'
-    return formatMoneyFromCents(Math.round(major * 100), normalizeCurrency(event.currency, 'HTG'))
+    return formatMoneyFromCents(
+      Math.round(major * 100),
+      normalizeCurrency(event.currency, 'HTG'),
+      'en-US',
+      { currencyDisplay: 'code' }
+    )
   })()
 
   // Needs attention logic
