@@ -118,6 +118,18 @@ export default function PayoutsPageNew({
     String(effectiveAccountLocation || '').toLowerCase() === 'united_states' ||
     String(effectiveAccountLocation || '').toLowerCase() === 'canada'
 
+  const isStripeConnectAccount =
+    isStripeConnectSelection || String(config?.payoutProvider || '').toLowerCase() === 'stripe_connect'
+
+  const formatLocationLabel = (raw: string | null | undefined) => {
+    const value = String(raw || '').trim()
+    if (!value) return 'Not set'
+    if (value.toLowerCase() === 'united_states') return 'United States'
+    if (value.toLowerCase() === 'canada') return 'Canada'
+    if (value.toLowerCase() === 'haiti') return 'Haiti'
+    return value.replace(/_/g, ' ')
+  }
+
   useEffect(() => {
     let cancelled = false
 
@@ -657,7 +669,7 @@ export default function PayoutsPageNew({
                     </div>
                   </div>
 
-                  {config?.method === 'bank_transfer' && hasPayoutSetup && (
+                  {!isStripeConnectAccount && config?.method === 'bank_transfer' && hasPayoutSetup && (
                     <div className="pt-3 border-t border-gray-200">
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div>
@@ -713,7 +725,7 @@ export default function PayoutsPageNew({
                     </div>
                   )}
 
-                  {config?.method === 'mobile_money' && hasPayoutSetup && (
+                  {!isStripeConnectAccount && config?.method === 'mobile_money' && hasPayoutSetup && (
                     <div className="pt-3 border-t border-gray-200">
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div>
@@ -925,28 +937,28 @@ export default function PayoutsPageNew({
                   <div className="space-y-4">
                     <div>
                       <div className="text-sm font-medium text-gray-500 mb-1">Location</div>
-                      <div className="text-base text-gray-900 capitalize">
-                        {config?.bankDetails?.accountLocation 
-                          ? config.bankDetails.accountLocation.replace('_', ' ') 
-                          : 'Not set'}
+                      <div className="text-base text-gray-900">
+                        {formatLocationLabel(config?.accountLocation || config?.bankDetails?.accountLocation)}
                       </div>
                     </div>
 
                     <div>
                       <div className="text-sm font-medium text-gray-500 mb-1">Method</div>
                       <div className="text-base text-gray-900">
-                        {config?.method === 'bank_transfer' ? (
+                        {isStripeConnectAccount ? (
+                          <>Stripe Connect</>
+                        ) : config?.method === 'bank_transfer' ? (
                           <>
-                            Bank transfer · {config?.bankDetails?.bankName} · 
+                            Bank transfer · {config?.bankDetails?.bankName || 'Bank'} ·{' '}
                             <span className="font-mono">
-                              ****{config?.bankDetails?.accountNumberLast4 || config?.bankDetails?.accountNumber?.slice(-4)}
+                              ****{config?.bankDetails?.accountNumberLast4 || config?.bankDetails?.accountNumber?.slice(-4) || '----'}
                             </span>
                           </>
                         ) : (
                           <>
-                            Mobile money · {config?.mobileMoneyDetails?.provider} · 
+                            Mobile money · {config?.mobileMoneyDetails?.provider || 'Provider'} ·{' '}
                             <span className="font-mono">
-                              ****{config?.mobileMoneyDetails?.phoneNumberLast4 || config?.mobileMoneyDetails?.phoneNumber?.slice(-4)}
+                              ****{config?.mobileMoneyDetails?.phoneNumberLast4 || config?.mobileMoneyDetails?.phoneNumber?.slice(-4) || '----'}
                             </span>
                           </>
                         )}
@@ -954,7 +966,9 @@ export default function PayoutsPageNew({
                     </div>
 
                     <p className="text-sm text-gray-600 pt-2">
-                      Your payouts will be sent to this account.
+                      {isStripeConnectAccount
+                        ? 'Your payouts are handled through Stripe Connect.'
+                        : 'Your payouts will be sent to this account.'}
                     </p>
 
                     <button
@@ -999,37 +1013,41 @@ export default function PayoutsPageNew({
                     </div>
 
                     {/* Payout Method */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Payout method <span className="text-red-500">*</span>
-                      </label>
-                      <div className="space-y-2">
-                        <label className="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                          <input
-                            type="radio"
-                            name="method"
-                            value="bank_transfer"
-                            checked={formData.method === 'bank_transfer'}
-                            onChange={(e) => setFormData({ ...formData, method: e.target.value as any })}
-                            className="w-4 h-4 text-purple-600"
-                            disabled={formData.accountLocation === 'united_states' || formData.accountLocation === 'canada'}
-                          />
-                          <span className="text-sm font-medium text-gray-900">Bank transfer</span>
+                    {!['united_states', 'canada'].includes(formData.accountLocation) ? (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Payout method <span className="text-red-500">*</span>
                         </label>
-                        <label className="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                          <input
-                            type="radio"
-                            name="method"
-                            value="mobile_money"
-                            checked={formData.method === 'mobile_money'}
-                            onChange={(e) => setFormData({ ...formData, method: e.target.value as any })}
-                            className="w-4 h-4 text-purple-600"
-                            disabled={formData.accountLocation === 'united_states' || formData.accountLocation === 'canada'}
-                          />
-                          <span className="text-sm font-medium text-gray-900">Mobile money</span>
-                        </label>
+                        <div className="space-y-2">
+                          <label className="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input
+                              type="radio"
+                              name="method"
+                              value="bank_transfer"
+                              checked={formData.method === 'bank_transfer'}
+                              onChange={(e) => setFormData({ ...formData, method: e.target.value as any })}
+                              className="w-4 h-4 text-purple-600"
+                            />
+                            <span className="text-sm font-medium text-gray-900">Bank transfer</span>
+                          </label>
+                          <label className="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input
+                              type="radio"
+                              name="method"
+                              value="mobile_money"
+                              checked={formData.method === 'mobile_money'}
+                              onChange={(e) => setFormData({ ...formData, method: e.target.value as any })}
+                              className="w-4 h-4 text-purple-600"
+                            />
+                            <span className="text-sm font-medium text-gray-900">Mobile money</span>
+                          </label>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">
+                        Stripe Connect will collect your bank details securely. You don&apos;t need to enter any bank information on EventHaiti.
+                      </div>
+                    )}
 
                     {/* Bank Transfer Fields */}
                     {formData.method === 'bank_transfer' && !['united_states', 'canada'].includes(formData.accountLocation) && (
@@ -1154,7 +1172,7 @@ export default function PayoutsPageNew({
                     )}
 
                     {/* Mobile Money Fields */}
-                    {formData.method === 'mobile_money' && (
+                    {formData.method === 'mobile_money' && !['united_states', 'canada'].includes(formData.accountLocation) && (
                       <>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1239,7 +1257,9 @@ export default function PayoutsPageNew({
                         disabled={isSaving || payoutChangeVerificationRequired}
                         className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                       >
-                        {isSaving ? 'Saving...' : 'Save payout details'}
+                        {isSaving
+                          ? (['united_states', 'canada'].includes(formData.accountLocation) ? 'Opening Stripe…' : 'Saving…')
+                          : (['united_states', 'canada'].includes(formData.accountLocation) ? 'Continue to Stripe' : 'Save payout details')}
                       </button>
                       {hasPayoutSetup && (
                         <button

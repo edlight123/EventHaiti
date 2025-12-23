@@ -14,6 +14,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const organizerPayoutConfigDoc = await adminDb
+      .collection('organizers')
+      .doc(user.id)
+      .collection('payoutConfig')
+      .doc('main')
+      .get()
+    const organizerPayoutConfig = organizerPayoutConfigDoc.exists ? (organizerPayoutConfigDoc.data() as any) : null
+    const accountLocation = String(organizerPayoutConfig?.accountLocation || organizerPayoutConfig?.bankDetails?.accountLocation || '').toLowerCase()
+    const payoutProvider = String(organizerPayoutConfig?.payoutProvider || '').toLowerCase()
+    const isStripeConnect = payoutProvider === 'stripe_connect' || accountLocation === 'united_states' || accountLocation === 'canada'
+    if (isStripeConnect) {
+      return NextResponse.json(
+        {
+          error: 'Stripe Connect required',
+          message: 'US/Canada accounts must withdraw via Stripe Connect. MonCash withdrawals are only available for Haiti accounts.',
+        },
+        { status: 400 }
+      )
+    }
+
     const body = await req.json()
     const { eventId, amount, moncashNumber } = body
 

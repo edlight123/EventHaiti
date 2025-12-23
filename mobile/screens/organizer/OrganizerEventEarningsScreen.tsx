@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Modal,
   ScrollView,
   StyleSheet,
@@ -12,10 +13,11 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native'
-import { collection, getDocs, limit, query, where } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, limit, query, where } from 'firebase/firestore'
 
 import { COLORS } from '../../config/brand'
 import { db } from '../../config/firebase'
+import { useAuth } from '../../contexts/AuthContext'
 import { backendJson } from '../../lib/api/backend'
 import { getEventById } from '../../lib/api/organizer'
 
@@ -46,9 +48,14 @@ export default function OrganizerEventEarningsScreen() {
   const navigation = useNavigation<any>()
   const { eventId } = route.params
 
+  const { user } = useAuth()
+
   const [loading, setLoading] = useState(true)
   const [eventTitle, setEventTitle] = useState<string>('')
   const [earnings, setEarnings] = useState<EventEarnings | null>(null)
+
+  const [isStripeConnectAccount, setIsStripeConnectAccount] = useState(false)
+  const [accountLocation, setAccountLocation] = useState<string>('')
 
   const [showWithdraw, setShowWithdraw] = useState(false)
   const [method, setMethod] = useState<'moncash' | 'bank' | null>(null)
@@ -98,6 +105,33 @@ export default function OrganizerEventEarningsScreen() {
     return `${symbol}${(cents / 100).toFixed(2)}`
   }
 
+  const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL || 'https://eventhaiti.vercel.app'
+
+  const loadPayoutRail = useCallback(async () => {
+    if (!user?.uid) {
+      setIsStripeConnectAccount(false)
+      setAccountLocation('')
+      return
+    }
+
+    try {
+      const payoutRef = doc(db, 'organizers', user.uid, 'payoutConfig', 'main')
+      const snap = await getDoc(payoutRef)
+      const data = snap.exists() ? (snap.data() as any) : null
+
+      const loc = String(data?.accountLocation || data?.bankDetails?.accountLocation || '').toLowerCase()
+      const provider = String(data?.payoutProvider || '').toLowerCase()
+      const stripe = provider === 'stripe_connect' || loc === 'united_states' || loc === 'canada'
+
+      setIsStripeConnectAccount(stripe)
+      setAccountLocation(loc)
+    } catch (e) {
+      // Default to Haiti rails if we can't read payout config.
+      setIsStripeConnectAccount(false)
+      setAccountLocation('')
+    }
+  }, [user?.uid])
+
   const loadEarnings = useCallback(async () => {
     setLoading(true)
     try {
@@ -128,15 +162,25 @@ export default function OrganizerEventEarningsScreen() {
 
   useEffect(() => {
     loadEarnings()
+    loadPayoutRail()
   }, [loadEarnings])
 
   useFocusEffect(
     useCallback(() => {
       loadEarnings()
-    }, [loadEarnings])
+      loadPayoutRail()
+    }, [loadEarnings, loadPayoutRail])
   )
 
   const openWithdraw = async (nextMethod: 'moncash' | 'bank') => {
+    if (isStripeConnectAccount) {
+      Alert.alert(
+        'Stripe Connect required',
+        'US/Canada payouts are handled via Stripe Connect. Manage payout details on the web payouts settings page.'
+      )
+      return
+    }
+
     setMethod(nextMethod)
     setShowWithdraw(true)
     setVerificationRequired(false)
@@ -365,25 +409,57 @@ export default function OrganizerEventEarningsScreen() {
 
         <View style={{ height: 12 }} />
 
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: COLORS.primary }]}
-          onPress={() => openWithdraw('moncash')}
-          disabled={!earnings || earnings?.settlementStatus !== 'ready' || availableToWithdraw <= 0}
-        >
-          <Ionicons name="phone-portrait-outline" size={20} color={COLORS.white} />
-          <Text style={styles.actionButtonText}>Withdraw via MonCash</Text>
-        </TouchableOpacity>
+        {isStripeConnectAccount ? (
+          <View style={styles.notice}>
+            <Ionicons name="card-outline" size={18} color={COLORS.textSecondary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.noticeText}>
+                US/Canada payouts are handled via Stripe Connect. Manage payout details on the web.
+              </Text>
+              <TouchableOpacity
+                onPress={async () => {
+                  const url = `${String(webBaseUrl).replace(/\/$/, '')}/organizer/settings/payouts`
+                  try {
+                    const supported = await Linking.canOpenURL(url)
+                    if (supported) {
+                      await Linking.openURL(url)
+                    } else {
+                      await Linking.openURL(url)
+                    }
+                  } catch {
+                    Alert.alert('Unable to open link', url)
+                  }
+                }}
+                style={[styles.actionButton, { backgroundColor: COLORS.primary, marginTop: 10 }]}
+              >
+                <Ionicons name="open-outline" size={20} color={COLORS.white} />
+                <Text style={styles.actionButtonText}>Open payout settings</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: COLORS.primary }]}
+              onPress={() => openWithdraw('moncash')}
+              disabled={!earnings || earnings?.settlementStatus !== 'ready' || availableToWithdraw <= 0}
+            >
+              <Ionicons name="phone-portrait-outline" size={20} color={COLORS.white} />
+              <Text style={styles.actionButtonText}>Withdraw via MonCash</Text>
+            </TouchableOpacity>
 
-        <View style={{ height: 12 }} />
+            <View style={{ height: 12 }} />
 
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: COLORS.text }]}
-          onPress={() => openWithdraw('bank')}
-          disabled={!earnings || earnings?.settlementStatus !== 'ready' || availableToWithdraw <= 0}
-        >
-          <Ionicons name="business-outline" size={20} color={COLORS.white} />
-          <Text style={styles.actionButtonText}>Withdraw to Bank</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: COLORS.text }]}
+              onPress={() => openWithdraw('bank')}
+              disabled={!earnings || earnings?.settlementStatus !== 'ready' || availableToWithdraw <= 0}
+            >
+              <Ionicons name="business-outline" size={20} color={COLORS.white} />
+              <Text style={styles.actionButtonText}>Withdraw to Bank</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
         {!earnings ? (
           <View style={styles.notice}>

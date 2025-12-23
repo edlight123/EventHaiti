@@ -20,6 +20,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const payoutConfigDoc = await adminDb
+      .collection('organizers')
+      .doc(user.id)
+      .collection('payoutConfig')
+      .doc('main')
+      .get()
+    const payoutConfig = payoutConfigDoc.exists ? (payoutConfigDoc.data() as any) : null
+    const accountLocation = String(payoutConfig?.accountLocation || payoutConfig?.bankDetails?.accountLocation || '').toLowerCase()
+    const payoutProvider = String(payoutConfig?.payoutProvider || '').toLowerCase()
+    const isStripeConnect = payoutProvider === 'stripe_connect' || accountLocation === 'united_states' || accountLocation === 'canada'
+    if (isStripeConnect) {
+      return NextResponse.json(
+        {
+          error: 'Stripe Connect required',
+          message: 'US/Canada accounts must withdraw via Stripe Connect. Bank withdrawals are not available in EventHaiti for Stripe Connect accounts.',
+        },
+        { status: 400 }
+      )
+    }
+
     const body = await req.json()
     const { eventId, amount, bankDetails, bankDestinationId, saveDestination } = body
 

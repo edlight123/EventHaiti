@@ -39,6 +39,27 @@ export async function GET(_req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const payoutConfigDoc = await adminDb
+      .collection('organizers')
+      .doc(user.id)
+      .collection('payoutConfig')
+      .doc('main')
+      .get()
+    const payoutConfig = payoutConfigDoc.exists ? (payoutConfigDoc.data() as any) : null
+    const accountLocation = String(payoutConfig?.accountLocation || payoutConfig?.bankDetails?.accountLocation || '').toLowerCase()
+    const payoutProvider = String(payoutConfig?.payoutProvider || '').toLowerCase()
+    const isStripeConnect = payoutProvider === 'stripe_connect' || accountLocation === 'united_states' || accountLocation === 'canada'
+
+    if (isStripeConnect) {
+      return NextResponse.json(
+        {
+          error: 'Stripe Connect account',
+          message: 'US/Canada payouts are handled via Stripe Connect. Bank destinations are managed in Stripe, not in EventHaiti.',
+        },
+        { status: 400 }
+      )
+    }
+
     const destinations = await listBankDestinations(user.id)
     return NextResponse.json({ destinations })
   } catch (e: any) {
@@ -54,6 +75,27 @@ export async function POST(req: NextRequest) {
     const { user, error } = await requireAuth()
     if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const payoutConfigDoc = await adminDb
+      .collection('organizers')
+      .doc(user.id)
+      .collection('payoutConfig')
+      .doc('main')
+      .get()
+    const payoutConfig = payoutConfigDoc.exists ? (payoutConfigDoc.data() as any) : null
+    const accountLocation = String(payoutConfig?.accountLocation || payoutConfig?.bankDetails?.accountLocation || '').toLowerCase()
+    const payoutProvider = String(payoutConfig?.payoutProvider || '').toLowerCase()
+    const isStripeConnect = payoutProvider === 'stripe_connect' || accountLocation === 'united_states' || accountLocation === 'canada'
+
+    if (isStripeConnect) {
+      return NextResponse.json(
+        {
+          error: 'Stripe Connect account',
+          message: 'US/Canada payouts are handled via Stripe Connect. Bank destinations are managed in Stripe, not in EventHaiti.',
+        },
+        { status: 400 }
+      )
     }
 
     const body = await req.json().catch(() => ({}))

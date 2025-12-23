@@ -415,7 +415,28 @@ export async function updatePayoutConfig(
     const configDoc = await configRef.get()
     const current = configDoc.exists ? (configDoc.data() as PayoutConfig) : null
 
-    const sensitiveUpdate = isSensitivePayoutDetailsUpdate(updates)
+    const normalizedLocation = String(
+      updates.accountLocation ?? current?.accountLocation ?? current?.bankDetails?.accountLocation ?? ''
+    ).toLowerCase()
+    const effectiveProvider = String(updates.payoutProvider ?? current?.payoutProvider ?? '').toLowerCase()
+    const isStripeConnectAccount =
+      effectiveProvider === 'stripe_connect' ||
+      normalizedLocation === 'united_states' ||
+      normalizedLocation === 'canada'
+
+    // US/CA payouts are handled via Stripe Connect, so we should not store bank/mobile-money details.
+    const sanitizedUpdates: Partial<PayoutConfig> = { ...updates }
+    if (isStripeConnectAccount) {
+      delete (sanitizedUpdates as any).bankDetails
+      delete (sanitizedUpdates as any).mobileMoneyDetails
+      // This setting is only meaningful for Haiti MonCash prefunding.
+      delete (sanitizedUpdates as any).allowInstantMoncash
+      if (sanitizedUpdates.method === 'mobile_money') {
+        sanitizedUpdates.method = 'bank_transfer'
+      }
+    }
+
+    const sensitiveUpdate = isSensitivePayoutDetailsUpdate(sanitizedUpdates)
     const existingHasMethod = hasPayoutMethod(current)
     const shouldRequireStepUp = Boolean(configDoc.exists && existingHasMethod && sensitiveUpdate)
 
@@ -425,7 +446,7 @@ export async function updatePayoutConfig(
     
     // Mask sensitive data before saving
     const updateData: any = {
-      ...updates,
+      ...sanitizedUpdates,
       updatedAt: now,
     }
 
@@ -436,8 +457,8 @@ export async function updatePayoutConfig(
     }
 
     // If bank details are being updated, mask the account number
-    if (updates.bankDetails?.accountNumber) {
-      const accountNumber = updates.bankDetails.accountNumber
+    if (!isStripeConnectAccount && sanitizedUpdates.bankDetails?.accountNumber) {
+      const accountNumber = sanitizedUpdates.bankDetails.accountNumber
 
       // Best-effort: store encrypted full details for future withdrawals.
       try {
@@ -446,11 +467,11 @@ export async function updatePayoutConfig(
             organizerId,
             bankDetails: {
               accountNumber,
-              bankName: updates.bankDetails.bankName,
-              accountHolder: updates.bankDetails.accountName,
-              routingNumber: updates.bankDetails.routingNumber,
-              swiftCode: updates.bankDetails.swift,
-              iban: updates.bankDetails.iban,
+              bankName: sanitizedUpdates.bankDetails.bankName,
+              accountHolder: sanitizedUpdates.bankDetails.accountName,
+              routingNumber: sanitizedUpdates.bankDetails.routingNumber,
+              swiftCode: sanitizedUpdates.bankDetails.swift,
+              iban: sanitizedUpdates.bankDetails.iban,
             },
           })
         } else {
@@ -461,17 +482,17 @@ export async function updatePayoutConfig(
       }
 
       updateData.bankDetails = {
-        ...updates.bankDetails,
+        ...sanitizedUpdates.bankDetails,
         accountNumber: maskAccountNumber(accountNumber),
         accountNumberLast4: accountNumber.slice(-4)
       }
     }
 
     // If mobile money details are being updated, mask the phone number
-    if (updates.mobileMoneyDetails?.phoneNumber) {
-      const phoneNumber = updates.mobileMoneyDetails.phoneNumber
+    if (!isStripeConnectAccount && sanitizedUpdates.mobileMoneyDetails?.phoneNumber) {
+      const phoneNumber = sanitizedUpdates.mobileMoneyDetails.phoneNumber
       updateData.mobileMoneyDetails = {
-        ...updates.mobileMoneyDetails,
+        ...sanitizedUpdates.mobileMoneyDetails,
         phoneNumber: maskPhoneNumber(phoneNumber),
         phoneNumberLast4: phoneNumber.slice(-4)
       }
