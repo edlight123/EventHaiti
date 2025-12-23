@@ -246,6 +246,71 @@ export async function getEventEarnings(eventId: string): Promise<EventEarnings |
   return deriveEventEarningsFromTickets(eventId)
 }
 
+export type EventTierSalesBreakdownRow = {
+  tierId: string | null
+  tierName: string
+  ticketsSold: number
+  grossSales: number
+}
+
+export async function getEventTierSalesBreakdown(eventId: string): Promise<EventTierSalesBreakdownRow[]> {
+  const tiers = new Map<string, EventTierSalesBreakdownRow>()
+
+  const normalizeTierName = (value: unknown) => {
+    const name = String(value || '').trim()
+    return name.length > 0 ? name : 'General Admission'
+  }
+
+  let lastDoc: FirebaseFirestore.QueryDocumentSnapshot | null = null
+
+  while (true) {
+    let queryRef = adminDb
+      .collection('tickets')
+      .where('event_id', '==', eventId)
+      .where('status', '==', 'confirmed')
+      .orderBy('purchased_at', 'desc')
+      .select('tier_id', 'tierId', 'tier_name', 'tierName', 'ticket_type', 'ticketType', 'price_paid', 'pricePaid', 'quantity')
+      .limit(1000) as FirebaseFirestore.Query
+
+    if (lastDoc) {
+      queryRef = (queryRef as any).startAfter(lastDoc)
+    }
+
+    const snapshot = await queryRef.get()
+    if (snapshot.empty) break
+
+    for (const doc of snapshot.docs) {
+      const data: any = doc.data() || {}
+
+      const tierId = (data.tier_id || data.tierId || null) as string | null
+      const tierName = normalizeTierName(data.tier_name || data.tierName || data.ticket_type || data.ticketType)
+      const groupKey = String(tierId || tierName)
+
+      const quantity = Math.max(1, Number(data.quantity || 1) || 1)
+      const pricePaid = Number(data.price_paid ?? data.pricePaid ?? 0) || 0
+      const grossSales = Math.max(0, Math.round(pricePaid)) * quantity
+
+      const existing = tiers.get(groupKey)
+      if (existing) {
+        existing.ticketsSold += quantity
+        existing.grossSales += grossSales
+      } else {
+        tiers.set(groupKey, {
+          tierId,
+          tierName,
+          ticketsSold: quantity,
+          grossSales,
+        })
+      }
+    }
+
+    lastDoc = snapshot.docs[snapshot.docs.length - 1]
+    if (snapshot.docs.length < 1000) break
+  }
+
+  return Array.from(tiers.values()).sort((a, b) => b.grossSales - a.grossSales)
+}
+
 /**
  * Get or create event earnings record
  * 

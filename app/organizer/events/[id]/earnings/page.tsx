@@ -1,7 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { adminDb } from '@/lib/firebase/admin'
-import { getEventEarnings } from '@/lib/earnings'
+import { getEventEarnings, getEventTierSalesBreakdown } from '@/lib/earnings'
 import { calculateFees } from '@/lib/fees'
 import EventEarningsView from './EventEarningsView'
 import Navbar from '@/components/Navbar'
@@ -43,6 +43,8 @@ export default async function EventEarningsPage({
   // Fetch earnings
   const earnings = await getEventEarnings(eventId)
 
+  const tierBreakdown = await getEventTierSalesBreakdown(eventId)
+
   // Serialize Firestore timestamps
   const serializeData = (obj: any): any => {
     if (!obj || typeof obj !== 'object') return obj
@@ -73,6 +75,7 @@ export default async function EventEarningsPage({
         event={serializedEvent}
         earnings={serializedEarnings}
         organizerId={user.id}
+        tierBreakdown={tierBreakdown}
       />
       
       <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />

@@ -9,9 +9,15 @@ interface EventEarningsViewProps {
   event: any
   earnings: EventEarnings | null
   organizerId: string
+  tierBreakdown?: Array<{
+    tierId: string | null
+    tierName: string
+    ticketsSold: number
+    grossSales: number
+  }>
 }
 
-export default function EventEarningsView({ event, earnings, organizerId }: EventEarningsViewProps) {
+export default function EventEarningsView({ event, earnings, organizerId, tierBreakdown }: EventEarningsViewProps) {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false)
   const [withdrawMethod, setWithdrawMethod] = useState<'moncash' | 'bank' | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -409,6 +415,41 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
             <span className="font-bold text-teal-600 text-lg">{formatCurrency(earnings.netAmount, earnings.currency)}</span>
           </div>
         </div>
+      </div>
+
+      {/* Ticket Tier Breakdown */}
+      <div className="bg-white rounded-xl p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">🎟️ Ticket Tier Breakdown</h2>
+            <p className="text-sm text-gray-600">Totals use the listed price at the time of purchase (no FX-adjusted amounts).</p>
+          </div>
+        </div>
+
+        {!tierBreakdown || tierBreakdown.length === 0 ? (
+          <div className="text-gray-600 text-sm">No ticket sales yet.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b">
+                  <th className="py-2 pr-4 font-medium">Tier</th>
+                  <th className="py-2 pr-4 font-medium">Tickets Sold</th>
+                  <th className="py-2 font-medium">Amount Charged</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tierBreakdown.map((row) => (
+                  <tr key={String(row.tierId || row.tierName)} className="border-b last:border-b-0">
+                    <td className="py-3 pr-4 font-medium text-gray-900">{row.tierName}</td>
+                    <td className="py-3 pr-4 text-gray-700">{row.ticketsSold}</td>
+                    <td className="py-3 text-gray-900">{formatCurrency(row.grossSales, earnings.currency)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Settlement Status */}
