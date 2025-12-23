@@ -8,6 +8,105 @@ import { adminDb } from '@/lib/firebase/admin'
 import { calculateFees, calculateSettlementDate, isSettlementReady } from '@/lib/fees'
 import type { EventEarnings, SettlementStatus, EarningsSummary } from '@/types/earnings'
 
+async function findEventEarningsDoc(eventId: string) {
+  // Current schema: eventId field.
+  const byEventId = await adminDb
+    .collection('event_earnings')
+    .where('eventId', '==', eventId)
+    .limit(1)
+    .get()
+  if (!byEventId.empty) return byEventId.docs[0]
+
+  // Legacy schema: event_id field.
+  const byLegacyEventId = await adminDb
+    .collection('event_earnings')
+    .where('event_id', '==', eventId)
+    .limit(1)
+    .get()
+  if (!byLegacyEventId.empty) return byLegacyEventId.docs[0]
+
+  // Some deployments may have used the eventId as the doc id.
+  const byDocId = await adminDb.collection('event_earnings').doc(eventId).get()
+  if (byDocId.exists) return byDocId
+
+  return null
+}
+
+async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEarnings | null> {
+  const eventDoc = await adminDb.collection('events').doc(eventId).get()
+  if (!eventDoc.exists) return null
+
+  const event = eventDoc.data() || {}
+  const eventDateRaw = event.start_datetime || event.date_time || event.date || event.created_at
+  const eventDate = eventDateRaw?.toDate ? eventDateRaw.toDate() : eventDateRaw ? new Date(eventDateRaw) : null
+  if (!eventDate || isNaN(eventDate.getTime())) return null
+
+  const ticketsSnapshot = await adminDb.collection('tickets').where('event_id', '==', eventId).get()
+
+  // Group by payment_id so fixed processing fee is applied once per purchase.
+  const paymentGroups = new Map<string, { grossCents: number; ticketCount: number }>()
+  let ticketsSold = 0
+
+  for (const ticketDoc of ticketsSnapshot.docs) {
+    const ticket = ticketDoc.data() || {}
+    if (ticket.status && String(ticket.status).toLowerCase() !== 'valid') continue
+
+    const pricePaid = Number(ticket.price_paid ?? ticket.pricePaid ?? 0)
+    const grossCents = Math.round(pricePaid * 100)
+    if (!Number.isFinite(grossCents) || grossCents <= 0) continue
+
+    const paymentId = String(ticket.payment_id ?? ticket.paymentId ?? 'unknown')
+    const current = paymentGroups.get(paymentId) || { grossCents: 0, ticketCount: 0 }
+    current.grossCents += grossCents
+    current.ticketCount += 1
+    paymentGroups.set(paymentId, current)
+
+    ticketsSold += 1
+  }
+
+  if (ticketsSold === 0 || paymentGroups.size === 0) return null
+
+  let grossSales = 0
+  let platformFee = 0
+  let processingFees = 0
+  let netAmount = 0
+
+  for (const group of Array.from(paymentGroups.values())) {
+    const fees = calculateFees(group.grossCents)
+    grossSales += fees.grossAmount
+    platformFee += fees.platformFee
+    processingFees += fees.processingFee
+    netAmount += fees.netAmount
+  }
+
+  const settlementReadyDate = calculateSettlementDate(eventDate).toISOString()
+  const settlementStatus: SettlementStatus = isSettlementReady(settlementReadyDate) ? 'ready' : 'pending'
+  const availableToWithdraw = settlementStatus === 'ready' ? Math.max(0, netAmount) : 0
+
+  const currencyRaw = String(event.currency || 'HTG').toUpperCase()
+  const currency = (currencyRaw === 'USD' ? 'USD' : 'HTG') as 'HTG' | 'USD'
+
+  const nowIso = new Date().toISOString()
+  return {
+    id: `derived_${eventId}`,
+    eventId,
+    organizerId: String(event.organizer_id || event.organizerId || ''),
+    grossSales,
+    ticketsSold,
+    platformFee,
+    processingFees,
+    netAmount,
+    availableToWithdraw,
+    withdrawnAmount: 0,
+    settlementStatus,
+    settlementReadyDate,
+    currency,
+    lastCalculatedAt: nowIso,
+    createdAt: nowIso,
+    updatedAt: nowIso,
+  }
+}
+
 /**
  * Get event earnings record (without creating if missing)
  * 
@@ -15,18 +114,13 @@ import type { EventEarnings, SettlementStatus, EarningsSummary } from '@/types/e
  * @returns EventEarnings or null if not found
  */
 export async function getEventEarnings(eventId: string): Promise<EventEarnings | null> {
-  const earningsSnapshot = await adminDb
-    .collection('event_earnings')
-    .where('eventId', '==', eventId)
-    .limit(1)
-    .get()
-
-  if (earningsSnapshot.empty) {
-    return null
+  const doc = await findEventEarningsDoc(eventId)
+  if (doc) {
+    return { id: doc.id, ...(doc.data() as any) } as EventEarnings
   }
 
-  const doc = earningsSnapshot.docs[0]
-  return { id: doc.id, ...doc.data() } as EventEarnings
+  // Fallback for legacy data: compute a best-effort view from tickets.
+  return deriveEventEarningsFromTickets(eventId)
 }
 
 /**

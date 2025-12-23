@@ -51,11 +51,23 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
     )
   }
 
-  const { platformFee, processingFee } = calculateFees(earnings.grossSales)
-  const eventDate = event.date_time ? new Date(event.date_time) : null
-  const settlementDate = eventDate ? calculateSettlementDate(eventDate) : null
-  const isSettled = settlementDate ? new Date() >= settlementDate : false
-  const availableToWithdraw = earnings.settlementStatus === 'ready' ? earnings.netAmount - earnings.withdrawnAmount : 0
+  const derivedFees = calculateFees(earnings.grossSales)
+  const platformFee = Number(earnings.platformFee || 0) || derivedFees.platformFee
+  const processingFee = Number(earnings.processingFees || 0) || derivedFees.processingFee
+
+  const eventDateRaw = event.start_datetime || event.date_time || event.date || event.created_at
+  const eventDate = eventDateRaw ? new Date(eventDateRaw) : null
+
+  const settlementDate = earnings.settlementReadyDate
+    ? new Date(earnings.settlementReadyDate)
+    : eventDate
+      ? calculateSettlementDate(eventDate)
+      : null
+
+  const availableToWithdraw =
+    earnings.settlementStatus === 'ready'
+      ? Math.max(0, Number(earnings.netAmount || 0) - Number(earnings.withdrawnAmount || 0))
+      : 0
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -85,12 +97,9 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
         ? '/api/organizer/withdraw-moncash'
         : '/api/organizer/withdraw-bank'
 
-      // Convert availableToWithdraw from cents to dollars for API
-      const amountInDollars = availableToWithdraw / 100
-
       const payload = withdrawMethod === 'moncash'
-        ? { eventId: event.id, amount: amountInDollars, moncashNumber }
-        : { eventId: event.id, amount: amountInDollars, bankDetails }
+        ? { eventId: event.id, amount: availableToWithdraw, moncashNumber }
+        : { eventId: event.id, amount: availableToWithdraw, bankDetails }
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -139,21 +148,21 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <div className="text-teal-100 text-sm font-medium mb-1">Gross Revenue</div>
-            <div className="text-3xl font-bold">{formatCurrency(earnings.grossSales / 100)}</div>
+            <div className="text-3xl font-bold">{formatCurrency(earnings.grossSales, earnings.currency)}</div>
             <div className="text-teal-100 text-sm mt-1">{earnings.ticketsSold} tickets sold</div>
           </div>
           
           <div>
             <div className="text-teal-100 text-sm font-medium mb-1">Total Fees</div>
-            <div className="text-3xl font-bold">-{formatCurrency((platformFee + processingFee) / 100)}</div>
+            <div className="text-3xl font-bold">-{formatCurrency(platformFee + processingFee, earnings.currency)}</div>
             <div className="text-teal-100 text-sm mt-1">Platform + Stripe</div>
           </div>
           
           <div>
             <div className="text-teal-100 text-sm font-medium mb-1">Your Earnings</div>
-            <div className="text-3xl font-bold">{formatCurrency(earnings.netAmount / 100)}</div>
+            <div className="text-3xl font-bold">{formatCurrency(earnings.netAmount, earnings.currency)}</div>
             <div className="text-teal-100 text-sm mt-1">
-              {earnings.withdrawnAmount > 0 ? `${formatCurrency(earnings.withdrawnAmount / 100)} withdrawn` : 'Not withdrawn yet'}
+              {earnings.withdrawnAmount > 0 ? `${formatCurrency(earnings.withdrawnAmount, earnings.currency)} withdrawn` : 'Not withdrawn yet'}
             </div>
           </div>
         </div>
@@ -165,25 +174,25 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
         <div className="space-y-3">
           <div className="flex justify-between py-2 border-b border-gray-100">
             <span className="text-gray-600">Gross Revenue</span>
-            <span className="font-semibold text-gray-900">{formatCurrency(earnings.grossSales / 100)}</span>
+            <span className="font-semibold text-gray-900">{formatCurrency(earnings.grossSales, earnings.currency)}</span>
           </div>
           <div className="flex justify-between py-2 border-b border-gray-100">
             <div>
               <div className="text-gray-600">Platform Fee (10%)</div>
               <div className="text-xs text-gray-400">Minimum $0.50 per ticket</div>
             </div>
-            <span className="font-semibold text-red-600">-{formatCurrency(platformFee / 100)}</span>
+            <span className="font-semibold text-red-600">-{formatCurrency(platformFee, earnings.currency)}</span>
           </div>
           <div className="flex justify-between py-2 border-b border-gray-100">
             <div>
               <div className="text-gray-600">Stripe Processing Fee</div>
               <div className="text-xs text-gray-400">2.9% + $0.30 per transaction</div>
             </div>
-            <span className="font-semibold text-red-600">-{formatCurrency(processingFee / 100)}</span>
+            <span className="font-semibold text-red-600">-{formatCurrency(processingFee, earnings.currency)}</span>
           </div>
           <div className="flex justify-between py-3 bg-teal-50 rounded-lg px-3">
             <span className="font-bold text-gray-900">Net Earnings</span>
-            <span className="font-bold text-teal-600 text-lg">{formatCurrency(earnings.netAmount / 100)}</span>
+            <span className="font-bold text-teal-600 text-lg">{formatCurrency(earnings.netAmount, earnings.currency)}</span>
           </div>
         </div>
       </div>
@@ -222,7 +231,7 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-xl font-bold text-gray-900">💸 Request Withdrawal</h2>
-              <p className="text-gray-600 text-sm">Available: {formatCurrency(availableToWithdraw)}</p>
+              <p className="text-gray-600 text-sm">Available: {formatCurrency(availableToWithdraw, earnings.currency)}</p>
             </div>
           </div>
 
@@ -263,7 +272,7 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
           ) : (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <p className="text-yellow-800 text-sm">
-                ⚠️ Minimum withdrawal amount is $50.00. Current available balance: {formatCurrency(availableToWithdraw)}
+                ⚠️ Minimum withdrawal amount is $50.00. Current available balance: {formatCurrency(availableToWithdraw, earnings.currency)}
               </p>
             </div>
           )}
@@ -280,7 +289,7 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
                 <div className="font-medium text-gray-900">Total Withdrawn</div>
                 <div className="text-sm text-gray-500">From this event</div>
               </div>
-              <span className="font-bold text-gray-900">{formatCurrency(earnings.withdrawnAmount / 100)}</span>
+              <span className="font-bold text-gray-900">{formatCurrency(earnings.withdrawnAmount, earnings.currency)}</span>
             </div>
             {earnings.netAmount - earnings.withdrawnAmount > 0 && (
               <div className="flex justify-between items-center py-3">
@@ -288,7 +297,7 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
                   <div className="font-medium text-gray-900">Remaining Balance</div>
                   <div className="text-sm text-gray-500">Available {earnings.settlementStatus === 'ready' ? 'now' : 'after settlement'}</div>
                 </div>
-                <span className="font-bold text-teal-600">{formatCurrency((earnings.netAmount - earnings.withdrawnAmount) / 100)}</span>
+                <span className="font-bold text-teal-600">{formatCurrency(earnings.netAmount - earnings.withdrawnAmount, earnings.currency)}</span>
               </div>
             )}
           </div>
@@ -307,7 +316,7 @@ export default function EventEarningsView({ event, earnings, organizerId }: Even
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
                 <div className="flex justify-between mb-2">
                   <span className="text-gray-600">Amount:</span>
-                  <span className="font-bold text-gray-900">{formatCurrency(availableToWithdraw)}</span>
+                  <span className="font-bold text-gray-900">{formatCurrency(availableToWithdraw, earnings.currency)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Method:</span>
