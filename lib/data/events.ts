@@ -113,12 +113,21 @@ export async function getEventById(eventId: string): Promise<Event | null> {
 
       let country = normalizeCountryCode(directCountry)
 
-      // Fallback: infer from organizer profile/payout config if event country is missing.
+      // If the event doesn't explicitly provide a country, try to infer from the event's own location text
+      // BEFORE consulting organizer payout settings. This avoids cases where an organizer is US/CA-based
+      // (Stripe Connect) but the specific event is actually in Haiti.
+      if (!country) {
+        country = inferCountryFromTextLocation(
+          [data?.venue_name, data?.address, data?.commune, data?.city].filter(Boolean).join(' ')
+        )
+      }
+
+      // Fallback: infer from organizer profile/payout config if event country is still missing.
       if (!country) {
         const organizerId = String(data?.organizer_id || '').trim()
         if (organizerId) {
           try {
-            const [organizerDoc, payoutConfigDoc] = await Promise.all([
+            const [organizerDoc, payoutConfigDoc, userDoc] = await Promise.all([
               adminDb.collection('organizers').doc(organizerId).get(),
               adminDb
                 .collection('organizers')
@@ -126,39 +135,44 @@ export async function getEventById(eventId: string): Promise<Event | null> {
                 .collection('payoutConfig')
                 .doc('main')
                 .get(),
+              adminDb.collection('users').doc(organizerId).get(),
             ])
 
             const organizerData = organizerDoc.exists ? (organizerDoc.data() as any) : null
             const payoutConfig = payoutConfigDoc.exists ? (payoutConfigDoc.data() as any) : null
+            const userData = userDoc.exists ? (userDoc.data() as any) : null
 
             country =
               normalizeCountryCode(
                 organizerData?.country ??
                   organizerData?.location?.country ??
                   organizerData?.location?.countryCode ??
-                  organizerData?.location?.country_code
+                  organizerData?.location?.country_code ??
+                  userData?.country ??
+                  userData?.location?.country ??
+                  userData?.location?.countryCode ??
+                  userData?.location?.country_code
               ) ||
               inferCountryFromAccountLocation(
                 payoutConfig?.accountLocation ?? payoutConfig?.bankDetails?.accountLocation
               ) ||
-              inferCountryFromAccountLocation(organizerData?.accountLocation) ||
+              inferCountryFromAccountLocation(organizerData?.accountLocation ?? userData?.accountLocation) ||
               inferCountryFromTextLocation(
-                [organizerData?.default_city, organizerData?.city, organizerData?.address]
+                [
+                  organizerData?.default_city,
+                  organizerData?.city,
+                  organizerData?.address,
+                  userData?.default_city,
+                  userData?.city,
+                  userData?.address,
+                ]
                   .filter(Boolean)
                   .join(' ')
               )
           } catch (e) {
-            // Non-fatal; we'll fall back to event text below.
             console.warn('Country inference fallback failed for organizer:', organizerId, e)
           }
         }
-      }
-
-      // Last resort: infer from event text fields (venue/address/city).
-      if (!country) {
-        country = inferCountryFromTextLocation(
-          [data?.venue_name, data?.address, data?.commune, data?.city].filter(Boolean).join(' ')
-        )
       }
       
       // Explicitly construct event object to exclude problematic fields like ticket_tiers
