@@ -4,7 +4,22 @@ export const runtime = 'edge'
 export const size = { width: 32, height: 32 }
 export const contentType = 'image/png'
 
-export default function Icon() {
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return btoa(binary)
+}
+
+export default async function Icon() {
+  const logoBuffer = await fetch(
+    new URL('./_assets/favicon.png', import.meta.url)
+  ).then((res) => res.arrayBuffer())
+
+  const logoSrc = `data:image/png;base64,${arrayBufferToBase64(logoBuffer)}`
+
   return new ImageResponse(
     (
       <div
@@ -14,19 +29,19 @@ export default function Icon() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #0D9488 0%, #F97316 100%)',
-          borderRadius: '6px',
+          background: 'transparent',
         }}
       >
-        <div
+        <img
+          src={logoSrc}
+          width={size.width}
+          height={size.height}
           style={{
-            fontSize: 20,
-            fontWeight: 'bold',
-            color: 'white',
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
           }}
-        >
-          🎫
-        </div>
+        />
       </div>
     ),
     {
