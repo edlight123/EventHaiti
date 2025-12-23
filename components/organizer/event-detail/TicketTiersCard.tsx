@@ -3,6 +3,7 @@
 import { Ticket, Plus, Edit2 } from 'lucide-react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
+import { formatMoneyFromCents, normalizeCurrency } from '@/lib/money'
 
 interface TicketTier {
   id: string
@@ -11,14 +12,16 @@ interface TicketTier {
   quantity: number
   sold: number
   description?: string
+  currency?: string | null
 }
 
 interface TicketTiersCardProps {
   eventId: string
   tiers: TicketTier[]
+  currency?: string | null
 }
 
-export function TicketTiersCard({ eventId, tiers }: TicketTiersCardProps) {
+export function TicketTiersCard({ eventId, tiers, currency }: TicketTiersCardProps) {
   const { t } = useTranslation('common')
   const hasTiers = tiers && tiers.length > 0
 
@@ -84,7 +87,12 @@ export function TicketTiersCard({ eventId, tiers }: TicketTiersCardProps) {
                     )}
                   </div>
                   <div className="text-right ml-4">
-                    <div className="text-lg font-bold text-gray-900">{tier.price} HTG</div>
+                    <div className="text-lg font-bold text-gray-900">
+                      {formatMoneyFromCents(
+                        Math.round((Number(tier.price || 0) || 0) * 100),
+                        normalizeCurrency(tier.currency, normalizeCurrency(currency, 'HTG'))
+                      )}
+                    </div>
                   </div>
                 </div>
 

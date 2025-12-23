@@ -125,7 +125,7 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Column */}
           <div className="space-y-6">
-            <TicketTiersCard eventId={event.id} tiers={tiers} />
+            <TicketTiersCard eventId={event.id} tiers={tiers} currency={event?.currency} />
             <VenueCard 
               eventId={event.id} 
               venue={{
