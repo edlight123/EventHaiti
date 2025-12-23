@@ -319,6 +319,27 @@ export async function POST(request: NextRequest) {
     for (const e of eventsToCreate) {
       const ref = adminDb.collection('events').doc()
       batch.set(ref, { ...e, id: ref.id })
+
+      // Create a default tier so tier-based purchase flows work out of the box.
+      // Use a deterministic ID so reruns won't create duplicate tiers.
+      const tierId = `seed_${ref.id}_ga`
+      const tierRef = adminDb.collection('ticket_tiers').doc(tierId)
+      batch.set(tierRef, {
+        id: tierId,
+        event_id: ref.id,
+        name: 'General Admission',
+        description: null,
+        price: typeof e.ticket_price === 'number' ? e.ticket_price : Number(e.ticket_price || 0),
+        total_quantity: typeof e.total_tickets === 'number' ? e.total_tickets : Number(e.total_tickets || 0),
+        sold_quantity: 0,
+        sales_start: null,
+        sales_end: null,
+        sort_order: 0,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+
       created.push({
         id: ref.id,
         title: e.title,

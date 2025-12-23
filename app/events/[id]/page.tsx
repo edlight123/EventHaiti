@@ -121,7 +121,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         
         const totalFromTiers = tiersSnapshot.docs.reduce((sum: number, doc: any) => {
           const data = doc.data()
-          return sum + (data.quantity || 0)
+          return sum + (data.total_quantity || data.quantity || 0)
         }, 0)
         
         event.total_tickets = totalFromTiers || event.total_tickets || 0

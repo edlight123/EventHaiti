@@ -30,6 +30,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   const [showModal, setShowModal] = useState(false)
   const [showTieredModal, setShowTieredModal] = useState(false)
   const [showEmbeddedPayment, setShowEmbeddedPayment] = useState(false)
+  const [tierProbeLoading, setTierProbeLoading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'moncash' | 'natcash' | 'sogepay'>('stripe')
@@ -43,6 +44,31 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
 
   const countryCode = normalizeCountryCode(country)
   const isHaitiEvent = countryCode === 'HT'
+
+  async function handleOpenPurchaseFlow() {
+    if (loading || tierProbeLoading) return
+    setError(null)
+
+    // Prefer tiered checkout when tiers exist; otherwise fall back to the legacy
+    // single-price purchase modal (this matches the empty-state guidance shown
+    // in the tier selector).
+    setTierProbeLoading(true)
+    try {
+      const res = await fetch(`/api/ticket-tiers?eventId=${encodeURIComponent(String(eventId))}`)
+      const data = await res.json().catch(() => ({}))
+      const tiers = Array.isArray(data?.tiers) ? data.tiers : []
+
+      if (tiers.length > 0) {
+        setShowTieredModal(true)
+      } else {
+        setShowModal(true)
+      }
+    } catch {
+      setShowModal(true)
+    } finally {
+      setTierProbeLoading(false)
+    }
+  }
 
   const [usdHtgQuote, setUsdHtgQuote] = useState<null | {
     baseRate: number
@@ -443,11 +469,11 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
       ) : (
         <>
           <button
-            onClick={() => setShowTieredModal(true)}
-            disabled={loading}
+            onClick={handleOpenPurchaseFlow}
+            disabled={loading || tierProbeLoading}
             className="block w-full bg-teal-700 hover:bg-teal-800 text-white text-center font-semibold py-2.5 px-5 rounded-lg transition-colors disabled:opacity-50 min-h-[44px]"
           >
-            {loading ? t('events.processing') : t('events.buy_ticket')}
+            {loading || tierProbeLoading ? t('events.processing') : t('events.buy_ticket')}
           </button>
 
           {/* Tiered Ticket Selection Modal */}
