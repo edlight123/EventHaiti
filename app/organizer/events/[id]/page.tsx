@@ -4,6 +4,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import Navbar from '@/components/Navbar'
 import { isAdmin } from '@/lib/admin'
 import { EventCommandCenter } from './EventCommandCenter'
+import { normalizeCurrency } from '@/lib/money'
 
 export const revalidate = 0
 
@@ -44,6 +45,7 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
     return {
       id: doc.id,
       price_paid: data.price_paid || 0,
+      currency: data.currency || null,
       status: data.status || 'active',
       checked_in_at: data.checked_in_at?.toDate?.()?.toISOString() || data.checked_in_at,
       purchased_at: data.purchased_at?.toDate?.()?.toISOString() || data.purchased_at,
@@ -95,6 +97,7 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
     banner_image_url: eventData.banner_image || eventData.banner_image_url,
     category: eventData.category,
     is_published: eventData.is_published || false,
+    currency: eventData.currency || null,
     max_attendees: eventData.max_attendees || 0,
     created_at: convertTimestamp(eventData.created_at),
     updated_at: convertTimestamp(eventData.updated_at),
@@ -103,15 +106,25 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
 
   // Calculate stats
   const ticketsSold = tickets.filter((t: any) => t.status !== 'cancelled').length
-  const revenue = tickets
-    .filter((t: any) => t.status !== 'cancelled')
-    .reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0)
   const checkedIn = tickets.filter((t: any) => t.checked_in_at).length
+
+  const eventCurrency = normalizeCurrency(eventData.currency, 'HTG')
+  const revenueByCurrencyCents: Record<string, number> = {}
+  let revenueCents = 0
+  for (const t of tickets) {
+    if (t.status === 'cancelled') continue
+    const currency = normalizeCurrency(t.currency, eventCurrency)
+    const cents = Math.round((Number(t.price_paid || 0) || 0) * 100)
+    revenueByCurrencyCents[currency] = (revenueByCurrencyCents[currency] || 0) + cents
+    revenueCents += cents
+  }
 
   const stats = {
     ticketsSold,
     capacity: eventData.total_tickets || 0,
-    revenue,
+    revenueCents,
+    revenueByCurrencyCents,
+    currency: eventCurrency,
     checkedIn,
   }
 

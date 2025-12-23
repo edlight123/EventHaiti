@@ -11,6 +11,7 @@ import { TicketTiersCard } from '@/components/organizer/event-detail/TicketTiers
 import { VenueCard } from '@/components/organizer/event-detail/VenueCard'
 import { EventActivityTimeline } from '@/components/organizer/event-detail/EventActivityTimeline'
 import { Image as ImageIcon } from 'lucide-react'
+import { formatMoneyFromCents, normalizeCurrency } from '@/lib/money'
 
 interface EventCommandCenterProps {
   event: any
@@ -81,7 +82,11 @@ export function EventCommandCenter({ event, stats, tickets, tiers }: EventComman
   const activities = tickets.slice(0, 5).map((ticket: any, index: number) => ({
     id: `ticket-${ticket.id}`,
     type: 'ticket_sold' as const,
-    description: `Ticket sold for ${ticket.price_paid} HTG`,
+    description: (() => {
+      const currency = normalizeCurrency(ticket?.currency, event?.currency || 'HTG')
+      const cents = Math.round((Number(ticket?.price_paid || 0) || 0) * 100)
+      return `Ticket sold for ${formatMoneyFromCents(cents, currency)}`
+    })(),
     timestamp: ticket.purchased_at || new Date().toISOString()
   }))
 

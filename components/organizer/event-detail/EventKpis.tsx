@@ -2,13 +2,17 @@
 
 import { Ticket, DollarSign, Users, TrendingUp } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { formatMoneyFromCents, formatMultiCurrencyFromCents, normalizeCurrency } from '@/lib/money'
 
 interface EventKpisProps {
   stats: {
     ticketsSold: number
     capacity: number
-    revenue: number
-    netRevenue?: number
+    revenueCents: number
+    revenueByCurrencyCents?: Record<string, number>
+    currency?: string | null
+    netRevenueCents?: number
+    netRevenueByCurrencyCents?: Record<string, number>
     checkedIn: number
     conversion?: number
     views?: number
@@ -19,6 +23,29 @@ export function EventKpis({ stats }: EventKpisProps) {
   const { t } = useTranslation('common')
   const progress = stats.capacity > 0 ? (stats.ticketsSold / stats.capacity) * 100 : 0
   const checkInRate = stats.ticketsSold > 0 ? (stats.checkedIn / stats.ticketsSold) * 100 : 0
+
+  const revenueText = (() => {
+    const breakdown = stats.revenueByCurrencyCents || {}
+    const nonZero = Object.entries(breakdown).filter(([, cents]) => (cents || 0) !== 0)
+    if (nonZero.length > 1) return formatMultiCurrencyFromCents(breakdown)
+    if (nonZero.length === 1) {
+      const [currency, cents] = nonZero[0]
+      return formatMoneyFromCents(Number(cents || 0), currency)
+    }
+    return formatMoneyFromCents(Number(stats.revenueCents || 0), normalizeCurrency(stats.currency, 'HTG'))
+  })()
+
+  const netRevenueText = (() => {
+    if (stats.netRevenueCents === undefined && !stats.netRevenueByCurrencyCents) return null
+    const breakdown = stats.netRevenueByCurrencyCents || {}
+    const nonZero = Object.entries(breakdown).filter(([, cents]) => (cents || 0) !== 0)
+    if (nonZero.length > 1) return formatMultiCurrencyFromCents(breakdown)
+    if (nonZero.length === 1) {
+      const [currency, cents] = nonZero[0]
+      return formatMoneyFromCents(Number(cents || 0), currency)
+    }
+    return formatMoneyFromCents(Number(stats.netRevenueCents || 0), normalizeCurrency(stats.currency, 'HTG'))
+  })()
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
@@ -55,16 +82,11 @@ export function EventKpis({ stats }: EventKpisProps) {
         </div>
         <div className="space-y-2">
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl md:text-3xl font-bold text-gray-900">
-              {stats.revenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+            <span className="text-2xl md:text-3xl font-bold text-gray-900 truncate" title={revenueText}>
+              {revenueText}
             </span>
-            <span className="text-sm text-gray-500">HTG</span>
           </div>
-          {stats.netRevenue !== undefined && (
-            <p className="text-xs text-gray-600">
-              Net: {stats.netRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })} HTG
-            </p>
-          )}
+          {netRevenueText && <p className="text-xs text-gray-600">Net: {netRevenueText}</p>}
         </div>
       </div>
 
