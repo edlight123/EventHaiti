@@ -88,13 +88,18 @@ export async function POST(request: Request) {
       tierId,
       promoCode,
       tiers,
+      mobileMoneyProvider,
     }: {
       eventId: string
       quantity?: number
       tierId?: string | null
       promoCode?: string | null
       tiers?: TierSelection[]
+      mobileMoneyProvider?: string | null
     } = await request.json()
+
+    const provider = String(mobileMoneyProvider || 'moncash').toLowerCase()
+    const normalizedProvider = provider === 'natcash' ? 'natcash' : 'moncash'
 
     if (!eventId) {
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 })
@@ -267,7 +272,7 @@ export async function POST(request: Request) {
       event_id: eventId,
       quantity: totalQuantity,
       amount: chargeAmount,
-      payment_method: 'moncash_button',
+      payment_method: normalizedProvider,
       status: 'pending',
       currency: chargeCurrency,
       original_currency: originalCurrency,
@@ -280,6 +285,7 @@ export async function POST(request: Request) {
       tier_selections: chargeSelections,
       promo_code_id: promoCode || null,
       moncash_button_token: null,
+      mobile_money_provider: normalizedProvider,
     })
 
     if (pendingInsertError) {
@@ -330,7 +336,6 @@ export async function POST(request: Request) {
       const origin = new URL(request.url).origin
       redirectUrl = `${origin}/api/moncash-button/checkout?orderId=${encodeURIComponent(orderId)}`
     }
-
     const response = NextResponse.json({ redirectUrl })
     // Correlate browser redirect back from MonCash to our pending transaction.
     // This prevents false "missing_order" failures when the gateway doesn't include orderId

@@ -302,6 +302,11 @@ export async function GET(request: Request) {
     const fxProvider = pendingTx.exchange_rate_provider != null ? String(pendingTx.exchange_rate_provider) : null
     const fxFetchedAt = pendingTx.exchange_rate_fetched_at != null ? String(pendingTx.exchange_rate_fetched_at) : null
 
+    const pendingPaymentMethodRaw = String(
+      (pendingTx as any)?.payment_method || (pendingTx as any)?.mobile_money_provider || 'moncash_button'
+    ).toLowerCase()
+    const normalizedPaymentMethod = pendingPaymentMethodRaw === 'natcash' ? 'natcash' : pendingPaymentMethodRaw === 'moncash' ? 'moncash' : 'moncash_button'
+
     // Create tickets
     const createdTickets: any[] = []
 
@@ -331,7 +336,7 @@ export async function GET(request: Request) {
           // Auditing
           charged_amount: selection.unitPrice,
           charged_currency: chargedCurrency,
-          payment_method: 'moncash',
+          payment_method: normalizedPaymentMethod,
           payment_id: transactionId || payment.transNumber || orderId,
           status: 'valid',
           purchased_at: new Date().toISOString(),
@@ -375,7 +380,7 @@ export async function GET(request: Request) {
                 exchange_rate_fetched_at: fxFetchedAt,
                 charged_amount: selection.unitPrice,
                 charged_currency: chargedCurrency,
-                payment_method: 'moncash_button',
+                payment_method: normalizedPaymentMethod,
                 payment_id: transactionId || payment.transNumber || orderId,
                 purchased_at: new Date().toISOString(),
                 created_at: new Date().toISOString(),
@@ -398,7 +403,7 @@ export async function GET(request: Request) {
       const grossEventCents = Math.round(Number(pendingTx.original_amount || 0) * 100)
       await addTicketToEarnings(pendingTx.event_id, grossEventCents, Number(pendingTx.quantity || 1), {
         currency: eventCurrency,
-        paymentMethod: 'moncash_button',
+        paymentMethod: normalizedPaymentMethod,
         chargedAmountCents: Math.round(Number(pendingTx.amount || 0) * 100),
         fxRate,
         chargedCurrency,

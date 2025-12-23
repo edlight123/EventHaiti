@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useRouter } from 'next/navigation'
 import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 import { isDemoMode } from '@/lib/demo'
+import { normalizeCountryCode } from '@/lib/payment-provider'
 import EventbriteStyleTicketSelector from '@/components/EventbriteStyleTicketSelector'
 import BottomSheet from '@/components/ui/BottomSheet'
 import { useToast } from '@/components/ui/Toast'
@@ -31,7 +32,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   const [showEmbeddedPayment, setShowEmbeddedPayment] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'moncash' | 'sogepay'>('stripe')
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'moncash' | 'natcash' | 'sogepay'>('stripe')
   const [quantity, setQuantity] = useState(1)
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
   const [selectedTierPrice, setSelectedTierPrice] = useState<number>(0)
@@ -40,8 +41,8 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   const [isMonCashPopupOpen, setIsMonCashPopupOpen] = useState(false)
   const moncashPopupRef = useRef<Window | null>(null)
 
-  const countryCode = String(country || '').toUpperCase()
-  const isHaitiEvent = countryCode === 'HT' || countryCode === 'HAITI'
+  const countryCode = normalizeCountryCode(country)
+  const isHaitiEvent = countryCode === 'HT'
 
   const [usdHtgQuote, setUsdHtgQuote] = useState<null | {
     baseRate: number
@@ -198,7 +199,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
     }
   }
 
-  async function handlePurchase(method: 'stripe' | 'moncash' | 'sogepay') {
+  async function handlePurchase(method: 'stripe' | 'moncash' | 'natcash' | 'sogepay') {
     setLoading(true)
     setError(null)
 
@@ -313,6 +314,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
             tierId: selectedTierId,
             promoCode,
             tiers,
+            mobileMoneyProvider: method,
           }),
         })
 
@@ -601,26 +603,49 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
 
               {/* MonCash Option (Haiti only) */}
               {isHaitiEvent && (
-                <button
-                  onClick={() => handlePurchase('moncash')}
-                  disabled={loading}
-                  className="w-full flex items-center justify-between px-4 py-4 border-2 border-gray-200 rounded-lg hover:border-teal-600 hover:bg-teal-50 transition disabled:opacity-50"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/>
-                      </svg>
+                <>
+                  <button
+                    onClick={() => handlePurchase('moncash')}
+                    disabled={loading}
+                    className="w-full flex items-center justify-between px-4 py-4 border-2 border-gray-200 rounded-lg hover:border-teal-600 hover:bg-teal-50 transition disabled:opacity-50"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/>
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <div className="font-semibold text-gray-900">MonCash</div>
+                        <div className="text-sm text-gray-500">{t('events.mobile_money_haiti')}</div>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <div className="font-semibold text-gray-900">MonCash</div>
-                      <div className="text-sm text-gray-500">{t('events.mobile_money_haiti')}</div>
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+
+                  <button
+                    onClick={() => handlePurchase('natcash')}
+                    disabled={loading}
+                    className="w-full flex items-center justify-between px-4 py-4 border-2 border-gray-200 rounded-lg hover:border-teal-600 hover:bg-teal-50 transition disabled:opacity-50"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-6 h-6 text-green-700" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 2v12h10V6H7zm2 10h6v2H9v-2zm0-4h6v2H9v-2z" />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <div className="font-semibold text-gray-900">NatCash</div>
+                        <div className="text-sm text-gray-500">{t('events.mobile_money_haiti')}</div>
+                      </div>
                     </div>
-                  </div>
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </>
               )}
             </div>
 

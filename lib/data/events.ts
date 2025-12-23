@@ -29,6 +29,7 @@ export interface Event {
   title: string
   description: string
   organizer_id: string
+  country?: string
   start_datetime: string
   end_datetime: string
   venue_name: string
@@ -78,6 +79,12 @@ export async function getEventById(eventId: string): Promise<Event | null> {
       }
 
       const data = eventDoc.data()
+
+      const country =
+        data?.country ??
+        data?.location?.country ??
+        data?.location?.countryCode ??
+        data?.location?.country_code
       
       // Explicitly construct event object to exclude problematic fields like ticket_tiers
       // (ticket_tiers array in event doc can cause React render errors if passed to client)
@@ -88,6 +95,7 @@ export async function getEventById(eventId: string): Promise<Event | null> {
         description: data?.description,
         category: data?.category,
         venue_name: data?.venue_name,
+        country,
         city: data?.city,
         commune: data?.commune,
         address: data?.address,
