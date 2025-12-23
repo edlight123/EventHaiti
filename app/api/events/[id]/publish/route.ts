@@ -3,6 +3,8 @@ import { adminDb } from '@/lib/firebase/admin'
 import { requireAuth } from '@/lib/auth'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
+import { resolveEventCountry } from '@/lib/event-country'
+import { normalizeCountryCode } from '@/lib/payment-provider'
 
 async function isOrganizerVerified(userId: string): Promise<boolean> {
   const userDoc = await adminDb.collection('users').doc(userId).get()
@@ -71,10 +73,19 @@ export async function POST(
     }
 
     // Update publish status
-    await adminDb.collection('events').doc(id).update({
+    const resolvedCountry = await resolveEventCountry(eventData)
+    const existingCountry = normalizeCountryCode(eventData?.country)
+    const updatePayload: Record<string, any> = {
       is_published,
-      updated_at: new Date()
-    })
+      updated_at: new Date(),
+    }
+
+    // Persist a normalized country code when we can determine it.
+    if (resolvedCountry && resolvedCountry !== existingCountry) {
+      updatePayload.country = resolvedCountry
+    }
+
+    await adminDb.collection('events').doc(id).update(updatePayload)
 
     // If publishing for the first time, notify followers
     if (is_published && !eventData.is_published) {

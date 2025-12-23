@@ -318,7 +318,10 @@ export default function EventFormPremium({ userId, event, isVerified = false, ve
 
       const { error } = await supabase
         .from('events')
-        .update({ is_published: newPublishState })
+        .update({
+          is_published: newPublishState,
+          country: formData.country || 'HT',
+        })
         .eq('id', event?.id)
 
       if (error) throw error

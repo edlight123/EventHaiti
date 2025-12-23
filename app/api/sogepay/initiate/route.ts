@@ -3,44 +3,9 @@ import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { getPaymentProviderForEventCountry, normalizeCountryCode } from '@/lib/payment-provider'
 import { calculateDiscount } from '@/lib/promo-codes'
-import { adminDb } from '@/lib/firebase/admin'
+import { resolveEventCountry } from '@/lib/event-country'
 
 export const runtime = 'nodejs'
-
-function inferCountryFromEventText(event: any): string {
-  const normalized = normalizeCountryCode(event?.country)
-  if (normalized) return normalized
-
-  const haystack = [event?.city, event?.commune, event?.address, event?.venue_address, event?.venue_name]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase()
-
-  // Minimal Haiti heuristics for legacy rows missing explicit country.
-  if (haystack.includes('haiti')) return 'HT'
-  if (haystack.includes('port-au-prince') || haystack.includes('port au prince')) return 'HT'
-  if (haystack.includes('cap-haitien') || haystack.includes('cap haitien')) return 'HT'
-
-  return ''
-}
-
-async function inferCountryFromOrganizer(organizerId: unknown): Promise<string> {
-  const id = String(organizerId || '').trim()
-  if (!id) return ''
-
-  try {
-    const userDoc = await adminDb.collection('users').doc(id).get()
-    if (userDoc.exists) {
-      const data: any = userDoc.data() || {}
-      const fromUser = normalizeCountryCode(data.default_country || data.country)
-      if (fromUser) return fromUser
-    }
-  } catch {
-    // Ignore and fall through.
-  }
-
-  return ''
-}
 
 function isSogepayConfigured(): boolean {
   // Placeholder: wire these to real Sogepay credentials once provided.
@@ -68,10 +33,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
-    const eventCountry =
-      normalizeCountryCode(event.country) ||
-      inferCountryFromEventText(event) ||
-      (await inferCountryFromOrganizer(event.organizer_id))
+    const eventCountry = (await resolveEventCountry(event)) || normalizeCountryCode(event.country)
     const provider = getPaymentProviderForEventCountry(eventCountry)
     if (provider !== 'sogepay') {
       return NextResponse.json(
