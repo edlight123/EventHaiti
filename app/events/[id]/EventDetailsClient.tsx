@@ -185,8 +185,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
               <BuyTicketButton 
                 eventId={event.id} 
                 userId={user.id} 
-                isFree={event.is_free || !event.price} 
-                ticketPrice={event.price || 0}
+                isFree={isFree}
+                ticketPrice={event.ticket_price || 0}
                 eventTitle={event.title}
                 currency={event.currency || 'HTG'}
                 country={event.country}
@@ -217,8 +217,8 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
         city={event.city}
         address={event.address || ''}
         commune={event.commune || ''}
-        isFree={event.is_free || !event.price}
-        ticketPrice={event.price || 0}
+        isFree={Boolean(event.is_free || !event.ticket_price || event.ticket_price === 0)}
+        ticketPrice={event.ticket_price || 0}
         currency={event.currency || 'HTG'}
         remainingTickets={ticketsRemaining || 0}
         isSoldOut={isSoldOut}
@@ -416,6 +416,7 @@ export default function EventDetailsClient({ event, user, isFavorite, isFollowin
                         ticketPrice={event.ticket_price || 0}
                         eventTitle={event.title}
                         currency={event.currency || 'HTG'}
+                        country={event.country}
                       />
                       <div className="mt-4">
                         <FavoriteButton eventId={event.id} userId={user.id} initialIsFavorite={isFavorite} />

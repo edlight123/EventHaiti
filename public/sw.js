@@ -1,7 +1,7 @@
 // Basic service worker for EventHaiti PWA
 // Extensible: add caching strategies or push handlers later
-const STATIC_CACHE = 'eventhaiti-static-v3'
-const NAV_CACHE = 'eventhaiti-nav-v2'
+const STATIC_CACHE = 'eventhaiti-static-v4'
+const NAV_CACHE = 'eventhaiti-nav-v3'
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -36,6 +36,12 @@ self.addEventListener('fetch', (event) => {
   // Skip API requests and external resources - let them pass through
   const url = new URL(request.url)
   if (url.pathname.startsWith('/api/') || url.origin !== self.location.origin) {
+    return
+  }
+
+  // Never cache Next.js build assets. These are already fingerprinted and should
+  // come from the network to avoid serving stale UI after a deployment.
+  if (url.pathname.startsWith('/_next/')) {
     return
   }
   
