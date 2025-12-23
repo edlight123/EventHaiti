@@ -1,21 +1,28 @@
 // API Route: POST /api/tickets/transfer/cancel
 // Cancel a pending ticket transfer
 
-import { createClient } from '@/lib/firebase-db/server'
+import { adminDb } from '@/lib/firebase/admin'
+import { getCurrentUser } from '@/lib/auth'
+import { createNotification } from '@/lib/notifications/helpers'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
 const cancelSchema = z.object({
-  transferId: z.string().uuid()
+  transferId: z.string().min(1)
 })
+
+function toDate(value: any): Date | null {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (typeof value?.toDate === 'function') return value.toDate()
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? null : d
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    
-    // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    const user = await getCurrentUser()
+    if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -34,15 +41,17 @@ export async function POST(request: NextRequest) {
 
     const { transferId } = validation.data
 
-    // Get transfer details
-    const { data: transfer, error: transferError } = await supabase
-      .from('ticket_transfers')
-      .select('*, tickets(events(title))')
-      .eq('id', transferId)
-      .eq('from_user_id', user.id)
-      .single()
+    const transferRef = adminDb.collection('ticket_transfers').doc(transferId)
+    const transferSnap = await transferRef.get()
+    if (!transferSnap.exists) {
+      return NextResponse.json(
+        { error: 'Transfer not found or not owned by you' },
+        { status: 404 }
+      )
+    }
 
-    if (transferError || !transfer) {
+    const transfer = transferSnap.data() as any
+    if (transfer?.from_user_id !== user.id) {
       return NextResponse.json(
         { error: 'Transfer not found or not owned by you' },
         { status: 404 }
@@ -57,13 +66,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Cancel transfer
-    const { error: updateError } = await supabase
-      .from('ticket_transfers')
-      .update({ status: 'cancelled' })
-      .eq('id', transferId)
+    // Optional expiry handling
+    const exp = toDate(transfer?.expires_at)
+    if (exp && exp < new Date()) {
+      await transferRef.update({ status: 'expired', updated_at: new Date().toISOString() })
+      return NextResponse.json(
+        { error: 'Transfer has expired' },
+        { status: 400 }
+      )
+    }
 
-    if (updateError) {
+    // Cancel transfer
+    try {
+      await transferRef.update({
+        status: 'cancelled',
+        responded_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+    } catch (updateError) {
       console.error('Transfer cancellation error:', updateError)
       return NextResponse.json(
         { error: 'Failed to cancel transfer' },
@@ -74,15 +94,54 @@ export async function POST(request: NextRequest) {
     // Optionally notify recipient
     try {
       const { sendEmail, getTicketTransferCancelledEmail } = await import('@/lib/email')
-      
+
+      // Resolve event title if possible
+      let eventTitle = 'Event'
+      try {
+        const ticketId = String(transfer?.ticket_id || '')
+        if (ticketId) {
+          const ticketSnap = await adminDb.collection('tickets').doc(ticketId).get()
+          const eventId = (ticketSnap.data() as any)?.event_id
+          if (eventId) {
+            const eventSnap = await adminDb.collection('events').doc(eventId).get()
+            eventTitle = (eventSnap.data() as any)?.title || eventTitle
+          }
+        }
+      } catch {
+        // ignore
+      }
+
       await sendEmail({
         to: transfer.to_email,
-        subject: `Ticket transfer cancelled - ${transfer.tickets.events.title}`,
+        subject: `Ticket transfer cancelled - ${eventTitle}`,
         html: getTicketTransferCancelledEmail({
-          eventTitle: transfer.tickets.events.title,
-          senderName: user.user_metadata?.full_name || 'The sender'
+          eventTitle,
+          senderName: user.name || user.email || 'The sender'
         })
       })
+
+      // If the recipient has an account, also create an in-app notification
+      try {
+        const recipientQuery = await adminDb
+          .collection('users')
+          .where('email', '==', String(transfer.to_email || '').toLowerCase())
+          .limit(1)
+          .get()
+
+        if (!recipientQuery.empty) {
+          const recipientDoc = recipientQuery.docs[0]
+          await createNotification(
+            recipientDoc.id,
+            'ticket_transfer',
+            'Ticket transfer cancelled',
+            `${user.name || user.email || 'The sender'} cancelled the ticket transfer for "${eventTitle}".`,
+            '/tickets',
+            { ticketId: transfer?.ticket_id, eventTitle }
+          )
+        }
+      } catch (notifyError) {
+        console.error('Failed to create cancellation notification:', notifyError)
+      }
     } catch (emailError) {
       console.error('Failed to send cancellation notification:', emailError)
       // Continue - cancellation was successful

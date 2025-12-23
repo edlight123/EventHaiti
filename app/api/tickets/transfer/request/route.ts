@@ -5,6 +5,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getCurrentUser } from '@/lib/auth'
+import { createNotification } from '@/lib/notifications/helpers'
 
 const transferRequestSchema = z.object({
   ticketId: z.string().min(1),
@@ -178,6 +179,20 @@ export async function POST(request: NextRequest) {
       if (!recipientQuery.empty) {
         const recipientDoc = recipientQuery.docs[0]
         const recipient = recipientDoc.data()
+
+        // Create in-app notification for recipient
+        try {
+          await createNotification(
+            recipientDoc.id,
+            'ticket_transfer',
+            'Ticket transfer request',
+            `${sender?.full_name || sender?.name || 'Someone'} wants to transfer you a ticket for "${event?.title || 'an event'}".`,
+            `/tickets/transfer/${transfer.transfer_token}`,
+            { eventId: ticket.event_id, ticketId }
+          )
+        } catch (notifyError) {
+          console.error('Failed to create transfer notification:', notifyError)
+        }
 
         if (recipient?.phone) {
           try {

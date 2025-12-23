@@ -6,6 +6,7 @@ export type ScanResult = 'valid' | 'already_used' | 'invalid'
 
 export type NotificationType = 
   | 'ticket_purchased' 
+  | 'ticket_transfer'
   | 'event_updated' 
   | 'event_reminder_24h' 
   | 'event_reminder_3h' 

@@ -8,6 +8,20 @@ import TransferAcceptForm from './TransferAcceptForm'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+function serializeData(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj
+  if (obj.toDate && typeof obj.toDate === 'function') return obj.toDate().toISOString()
+  if (Array.isArray(obj)) return obj.map(serializeData)
+
+  const serialized: any = {}
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      serialized[key] = serializeData(obj[key])
+    }
+  }
+  return serialized
+}
+
 export default async function TransferAcceptPage({ params }: { params: Promise<{ token: string }> }) {
   const { user, error } = await requireAuth()
 
@@ -155,15 +169,21 @@ export default async function TransferAcceptPage({ params }: { params: Promise<{
   const senderDoc = await adminDb.collection('users').doc(transfer.from_user_id).get()
   const sender = senderDoc.exists ? senderDoc.data() : null
 
+  // IMPORTANT: Firestore documents often contain Timestamp instances which cannot be
+  // passed to Client Components. Serialize before passing down.
+  const serializedTicket = serializeData({ id: ticketDoc.id, ...ticket })
+  const serializedEvent = event ? serializeData({ id: eventDoc.id, ...event }) : null
+  const serializedSender = sender ? serializeData({ id: senderDoc.id, ...sender }) : null
+
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} />
       <div className="max-w-2xl mx-auto px-4 py-6 sm:py-12">
         <TransferAcceptForm
           transfer={transfer}
-          ticket={ticket}
-          event={event}
-          sender={sender}
+          ticket={serializedTicket}
+          event={serializedEvent}
+          sender={serializedSender}
           currentUser={user}
         />
       </div>

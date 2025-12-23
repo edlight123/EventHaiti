@@ -94,6 +94,8 @@ export function NotificationsClient({
     switch (type) {
       case 'ticket_purchased':
         return '🎫'
+      case 'ticket_transfer':
+        return '🔁'
       case 'event_updated':
         return '📢'
       case 'event_reminder_24h':
@@ -108,6 +110,9 @@ export function NotificationsClient({
   }
 
   const getNotificationLink = (notification: Notification): string => {
+    if ((notification as any).actionUrl) {
+      return (notification as any).actionUrl as string
+    }
     if (notification.ticketId) {
       return `/tickets/${notification.ticketId}`
     }

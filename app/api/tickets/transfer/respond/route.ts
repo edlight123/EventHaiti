@@ -1,29 +1,32 @@
 // API Route: POST /api/tickets/transfer/respond
-// Accept or reject a ticket transfer
+// Accept or reject a ticket transfer (Firestore-backed)
 
-import { createClient } from '@/lib/firebase-db/server'
+import { adminDb } from '@/lib/firebase/admin'
+import { getCurrentUser } from '@/lib/auth'
+import { createNotification } from '@/lib/notifications/helpers'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
 const transferResponseSchema = z.object({
-  transferToken: z.string(),
+  transferToken: z.string().min(1),
   action: z.enum(['accept', 'reject'])
 })
 
+function toDate(value: any): Date | null {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (typeof value?.toDate === 'function') return value.toDate()
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    
-    // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Validate request body
     const body = await request.json()
     const validation = transferResponseSchema.safeParse(body)
     if (!validation.success) {
@@ -35,213 +38,200 @@ export async function POST(request: NextRequest) {
 
     const { transferToken, action } = validation.data
 
-    // Get transfer details
-    const { data: transfer, error: transferError } = await supabase
-      .from('ticket_transfers')
-      .select(`
-        *,
-        tickets(
-          id,
-          attendee_id,
-          status,
-          checked_in,
-          transfer_count,
-          events(
-            id,
-            title,
-            start_datetime
-          )
-        )
-      `)
-      .eq('transfer_token', transferToken)
-      .single()
+    // Find transfer by token
+    const transfersQuery = await adminDb
+      .collection('ticket_transfers')
+      .where('transfer_token', '==', transferToken)
+      .limit(1)
+      .get()
 
-    if (transferError || !transfer) {
-      return NextResponse.json(
-        { error: 'Transfer not found' },
-        { status: 404 }
-      )
+    if (transfersQuery.empty) {
+      return NextResponse.json({ error: 'Transfer not found' }, { status: 404 })
     }
 
-    // Verify recipient
-    if (transfer.to_email.toLowerCase() !== user.email?.toLowerCase()) {
-      return NextResponse.json(
-        { error: 'This transfer is not for you' },
-        { status: 403 }
-      )
-    }
+    const transferDoc = transfersQuery.docs[0]
+    const transferRef = transferDoc.ref
 
-    // Check transfer status
-    if (transfer.status !== 'pending') {
-      return NextResponse.json(
-        { error: `Transfer is ${transfer.status}` },
-        { status: 400 }
-      )
-    }
+    const nowIso = new Date().toISOString()
 
-    // Check expiration
-    if (new Date(transfer.expires_at) < new Date()) {
-      await supabase
-        .from('ticket_transfers')
-        .update({ status: 'expired' })
-        .eq('id', transfer.id)
-
-      return NextResponse.json(
-        { error: 'Transfer has expired' },
-        { status: 400 }
-      )
-    }
-
-    // Check ticket is still valid
-    if ((transfer.tickets.status !== 'active' && transfer.tickets.status !== 'valid') || transfer.tickets.checked_in) {
-      return NextResponse.json(
-        { error: 'Ticket is no longer available for transfer' },
-        { status: 400 }
-      )
-    }
-
-    if (action === 'reject') {
-      // Reject transfer
-      const { error: updateError } = await supabase
-        .from('ticket_transfers')
-        .update({ 
-          status: 'rejected',
-          to_user_id: user.id
-        })
-        .eq('id', transfer.id)
-
-      if (updateError) {
-        console.error('Transfer rejection error:', updateError)
-        return NextResponse.json(
-          { error: 'Failed to reject transfer' },
-          { status: 500 }
-        )
-      }
-
-      // Notify original owner
-      try {
-        const { sendEmail, getTicketTransferResponseEmail } = await import('@/lib/email')
-        const { data: originalOwner } = await supabase
-          .from('users')
-          .select('email, full_name')
-          .eq('id', transfer.from_user_id)
-          .single()
-
-        if (originalOwner?.email) {
-          await sendEmail({
-            to: originalOwner.email,
-            subject: `Ticket transferred successfully - ${transfer.tickets.events.title}`,
-            html: getTicketTransferResponseEmail({
-              recipientName: user.user_metadata?.full_name || transfer.to_email,
-              eventTitle: transfer.tickets.events.title,
-              action: 'rejected',
-              ticketId: transfer.ticket_id
-            })
-          })
+    // Perform update atomically
+    const { ticketId, fromUserId, toEmailLower, status, expiresAt, ticketEventId } = await adminDb.runTransaction(
+      async (tx) => {
+        const transferSnap = await tx.get(transferRef)
+        if (!transferSnap.exists) {
+          throw new Error('Transfer not found')
         }
-      } catch (emailError) {
-        console.error('Failed to send rejection notification:', emailError)
-      }
 
-      return NextResponse.json({
-        success: true,
-        status: 'rejected'
-      })
-    }
+        const transfer = transferSnap.data() as any
 
-    // Accept transfer - update ticket ownership
-    const { error: ticketUpdateError } = await supabase
-      .from('tickets')
-      .update({ 
-        attendee_id: user.id,
-        user_id: user.id,
-        transfer_count: (transfer.tickets.transfer_count || 0) + 1
-      })
-      .eq('id', transfer.ticket_id)
+        const toEmail = String(transfer?.to_email || '').toLowerCase()
+        if (!toEmail || toEmail !== (user.email || '').toLowerCase()) {
+          const err: any = new Error('This transfer is not for you')
+          err.status = 403
+          throw err
+        }
 
-    if (ticketUpdateError) {
-      console.error('Ticket update error:', ticketUpdateError)
-      return NextResponse.json(
-        { error: 'Failed to transfer ticket ownership' },
-        { status: 500 }
-      )
-    }
+        if (transfer?.status !== 'pending') {
+          const err: any = new Error(`Transfer is ${transfer?.status}`)
+          err.status = 400
+          throw err
+        }
 
-    // Update transfer status
-    const { error: transferUpdateError } = await supabase
-      .from('ticket_transfers')
-      .update({ 
-        status: 'accepted',
-        to_user_id: user.id,
-        accepted_at: new Date().toISOString()
-      })
-      .eq('id', transfer.id)
+        const exp = toDate(transfer?.expires_at)
+        if (exp && exp < new Date()) {
+          tx.update(transferRef, { status: 'expired', updated_at: nowIso })
+          const err: any = new Error('Transfer has expired')
+          err.status = 400
+          throw err
+        }
 
-    if (transferUpdateError) {
-      console.error('Transfer status update error:', transferUpdateError)
-      // Note: ticket ownership was already transferred
-    }
+        const ticketId = String(transfer?.ticket_id || '')
+        const fromUserId = String(transfer?.from_user_id || '')
+        if (!ticketId || !fromUserId) {
+          const err: any = new Error('Transfer is missing ticket information')
+          err.status = 500
+          throw err
+        }
 
-    // Send notifications
-    try {
-      const { sendEmail, getTicketTransferResponseEmail, getTicketConfirmationEmail } = await import('@/lib/email')
-      
-      // Notify original owner
-      const { data: originalOwner } = await supabase
-        .from('users')
-        .select('email, full_name')
-        .eq('id', transfer.from_user_id)
-        .single()
+        const ticketRef = adminDb.collection('tickets').doc(ticketId)
+        const ticketSnap = await tx.get(ticketRef)
+        if (!ticketSnap.exists) {
+          const err: any = new Error('Ticket not found')
+          err.status = 404
+          throw err
+        }
 
-      if (originalOwner?.email) {
-        await sendEmail({
-          to: originalOwner.email,
-          subject: `Ticket transferred successfully - ${transfer.tickets.events.title}`,
-          html: getTicketTransferResponseEmail({
-            recipientName: user.user_metadata?.full_name || transfer.to_email,
-            eventTitle: transfer.tickets.events.title,
-            action: 'accepted',
-            ticketId: transfer.ticket_id
+        const ticket = ticketSnap.data() as any
+        const ticketStatus = ticket?.status
+        const checkedIn = !!ticket?.checked_in || !!ticket?.checked_in_at
+
+        if ((ticketStatus !== 'active' && ticketStatus !== 'valid') || checkedIn) {
+          const err: any = new Error('Ticket is no longer available for transfer')
+          err.status = 400
+          throw err
+        }
+
+        const baseTransferUpdate: any = {
+          to_user_id: user.id,
+          responded_at: nowIso,
+          updated_at: nowIso
+        }
+
+        if (action === 'reject') {
+          tx.update(transferRef, { ...baseTransferUpdate, status: 'rejected' })
+        } else {
+          const existingTransferCount = Number(ticket?.transfer_count || 0)
+          tx.update(ticketRef, {
+            attendee_id: user.id,
+            user_id: user.id,
+            transfer_count: existingTransferCount + 1,
+            updated_at: nowIso
           })
-        })
+          tx.update(transferRef, { ...baseTransferUpdate, status: 'accepted' })
+        }
+
+        return {
+          ticketId,
+          fromUserId,
+          toEmailLower: toEmail,
+          status: action === 'reject' ? 'rejected' : 'accepted',
+          expiresAt: exp?.toISOString() || transfer?.expires_at || null,
+          ticketEventId: String(ticket?.event_id || '')
+        }
       }
+    )
 
-      // Send new ticket confirmation to recipient
-      const { data: ticket } = await supabase
-        .from('tickets')
-        .select('*, events(*)')
-        .eq('id', transfer.ticket_id)
-        .single()
+    // Fetch event + sender/recipient for messages (best-effort)
+    let eventTitle = 'Event'
+    if (ticketEventId) {
+      try {
+        const eventSnap = await adminDb.collection('events').doc(ticketEventId).get()
+        eventTitle = (eventSnap.data() as any)?.title || eventTitle
+      } catch {
+        // ignore
+      }
+    }
 
-      if (ticket) {
+    let senderEmail: string | undefined
+    let senderName: string | undefined
+    try {
+      const senderSnap = await adminDb.collection('users').doc(fromUserId).get()
+      const sender = senderSnap.data() as any
+      senderEmail = sender?.email
+      senderName = sender?.full_name || sender?.name
+    } catch {
+      // ignore
+    }
+
+    let recipientName = ''
+    try {
+      const recipientSnap = await adminDb.collection('users').doc(user.id).get()
+      const recipient = recipientSnap.data() as any
+      recipientName = recipient?.full_name || recipient?.name || ''
+    } catch {
+      // ignore
+    }
+
+    // Email notifications (best-effort)
+    try {
+      const { sendEmail, getTicketTransferResponseEmail } = await import('@/lib/email')
+
+      if (senderEmail) {
         await sendEmail({
-          to: user.email!,
-          subject: `Your ticket for ${ticket.events.title}`,
-          html: getTicketConfirmationEmail({
-            attendeeName: user.user_metadata?.full_name || 'Attendee',
-            eventTitle: ticket.events.title,
-            eventDate: ticket.events.start_datetime,
-            eventVenue: ticket.events.location,
-            ticketId: ticket.id,
-            qrCodeDataURL: ticket.qr_code
+          to: senderEmail,
+          subject: `Ticket transfer ${status} - ${eventTitle}`,
+          html: getTicketTransferResponseEmail({
+            recipientName: recipientName || user.email || toEmailLower,
+            eventTitle,
+            action: status === 'accepted' ? 'accepted' : 'rejected',
+            ticketId
           })
         })
       }
     } catch (emailError) {
-      console.error('Failed to send transfer notifications:', emailError)
+      console.error('Failed to send transfer response email:', emailError)
+    }
+
+    // In-app notifications (best-effort)
+    try {
+      const recipientLabel = recipientName || user.email || 'The recipient'
+      const senderLabel = senderName || senderEmail || 'The sender'
+
+      await createNotification(
+        fromUserId,
+        'ticket_transfer',
+        status === 'accepted' ? 'Ticket transfer accepted' : 'Ticket transfer declined',
+        `${recipientLabel} has ${status === 'accepted' ? 'accepted' : 'declined'} your ticket transfer for "${eventTitle}".`,
+        `/tickets/${ticketId}`,
+        { eventId: ticketEventId, ticketId, transferStatus: status }
+      )
+
+      if (status === 'accepted') {
+        await createNotification(
+          user.id,
+          'ticket_transfer',
+          'Ticket received',
+          `You accepted a ticket transfer for "${eventTitle}" from ${senderLabel}.`,
+          `/tickets/${ticketId}`,
+          { eventId: ticketEventId, ticketId, transferStatus: status }
+        )
+      }
+    } catch (notifyError) {
+      console.error('Failed to create transfer notifications:', notifyError)
     }
 
     return NextResponse.json({
       success: true,
-      status: 'accepted',
-      ticketId: transfer.ticket_id
+      status,
+      ticketId,
+      expiresAt
     })
-
-  } catch (error) {
+  } catch (error: any) {
+    const status = typeof error?.status === 'number' ? error.status : 500
     console.error('Transfer response error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: error?.message || 'Internal server error' },
+      { status }
     )
   }
 }

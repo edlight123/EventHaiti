@@ -6,8 +6,10 @@ export interface Notification {
   type: NotificationType
   title: string
   message: string
+  actionUrl?: string
   eventId?: string
   ticketId?: string
+  metadata?: Record<string, any>
   isRead: boolean
   createdAt: string
   readAt?: string

@@ -267,64 +267,6 @@ export async function recordTicketScan(ticketId: string, scannedBy: string): Pro
 }
 
 /**
- * Log ticket transfer
- */
-export async function logTicketTransfer(
-  ticketId: string,
-  fromUserId: string,
-  toUserId: string,
-  ipAddress: string,
-  reason?: string
-): Promise<void> {
-  const supabase = await createClient()
-  const id = `transfer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
-  // Check if ticket has been transferred too many times
-  const { data: transfers } = await supabase
-    .from('ticket_transfers')
-    .select('id')
-    .eq('ticket_id', ticketId)
-
-  if (transfers && transfers.length >= 3) {
-    await logSuspiciousActivity({
-      userId: fromUserId,
-      activityType: 'duplicate_tickets',
-      description: `Ticket ${ticketId} has been transferred ${transfers.length} times`,
-      severity: 'medium',
-      metadata: { ticketId, fromUserId, toUserId, transferCount: transfers.length },
-    })
-  }
-
-  // Record transfer
-  await supabase.from('ticket_transfers').insert({
-    id,
-    ticket_id: ticketId,
-    from_user_id: fromUserId,
-    to_user_id: toUserId,
-    transferred_at: new Date().toISOString(),
-    transfer_reason: reason,
-    ip_address: ipAddress,
-  })
-
-  // Update ticket transfer count
-  const { data: ticket } = await supabase
-    .from('tickets')
-    .select('transfer_count')
-    .eq('id', ticketId)
-    .single()
-  
-  const currentCount = ticket?.transfer_count || 0
-  
-  await supabase
-    .from('tickets')
-    .update({
-      transfer_count: currentCount + 1,
-      user_id: toUserId,
-    })
-    .eq('id', ticketId)
-}
-
-/**
  * Detect potential bot behavior
  */
 export async function detectBotBehavior(

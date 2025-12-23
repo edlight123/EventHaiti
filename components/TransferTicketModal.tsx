@@ -28,10 +28,10 @@ export default function TransferTicketModal({
     setLoading(true)
 
     try {
-      const response = await fetch('/api/tickets/transfer', {
+      const response = await fetch('/api/tickets/transfer/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticketId, toEmail: toEmail.trim(), reason }),
+        body: JSON.stringify({ ticketId, toEmail: toEmail.trim(), message: reason }),
       })
 
       const data = await response.json()
@@ -40,7 +40,7 @@ export default function TransferTicketModal({
         throw new Error(data.error || 'Failed to transfer ticket')
       }
 
-      alert(data.message || 'Ticket transferred successfully!')
+      alert(data.message || 'Transfer link sent!')
       setIsOpen(false)
       setToEmail('')
       setReason('')

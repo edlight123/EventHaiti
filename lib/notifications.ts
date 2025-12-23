@@ -120,8 +120,10 @@ export async function getUserNotifications(
       type: doc.data().type,
       title: doc.data().title,
       message: doc.data().message,
+      actionUrl: doc.data().actionUrl || undefined,
       eventId: doc.data().eventId || undefined,
       ticketId: doc.data().ticketId || undefined,
+      metadata: doc.data().metadata || undefined,
       isRead: doc.data().isRead,
       createdAt: doc.data().createdAt.toDate().toISOString(),
       readAt: doc.data().readAt?.toDate()?.toISOString() || undefined
