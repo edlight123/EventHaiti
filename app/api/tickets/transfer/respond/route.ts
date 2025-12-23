@@ -6,6 +6,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { createNotification } from '@/lib/notifications/helpers'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import type { DocumentReference, Transaction } from 'firebase-admin/firestore'
 
 const transferResponseSchema = z.object({
   transferToken: z.string().min(1),
@@ -50,13 +51,13 @@ export async function POST(request: NextRequest) {
     }
 
     const transferDoc = transfersQuery.docs[0]
-    const transferRef = transferDoc.ref
+    const transferRef = transferDoc.ref as DocumentReference
 
     const nowIso = new Date().toISOString()
 
     // Perform update atomically
     const { ticketId, fromUserId, toEmailLower, status, expiresAt, ticketEventId } = await adminDb.runTransaction(
-      async (tx) => {
+      async (tx: Transaction) => {
         const transferSnap = await tx.get(transferRef)
         if (!transferSnap.exists) {
           throw new Error('Transfer not found')
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
           throw err
         }
 
-        const ticketRef = adminDb.collection('tickets').doc(ticketId)
+        const ticketRef = adminDb.collection('tickets').doc(ticketId) as DocumentReference
         const ticketSnap = await tx.get(ticketRef)
         if (!ticketSnap.exists) {
           const err: any = new Error('Ticket not found')
