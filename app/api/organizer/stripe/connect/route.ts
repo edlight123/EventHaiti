@@ -16,9 +16,23 @@ function normalizeAppUrl(request: NextRequest) {
   const fromEnv = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '')
   if (fromEnv) return fromEnv
 
-  const forwardedProto = request.headers.get('x-forwarded-proto')
-  const forwardedHost = request.headers.get('x-forwarded-host')
-  if (forwardedProto && forwardedHost) return `${forwardedProto}://${forwardedHost}`
+  const first = (value: string | null) => String(value || '').split(',')[0].trim()
+
+  // Prefer the actual request host (works well with domain aliases).
+  const host =
+    first(request.headers.get('host')) ||
+    first(request.headers.get('x-forwarded-host')) ||
+    request.nextUrl.host ||
+    first(process.env.VERCEL_URL || null)
+
+  // Prefer forwarded proto, otherwise infer.
+  const inferredProto = request.nextUrl.protocol ? request.nextUrl.protocol.replace(':', '') : ''
+  const proto =
+    first(request.headers.get('x-forwarded-proto')) ||
+    inferredProto ||
+    (process.env.VERCEL_ENV === 'production' ? 'https' : 'http')
+
+  if (host) return `${proto}://${host}`
 
   return request.nextUrl.origin || 'http://localhost:3000'
 }
