@@ -6,6 +6,7 @@ import { sendWhatsAppMessage, getTicketConfirmationWhatsApp } from '@/lib/whatsa
 import { trackPromoCodeUsage, calculateDiscount } from '@/lib/promo-codes'
 import { notifyTicketPurchase, notifyOrganizerTicketSale } from '@/lib/notifications/helpers'
 import { addTicketToEarnings } from '@/lib/earnings'
+import { adminDb } from '@/lib/firebase/admin'
 
 // Lazy load Stripe to avoid build-time initialization
 function getStripe() {
@@ -40,6 +41,9 @@ export async function POST(request: Request) {
       const supabase = await createClient()
       const quantity = parseInt(session.metadata.quantity || '1', 10)
       const pricePerTicket = session.amount_total / 100 / quantity // Total price divided by quantity
+      const originalCurrency = String(session.metadata.originalCurrency || '').toUpperCase() || 'USD'
+      const priceInOriginalCurrency = Number(session.metadata.priceInOriginalCurrency || session.metadata.finalPrice || 0)
+      const exchangeRateUsed = session.metadata.exchangeRate ? parseFloat(session.metadata.exchangeRate) : null
       
       // Create tickets one at a time to ensure each gets unique ID
       const createdTickets = []
@@ -48,10 +52,12 @@ export async function POST(request: Request) {
         const ticketData = {
           event_id: session.metadata.eventId,
           attendee_id: session.client_reference_id,
-          price_paid: pricePerTicket,
-          currency: session.metadata.currency || session.currency || 'usd',
-          original_currency: session.metadata.originalCurrency || session.metadata.currency || session.currency || 'usd',
-          exchange_rate_used: session.metadata.exchangeRate ? parseFloat(session.metadata.exchangeRate) : null,
+          // Organizer-facing/event-currency amount.
+          price_paid: Number.isFinite(priceInOriginalCurrency) && priceInOriginalCurrency > 0 ? priceInOriginalCurrency : pricePerTicket,
+          currency: originalCurrency === 'HTG' ? 'HTG' : 'USD',
+          original_currency: originalCurrency === 'HTG' ? 'HTG' : 'USD',
+          // settlement-per-event rate (USD per HTG for Stripe when event is HTG)
+          exchange_rate_used: exchangeRateUsed,
           payment_method: 'stripe',
           payment_id: session.payment_intent,
           status: 'valid',
@@ -73,6 +79,34 @@ export async function POST(request: Request) {
         if (createdTicket) {
           createdTickets.push(createdTicket)
           console.log('Created ticket:', createdTicket.id, 'with QR:', qrCodeData)
+
+          // Mirror into Firestore for organizer earnings/admin analytics.
+          try {
+            await adminDb.collection('tickets').doc(String(createdTicket.id)).set(
+              {
+                event_id: session.metadata.eventId,
+                attendee_id: session.client_reference_id,
+                status: 'confirmed',
+                ticket_type: createdTicket.tier_name || createdTicket.tierName || 'General Admission',
+                price_paid: ticketData.price_paid,
+                currency: ticketData.currency,
+                exchange_rate_used: ticketData.exchange_rate_used ?? null,
+                charged_amount: pricePerTicket,
+                charged_currency: String(session.currency || 'usd').toUpperCase(),
+                payment_method: 'stripe',
+                payment_id: session.payment_intent,
+                purchased_at: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+              { merge: true }
+            )
+          } catch (e) {
+            console.warn('[stripe] failed to mirror ticket to Firestore', {
+              ticketId: createdTicket.id,
+              message: (e as any)?.message,
+            })
+          }
         }
       }
 
@@ -128,11 +162,18 @@ export async function POST(request: Request) {
 
       // Update event earnings (NEW: automatic earnings tracking)
       try {
-        await addTicketToEarnings(
-          session.metadata.eventId,
-          session.amount_total, // Already in cents
-          quantity
+        const eventGrossCents = Math.round(
+          (Number.isFinite(priceInOriginalCurrency) && priceInOriginalCurrency > 0 ? priceInOriginalCurrency : pricePerTicket) *
+            quantity *
+            100
         )
+        await addTicketToEarnings(session.metadata.eventId, eventGrossCents, quantity, {
+          currency: originalCurrency,
+          paymentMethod: 'stripe',
+          chargedAmountCents: session.amount_total,
+          fxRate: exchangeRateUsed,
+          chargedCurrency: String(session.currency || 'usd').toUpperCase(),
+        })
         console.log(`✅ Updated earnings for event ${session.metadata.eventId}: ${session.amount_total} cents (${quantity} tickets)`)
       } catch (earningsError) {
         console.error('❌ Failed to update earnings:', earningsError)
@@ -224,6 +265,9 @@ export async function POST(request: Request) {
       const supabase = await createClient()
       const quantity = parseInt(paymentIntent.metadata.quantity || '1', 10)
       const pricePerTicket = paymentIntent.amount / 100 / quantity
+      const originalCurrency = String(paymentIntent.metadata.originalCurrency || '').toUpperCase() || 'USD'
+      const priceInOriginalCurrency = Number(paymentIntent.metadata.priceInOriginalCurrency || paymentIntent.metadata.finalPrice || 0)
+      const exchangeRateUsed = paymentIntent.metadata.exchangeRate ? parseFloat(paymentIntent.metadata.exchangeRate) : null
       
       // Create tickets
       const createdTickets = []
@@ -232,10 +276,10 @@ export async function POST(request: Request) {
         const ticketData = {
           event_id: paymentIntent.metadata.eventId,
           attendee_id: paymentIntent.metadata.userId,
-          price_paid: pricePerTicket,
-          currency: paymentIntent.metadata.currency || paymentIntent.currency || 'usd',
-          original_currency: paymentIntent.metadata.originalCurrency || paymentIntent.metadata.currency || paymentIntent.currency || 'usd',
-          exchange_rate_used: paymentIntent.metadata.exchangeRate ? parseFloat(paymentIntent.metadata.exchangeRate) : null,
+          price_paid: Number.isFinite(priceInOriginalCurrency) && priceInOriginalCurrency > 0 ? priceInOriginalCurrency : pricePerTicket,
+          currency: originalCurrency === 'HTG' ? 'HTG' : 'USD',
+          original_currency: originalCurrency === 'HTG' ? 'HTG' : 'USD',
+          exchange_rate_used: exchangeRateUsed,
           payment_method: 'stripe',
           payment_id: paymentIntent.id,
           status: 'valid',
@@ -264,10 +308,58 @@ export async function POST(request: Request) {
             eventId: createdTicket.event_id,
             qrCode: createdTicket.qr_code_data
           })
+
+          // Mirror into Firestore for organizer earnings/admin analytics.
+          try {
+            await adminDb.collection('tickets').doc(String(createdTicket.id)).set(
+              {
+                event_id: paymentIntent.metadata.eventId,
+                attendee_id: paymentIntent.metadata.userId,
+                status: 'confirmed',
+                ticket_type: paymentIntent.metadata.tierName || 'General Admission',
+                price_paid: ticketData.price_paid,
+                currency: ticketData.currency,
+                exchange_rate_used: ticketData.exchange_rate_used ?? null,
+                charged_amount: pricePerTicket,
+                charged_currency: String(paymentIntent.currency || 'usd').toUpperCase(),
+                payment_method: 'stripe',
+                payment_id: paymentIntent.id,
+                purchased_at: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+              { merge: true }
+            )
+          } catch (e) {
+            console.warn('[stripe] failed to mirror ticket to Firestore', {
+              ticketId: createdTicket.id,
+              message: (e as any)?.message,
+            })
+          }
         }
       }
       
       console.log(`📊 Total tickets created: ${createdTickets.length} for user ${paymentIntent.metadata.userId}`)
+
+      // Update event earnings for embedded payments as well.
+      try {
+        const eventGrossCents = Math.round(
+          (Number.isFinite(priceInOriginalCurrency) && priceInOriginalCurrency > 0 ? priceInOriginalCurrency : pricePerTicket) *
+            quantity *
+            100
+        )
+        await addTicketToEarnings(paymentIntent.metadata.eventId, eventGrossCents, quantity, {
+          currency: originalCurrency,
+          paymentMethod: 'stripe',
+          chargedAmountCents: paymentIntent.amount,
+          fxRate: exchangeRateUsed,
+          chargedCurrency: String(paymentIntent.currency || 'usd').toUpperCase(),
+        })
+        console.log(`✅ Updated earnings for event ${paymentIntent.metadata.eventId}: ${paymentIntent.amount} cents (${quantity} tickets)`)
+      } catch (earningsError) {
+        console.error('❌ Failed to update earnings:', earningsError)
+        // Don't fail the webhook - log for manual reconciliation
+      }
 
       // Update tickets_sold count
       if (createdTickets.length > 0) {

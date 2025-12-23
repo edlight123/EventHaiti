@@ -195,6 +195,7 @@ export async function POST(request: Request) {
 
       chargeSelections = normalizedSelections.map((s) => ({
         ...s,
+        originalUnitPrice: s.unitPrice,
         unitPrice: convertUsdToHtgAmount(s.unitPrice, effectiveRate),
       }))
       chargeAmount = chargeSelections.reduce((sum, s) => sum + s.quantity * s.unitPrice, 0)

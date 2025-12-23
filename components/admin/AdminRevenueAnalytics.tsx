@@ -16,6 +16,14 @@ interface RevenueData {
   totalRevenueUSD: number
   totalRevenueHTG: number
   totalTickets: number
+  totalRevenueUSDWithFxSpread: number
+  fxSpread: {
+    ticketCount: number
+    usdVolume: number
+    profitHTG: number
+    profitUSD: number
+    averageSpreadPercent: number
+  }
   byCurrency: {
     HTG: {
       revenue: number
@@ -122,8 +130,13 @@ export function AdminRevenueAnalytics() {
           </div>
           <div className="text-sm font-medium text-teal-700 mb-1">Total Revenue (USD)</div>
           <div className="text-3xl font-bold text-teal-900">
-            {formatCurrency(revenue.totalRevenueUSD, 'USD')}
+            {formatCurrency(revenue.totalRevenueUSDWithFxSpread ?? revenue.totalRevenueUSD, 'USD')}
           </div>
+          {revenue.fxSpread?.ticketCount > 0 && (
+            <div className="text-xs text-teal-700 mt-2">
+              Includes FX spread: {formatCurrency(revenue.fxSpread.profitUSD || 0, 'USD')}
+            </div>
+          )}
           {growth && (
             <div className="text-xs text-teal-600 mt-2">
               7-day growth: <GrowthBadge value={growth.revenueGrowth7d} />
@@ -224,6 +237,37 @@ export function AdminRevenueAnalytics() {
           </div>
         </div>
       </div>
+
+      {/* FX Spread Profit */}
+      {revenue.fxSpread?.ticketCount > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">FX Spread Profit (MonCash USD Events)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="border border-gray-200 rounded-lg p-4">
+              <div className="text-sm text-gray-600">USD Volume</div>
+              <div className="text-xl font-semibold text-gray-900">
+                {formatCurrency(revenue.fxSpread.usdVolume, 'USD')}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">{revenue.fxSpread.ticketCount} tickets</div>
+            </div>
+            <div className="border border-gray-200 rounded-lg p-4">
+              <div className="text-sm text-gray-600">Spread Profit</div>
+              <div className="text-xl font-semibold text-gray-900">
+                {formatCurrency(revenue.fxSpread.profitHTG, 'HTG')}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">{formatCurrency(revenue.fxSpread.profitUSD || 0, 'USD')}</div>
+              <div className="text-xs text-gray-500 mt-1">Computed from base vs effective rate</div>
+            </div>
+            <div className="border border-gray-200 rounded-lg p-4">
+              <div className="text-sm text-gray-600">Avg Spread</div>
+              <div className="text-xl font-semibold text-gray-900">
+                {(revenue.fxSpread.averageSpreadPercent * 100).toFixed(2)}%
+              </div>
+              <div className="text-xs text-gray-500 mt-1">From quote metadata</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Payment Method Breakdown */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

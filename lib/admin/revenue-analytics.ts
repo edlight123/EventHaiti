@@ -9,6 +9,18 @@ export interface RevenueBreakdown {
   totalRevenueUSD: number
   totalRevenueHTG: number
   totalTickets: number
+
+  // Convenience roll-up for admin dashboard (gross USD equivalent + FX spread profit converted to USD).
+  totalRevenueUSDWithFxSpread: number
+
+  // FX spread profit (MonCash USD-priced events charged in HTG)
+  fxSpread: {
+    ticketCount: number
+    usdVolume: number
+    profitHTG: number
+    profitUSD: number
+    averageSpreadPercent: number
+  }
   
   // By currency
   byCurrency: {
@@ -55,6 +67,24 @@ export interface RevenueBreakdown {
   }
 }
 
+function toNumber(value: unknown): number | null {
+  const n = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(n) ? n : null
+}
+
+function normalizeCurrency(raw: unknown): 'HTG' | 'USD' {
+  const upper = String(raw || '').toUpperCase()
+  return upper === 'USD' ? 'USD' : 'HTG'
+}
+
+function normalizePaymentMethod(raw: unknown): 'stripe' | 'moncash' | 'natcash' {
+  const value = String(raw || '').toLowerCase()
+  if (value === 'stripe') return 'stripe'
+  if (value === 'natcash') return 'natcash'
+  // Treat moncash_button as moncash for reporting.
+  return 'moncash'
+}
+
 export interface PlatformMetrics {
   revenue: RevenueBreakdown
   growth: {
@@ -85,7 +115,8 @@ export async function getPlatformRevenueAnalytics(
   endDate?: Date
 ): Promise<RevenueBreakdown> {
   const ticketsRef = adminDb.collection('tickets')
-  let query: any = ticketsRef.where('status', '==', 'confirmed')
+  // Support both legacy ticket status values.
+  let query: any = ticketsRef.where('status', 'in', ['confirmed', 'valid'])
 
   if (startDate) {
     query = query.where('created_at', '>=', startDate)
@@ -105,6 +136,14 @@ export async function getPlatformRevenueAnalytics(
     totalRevenueUSD: 0,
     totalRevenueHTG: 0,
     totalTickets: tickets.length,
+    totalRevenueUSDWithFxSpread: 0,
+    fxSpread: {
+      ticketCount: 0,
+      usdVolume: 0,
+      profitHTG: 0,
+      profitUSD: 0,
+      averageSpreadPercent: 0,
+    },
     byCurrency: {
       HTG: { revenue: 0, tickets: 0, averagePrice: 0, convertedToUSD: 0 },
       USD: { revenue: 0, tickets: 0, averagePrice: 0 }
@@ -123,31 +162,72 @@ export async function getPlatformRevenueAnalytics(
   }
 
   const exchangeRates: number[] = []
+  const fxSpreadPercents: number[] = []
 
   for (const ticket of tickets) {
-    const price = ticket.price_paid || 0
-    const currency = (ticket.currency || 'USD').toUpperCase()
-    const originalCurrency = (ticket.original_currency || currency).toUpperCase()
-    const exchangeRate = ticket.exchange_rate_used || 1
-    const paymentMethod = (ticket.payment_method || 'stripe').toLowerCase()
+    const price = toNumber(ticket.price_paid) ?? 0
+    const currency = normalizeCurrency(ticket.currency)
+    const chargedCurrency = normalizeCurrency(ticket.charged_currency)
+    const fxRate = toNumber(ticket.exchange_rate_used)
+    const fxBaseRate = toNumber(ticket.exchange_rate_base)
+    const fxSpreadPercent = toNumber(ticket.exchange_rate_spread_percent)
+    const paymentMethod = normalizePaymentMethod(ticket.payment_method)
 
-    // Track exchange rates
-    if (exchangeRate !== 1 && originalCurrency === 'HTG') {
-      exchangeRates.push(exchangeRate)
+    // Compute implied HTG->USD rate for general stats.
+    // - Stripe HTG events: fxRate = USD per HTG (charged USD, event HTG)
+    // - MonCash USD events: fxRate = HTG per USD (charged HTG, event USD)
+    let htgToUsdRate: number | null = null
+    if (currency === 'HTG' && chargedCurrency === 'USD' && fxRate && fxRate > 0) {
+      htgToUsdRate = fxRate
+    } else if (currency === 'USD' && chargedCurrency === 'HTG' && fxRate && fxRate > 0) {
+      htgToUsdRate = 1 / fxRate
+    }
+    if (htgToUsdRate && Number.isFinite(htgToUsdRate) && htgToUsdRate > 0) {
+      exchangeRates.push(htgToUsdRate)
     }
 
-    // Calculate USD equivalent
-    let priceUSD = price
+    // Calculate USD/HTG equivalents with minimal assumptions.
+    let priceUSD = 0
     let priceHTG = 0
 
-    if (currency === 'HTG') {
-      priceHTG = price
-      priceUSD = price * (exchangeRate || 0.0076)
-    } else if (originalCurrency === 'HTG' && currency === 'USD') {
-      priceHTG = price / (exchangeRate || 0.0076)
+    if (currency === 'USD') {
       priceUSD = price
+      if (chargedCurrency === 'HTG') {
+        const chargedAmount = toNumber(ticket.charged_amount)
+        if (chargedAmount && chargedAmount > 0) {
+          priceHTG = chargedAmount
+        } else if (fxRate && fxRate > 0) {
+          priceHTG = price * fxRate
+        }
+      }
     } else {
-      priceUSD = price
+      priceHTG = price
+      if (chargedCurrency === 'USD') {
+        const chargedAmount = toNumber(ticket.charged_amount)
+        if (chargedAmount && chargedAmount > 0) {
+          priceUSD = chargedAmount
+        } else if (fxRate && fxRate > 0) {
+          priceUSD = price * fxRate
+        }
+      }
+      if (priceUSD === 0) {
+        // Legacy fallback for when we truly have no rate recorded.
+        priceUSD = price * 0.0076
+      }
+    }
+
+    if (priceHTG === 0 && priceUSD > 0 && htgToUsdRate && htgToUsdRate > 0) {
+      priceHTG = priceUSD / htgToUsdRate
+    }
+
+    // Spread profit for MonCash USD events charged in HTG.
+    if (currency === 'USD' && chargedCurrency === 'HTG' && fxRate && fxRate > 0 && fxBaseRate && fxBaseRate > 0) {
+      breakdown.fxSpread.ticketCount += 1
+      breakdown.fxSpread.usdVolume += price
+      breakdown.fxSpread.profitHTG += price * (fxRate - fxBaseRate)
+      if (fxSpreadPercent != null && Number.isFinite(fxSpreadPercent)) {
+        fxSpreadPercents.push(fxSpreadPercent)
+      }
     }
 
     // Update totals
@@ -155,7 +235,7 @@ export async function getPlatformRevenueAnalytics(
     breakdown.totalRevenueHTG += priceHTG
 
     // Update currency breakdown
-    if (originalCurrency === 'HTG') {
+    if (currency === 'HTG') {
       breakdown.byCurrency.HTG.revenue += priceHTG
       breakdown.byCurrency.HTG.tickets++
       breakdown.byCurrency.HTG.convertedToUSD += priceUSD
@@ -210,6 +290,17 @@ export async function getPlatformRevenueAnalytics(
     breakdown.exchangeRates.rateSpread = 
       breakdown.exchangeRates.maxRate - breakdown.exchangeRates.minRate
   }
+
+  if (fxSpreadPercents.length > 0) {
+    breakdown.fxSpread.averageSpreadPercent =
+      fxSpreadPercents.reduce((sum, v) => sum + v, 0) / fxSpreadPercents.length
+  }
+
+  // Convert spread profit HTG -> USD using observed average HTG->USD rate when available.
+  // Fallback to a conservative constant only when we have no rate data.
+  const htgToUsd = breakdown.exchangeRates.averageRate > 0 ? breakdown.exchangeRates.averageRate : 0.0076
+  breakdown.fxSpread.profitUSD = breakdown.fxSpread.profitHTG * htgToUsd
+  breakdown.totalRevenueUSDWithFxSpread = breakdown.totalRevenueUSD + breakdown.fxSpread.profitUSD
 
   return breakdown
 }

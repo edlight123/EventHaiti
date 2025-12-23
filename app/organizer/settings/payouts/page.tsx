@@ -13,6 +13,11 @@ export const revalidate = 0
 
 async function getOrganizerEventSummaries(organizerId: string) {
   try {
+    const normalizeCurrency = (raw: unknown): 'HTG' | 'USD' => {
+      const upper = String(raw || '').toUpperCase()
+      return upper === 'USD' ? 'USD' : 'HTG'
+    }
+
     // Primary source: precomputed earnings docs.
     // Note: older schemas may have organizer_id instead of organizerId.
     const [earningsSnapshot, legacyEarningsSnapshot] = await Promise.all([
@@ -47,6 +52,9 @@ async function getOrganizerEventSummaries(organizerId: string) {
           const availableToWithdraw = Number(earnings.availableToWithdraw || earnings.available_to_withdraw || 0)
           const withdrawnAmount = Number(earnings.withdrawnAmount || earnings.withdrawn_amount || 0)
 
+          // Amounts in the earnings doc are stored in cents of this currency.
+          const currency = normalizeCurrency(earnings.currency || earnings.currency_code || eventData?.currency)
+
           const payoutStatus: 'pending' | 'scheduled' | 'paid' | 'on_hold' = (() => {
             const settlementStatus = String(earnings.settlementStatus || earnings.settlement_status || '')
             if (settlementStatus === 'ready' && availableToWithdraw > 0) return 'scheduled'
@@ -63,6 +71,7 @@ async function getOrganizerEventSummaries(organizerId: string) {
             grossSales,
             fees,
             netPayout,
+            currency,
             payoutStatus,
           }
         })
@@ -88,6 +97,18 @@ async function getOrganizerEventSummaries(organizerId: string) {
 
         // Avoid composite index requirements by only filtering by event_id at query time.
         const ticketsSnapshot = await adminDb.collection('tickets').where('event_id', '==', eventId).get()
+
+        // Try to align displayed currency with the currency of `price_paid` values.
+        // For Stripe card payments, `price_paid` is typically in USD.
+        const currency = (() => {
+          for (const doc of ticketsSnapshot.docs) {
+            const t = doc.data() || {}
+            const c = String(t.currency || '').toUpperCase()
+            if (c === 'USD') return 'USD' as const
+            if (c === 'HTG') return 'HTG' as const
+          }
+          return normalizeCurrency(eventData?.currency)
+        })()
 
         // Group by payment_id so we can apply fixed processing fees per purchase.
         const paymentGroups = new Map<string, { grossCents: number; ticketCount: number }>()
@@ -134,6 +155,7 @@ async function getOrganizerEventSummaries(organizerId: string) {
           grossSales,
           fees: platformFee + processingFees,
           netPayout: netAmount,
+          currency,
           payoutStatus,
         }
       })
@@ -154,12 +176,17 @@ function calculateUpcomingPayout(earnings: any[]) {
   const scheduled = earnings.filter(e => e.payoutStatus === 'scheduled')
   if (scheduled.length === 0) return undefined
 
+  const currencies = new Set<string>(scheduled.map((e) => String(e.currency || '').toUpperCase()).filter(Boolean))
+  if (currencies.size !== 1) return undefined
+  const currency = (Array.from(currencies)[0] || 'HTG') as string
+
   const totalAmount = scheduled.reduce((sum, e) => sum + e.netPayout, 0)
   const nextPayoutDate = new Date()
   nextPayoutDate.setDate(nextPayoutDate.getDate() + 5) // 5 business days from now
 
   return {
     amount: totalAmount,
+    currency,
     date: nextPayoutDate.toISOString(),
     eventCount: scheduled.length
   }

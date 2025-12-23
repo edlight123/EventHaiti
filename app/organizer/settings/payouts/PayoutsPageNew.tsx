@@ -45,6 +45,7 @@ interface EventPayoutSummary {
   grossSales: number
   fees: number
   netPayout: number
+  currency?: 'HTG' | 'USD' | string
   payoutStatus: 'pending' | 'scheduled' | 'paid' | 'on_hold'
 }
 
@@ -53,6 +54,7 @@ interface PayoutsPageProps {
   eventSummaries: EventPayoutSummary[]
   upcomingPayout?: {
     amount: number
+    currency: string
     date: string
     eventCount: number
   }
@@ -461,11 +463,12 @@ export default function PayoutsPageNew({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payoutChangeVerificationRequired])
 
-  const formatCurrency = (amount: number) => {
-    const normalized = amount / 100
+  const formatCurrency = (amountCents: number, currencyRaw?: string) => {
+    const normalized = amountCents / 100
+    const currency = String(currencyRaw || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG'
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'HTG',
+      currency,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(normalized)
@@ -1376,13 +1379,13 @@ export default function PayoutsPageNew({
                             {event.ticketsSold}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-900 text-right">
-                            {formatCurrency(event.grossSales)}
+                            {formatCurrency(event.grossSales, event.currency)}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-500 text-right">
-                            {formatCurrency(event.fees)}
+                            {formatCurrency(event.fees, event.currency)}
                           </td>
                           <td className="px-6 py-4 text-sm font-medium text-gray-900 text-right">
-                            {formatCurrency(event.netPayout)}
+                            {formatCurrency(event.netPayout, event.currency)}
                           </td>
                           <td className="px-6 py-4">
                             {getStatusPill(event.payoutStatus)}
@@ -1420,7 +1423,7 @@ export default function PayoutsPageNew({
                         <div>
                           <div className="text-xs text-gray-500">Net payout</div>
                           <div className="text-lg font-semibold text-gray-900">
-                            {formatCurrency(event.netPayout)}
+                            {formatCurrency(event.netPayout, event.currency)}
                           </div>
                         </div>
                         <ChevronRight className="w-5 h-5 text-gray-400" />
@@ -1444,7 +1447,7 @@ export default function PayoutsPageNew({
                       <Clock className="w-5 h-5 text-blue-600 flex-shrink-0" />
                       <div>
                         <div className="text-sm font-medium text-blue-900">
-                          Next payout: {formatCurrency(upcomingPayout.amount)} · {formatDate(upcomingPayout.date)}
+                          Next payout: {formatCurrency(upcomingPayout.amount, upcomingPayout.currency)} · {formatDate(upcomingPayout.date)}
                         </div>
                         <div className="text-xs text-blue-700 mt-0.5">
                           Includes {upcomingPayout.eventCount} {upcomingPayout.eventCount === 1 ? 'event' : 'events'}

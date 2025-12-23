@@ -6,6 +6,8 @@ import { notifyTicketPurchase as notifyTicketPurchaseNotification } from '@/lib/
 import { sendEmail, getTicketConfirmationEmail } from '@/lib/email'
 import { sendWhatsAppMessage, getTicketConfirmationWhatsApp } from '@/lib/whatsapp'
 import { generateTicketQRCode } from '@/lib/qrcode'
+import { adminDb } from '@/lib/firebase/admin'
+import { addTicketToEarnings } from '@/lib/earnings'
 
 export async function GET(request: Request) {
   try {
@@ -70,16 +72,30 @@ export async function GET(request: Request) {
     const quantity = pendingTx.quantity || 1
     const pricePerTicket = pendingTx.amount / quantity
 
+    const eventCurrency = String(pendingTx.original_currency || pendingTx.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG'
+    const chargedCurrency = String(pendingTx.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG'
+    const fxRate = pendingTx.exchange_rate_used != null ? Number(pendingTx.exchange_rate_used) : null
+    const organizerUnitPrice = (() => {
+      if (eventCurrency === 'USD') {
+        const fallback = Number(pendingTx.original_amount || 0) / Math.max(1, quantity)
+        return Number.isFinite(fallback) && fallback > 0 ? fallback : 0
+      }
+      return pricePerTicket
+    })()
+
     const createdTickets = []
     for (let i = 0; i < quantity; i++) {
       const ticketData = {
         event_id: pendingTx.event_id,
         attendee_id: pendingTx.user_id,
         attendee_name: attendee?.full_name || attendee?.email || 'Guest',
-        price_paid: pricePerTicket,
-        currency: pendingTx.currency || 'HTG',
-        original_currency: pendingTx.original_currency || pendingTx.currency || 'HTG',
-        exchange_rate_used: pendingTx.exchange_rate_used ?? null,
+        // Organizer-facing/event currency
+        price_paid: organizerUnitPrice,
+        currency: eventCurrency,
+        original_currency: eventCurrency,
+        exchange_rate_used: fxRate,
+        charged_amount: pricePerTicket,
+        charged_currency: chargedCurrency,
         payment_method: 'moncash',
         payment_id: transactionId,
         status: 'valid',
@@ -117,6 +133,34 @@ export async function GET(request: Request) {
         createdTicket.qr_code_data = createdTicket.id
         createdTickets.push(createdTicket)
         console.log('Created ticket:', createdTicket.id, 'with QR:', createdTicket.id)
+
+        // Mirror into Firestore for organizer earnings and admin analytics.
+        try {
+          await adminDb.collection('tickets').doc(String(createdTicket.id)).set(
+            {
+              event_id: pendingTx.event_id,
+              attendee_id: pendingTx.user_id,
+              status: 'confirmed',
+              ticket_type: pendingTx.tier_name || 'General Admission',
+              price_paid: organizerUnitPrice,
+              currency: eventCurrency,
+              exchange_rate_used: fxRate,
+              charged_amount: pricePerTicket,
+              charged_currency: chargedCurrency,
+              payment_method: 'moncash',
+              payment_id: transactionId,
+              purchased_at: new Date().toISOString(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+            { merge: true }
+          )
+        } catch (e) {
+          console.warn('[moncash] failed to mirror ticket to Firestore', {
+            ticketId: createdTicket.id,
+            message: (e as any)?.message,
+          })
+        }
       }
     }
     
@@ -148,6 +192,20 @@ export async function GET(request: Request) {
         .from('events')
         .update({ tickets_sold: (eventData.tickets_sold || 0) + quantity })
         .eq('id', pendingTx.event_id)
+    }
+
+    // Update Firestore earnings in event currency.
+    try {
+      const grossEventCents = Math.round(Number(pendingTx.original_amount || pendingTx.amount || 0) * 100)
+      await addTicketToEarnings(pendingTx.event_id, grossEventCents, Number(quantity || 1), {
+        currency: eventCurrency,
+        paymentMethod: 'moncash',
+        chargedAmountCents: Math.round(Number(pendingTx.amount || 0) * 100),
+        fxRate,
+        chargedCurrency,
+      })
+    } catch (e) {
+      console.warn('[moncash] failed to update earnings', { message: (e as any)?.message })
     }
 
     // Generate QR code

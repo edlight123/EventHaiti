@@ -8,6 +8,62 @@ import { adminDb } from '@/lib/firebase/admin'
 import { calculateFees, calculateSettlementDate, isSettlementReady } from '@/lib/fees'
 import type { EventEarnings, SettlementStatus, EarningsSummary } from '@/types/earnings'
 
+type PaymentMethod = 'stripe' | 'moncash' | 'moncash_button' | 'natcash' | 'unknown'
+
+function normalizeCurrency(raw: unknown): 'HTG' | 'USD' {
+  const upper = String(raw || '').toUpperCase()
+  return upper === 'USD' ? 'USD' : 'HTG'
+}
+
+function normalizePaymentMethod(raw: unknown): PaymentMethod {
+  const value = String(raw || '').toLowerCase()
+  if (value === 'stripe') return 'stripe'
+  if (value === 'moncash_button') return 'moncash_button'
+  if (value === 'moncash') return 'moncash'
+  if (value === 'natcash') return 'natcash'
+  return 'unknown'
+}
+
+function calculateEventCurrencyFees(options: {
+  grossEventCents: number
+  paymentMethod: PaymentMethod
+  chargedAmountCents?: number | null
+  fxRate?: number | null
+}): { grossAmount: number; platformFee: number; processingFee: number; netAmount: number } {
+  const grossEventCents = Math.max(0, Math.round(options.grossEventCents || 0))
+  if (grossEventCents <= 0) {
+    return { grossAmount: 0, platformFee: 0, processingFee: 0, netAmount: 0 }
+  }
+
+  // Platform fee is always calculated on organizer-facing gross (event currency).
+  const platformSide = calculateFees(grossEventCents)
+  const platformFee = platformSide.platformFee
+
+  // Processing fee depends on the payment rail.
+  // Stripe fees are in charged/settlement currency, so convert them back to event currency when needed.
+  let processingFeeEventCents = 0
+  if (options.paymentMethod === 'stripe') {
+    const charged = Math.max(0, Math.round(options.chargedAmountCents ?? grossEventCents))
+    const stripeFees = calculateFees(charged)
+    const stripeProcessingFeeChargedCents = stripeFees.processingFee
+    const fx = typeof options.fxRate === 'number' && Number.isFinite(options.fxRate) && options.fxRate > 0
+      ? options.fxRate
+      : null
+
+    // fxRate is settlement-per-event (e.g., USD per HTG for Stripe HTG events).
+    // Convert charged-currency processing fee back to event currency.
+    processingFeeEventCents = fx ? Math.round(stripeProcessingFeeChargedCents / fx) : stripeProcessingFeeChargedCents
+  }
+
+  const netAmount = grossEventCents - platformFee - processingFeeEventCents
+  return {
+    grossAmount: grossEventCents,
+    platformFee,
+    processingFee: processingFeeEventCents,
+    netAmount,
+  }
+}
+
 async function findEventEarningsDoc(eventId: string) {
   // Current schema: eventId field.
   const byEventId = await adminDb
@@ -43,23 +99,77 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
 
   const ticketsSnapshot = await adminDb.collection('tickets').where('event_id', '==', eventId).get()
 
+  const currencyCounts = new Map<'HTG' | 'USD', number>()
+
   // Group by payment_id so fixed processing fee is applied once per purchase.
-  const paymentGroups = new Map<string, { grossCents: number; ticketCount: number }>()
+  const paymentGroups = new Map<
+    string,
+    {
+      grossEventCents: number
+      ticketCount: number
+      paymentMethod: PaymentMethod
+      fxRate: number | null
+      chargedAmountCents: number
+    }
+  >()
   let ticketsSold = 0
 
   for (const ticketDoc of ticketsSnapshot.docs) {
     const ticket = ticketDoc.data() || {}
-    if (ticket.status && String(ticket.status).toLowerCase() !== 'valid') continue
+    // Accept both legacy "valid" and standard "confirmed" tickets.
+    const status = String(ticket.status || '').toLowerCase()
+    if (status && status !== 'valid' && status !== 'confirmed') continue
+
+    const ticketCurrency = normalizeCurrency(ticket.currency || ticket.currency_code)
+    currencyCounts.set(ticketCurrency, (currencyCounts.get(ticketCurrency) || 0) + 1)
 
     const pricePaid = Number(ticket.price_paid ?? ticket.pricePaid ?? 0)
-    const grossCents = Math.round(pricePaid * 100)
-    if (!Number.isFinite(grossCents) || grossCents <= 0) continue
+    const grossEventCents = Math.round(pricePaid * 100)
+    if (!Number.isFinite(grossEventCents) || grossEventCents <= 0) continue
+
+    const paymentMethod = normalizePaymentMethod(ticket.payment_method)
+    const fxRate = ticket.exchange_rate_used != null ? Number(ticket.exchange_rate_used) : null
+
+    // If charged amount/currency is explicitly recorded (newer data), use it.
+    // Otherwise, infer best-effort based on payment method and exchange rate.
+    const chargedAmountMajor = ticket.charged_amount != null ? Number(ticket.charged_amount) : null
+    const chargedAmountCents = (() => {
+      if (chargedAmountMajor != null && Number.isFinite(chargedAmountMajor) && chargedAmountMajor > 0) {
+        return Math.round(chargedAmountMajor * 100)
+      }
+      if (paymentMethod === 'stripe' && fxRate && Number.isFinite(fxRate) && fxRate > 0) {
+        // Stripe HTG events charge in USD: charged = event * fx
+        return Math.round((grossEventCents / 100) * fxRate * 100)
+      }
+      if ((paymentMethod === 'moncash' || paymentMethod === 'moncash_button') && fxRate && Number.isFinite(fxRate) && fxRate > 0) {
+        // MonCash USD events charge in HTG: charged = event * fx
+        return Math.round((grossEventCents / 100) * fxRate * 100)
+      }
+      return grossEventCents
+    })()
 
     const paymentId = String(ticket.payment_id ?? ticket.paymentId ?? 'unknown')
-    const current = paymentGroups.get(paymentId) || { grossCents: 0, ticketCount: 0 }
-    current.grossCents += grossCents
-    current.ticketCount += 1
-    paymentGroups.set(paymentId, current)
+    const current =
+      paymentGroups.get(paymentId) ||
+      ({
+        grossEventCents: 0,
+        ticketCount: 0,
+        paymentMethod,
+        fxRate: fxRate && Number.isFinite(fxRate) ? fxRate : null,
+        chargedAmountCents: 0,
+      } as const)
+
+    // Preserve first non-unknown payment method/fx.
+    const methodToUse = current.paymentMethod !== 'unknown' ? current.paymentMethod : paymentMethod
+    const fxToUse = current.fxRate ?? (fxRate && Number.isFinite(fxRate) ? fxRate : null)
+
+    paymentGroups.set(paymentId, {
+      grossEventCents: current.grossEventCents + grossEventCents,
+      ticketCount: current.ticketCount + 1,
+      paymentMethod: methodToUse,
+      fxRate: fxToUse,
+      chargedAmountCents: current.chargedAmountCents + chargedAmountCents,
+    })
 
     ticketsSold += 1
   }
@@ -72,7 +182,12 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
   let netAmount = 0
 
   for (const group of Array.from(paymentGroups.values())) {
-    const fees = calculateFees(group.grossCents)
+    const fees = calculateEventCurrencyFees({
+      grossEventCents: group.grossEventCents,
+      paymentMethod: group.paymentMethod,
+      chargedAmountCents: group.chargedAmountCents,
+      fxRate: group.fxRate,
+    })
     grossSales += fees.grossAmount
     platformFee += fees.platformFee
     processingFees += fees.processingFee
@@ -83,8 +198,14 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
   const settlementStatus: SettlementStatus = isSettlementReady(settlementReadyDate) ? 'ready' : 'pending'
   const availableToWithdraw = settlementStatus === 'ready' ? Math.max(0, netAmount) : 0
 
-  const currencyRaw = String(event.currency || 'HTG').toUpperCase()
-  const currency = (currencyRaw === 'USD' ? 'USD' : 'HTG') as 'HTG' | 'USD'
+  // Amounts are computed from `ticket.price_paid`, so currency should match the predominant ticket currency.
+  // Fall back to event currency if tickets are missing currency.
+  const eventCurrency = normalizeCurrency(event.currency || 'HTG')
+  const currency = (() => {
+    if (currencyCounts.size === 0) return eventCurrency
+    const entries = Array.from(currencyCounts.entries()).sort((a, b) => b[1] - a[1])
+    return entries[0]?.[0] || eventCurrency
+  })()
 
   const nowIso = new Date().toISOString()
   return {
@@ -195,12 +316,28 @@ export async function getOrCreateEventEarnings(eventId: string): Promise<{
 export async function addTicketToEarnings(
   eventId: string,
   ticketAmount: number,
-  quantity: number = 1
+  quantity: number = 1,
+  options?: {
+    currency?: string
+    paymentMethod?: PaymentMethod | string
+    chargedAmountCents?: number
+    chargedCurrency?: string
+    fxRate?: number | null
+  }
 ): Promise<void> {
   const { ref, data } = await getOrCreateEventEarnings(eventId)
 
-  // Calculate fees for this transaction
-  const fees = calculateFees(ticketAmount)
+  const currency = normalizeCurrency(options?.currency || data?.currency || 'HTG')
+  const paymentMethod = normalizePaymentMethod(options?.paymentMethod)
+  const fxRate = options?.fxRate != null ? Number(options.fxRate) : null
+  const chargedAmountCents = options?.chargedAmountCents
+
+  const fees = calculateEventCurrencyFees({
+    grossEventCents: ticketAmount,
+    paymentMethod,
+    chargedAmountCents,
+    fxRate,
+  })
 
   // Update earnings
   const updates: Partial<EventEarnings> = {
@@ -212,6 +349,7 @@ export async function addTicketToEarnings(
     availableToWithdraw: (data?.availableToWithdraw || 0) + fees.netAmount,
     lastCalculatedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    currency,
   }
 
   await ref.update(updates)

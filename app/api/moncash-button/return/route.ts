@@ -11,6 +11,8 @@ import { notifyTicketPurchase as notifyTicketPurchaseNotification } from '@/lib/
 import { sendEmail, getTicketConfirmationEmail } from '@/lib/email'
 import { sendWhatsAppMessage, getTicketConfirmationWhatsApp } from '@/lib/whatsapp'
 import { generateTicketQRCode } from '@/lib/qrcode'
+import { adminDb } from '@/lib/firebase/admin'
+import { addTicketToEarnings } from '@/lib/earnings'
 
 export const runtime = 'nodejs'
 
@@ -280,7 +282,7 @@ export async function GET(request: Request) {
       .eq('id', pendingTx.user_id)
       .single()
 
-    const tierSelections: Array<{ tierId?: string | null; tierName?: string; quantity: number; unitPrice: number }> =
+    const tierSelections: Array<{ tierId?: string | null; tierName?: string; quantity: number; unitPrice: number; originalUnitPrice?: number }> =
       Array.isArray(pendingTx.tier_selections) && pendingTx.tier_selections.length > 0
         ? pendingTx.tier_selections
         : [
@@ -292,20 +294,43 @@ export async function GET(request: Request) {
             },
           ]
 
+    const eventCurrency = String(pendingTx.original_currency || pendingTx.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG'
+    const chargedCurrency = String(pendingTx.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG'
+    const fxRate = pendingTx.exchange_rate_used != null ? Number(pendingTx.exchange_rate_used) : null
+    const fxBaseRate = pendingTx.exchange_rate_base != null ? Number(pendingTx.exchange_rate_base) : null
+    const fxSpreadPercent = pendingTx.exchange_rate_spread_percent != null ? Number(pendingTx.exchange_rate_spread_percent) : null
+    const fxProvider = pendingTx.exchange_rate_provider != null ? String(pendingTx.exchange_rate_provider) : null
+    const fxFetchedAt = pendingTx.exchange_rate_fetched_at != null ? String(pendingTx.exchange_rate_fetched_at) : null
+
     // Create tickets
     const createdTickets: any[] = []
 
     for (const selection of tierSelections) {
       const selectionQty = selection.quantity || 0
       for (let i = 0; i < selectionQty; i++) {
+        const organizerUnitPrice = (() => {
+          if (eventCurrency === 'USD') {
+            const raw = selection.originalUnitPrice
+            if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) return raw
+            const fallback = Number(pendingTx.original_amount || 0) / Math.max(1, pendingTx.quantity || 1)
+            return Number.isFinite(fallback) && fallback > 0 ? fallback : 0
+          }
+          return selection.unitPrice
+        })()
+
         const ticketData = {
           event_id: pendingTx.event_id,
           attendee_id: pendingTx.user_id,
           attendee_name: attendee?.full_name || attendee?.email || 'Guest',
-          price_paid: selection.unitPrice,
-          currency: pendingTx.currency || 'HTG',
-          original_currency: pendingTx.original_currency || pendingTx.currency || 'HTG',
-          exchange_rate_used: pendingTx.exchange_rate_used ?? null,
+          // Organizer-facing/event currency
+          price_paid: organizerUnitPrice,
+          currency: eventCurrency,
+          original_currency: eventCurrency,
+          // settlement-per-event fx rate (HTG per USD for MonCash USD events)
+          exchange_rate_used: fxRate,
+          // Auditing
+          charged_amount: selection.unitPrice,
+          charged_currency: chargedCurrency,
           payment_method: 'moncash',
           payment_id: transactionId || payment.transNumber || orderId,
           status: 'valid',
@@ -332,8 +357,54 @@ export async function GET(request: Request) {
           await supabase.from('tickets').update({ qr_code_data: createdTicket.id }).eq('id', createdTicket.id)
           createdTicket.qr_code_data = createdTicket.id
           createdTickets.push(createdTicket)
+
+          // Mirror into Firestore for organizer earnings and admin analytics.
+          try {
+            await adminDb.collection('tickets').doc(String(createdTicket.id)).set(
+              {
+                event_id: pendingTx.event_id,
+                attendee_id: pendingTx.user_id,
+                status: 'confirmed',
+                ticket_type: selection.tierName || 'General Admission',
+                price_paid: organizerUnitPrice,
+                currency: eventCurrency,
+                exchange_rate_used: fxRate,
+                exchange_rate_base: fxBaseRate,
+                exchange_rate_spread_percent: fxSpreadPercent,
+                exchange_rate_provider: fxProvider,
+                exchange_rate_fetched_at: fxFetchedAt,
+                charged_amount: selection.unitPrice,
+                charged_currency: chargedCurrency,
+                payment_method: 'moncash_button',
+                payment_id: transactionId || payment.transNumber || orderId,
+                purchased_at: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+              { merge: true }
+            )
+          } catch (e) {
+            console.warn('[moncash_button] failed to mirror ticket to Firestore', {
+              ticketId: createdTicket.id,
+              message: (e as any)?.message,
+            })
+          }
         }
       }
+    }
+
+    // Update Firestore earnings in event currency.
+    try {
+      const grossEventCents = Math.round(Number(pendingTx.original_amount || 0) * 100)
+      await addTicketToEarnings(pendingTx.event_id, grossEventCents, Number(pendingTx.quantity || 1), {
+        currency: eventCurrency,
+        paymentMethod: 'moncash_button',
+        chargedAmountCents: Math.round(Number(pendingTx.amount || 0) * 100),
+        fxRate,
+        chargedCurrency,
+      })
+    } catch (e) {
+      console.warn('[moncash_button] failed to update earnings', { message: (e as any)?.message })
     }
 
     const ticket = createdTickets[0]
