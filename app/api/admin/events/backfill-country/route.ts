@@ -101,6 +101,8 @@ export async function POST(request: NextRequest) {
     let skipped = 0
     let unable = 0
 
+    const unableItems: Array<{ id: string; title?: string; organizer_id?: string }> = []
+
     const examples: Array<{
       id: string
       oldCountry: string
@@ -134,6 +136,9 @@ export async function POST(request: NextRequest) {
 
       if (!resolvedCountry) {
         unable += 1
+        if (unableItems.length < 100) {
+          unableItems.push({ id: doc.id, title: data.title, organizer_id: data.organizer_id })
+        }
         continue
       }
 
@@ -168,10 +173,13 @@ export async function POST(request: NextRequest) {
       success: true,
       dryRun,
       onlyPublished,
+      limit,
+      startAfterId: startAfterId || null,
       scanned,
       updated,
       skipped,
       unable,
+      unableItems,
       lastId,
       examples,
       next: lastId && scanned < limit ? { startAfterId: lastId } : null,
