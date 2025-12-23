@@ -83,7 +83,9 @@ export default function EventFormPremium({ userId, event, isVerified = false, ve
               name: tier.name || '',
               price: tier.price?.toString() || '',
               quantity: tier.total_quantity?.toString() || '',
-              description: tier.description || ''
+              description: tier.description || '',
+              salesStart: tier.sales_start || '',
+              salesEnd: tier.sales_end || ''
             }
           })
           setTicketTiers(formattedTiers)
@@ -196,7 +198,9 @@ export default function EventFormPremium({ userId, event, isVerified = false, ve
             price: parseFloat(tier.price?.toString() || '0'),
             total_quantity: parseInt(tier.quantity?.toString() || '0'),
             sold_quantity: 0,
-            description: tier.description || null
+            description: tier.description || null,
+            sales_start: tier.salesStart ? new Date(tier.salesStart).toISOString() : null,
+            sales_end: tier.salesEnd ? new Date(tier.salesEnd).toISOString() : null,
           }))
           
           const { error: tiersError } = await supabase
@@ -233,7 +237,9 @@ export default function EventFormPremium({ userId, event, isVerified = false, ve
             price: parseFloat(tier.price?.toString() || '0'),
             total_quantity: parseInt(tier.quantity?.toString() || '0'),
             sold_quantity: 0,
-            description: tier.description || null
+            description: tier.description || null,
+            sales_start: tier.salesStart ? new Date(tier.salesStart).toISOString() : null,
+            sales_end: tier.salesEnd ? new Date(tier.salesEnd).toISOString() : null,
           }))
           
           const { error: tiersError } = await supabase

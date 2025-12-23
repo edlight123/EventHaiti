@@ -26,6 +26,8 @@ export interface TicketTier {
   price: string | number
   quantity: string | number
   description?: string
+  salesStart?: string
+  salesEnd?: string
 }
 
 export interface TabValidation {

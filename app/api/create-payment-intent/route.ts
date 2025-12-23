@@ -121,6 +121,35 @@ export async function POST(request: Request) {
         .single()
 
       if (tier) {
+        const now = new Date()
+        const salesStart = tier.sales_start ? new Date(tier.sales_start) : null
+        const salesEnd = tier.sales_end ? new Date(tier.sales_end) : null
+
+        if (tier.is_active === false) {
+          await logPurchaseAttempt({ userId: user.id, eventId, ipAddress, quantity, fingerprint }, false)
+          return NextResponse.json({ error: 'This ticket tier is not available.' }, { status: 400 })
+        }
+        if (salesStart && !Number.isNaN(salesStart.getTime()) && salesStart > now) {
+          await logPurchaseAttempt({ userId: user.id, eventId, ipAddress, quantity, fingerprint }, false)
+          return NextResponse.json({ error: 'Ticket sales for this tier have not started yet.' }, { status: 400 })
+        }
+        if (salesEnd && !Number.isNaN(salesEnd.getTime()) && salesEnd < now) {
+          await logPurchaseAttempt({ userId: user.id, eventId, ipAddress, quantity, fingerprint }, false)
+          return NextResponse.json({ error: 'Ticket sales for this tier have ended.' }, { status: 400 })
+        }
+
+        const sold = Number(tier.sold_quantity || 0)
+        const total = Number(tier.total_quantity || 0)
+        const remaining = Math.max(0, total - sold)
+        if (remaining <= 0) {
+          await logPurchaseAttempt({ userId: user.id, eventId, ipAddress, quantity, fingerprint }, false)
+          return NextResponse.json({ error: 'This ticket tier is sold out.' }, { status: 400 })
+        }
+        if (quantity > remaining) {
+          await logPurchaseAttempt({ userId: user.id, eventId, ipAddress, quantity, fingerprint }, false)
+          return NextResponse.json({ error: `Only ${remaining} ticket(s) remaining for this tier.` }, { status: 400 })
+        }
+
         finalPrice = tier.price
         tierName = tier.name
       }

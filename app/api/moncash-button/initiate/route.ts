@@ -49,6 +49,27 @@ function buildTokenVariants(token: string): string[] {
 
 type TierSelection = { tierId: string; quantity: number }
 
+function tierIsOnSale(tier: any, now: Date): { ok: true } | { ok: false; reason: string } {
+  if (tier?.is_active === false) return { ok: false, reason: 'This ticket tier is not available.' }
+
+  const salesStart = tier?.sales_start ? new Date(tier.sales_start) : null
+  const salesEnd = tier?.sales_end ? new Date(tier.sales_end) : null
+
+  if (salesStart && !Number.isNaN(salesStart.getTime()) && salesStart > now) {
+    return { ok: false, reason: 'Ticket sales for this tier have not started yet.' }
+  }
+  if (salesEnd && !Number.isNaN(salesEnd.getTime()) && salesEnd < now) {
+    return { ok: false, reason: 'Ticket sales for this tier have ended.' }
+  }
+
+  const sold = Number(tier?.sold_quantity || 0)
+  const total = Number(tier?.total_quantity || 0)
+  const remaining = Math.max(0, total - sold)
+  if (remaining <= 0) return { ok: false, reason: 'This ticket tier is sold out.' }
+
+  return { ok: true }
+}
+
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser()
@@ -100,6 +121,7 @@ export async function POST(request: Request) {
 
     // Normalize tier selections
     let normalizedSelections: { tierId: string | null; tierName: string; quantity: number; unitPrice: number }[] = []
+    const now = new Date()
 
     if (Array.isArray(tiers) && tiers.length > 0) {
       // Multi-tier selection
@@ -113,6 +135,18 @@ export async function POST(request: Request) {
           .single()
 
         if (!tier) continue
+
+        const onSale = tierIsOnSale(tier, now)
+        if (!onSale.ok) {
+          return NextResponse.json({ error: onSale.reason }, { status: 400 })
+        }
+
+        const sold = Number(tier.sold_quantity || 0)
+        const total = Number(tier.total_quantity || 0)
+        const remaining = Math.max(0, total - sold)
+        if (selection.quantity > remaining) {
+          return NextResponse.json({ error: `Only ${remaining} ticket(s) remaining for ${tier.name || 'this tier'}.` }, { status: 400 })
+        }
 
         let unitPrice = tier.price
         if (promo) {
@@ -145,6 +179,18 @@ export async function POST(request: Request) {
           .single()
 
         if (tier) {
+          const onSale = tierIsOnSale(tier, now)
+          if (!onSale.ok) {
+            return NextResponse.json({ error: onSale.reason }, { status: 400 })
+          }
+
+          const sold = Number(tier.sold_quantity || 0)
+          const total = Number(tier.total_quantity || 0)
+          const remaining = Math.max(0, total - sold)
+          if (quantity > remaining) {
+            return NextResponse.json({ error: `Only ${remaining} ticket(s) remaining for this tier.` }, { status: 400 })
+          }
+
           unitPrice = tier.price
           tierName = tier.name
           resolvedTierId = tier.id

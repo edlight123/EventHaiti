@@ -15,8 +15,16 @@ export function TicketsTab({ formData, onChange, tiers, onTiersChange, validatio
   const priceError = validation.missingFields.find(f => f.toLowerCase().includes('price'))
   const quantityError = validation.missingFields.find(f => f.toLowerCase().includes('quantity') || f.toLowerCase().includes('tier'))
 
+  const toDateTimeLocalValue = (iso: string | undefined) => {
+    if (!iso) return ''
+    const date = new Date(iso)
+    if (Number.isNaN(date.getTime())) return ''
+    const tzOffsetMs = date.getTimezoneOffset() * 60_000
+    return new Date(date.getTime() - tzOffsetMs).toISOString().slice(0, 16)
+  }
+
   const addTier = () => {
-    onTiersChange([...tiers, { name: '', price: '', quantity: '', description: '' }])
+    onTiersChange([...tiers, { name: '', price: '', quantity: '', description: '', salesStart: '', salesEnd: '' }])
   }
 
   const updateTier = (index: number, field: keyof TicketTier, value: string | number) => {
@@ -236,6 +244,31 @@ export function TicketsTab({ formData, onChange, tiers, onTiersChange, validatio
                     placeholder="e.g., Includes backstage access"
                     className="w-full px-3 py-2 border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
                   />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Sales Start <span className="text-gray-500">(Optional)</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={toDateTimeLocalValue(tier.salesStart)}
+                      onChange={(e) => updateTier(index, 'salesStart', e.target.value ? new Date(e.target.value).toISOString() : '')}
+                      className="w-full px-3 py-2 border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Sales End <span className="text-gray-500">(Optional)</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={toDateTimeLocalValue(tier.salesEnd)}
+                      onChange={(e) => updateTier(index, 'salesEnd', e.target.value ? new Date(e.target.value).toISOString() : '')}
+                      className="w-full px-3 py-2 border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                    />
+                  </div>
                 </div>
               </div>
             ))}

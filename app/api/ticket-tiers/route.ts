@@ -89,6 +89,22 @@ export async function GET(req: NextRequest) {
 
     console.log('Fetching ticket tiers for eventId:', eventId)
 
+    // Prefer Supabase as the source of truth (purchase flows read tiers from Supabase).
+    try {
+      const supabase = await createClient()
+      const { data: tiers, error } = await supabase
+        .from('ticket_tiers')
+        .select('*')
+        .eq('event_id', eventId)
+        .order('sort_order', { ascending: true })
+
+      if (!error && Array.isArray(tiers) && tiers.length > 0) {
+        return NextResponse.json({ tiers })
+      }
+    } catch (e: any) {
+      console.warn('Supabase ticket_tiers fetch failed; falling back to Firestore', { message: e?.message })
+    }
+
     // Use direct Firestore access instead of wrapper to avoid query issues
     let snapshot
     try {

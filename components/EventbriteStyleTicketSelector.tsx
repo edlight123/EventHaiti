@@ -13,6 +13,7 @@ interface TicketTier {
   sold_quantity: number
   sales_start: string | null
   sales_end: string | null
+  is_active?: boolean
 }
 
 interface TierQuantity {
@@ -77,6 +78,10 @@ export default function EventbriteStyleTicketSelector({
 
   const isTierAvailable = (tier: TicketTier): boolean => {
     const now = new Date()
+
+    if (tier.is_active === false) {
+      return false
+    }
     
     if (tier.sales_start && new Date(tier.sales_start) > now) {
       return false
