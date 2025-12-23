@@ -33,15 +33,25 @@ interface EventCardProps {
 
 export default function EventCard({ event, priority = false, index = 0 }: EventCardProps) {
   const { t } = useTranslation('common')
-  const remainingTickets = event.total_tickets - event.tickets_sold
-  const isSoldOut = remainingTickets <= 0
-  const isFree = !event.ticket_price || event.ticket_price === 0
+
+  const toFiniteNumber = (value: unknown, fallback = 0) => {
+    const num = typeof value === 'number' ? value : Number(value)
+    return Number.isFinite(num) ? num : fallback
+  }
+
+  const totalTickets = toFiniteNumber((event as any).total_tickets, 0)
+  const ticketsSold = toFiniteNumber((event as any).tickets_sold, 0)
+  const remainingTickets = totalTickets > 0 ? Math.max(0, totalTickets - ticketsSold) : null
+  const isSoldOut = totalTickets > 0 ? remainingTickets === 0 : false
+
+  const ticketPrice = toFiniteNumber((event as any).ticket_price, 0)
+  const isFree = ticketPrice === 0
   
   // Premium badge logic
-  const isVIP = (event.ticket_price || 0) > 100
-  const isTrending = (event.tickets_sold || 0) > 10
+  const isVIP = ticketPrice > 100
+  const isTrending = ticketsSold > 10
   const isNew = new Date(event.start_datetime).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000 // Within 7 days
-  const selloutSoon = !isSoldOut && remainingTickets < 10
+  const selloutSoon = !isSoldOut && remainingTickets !== null && remainingTickets < 10
 
   return (
     <Link href={`/events/${event.id}`} prefetch={true} className="group">
@@ -197,12 +207,12 @@ export default function EventCard({ event, priority = false, index = 0 }: EventC
                 <div className="flex items-baseline gap-1 flex-wrap">
                   <span className="text-xs sm:text-sm font-medium text-gray-600 whitespace-nowrap">{t('common.from')}</span>
                   <span className="text-2xl sm:text-2xl md:text-3xl font-bold text-gray-900 whitespace-nowrap">
-                    {event.ticket_price?.toLocaleString()} <span className="text-sm sm:text-sm font-normal text-gray-600">{event.currency}</span>
+                    {ticketPrice.toLocaleString()} <span className="text-sm sm:text-sm font-normal text-gray-600">{event.currency}</span>
                   </span>
                 </div>
               )}
             </div>
-            {!isSoldOut && (
+            {!isSoldOut && remainingTickets !== null && (
               <div className="text-right flex-shrink-0">
                 <p className={`text-sm sm:text-sm font-bold ${selloutSoon ? 'text-warning-600' : 'text-brand-700'}`}>
                   {t('ticket.remaining', { count: remainingTickets })}
