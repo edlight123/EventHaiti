@@ -116,7 +116,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
         const tierId = (data.tier_id || data.tierId || null) as string | null
         const tierName = String(data.tier_name || data.tierName || data.ticket_type || data.ticketType || 'General Admission')
-        const listedCurrency = normalizeCurrency(data.original_currency || data.currency || event.currency)
+        const listedCurrency = normalizeCurrency(data.original_currency || event.currency || data.currency)
 
         const listedUnitPrice = Number(data.price_paid ?? data.pricePaid ?? 0) || 0
         const listedUnitPriceCents = Math.max(0, Math.round(listedUnitPrice * 100))

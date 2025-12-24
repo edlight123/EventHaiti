@@ -101,7 +101,8 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
 
   const ticketsSnapshot = await adminDb.collection('tickets').where('event_id', '==', eventId).get()
 
-  const currencyCounts = new Map<'HTG' | 'USD', number>()
+  // Organizer-facing earnings should always be presented in the event's currency (listed/original currency).
+  const eventCurrency = normalizeCurrency(event.currency || 'HTG')
 
   // Group by payment_id so fixed processing fee is applied once per purchase.
   const paymentGroups = new Map<
@@ -121,9 +122,6 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
     // Accept both legacy "valid" and standard "confirmed" tickets.
     const status = String(ticket.status || '').toLowerCase()
     if (status && status !== 'valid' && status !== 'confirmed') continue
-
-    const ticketCurrency = normalizeCurrency(ticket.currency || ticket.currency_code)
-    currencyCounts.set(ticketCurrency, (currencyCounts.get(ticketCurrency) || 0) + 1)
 
     const pricePaid = Number(ticket.price_paid ?? ticket.pricePaid ?? 0)
     const grossEventCents = Math.round(pricePaid * 100)
@@ -200,14 +198,7 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
   const settlementStatus: SettlementStatus = isSettlementReady(settlementReadyDate) ? 'ready' : 'pending'
   const availableToWithdraw = settlementStatus === 'ready' ? Math.max(0, netAmount) : 0
 
-  // Amounts are computed from `ticket.price_paid`, so currency should match the predominant ticket currency.
-  // Fall back to event currency if tickets are missing currency.
-  const eventCurrency = normalizeCurrency(event.currency || 'HTG')
-  const currency = (() => {
-    if (currencyCounts.size === 0) return eventCurrency
-    const entries = Array.from(currencyCounts.entries()).sort((a, b) => b[1] - a[1])
-    return entries[0]?.[0] || eventCurrency
-  })()
+  const currency = eventCurrency
 
   const nowIso = new Date().toISOString()
   return {
@@ -239,7 +230,30 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
 export async function getEventEarnings(eventId: string): Promise<EventEarnings | null> {
   const doc = await findEventEarningsDoc(eventId)
   if (doc) {
-    return { id: doc.id, ...(doc.data() as any) } as EventEarnings
+    const stored = { id: doc.id, ...(doc.data() as any) } as EventEarnings
+
+    // If stored currency disagrees with the event currency, prefer a derived view from tickets.
+    // This avoids showing Stripe charged currency (USD) for HTG events.
+    const eventDoc = await adminDb.collection('events').doc(eventId).get()
+    const eventCurrency = eventDoc.exists ? normalizeCurrency((eventDoc.data() as any)?.currency || 'HTG') : null
+
+    if (eventCurrency && normalizeCurrency((stored as any)?.currency || eventCurrency) !== eventCurrency) {
+      const derived = await deriveEventEarningsFromTickets(eventId)
+      if (derived) {
+        const withdrawnAmount = Math.max(0, Number((stored as any).withdrawnAmount || 0) || 0)
+        derived.id = stored.id
+        derived.withdrawnAmount = withdrawnAmount
+        derived.availableToWithdraw =
+          derived.settlementStatus === 'ready' ? Math.max(0, Number(derived.netAmount || 0) - withdrawnAmount) : 0
+        derived.currency = eventCurrency
+        return derived
+      }
+
+      // No tickets to derive from; at least align display currency to event currency.
+      return { ...stored, currency: eventCurrency } as EventEarnings
+    }
+
+    return stored
   }
 
   // Fallback for legacy data: compute a best-effort view from tickets.
@@ -257,6 +271,9 @@ export type EventTierSalesBreakdownRow = {
 
 export async function getEventTierSalesBreakdown(eventId: string): Promise<EventTierSalesBreakdownRow[]> {
   const tiers = new Map<string, EventTierSalesBreakdownRow>()
+
+  const eventDoc = await adminDb.collection('events').doc(eventId).get()
+  const eventCurrency = eventDoc.exists ? normalizeCurrency((eventDoc.data() as any)?.currency || 'HTG') : 'HTG'
 
   const normalizeTierName = (value: unknown) => {
     const name = String(value || '').trim()
@@ -299,7 +316,9 @@ export async function getEventTierSalesBreakdown(eventId: string): Promise<Event
       const tierId = (data.tier_id || data.tierId || null) as string | null
       const tierName = normalizeTierName(data.tier_name || data.tierName || data.ticket_type || data.ticketType)
 
-      const listedCurrency = normalizeCurrency(data.original_currency || data.currency || 'HTG')
+      // Prefer explicit original/listed currency; otherwise fall back to event currency.
+      // Do NOT fall back to charged currency, which can be USD for HTG events.
+      const listedCurrency = normalizeCurrency(data.original_currency || eventCurrency)
 
       const quantity = Math.max(1, Number(data.quantity || 1) || 1)
       const pricePaidMajor = Number(data.price_paid ?? data.pricePaid ?? 0) || 0
