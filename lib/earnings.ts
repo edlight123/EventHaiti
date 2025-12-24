@@ -402,7 +402,7 @@ export async function getOrCreateEventEarnings(eventId: string): Promise<{
     withdrawnAmount: 0,
     settlementStatus: 'pending',
     settlementReadyDate: settlementDate.toISOString(),
-    currency: event.currency || 'HTG',
+    currency: normalizeCurrency(event.currency || 'HTG'),
     lastCalculatedAt: new Date().toISOString(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -438,7 +438,6 @@ export async function addTicketToEarnings(
 ): Promise<void> {
   const { ref, data } = await getOrCreateEventEarnings(eventId)
 
-  const currency = normalizeCurrency(options?.currency || data?.currency || 'HTG')
   const paymentMethod = normalizePaymentMethod(options?.paymentMethod)
   const fxRate = options?.fxRate != null ? Number(options.fxRate) : null
   const chargedAmountCents = options?.chargedAmountCents
@@ -460,7 +459,6 @@ export async function addTicketToEarnings(
     availableToWithdraw: (data?.availableToWithdraw || 0) + fees.netAmount,
     lastCalculatedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    currency,
   }
 
   await ref.update(updates)
