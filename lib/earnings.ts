@@ -249,6 +249,8 @@ export async function getEventEarnings(eventId: string): Promise<EventEarnings |
 export type EventTierSalesBreakdownRow = {
   tierId: string | null
   tierName: string
+  listedUnitPriceCents: number
+  listedCurrency: 'HTG' | 'USD'
   ticketsSold: number
   grossSales: number
 }
@@ -269,7 +271,19 @@ export async function getEventTierSalesBreakdown(eventId: string): Promise<Event
       .where('event_id', '==', eventId)
       .where('status', '==', 'confirmed')
       .orderBy('purchased_at', 'desc')
-      .select('tier_id', 'tierId', 'tier_name', 'tierName', 'ticket_type', 'ticketType', 'price_paid', 'pricePaid', 'quantity')
+      .select(
+        'tier_id',
+        'tierId',
+        'tier_name',
+        'tierName',
+        'ticket_type',
+        'ticketType',
+        'price_paid',
+        'pricePaid',
+        'currency',
+        'original_currency',
+        'quantity'
+      )
       .limit(1000) as FirebaseFirestore.Query
 
     if (lastDoc) {
@@ -284,12 +298,15 @@ export async function getEventTierSalesBreakdown(eventId: string): Promise<Event
 
       const tierId = (data.tier_id || data.tierId || null) as string | null
       const tierName = normalizeTierName(data.tier_name || data.tierName || data.ticket_type || data.ticketType)
-      const groupKey = String(tierId || tierName)
+
+      const listedCurrency = normalizeCurrency(data.original_currency || data.currency || 'HTG')
 
       const quantity = Math.max(1, Number(data.quantity || 1) || 1)
       const pricePaidMajor = Number(data.price_paid ?? data.pricePaid ?? 0) || 0
       const unitPriceCents = Math.max(0, Math.round(pricePaidMajor * 100))
       const grossSales = unitPriceCents * quantity
+
+      const groupKey = `${String(tierId || tierName)}::${unitPriceCents}::${listedCurrency}`
 
       const existing = tiers.get(groupKey)
       if (existing) {
@@ -299,6 +316,8 @@ export async function getEventTierSalesBreakdown(eventId: string): Promise<Event
         tiers.set(groupKey, {
           tierId,
           tierName,
+          listedUnitPriceCents: unitPriceCents,
+          listedCurrency,
           ticketsSold: quantity,
           grossSales,
         })
@@ -309,7 +328,12 @@ export async function getEventTierSalesBreakdown(eventId: string): Promise<Event
     if (snapshot.docs.length < 1000) break
   }
 
-  return Array.from(tiers.values()).sort((a, b) => b.grossSales - a.grossSales)
+  return Array.from(tiers.values()).sort((a, b) => {
+    const tierCompare = a.tierName.localeCompare(b.tierName)
+    if (tierCompare !== 0) return tierCompare
+    if (a.listedCurrency !== b.listedCurrency) return a.listedCurrency.localeCompare(b.listedCurrency)
+    return a.listedUnitPriceCents - b.listedUnitPriceCents
+  })
 }
 
 /**

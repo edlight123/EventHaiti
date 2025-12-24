@@ -4,17 +4,13 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { calculateFees, formatCurrency, calculateSettlementDate } from '@/lib/fees'
 import type { EventEarnings } from '@/types/earnings'
+import type { EventTierSalesBreakdownRow } from '@/lib/earnings'
 
 interface EventEarningsViewProps {
   event: any
   earnings: EventEarnings | null
   organizerId: string
-  tierBreakdown?: Array<{
-    tierId: string | null
-    tierName: string
-    ticketsSold: number
-    grossSales: number
-  }>
+  tierBreakdown?: EventTierSalesBreakdownRow[]
 }
 
 export default function EventEarningsView({ event, earnings, organizerId, tierBreakdown }: EventEarningsViewProps) {
@@ -431,12 +427,6 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
             >
               Download audit (CSV)
             </a>
-            <a
-              href={`/api/organizer/events/${event.id}/earnings/audit?format=json`}
-              className="text-sm text-gray-600 hover:underline"
-            >
-              JSON
-            </a>
           </div>
         </div>
 
@@ -448,16 +438,21 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
               <thead>
                 <tr className="text-left text-gray-500 border-b">
                   <th className="py-2 pr-4 font-medium">Tier</th>
+                  <th className="py-2 pr-4 font-medium">Listed Price</th>
                   <th className="py-2 pr-4 font-medium">Tickets Sold</th>
-                  <th className="py-2 font-medium">Amount Charged</th>
+                  <th className="py-2 font-medium">Gross (Listed)</th>
                 </tr>
               </thead>
               <tbody>
                 {tierBreakdown.map((row) => (
-                  <tr key={String(row.tierId || row.tierName)} className="border-b last:border-b-0">
+                  <tr
+                    key={`${String(row.tierId || row.tierName)}::${row.listedUnitPriceCents}::${row.listedCurrency}`}
+                    className="border-b last:border-b-0"
+                  >
                     <td className="py-3 pr-4 font-medium text-gray-900">{row.tierName}</td>
+                    <td className="py-3 pr-4 text-gray-700">{formatCurrency(row.listedUnitPriceCents, row.listedCurrency)}</td>
                     <td className="py-3 pr-4 text-gray-700">{row.ticketsSold}</td>
-                    <td className="py-3 text-gray-900">{formatCurrency(row.grossSales, earnings.currency)}</td>
+                    <td className="py-3 text-gray-900">{formatCurrency(row.grossSales, row.listedCurrency)}</td>
                   </tr>
                 ))}
               </tbody>

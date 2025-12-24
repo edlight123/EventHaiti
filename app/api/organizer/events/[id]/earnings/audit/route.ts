@@ -10,10 +10,7 @@ type AuditTicketRow = {
   tierName: string
   listedUnitPrice: number
   listedUnitPriceCents: number
-  listedCurrency: 'HTG' | 'USD'
-  chargedUnitPrice: number | null
-  chargedCurrency: string | null
-  exchangeRateUsed: number | null
+  listedCurrency: string
   paymentMethod: string | null
   paymentId: string | null
 }
@@ -23,15 +20,16 @@ type PriceBucketRow = {
   tierName: string
   listedUnitPrice: number
   listedUnitPriceCents: number
-  listedCurrency: 'HTG' | 'USD'
+  listedCurrency: string
   ticketsSold: number
   grossSalesCents: number
   firstPurchaseAt: string
   lastPurchaseAt: string
 }
 
-function normalizeCurrency(raw: unknown): 'HTG' | 'USD' {
-  return String(raw || '').toUpperCase() === 'USD' ? 'USD' : 'HTG'
+function normalizeCurrency(raw: unknown): string {
+  const value = String(raw || '').trim().toUpperCase()
+  return value.length > 0 ? value : 'HTG'
 }
 
 function toIso(value: any): string {
@@ -72,6 +70,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     const url = new URL(request.url)
     const format = (url.searchParams.get('format') || 'csv').toLowerCase()
+    if (format !== 'csv') {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
 
     const tickets: AuditTicketRow[] = []
     const buckets = new Map<string, PriceBucketRow>()
@@ -96,9 +97,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           'pricePaid',
           'currency',
           'original_currency',
-          'charged_amount',
-          'charged_currency',
-          'exchange_rate_used',
           'payment_method',
           'payment_id'
         )
@@ -125,9 +123,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
         const purchasedAt = toIso(data.purchased_at)
 
-        const chargedUnitPrice = data.charged_amount != null ? Number(data.charged_amount) : null
-        const chargedCurrency = data.charged_currency != null ? String(data.charged_currency) : null
-        const exchangeRateUsed = data.exchange_rate_used != null ? Number(data.exchange_rate_used) : null
         const paymentMethod = data.payment_method != null ? String(data.payment_method) : null
         const paymentId = data.payment_id != null ? String(data.payment_id) : null
 
@@ -140,9 +135,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           listedUnitPrice,
           listedUnitPriceCents,
           listedCurrency,
-          chargedUnitPrice: Number.isFinite(chargedUnitPrice as any) ? chargedUnitPrice : null,
-          chargedCurrency,
-          exchangeRateUsed: Number.isFinite(exchangeRateUsed as any) ? exchangeRateUsed : null,
           paymentMethod,
           paymentId,
         })
@@ -180,18 +172,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       return a.listedUnitPriceCents - b.listedUnitPriceCents
     })
 
-    if (format === 'json') {
-      return NextResponse.json({
-        event: {
-          id: eventId,
-          title: String(event.title || ''),
-          currency: normalizeCurrency(event.currency || 'HTG'),
-        },
-        tickets,
-        priceBuckets,
-      })
-    }
-
     const eventTitleSafe = String(event.title || 'event')
       .replace(/[^a-z0-9]/gi, '_')
       .slice(0, 80)
@@ -207,9 +187,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         'Tier Name',
         'Listed Unit Price',
         'Listed Currency',
-        'Charged Unit Price',
-        'Charged Currency',
-        'Exchange Rate Used',
         'Payment Method',
         'Payment ID',
       ]
@@ -227,9 +204,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           t.tierName,
           t.listedUnitPrice.toFixed(2),
           t.listedCurrency,
-          t.chargedUnitPrice != null && Number.isFinite(t.chargedUnitPrice) ? t.chargedUnitPrice.toFixed(2) : '',
-          t.chargedCurrency || '',
-          t.exchangeRateUsed != null && Number.isFinite(t.exchangeRateUsed) ? String(t.exchangeRateUsed) : '',
           t.paymentMethod || '',
           t.paymentId || '',
         ]
