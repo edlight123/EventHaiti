@@ -418,7 +418,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900">🎟️ Ticket Tier Breakdown</h2>
-            <p className="text-sm text-gray-600">Totals use the listed price at the time of purchase (no FX-adjusted amounts).</p>
+            <p className="text-sm text-gray-600">Totals use the tier’s listed price at the time of purchase (no FX, no spread).</p>
           </div>
           <div className="flex items-center gap-3">
             <a
@@ -438,7 +438,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
               <thead>
                 <tr className="text-left text-gray-500 border-b">
                   <th className="py-2 pr-4 font-medium">Tier</th>
-                  <th className="py-2 pr-4 font-medium">Listed Price</th>
+                  <th className="py-2 pr-4 font-medium">Listed Unit Price</th>
                   <th className="py-2 pr-4 font-medium">Tickets Sold</th>
                   <th className="py-2 font-medium">Gross (Listed)</th>
                 </tr>
