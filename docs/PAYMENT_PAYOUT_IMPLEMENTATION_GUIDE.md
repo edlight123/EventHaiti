@@ -48,7 +48,12 @@ Links tickets to organizers:
 - `start_datetime`: For payout availability logic
 
 #### ✅ `organizers/{organizerId}/payoutConfig/main`
-Existing payout settings (already implemented)
+Legacy payout settings (backward compatibility)
+
+#### ✅ `organizers/{organizerId}/payoutProfiles/{profileId}`
+Primary payout settings store. Organizers can have multiple payout profiles:
+- `haiti` (internal verification + bank/mobile money)
+- `stripe_connect` (Stripe Connect account for US/CA)
 
 #### ✅ `organizers/{organizerId}/payouts/`
 Existing payout history (already implemented)
@@ -931,21 +936,18 @@ export default async function EventEarningsPage({
       ...earningsSnapshot.docs[0].data(),
     }
 
-    // Get payout config
-    const configDoc = await adminDb
-      .collection('organizers')
-      .doc(organizerId)
-      .collection('payoutConfig')
-      .doc('main')
-      .get()
-
-    const payoutConfig = configDoc.exists ? configDoc.data() : null
+    // Get required payout profile for this event
+    const { getPayoutProfile, getRequiredPayoutProfileIdForEventCountry } = await import(
+      '@/lib/firestore/payout-profiles'
+    )
+    const profileId = getRequiredPayoutProfileIdForEventCountry(event.country)
+    const payoutProfile = await getPayoutProfile(organizerId, profileId)
 
     return (
       <EventEarningsDetail
         event={{ id: eventDoc.id, ...event }}
         earnings={earnings}
-        payoutConfig={payoutConfig}
+        payoutConfig={payoutProfile}
         organizerId={organizerId}
       />
     )
@@ -1091,8 +1093,8 @@ export default function EventEarningsDetail({
             )}
           </div>
 
-          {/* Withdrawal Buttons (Haiti only) */}
-          {payoutConfig?.method !== 'stripe_connect' && canWithdraw && (
+          {/* Withdrawal Buttons (Haiti profile only) */}
+          {!payoutConfig?.stripeAccountId && canWithdraw && (
             <div className="space-y-3">
               <button
                 onClick={() => handleWithdraw('moncash')}
@@ -1111,7 +1113,7 @@ export default function EventEarningsDetail({
           )}
 
           {/* US/CA Stripe Connect Message */}
-          {payoutConfig?.method === 'stripe_connect' && (
+          {payoutConfig?.stripeAccountId && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-800">
                 Your earnings will be automatically transferred to your connected
@@ -1161,7 +1163,7 @@ export default function EventEarningsDetail({
 import { redirect } from 'next/navigation'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
-import { getPayoutConfig } from '@/lib/firestore/payout'
+import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import PayoutSettingsClient from './PayoutSettingsClient'
 
 export default async function PayoutSettingsPage() {
@@ -1174,8 +1176,8 @@ export default async function PayoutSettingsPage() {
     const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
     const organizerId = decodedClaims.uid
 
-    // Get payout config
-    const payoutConfig = await getPayoutConfig(organizerId)
+    // Get Haiti payout profile (used for Haiti withdrawals; Stripe Connect is managed separately)
+    const payoutConfig = await getPayoutProfile(organizerId, 'haiti')
 
     // Get user details for account location
     const userDoc = await adminDb.collection('users').doc(organizerId).get()

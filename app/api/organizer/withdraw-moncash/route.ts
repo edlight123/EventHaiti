@@ -4,6 +4,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { withdrawFromEarnings } from '@/lib/earnings'
 import { moncashPrefundedTransfer } from '@/lib/moncash'
 import type { WithdrawalRequest } from '@/types/earnings'
+import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 
 const PREFUNDING_FEE_PERCENT = 0.03
 
@@ -14,21 +15,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const organizerPayoutConfigDoc = await adminDb
-      .collection('organizers')
-      .doc(user.id)
-      .collection('payoutConfig')
-      .doc('main')
-      .get()
-    const organizerPayoutConfig = organizerPayoutConfigDoc.exists ? (organizerPayoutConfigDoc.data() as any) : null
-    const accountLocation = String(organizerPayoutConfig?.accountLocation || organizerPayoutConfig?.bankDetails?.accountLocation || '').toLowerCase()
-    const payoutProvider = String(organizerPayoutConfig?.payoutProvider || '').toLowerCase()
-    const isStripeConnect = payoutProvider === 'stripe_connect' || accountLocation === 'united_states' || accountLocation === 'canada'
-    if (isStripeConnect) {
+    const haitiProfile = await getPayoutProfile(user.id, 'haiti')
+    if (!haitiProfile) {
       return NextResponse.json(
         {
-          error: 'Stripe Connect required',
-          message: 'US/Canada accounts must withdraw via Stripe Connect. MonCash withdrawals are only available for Haiti accounts.',
+          error: 'Haiti payout profile required',
+          message: 'MonCash withdrawals are only available for organizers with a Haiti payout profile.',
+        },
+        { status: 400 }
+      )
+    }
+
+    if (haitiProfile.status !== 'active') {
+      return NextResponse.json(
+        {
+          error: 'Payout profile not active',
+          message: 'Please complete payout verification before requesting MonCash withdrawals.',
+        },
+        { status: 400 }
+      )
+    }
+
+    if (haitiProfile.method !== 'mobile_money') {
+      return NextResponse.json(
+        {
+          error: 'Mobile money not configured',
+          message: 'Please configure Haiti payout method as Mobile money to withdraw via MonCash.',
         },
         { status: 400 }
       )
@@ -95,17 +107,15 @@ export async function POST(req: NextRequest) {
     const currency = (String(earnings.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG') as 'HTG' | 'USD'
 
     // Check if instant MonCash (prefunding) is available and allowed.
-    const [platformConfigDoc, payoutConfigDoc] = await Promise.all([
+    const [platformConfigDoc] = await Promise.all([
       adminDb.collection('config').doc('payouts').get(),
-      adminDb.collection('organizers').doc(user.id).collection('payoutConfig').doc('main').get(),
     ])
 
     const prefunding = platformConfigDoc.exists ? (platformConfigDoc.data() as any)?.prefunding : null
     const prefundingEnabled = Boolean(prefunding?.enabled)
     const prefundingAvailable = Boolean(prefunding?.available)
 
-    const payoutConfig = payoutConfigDoc.exists ? (payoutConfigDoc.data() as any) : null
-    const allowInstantMoncash = Boolean(payoutConfig?.allowInstantMoncash)
+    const allowInstantMoncash = Boolean(haitiProfile?.allowInstantMoncash)
 
     const shouldUsePrefunding = prefundingEnabled && prefundingAvailable && allowInstantMoncash
 

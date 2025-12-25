@@ -9,10 +9,10 @@
 | Purpose | File(s) | Connection Details |
 | --- | --- | --- |
 | Firebase Admin SDK wrapper | `lib/firebase/admin.ts` | Exposes `adminDb`, `adminAuth`, `adminStorage`. All server components/API routes import from here. |
-| Organizer payout config helpers | `lib/firestore/payout.ts` | Reads/writes `organizers/{id}/payoutConfig/main`, `organizers/{id}/verificationDocuments/*`, `organizers/{id}/payouts`. Already merges verification state with `verification_requests`. |
+| Organizer payout helpers | `lib/firestore/payout.ts`, `lib/firestore/payout-profiles.ts` | `payout.ts` defines shared types/status helpers; `payout-profiles.ts` reads `organizers/{id}/payoutProfiles/{haiti|stripe_connect}` with legacy fallback to `payoutConfig/main`. Haiti profile verification is derived from `verificationDocuments/*` + `verification_requests/*`. |
 | Organizer auth/SSR checks | `app/organizer/page.tsx`, `app/organizer/settings/payouts/page.tsx` | Use `requireAuth` or `adminAuth.verifySessionCookie` + `cookies()` to guard access. |
 | Organizer verification submissions | `app/api/organizer/submit-identity-verification`, `submit-bank-verification`, `submit-phone-verification`, `send-phone-verification-code` | Write proof docs to `organizers/{id}/verificationDocuments`. Need to keep statuses pending until admin approval. |
-| Admin review tooling | `app/admin/bank-verifications/page.tsx`, `components/admin/BankVerificationReviewCard.tsx`, `app/api/admin/approve-bank-verification/route.ts` | Lists submissions via `adminDb`, lets admin approve/reject and updates `payoutConfig.verificationStatus.bank`. |
+| Admin review tooling | `app/admin/bank-verifications/page.tsx`, `components/admin/BankVerificationReviewCard.tsx`, `app/api/admin/approve-bank-verification/route.ts` | Lists submissions via `adminDb`, lets admin approve/reject and updates `verificationDocuments/bank`. Haiti profile status derives from those docs. |
 | Organizer payout UI | `components/organizer/PayoutsWidget.tsx`, `components/payout/PayoutStatusHero.tsx`, `components/payout/VerificationChecklist.tsx`, `components/payout/PayoutMethodCard.tsx` | Present state derived from payout config + verification docs. |
 
 _We will keep using these helpers—no new clients or services are required._
@@ -21,16 +21,16 @@ _We will keep using these helpers—no new clients or services are required._
 
 ## 2. Data Model Expectations
 
-- **Payout Config (`organizers/{id}/payoutConfig/main`)**
-  - `status`: `'not_setup' | 'pending_verification' | 'active' | 'on_hold'`.
-  - `method`: `'bank_transfer' | 'mobile_money'` + detail object (`bankDetails` or `mobileMoneyDetails`).
-  - `verificationStatus`: per-step map (`identity`, `bank`, `phone`).
-  - `createdAt`, `updatedAt` ISO strings.
+- **Payout Profiles (`organizers/{id}/payoutProfiles/{profileId}`)**
+   - `haiti` profile: `method` (`bank_transfer` | `mobile_money`), details (`bankDetails`/`mobileMoneyDetails`), and a derived `status` based on verification docs.
+   - `stripe_connect` profile: `stripeAccountId` and Stripe account readiness (charges/payouts enabled).
+- **Legacy Config (`organizers/{id}/payoutConfig/main`)**
+   - Backward compatibility only. Prefer profiles for new behavior.
 - **Verification Docs (`organizers/{id}/verificationDocuments/{identity|bank|phone}`)**
   - `status`: `'pending' | 'verified' | 'failed'`.
   - `submittedAt`, `reviewedAt`, `reviewedBy`, `rejectionReason`, `document metadata`.
 - **Organizer Verification (`verification_requests/{id}`)**
-  - Already managed by `/organizer/verify`; we only read for identity fallback in `getPayoutConfig`.
+   - Already managed by `/organizer/verify`; identity status is read and merged into the Haiti profile verification state.
 
 Derived helpers we need everywhere:
 
@@ -60,7 +60,7 @@ function determinePayoutStatus(config: PayoutConfig | null): PayoutStatus {
 ## 3. Organizer Flow Setup
 
 1. **Display accurate status on dashboard (`app/organizer/page.tsx`).**
-   - Fetch payout config alongside stats (`getPayoutConfig(user.id)`).
+   - Fetch payout profiles alongside stats (`getPayoutProfile(user.id, 'haiti')` and `getPayoutProfile(user.id, 'stripe_connect')`).
    - Replace hard-coded `hasPayoutSetup = false` with the derived helper.
    - Action Center alert:
      - Show "Payouts not set up" only when status is `not_setup`.
@@ -70,8 +70,7 @@ function determinePayoutStatus(config: PayoutConfig | null): PayoutStatus {
 2. **Keep payout status in sync when organizers submit docs.**
    - `submit-bank-verification`, `submit-identity-verification`, `submit-phone-verification` routes should:
      - Store metadata in `verificationDocuments` with `status: 'pending'`.
-     - Update `payoutConfig.verificationStatus.<step>` to `'pending'` (never auto-`verified`).
-     - Set `payoutConfig.status` to `'pending_verification'` if a method exists but docs still pending.
+   - Do not write `payoutConfig.verificationStatus.*` directly; the Haiti profile status is derived from verification docs.
 
 3. **Verification Checklist feedback (`components/payout/VerificationChecklist.tsx`).**
    - Already surfaces statuses; ensure we refresh after submissions (UI triggers `window.location.reload()`, which re-fetches data server-side).
@@ -89,8 +88,8 @@ function determinePayoutStatus(config: PayoutConfig | null): PayoutStatus {
    - (Optional future) Mirror the page for identity/phone; for now, bank is the gating factor for payouts.
 
 2. **Decision handling.**
-   - `/api/admin/approve-bank-verification` updates `verificationDocuments/bank` and merges `verificationStatus.bank`.
-   - After updating, invoke a shared helper to recompute `payoutConfig.status` → `'active'` if all steps verified, otherwise stay `'pending_verification'`.
+   - `/api/admin/approve-bank-verification` updates `verificationDocuments/bank`.
+   - The Haiti profile status becomes `'active'` automatically once all required steps are verified.
 
 3. **Admin awareness.**
    - Add a Firestore field `payoutConfig.awaitingManualReview = true` when organizer submits docs; remove when admin acts. This can drive an alert badge in `/admin/bank-verifications`.

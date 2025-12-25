@@ -10,6 +10,7 @@ import {
   consumePayoutDetailsChangeVerification,
   requireRecentPayoutDetailsChangeVerification,
 } from '@/lib/firestore/payout'
+import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 
 const normalizeName = (value: string) =>
   String(value || '')
@@ -39,22 +40,12 @@ export async function GET(_req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const payoutConfigDoc = await adminDb
-      .collection('organizers')
-      .doc(user.id)
-      .collection('payoutConfig')
-      .doc('main')
-      .get()
-    const payoutConfig = payoutConfigDoc.exists ? (payoutConfigDoc.data() as any) : null
-    const accountLocation = String(payoutConfig?.accountLocation || payoutConfig?.bankDetails?.accountLocation || '').toLowerCase()
-    const payoutProvider = String(payoutConfig?.payoutProvider || '').toLowerCase()
-    const isStripeConnect = payoutProvider === 'stripe_connect' || accountLocation === 'united_states' || accountLocation === 'canada'
-
-    if (isStripeConnect) {
+    const haitiProfile = await getPayoutProfile(user.id, 'haiti')
+    if (!haitiProfile) {
       return NextResponse.json(
         {
-          error: 'Stripe Connect account',
-          message: 'US/Canada payouts are handled via Stripe Connect. Bank destinations are managed in Stripe, not in EventHaiti.',
+          error: 'Haiti payout profile required',
+          message: 'Bank destinations are only available for organizers with a Haiti payout profile.',
         },
         { status: 400 }
       )
@@ -77,22 +68,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const payoutConfigDoc = await adminDb
-      .collection('organizers')
-      .doc(user.id)
-      .collection('payoutConfig')
-      .doc('main')
-      .get()
-    const payoutConfig = payoutConfigDoc.exists ? (payoutConfigDoc.data() as any) : null
-    const accountLocation = String(payoutConfig?.accountLocation || payoutConfig?.bankDetails?.accountLocation || '').toLowerCase()
-    const payoutProvider = String(payoutConfig?.payoutProvider || '').toLowerCase()
-    const isStripeConnect = payoutProvider === 'stripe_connect' || accountLocation === 'united_states' || accountLocation === 'canada'
-
-    if (isStripeConnect) {
+    const haitiProfile = await getPayoutProfile(user.id, 'haiti')
+    if (!haitiProfile) {
       return NextResponse.json(
         {
-          error: 'Stripe Connect account',
-          message: 'US/Canada payouts are handled via Stripe Connect. Bank destinations are managed in Stripe, not in EventHaiti.',
+          error: 'Haiti payout profile required',
+          message: 'Bank destinations are only available for organizers with a Haiti payout profile.',
         },
         { status: 400 }
       )

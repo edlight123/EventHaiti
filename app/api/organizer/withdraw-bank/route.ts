@@ -12,6 +12,7 @@ import {
   requireRecentPayoutDetailsChangeVerification,
 } from '@/lib/firestore/payout'
 import type { WithdrawalRequest } from '@/types/earnings'
+import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,21 +21,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const payoutConfigDoc = await adminDb
-      .collection('organizers')
-      .doc(user.id)
-      .collection('payoutConfig')
-      .doc('main')
-      .get()
-    const payoutConfig = payoutConfigDoc.exists ? (payoutConfigDoc.data() as any) : null
-    const accountLocation = String(payoutConfig?.accountLocation || payoutConfig?.bankDetails?.accountLocation || '').toLowerCase()
-    const payoutProvider = String(payoutConfig?.payoutProvider || '').toLowerCase()
-    const isStripeConnect = payoutProvider === 'stripe_connect' || accountLocation === 'united_states' || accountLocation === 'canada'
-    if (isStripeConnect) {
+    const haitiProfile = await getPayoutProfile(user.id, 'haiti')
+    if (!haitiProfile) {
       return NextResponse.json(
         {
-          error: 'Stripe Connect required',
-          message: 'US/Canada accounts must withdraw via Stripe Connect. Bank withdrawals are not available in EventHaiti for Stripe Connect accounts.',
+          error: 'Haiti payout profile required',
+          message: 'Bank withdrawals are only available for organizers with a Haiti payout profile.',
+        },
+        { status: 400 }
+      )
+    }
+
+    if (haitiProfile.status !== 'active') {
+      return NextResponse.json(
+        {
+          error: 'Payout profile not active',
+          message: 'Please complete payout verification before requesting bank withdrawals.',
+        },
+        { status: 400 }
+      )
+    }
+
+    if (haitiProfile.method !== 'bank_transfer') {
+      return NextResponse.json(
+        {
+          error: 'Bank transfer not configured',
+          message: 'Please configure Haiti payout method as Bank transfer to withdraw to a bank account.',
         },
         { status: 400 }
       )

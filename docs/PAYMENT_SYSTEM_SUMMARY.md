@@ -87,7 +87,8 @@ MonCash/Bank (Haiti) OR Stripe Connect (US/CA)
 
 - ✅ `tickets` - Already tracks purchases with payment_id
 - ✅ `events` - Links tickets to organizers
-- ✅ `organizers/{id}/payoutConfig/main` - Existing payout settings
+- ✅ `organizers/{id}/payoutProfiles/{haiti|stripe_connect}` - Payout profiles (primary)
+- ✅ `organizers/{id}/payoutConfig/main` - Legacy payout settings (backward compatibility)
 - ✅ `organizers/{id}/payouts` - Existing payout history
 
 ## 💡 How to Use the Existing Backend

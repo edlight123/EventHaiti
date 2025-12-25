@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { ChevronRight, AlertCircle, CheckCircle, Clock, Ban } from 'lucide-react'
 import Link from 'next/link'
-import { updatePayoutConfig } from './actions'
+import { updatePayoutProfileConfig } from './actions'
 import { useRouter } from 'next/navigation'
 
 // Types
@@ -50,7 +50,8 @@ interface EventPayoutSummary {
 }
 
 interface PayoutsPageProps {
-  config?: PayoutConfig
+  haitiConfig?: PayoutConfig
+  stripeConfig?: PayoutConfig
   eventSummaries: EventPayoutSummary[]
   upcomingPayout?: {
     amount: number
@@ -62,12 +63,22 @@ interface PayoutsPageProps {
 }
 
 export default function PayoutsPageNew({
-  config,
+  haitiConfig,
+  stripeConfig,
   eventSummaries,
   upcomingPayout,
   organizerId
 }: PayoutsPageProps) {
   const router = useRouter()
+
+  const [activeProfile, setActiveProfile] = useState<'haiti' | 'stripe_connect'>(() => {
+    if (haitiConfig) return 'haiti'
+    if (stripeConfig) return 'stripe_connect'
+    return 'haiti'
+  })
+
+  const config = activeProfile === 'haiti' ? haitiConfig : stripeConfig
+
   const [isEditing, setIsEditing] = useState(!config)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -91,36 +102,71 @@ export default function PayoutsPageNew({
   const [isLoadingStripeStatus, setIsLoadingStripeStatus] = useState(false)
   const [prefunding, setPrefunding] = useState<{ enabled: boolean; available: boolean } | null>(null)
   const [prefundingError, setPrefundingError] = useState<string | null>(null)
-  const [formData, setFormData] = useState({
-    accountLocation: config?.accountLocation || config?.bankDetails?.accountLocation || 'haiti',
-    method: config?.method || 'bank_transfer',
+  const [formData, setFormData] = useState(() => ({
+    accountLocation:
+      activeProfile === 'stripe_connect'
+        ? (config?.accountLocation || 'united_states')
+        : (config?.accountLocation || config?.bankDetails?.accountLocation || 'haiti'),
+    method: config?.method || (activeProfile === 'stripe_connect' ? 'bank_transfer' : 'bank_transfer'),
     bankName: config?.bankDetails?.bankName || 'unibank',
     customBankName: '',
     routingNumber: config?.bankDetails?.routingNumber || '',
     accountName: config?.bankDetails?.accountName || '',
-    accountNumber: config?.bankDetails?.accountNumber || '',
+    accountNumber: '',
     swift: config?.bankDetails?.swift || '',
     iban: config?.bankDetails?.iban || '',
     provider: config?.mobileMoneyDetails?.provider || 'moncash',
-    phoneNumber: config?.mobileMoneyDetails?.phoneNumber || ''
-  })
+    phoneNumber: ''
+  }))
 
   const hasPayoutSetup = Boolean(config)
-  const identityStatus = config?.verificationStatus?.identity || 'pending'
+  // Organizer identity verification is shared across profiles (internal KYC).
+  const organizerIdentityStatus = haitiConfig?.verificationStatus?.identity || 'pending'
+  const identityStatus = config?.verificationStatus?.identity || organizerIdentityStatus
   const bankStatus = config?.verificationStatus?.bank || 'pending'
   const phoneStatus = config?.verificationStatus?.phone || 'pending'
+
+  useEffect(() => {
+    setIsEditing(!config)
+    setError(null)
+    setPayoutChangeVerificationRequired(false)
+    setPayoutChangeCode('')
+    setPayoutChangeMessage(null)
+    setPendingSensitiveUpdate(null)
+
+    setFormData({
+      accountLocation:
+        activeProfile === 'stripe_connect'
+          ? (config?.accountLocation || 'united_states')
+          : (config?.accountLocation || config?.bankDetails?.accountLocation || 'haiti'),
+      method: config?.method || (activeProfile === 'stripe_connect' ? 'bank_transfer' : 'bank_transfer'),
+      bankName: config?.bankDetails?.bankName || 'unibank',
+      customBankName: '',
+      routingNumber: config?.bankDetails?.routingNumber || '',
+      accountName: config?.bankDetails?.accountName || '',
+      // Never prefill sensitive values.
+      accountNumber: '',
+      swift: config?.bankDetails?.swift || '',
+      iban: config?.bankDetails?.iban || '',
+      provider: config?.mobileMoneyDetails?.provider || 'moncash',
+      phoneNumber: '',
+    })
+  }, [activeProfile, config])
 
   const effectiveAccountLocation = (isEditing
     ? formData.accountLocation
     : (config?.accountLocation || config?.bankDetails?.accountLocation || formData.accountLocation))
-  const isHaiti = String(effectiveAccountLocation || '').toLowerCase() === 'haiti'
+
+  const isHaiti = activeProfile === 'haiti'
   const selectedProvider = String((isEditing ? formData.provider : config?.mobileMoneyDetails?.provider) || formData.provider || '').toLowerCase()
 
   const isStripeConnectSelection =
+    activeProfile === 'stripe_connect' ||
     String(effectiveAccountLocation || '').toLowerCase() === 'united_states' ||
     String(effectiveAccountLocation || '').toLowerCase() === 'canada'
 
   const isStripeConnectAccount =
+    activeProfile === 'stripe_connect' ||
     isStripeConnectSelection || String(config?.payoutProvider || '').toLowerCase() === 'stripe_connect'
 
   const formatLocationLabel = (raw: string | null | undefined) => {
@@ -136,7 +182,7 @@ export default function PayoutsPageNew({
     let cancelled = false
 
     const loadStripe = async () => {
-      if (!isStripeConnectSelection) return
+      if (activeProfile !== 'stripe_connect') return
       setIsLoadingStripeStatus(true)
       setStripeStatusError(null)
       try {
@@ -152,7 +198,7 @@ export default function PayoutsPageNew({
     }
 
     const loadPrefunding = async () => {
-      if (!isHaiti) return
+      if (activeProfile !== 'haiti') return
       setPrefundingError(null)
       try {
         const res = await fetch('/api/organizer/payout-prefunding-status', { cache: 'no-store' as any })
@@ -170,7 +216,7 @@ export default function PayoutsPageNew({
     return () => {
       cancelled = true
     }
-  }, [isStripeConnectSelection, isHaiti])
+  }, [activeProfile])
 
   const normalizeHaitiPhone = (raw: string) => {
     const compact = String(raw || '').replace(/[\s\-()]/g, '')
@@ -255,16 +301,21 @@ export default function PayoutsPageNew({
     const normalizedLocation = String(formData.accountLocation || '').toLowerCase()
     const wantsStripeConnect = normalizedLocation === 'united_states' || normalizedLocation === 'canada'
     
-    // Validate required fields
-    // Stripe Connect flow (US/CA): redirect to Stripe onboarding instead of collecting bank fields here.
-    if (!isHaiti && wantsStripeConnect) {
+    // Stripe Connect profile: redirect to Stripe onboarding instead of collecting bank fields here.
+    if (activeProfile === 'stripe_connect') {
       try {
+        if (!wantsStripeConnect) {
+          setError('Stripe Connect is only available for United States or Canada accounts')
+          setIsSaving(false)
+          return
+        }
+
         const stripeSetupUpdate = {
           accountLocation: normalizedLocation,
           payoutProvider: 'stripe_connect',
           method: 'bank_transfer',
         }
-        const updateResult = await updatePayoutConfig(stripeSetupUpdate as any)
+        const updateResult = await updatePayoutProfileConfig('stripe_connect', stripeSetupUpdate as any)
         if (!updateResult?.success) {
           if (updateResult?.requiresVerification) {
             setPendingSensitiveUpdate(stripeSetupUpdate)
@@ -372,7 +423,7 @@ export default function PayoutsPageNew({
         updates.payoutProvider = String(formData.provider || '').toLowerCase() === 'natcash' ? 'natcash' : 'moncash'
       }
 
-      const result = await updatePayoutConfig(updates)
+      const result = await updatePayoutProfileConfig(activeProfile as any, updates)
       if (!result?.success) {
         if (result?.requiresVerification) {
           setPendingSensitiveUpdate(updates)
@@ -434,7 +485,7 @@ export default function PayoutsPageNew({
 
       setPayoutChangeMessage('Verified. Saving your payout details…')
       if (pendingSensitiveUpdate) {
-        const result = await updatePayoutConfig(pendingSensitiveUpdate)
+        const result = await updatePayoutProfileConfig(activeProfile as any, pendingSensitiveUpdate)
         if (!result?.success) {
           if (result?.requiresVerification) {
             setPayoutChangeMessage('Verification expired. Please request a new code.')
@@ -638,6 +689,46 @@ export default function PayoutsPageNew({
           {/* Left Column - Payout Setup + Fees */}
           <div className="lg:col-span-1 space-y-6">
 
+            {/* Payout Profile Selector */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">Payout profile</h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  Set up both profiles. Each event uses the profile implied by its country.
+                </p>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveProfile('haiti')}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      activeProfile === 'haiti'
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    Haiti
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveProfile('stripe_connect')}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      activeProfile === 'stripe_connect'
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    US/Canada
+                  </button>
+                </div>
+
+                <div className="mt-3 text-xs text-gray-600">
+                  Haiti profile: {haitiConfig ? 'Configured' : 'Not set up'} · US/Canada profile: {stripeConfig ? 'Configured' : 'Not set up'}
+                </div>
+              </div>
+            </div>
+
             {/* Verification Card */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="p-6">
@@ -648,9 +739,9 @@ export default function PayoutsPageNew({
                     <div>
                       <div className="text-sm font-medium text-gray-900">Organizer identity</div>
                       <div className="text-sm text-gray-600">
-                        {identityStatus === 'verified'
+                        {organizerIdentityStatus === 'verified'
                           ? 'Verified'
-                          : identityStatus === 'failed'
+                          : organizerIdentityStatus === 'failed'
                             ? 'Needs attention'
                             : 'Pending'}
                       </div>
@@ -873,7 +964,7 @@ export default function PayoutsPageNew({
                         disabled={!prefunding?.enabled || !prefunding?.available}
                         onChange={async (e) => {
                           try {
-                            const result = await updatePayoutConfig({ allowInstantMoncash: e.target.checked } as any)
+                            const result = await updatePayoutProfileConfig('haiti' as any, { allowInstantMoncash: e.target.checked } as any)
                             if (!result?.success) {
                               if (result?.requiresVerification) {
                                 setPendingSensitiveUpdate({ allowInstantMoncash: e.target.checked })
@@ -993,22 +1084,34 @@ export default function PayoutsPageNew({
                         value={formData.accountLocation}
                         onChange={(e) => {
                           const nextLocation = e.target.value
+                          if (activeProfile === 'haiti') {
+                            setFormData({
+                              ...formData,
+                              accountLocation: 'haiti',
+                            })
+                            return
+                          }
+
                           const wantsStripe = nextLocation === 'united_states' || nextLocation === 'canada'
                           setFormData({
                             ...formData,
-                            accountLocation: nextLocation,
-                            method: wantsStripe ? 'bank_transfer' : formData.method,
+                            accountLocation: wantsStripe ? nextLocation : 'united_states',
+                            method: 'bank_transfer',
                           })
                         }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       >
-                        <option value="haiti">Haiti</option>
-                        <option value="canada">Canada</option>
-                        <option value="united_states">United States</option>
-                        <option value="other">Other…</option>
+                        {activeProfile === 'haiti' ? (
+                          <option value="haiti">Haiti</option>
+                        ) : (
+                          <>
+                            <option value="united_states">United States</option>
+                            <option value="canada">Canada</option>
+                          </>
+                        )}
                       </select>
 
-                      {(formData.accountLocation === 'united_states' || formData.accountLocation === 'canada') ? (
+                      {activeProfile === 'stripe_connect' ? (
                         <p className="mt-1 text-xs text-gray-500">
                           US/Canada payouts are handled via Stripe Connect (no bank details required here).
                         </p>
@@ -1016,7 +1119,7 @@ export default function PayoutsPageNew({
                     </div>
 
                     {/* Payout Method */}
-                    {!['united_states', 'canada'].includes(formData.accountLocation) ? (
+                    {activeProfile === 'haiti' ? (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Payout method <span className="text-red-500">*</span>
@@ -1053,7 +1156,7 @@ export default function PayoutsPageNew({
                     )}
 
                     {/* Bank Transfer Fields */}
-                    {formData.method === 'bank_transfer' && !['united_states', 'canada'].includes(formData.accountLocation) && (
+                    {activeProfile === 'haiti' && formData.method === 'bank_transfer' && (
                       <>
                         {/* Bank Name */}
                         <div>
@@ -1096,17 +1199,11 @@ export default function PayoutsPageNew({
                             type="text"
                             value={formData.routingNumber}
                             onChange={(e) => setFormData({ ...formData, routingNumber: e.target.value })}
-                            placeholder={
-                              formData.accountLocation === 'united_states' ? 'ABA routing number' :
-                              formData.accountLocation === 'canada' ? 'Institution / transit number' :
-                              'Routing or bank code'
-                            }
+                            placeholder="Routing or bank code"
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           />
                           <p className="mt-1 text-xs text-gray-500">
-                            {formData.accountLocation === 'united_states' && 'ABA routing number for US banks'}
-                            {formData.accountLocation === 'canada' && 'Institution / transit number for Canadian banks'}
-                            {!['united_states', 'canada'].includes(formData.accountLocation) && 'Bank code, routing number, or equivalent'}
+                            Bank code, routing number, or equivalent
                           </p>
                         </div>
 
@@ -1175,7 +1272,7 @@ export default function PayoutsPageNew({
                     )}
 
                     {/* Mobile Money Fields */}
-                    {formData.method === 'mobile_money' && !['united_states', 'canada'].includes(formData.accountLocation) && (
+                    {formData.method === 'mobile_money' && activeProfile === 'haiti' && (
                       <>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1261,8 +1358,8 @@ export default function PayoutsPageNew({
                         className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                       >
                         {isSaving
-                          ? (['united_states', 'canada'].includes(formData.accountLocation) ? 'Opening Stripe…' : 'Saving…')
-                          : (['united_states', 'canada'].includes(formData.accountLocation) ? 'Continue to Stripe' : 'Save payout details')}
+                          ? (activeProfile === 'stripe_connect' ? 'Opening Stripe…' : 'Saving…')
+                          : (activeProfile === 'stripe_connect' ? 'Continue to Stripe' : 'Save payout details')}
                       </button>
                       {hasPayoutSetup && (
                         <button

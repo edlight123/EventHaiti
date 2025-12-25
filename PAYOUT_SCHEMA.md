@@ -77,7 +77,19 @@
 
 ### Existing Subcollections (REUSED & EXTENDED)
 
-#### ✅ `organizers/{organizerId}/payoutConfig/main` - Payout Settings
+#### ✅ `organizers/{organizerId}/payoutProfiles/{profileId}` - Payout Profiles (PRIMARY)
+
+Organizers can have multiple payout profiles:
+- `haiti` (internal verification + Haiti rails)
+- `stripe_connect` (Stripe Connect account for US/CA)
+
+**Path:** `/organizers/{organizerId}/payoutProfiles/{profileId}`
+
+These documents reuse the `PayoutConfig` shape (same fields), but are scoped per profile.
+
+---
+
+#### ✅ `organizers/{organizerId}/payoutConfig/main` - Payout Settings (LEGACY)
 **Already Exists!** (See `/lib/firestore/payout.ts`)
 
 **Document ID:** `main` (singleton)  
@@ -111,7 +123,7 @@
 }
 ```
 
-**Why Needed:** Already tracks MonCash/Natcash/bank details. Reused as-is for payout method info.
+**Why Needed:** Backward compatibility for older organizers. New code should prefer payout profiles.
 
 ---
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
-import { recomputePayoutStatus } from '@/lib/firestore/payout'
+import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,15 +25,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get current payout config to ensure mobile money details exist
-    const configDoc = await adminDb
-      .collection('organizers')
-      .doc(organizerId)
-      .collection('payoutConfig')
-      .doc('main')
-      .get()
+    const haitiProfile = await getPayoutProfile(organizerId, 'haiti')
 
-    if (!configDoc.exists || !configDoc.data()?.mobileMoneyDetails) {
+    if (!haitiProfile || !haitiProfile.mobileMoneyDetails) {
       return NextResponse.json(
         { error: 'Mobile money details must be configured first' },
         { status: 400 }
@@ -82,22 +76,6 @@ export async function POST(request: NextRequest) {
         status: 'verified',
         verifiedAt: new Date().toISOString(),
       })
-
-    // Update payout config verification status
-    await adminDb
-      .collection('organizers')
-      .doc(organizerId)
-      .collection('payoutConfig')
-      .doc('main')
-      .set(
-        {
-          'verificationStatus.phone': 'verified',
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      )
-
-    await recomputePayoutStatus(organizerId)
 
     return NextResponse.json({
       success: true,

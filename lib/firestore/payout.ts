@@ -4,6 +4,7 @@ import { upsertPrimaryBankDestinationFromPayoutSettings } from '@/lib/firestore/
 export type PayoutStatus = 'not_setup' | 'pending_verification' | 'active' | 'on_hold'
 export type PayoutMethod = 'bank_transfer' | 'mobile_money'
 export type PayoutProvider = 'stripe_connect' | 'moncash' | 'natcash' | 'bank_transfer'
+export type PayoutProfileId = 'haiti' | 'stripe_connect'
 
 export interface PayoutConfig {
   status: PayoutStatus
@@ -516,6 +517,132 @@ export async function updatePayoutConfig(
     // Expected sentinel for step-up verification.
     if (!message.includes('PAYOUT_CHANGE_VERIFICATION_REQUIRED')) {
       console.error('Error updating payout config:', error)
+    }
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Update payout configuration for a specific payout profile.
+ *
+ * Profiles:
+ * - 'haiti': stores bank/mobile-money details and internal verification checklist.
+ * - 'stripe_connect': stores Stripe Connect metadata (accountLocation, stripeAccountId).
+ *
+ * Backward compatibility: this does not remove or migrate legacy payoutConfig/main automatically.
+ */
+export async function updatePayoutProfileConfig(
+  organizerId: string,
+  profileId: PayoutProfileId,
+  updates: Partial<PayoutConfig>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const configRef = adminDb
+      .collection('organizers')
+      .doc(organizerId)
+      .collection('payoutProfiles')
+      .doc(profileId)
+
+    const now = new Date().toISOString()
+
+    const configDoc = await configRef.get()
+    const current = configDoc.exists ? (configDoc.data() as PayoutConfig) : null
+
+    const normalizedLocation = String(
+      updates.accountLocation ?? current?.accountLocation ?? current?.bankDetails?.accountLocation ?? ''
+    ).toLowerCase()
+    const effectiveProvider = String(updates.payoutProvider ?? current?.payoutProvider ?? '').toLowerCase()
+    const isStripeConnectAccount =
+      profileId === 'stripe_connect' ||
+      effectiveProvider === 'stripe_connect' ||
+      normalizedLocation === 'united_states' ||
+      normalizedLocation === 'canada'
+
+    // Stripe Connect profile should never store bank/mobile money details.
+    const sanitizedUpdates: Partial<PayoutConfig> = { ...updates }
+    if (isStripeConnectAccount) {
+      delete (sanitizedUpdates as any).bankDetails
+      delete (sanitizedUpdates as any).mobileMoneyDetails
+      delete (sanitizedUpdates as any).allowInstantMoncash
+      if (sanitizedUpdates.method === 'mobile_money') {
+        sanitizedUpdates.method = 'bank_transfer'
+      }
+    }
+
+    const sensitiveUpdate = isSensitivePayoutDetailsUpdate(sanitizedUpdates)
+    const existingHasMethod = hasPayoutMethod(current)
+    const shouldRequireStepUp = Boolean(configDoc.exists && existingHasMethod && sensitiveUpdate)
+
+    if (shouldRequireStepUp) {
+      await requireRecentPayoutDetailsChangeVerification(organizerId)
+    }
+
+    const updateData: any = {
+      ...sanitizedUpdates,
+      updatedAt: now,
+    }
+
+    if (shouldRequireStepUp) {
+      updateData.status = 'on_hold'
+      updateData.payoutHoldUntil = new Date(Date.now() + PAYOUT_DETAILS_CHANGE_HOLD_MS).toISOString()
+    }
+
+    // Mask sensitive data before saving (Haiti profile only).
+    if (!isStripeConnectAccount && sanitizedUpdates.bankDetails?.accountNumber) {
+      const accountNumber = sanitizedUpdates.bankDetails.accountNumber
+
+      // Best-effort: store encrypted full details for future withdrawals.
+      try {
+        if (process.env.PAYOUT_DETAILS_ENCRYPTION_KEY) {
+          await upsertPrimaryBankDestinationFromPayoutSettings({
+            organizerId,
+            bankDetails: {
+              accountNumber,
+              bankName: sanitizedUpdates.bankDetails.bankName,
+              accountHolder: sanitizedUpdates.bankDetails.accountName,
+              routingNumber: sanitizedUpdates.bankDetails.routingNumber,
+              swiftCode: sanitizedUpdates.bankDetails.swift,
+              iban: sanitizedUpdates.bankDetails.iban,
+            },
+          })
+        } else {
+          console.warn('PAYOUT_DETAILS_ENCRYPTION_KEY not set; bank on-file withdrawals will be disabled.')
+        }
+      } catch (e) {
+        console.warn('Failed to persist encrypted bank destination:', e)
+      }
+
+      updateData.bankDetails = {
+        ...sanitizedUpdates.bankDetails,
+        accountNumber: maskAccountNumber(accountNumber),
+        accountNumberLast4: accountNumber.slice(-4),
+      }
+    }
+
+    if (!isStripeConnectAccount && sanitizedUpdates.mobileMoneyDetails?.phoneNumber) {
+      const phoneNumber = sanitizedUpdates.mobileMoneyDetails.phoneNumber
+      updateData.mobileMoneyDetails = {
+        ...sanitizedUpdates.mobileMoneyDetails,
+        phoneNumber: maskPhoneNumber(phoneNumber),
+        phoneNumberLast4: phoneNumber.slice(-4),
+      }
+    }
+
+    if (!configDoc.exists) {
+      updateData.createdAt = now
+    }
+
+    await configRef.set(updateData, { merge: true })
+
+    if (shouldRequireStepUp) {
+      await consumePayoutDetailsChangeVerification(organizerId)
+    }
+
+    return { success: true }
+  } catch (error: any) {
+    const message = String(error?.message || '')
+    if (!message.includes('PAYOUT_CHANGE_VERIFICATION_REQUIRED')) {
+      console.error('Error updating payout profile config:', error)
     }
     return { success: false, error: error.message }
   }

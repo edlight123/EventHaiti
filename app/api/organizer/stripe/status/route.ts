@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
+import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 
 export const runtime = 'nodejs'
 
@@ -23,15 +24,8 @@ export async function GET(_request: NextRequest) {
     const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
     const organizerId = decodedClaims.uid
 
-    const configSnap = await adminDb
-      .collection('organizers')
-      .doc(organizerId)
-      .collection('payoutConfig')
-      .doc('main')
-      .get()
-
-    const config = configSnap.exists ? configSnap.data() : null
-    const stripeAccountId = config?.stripeAccountId
+    const profile = await getPayoutProfile(organizerId, 'stripe_connect')
+    const stripeAccountId = profile?.stripeAccountId
 
     if (!stripeAccountId) {
       return NextResponse.json(

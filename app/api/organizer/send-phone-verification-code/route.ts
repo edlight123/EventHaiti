@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
+import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,22 +16,16 @@ export async function POST(request: NextRequest) {
     const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
     const organizerId = decodedClaims.uid
 
-    // Get current payout config to get phone number
-    const configDoc = await adminDb
-      .collection('organizers')
-      .doc(organizerId)
-      .collection('payoutConfig')
-      .doc('main')
-      .get()
+    const haitiProfile = await getPayoutProfile(organizerId, 'haiti')
 
-    if (!configDoc.exists || !configDoc.data()?.mobileMoneyDetails) {
+    if (!haitiProfile || !haitiProfile.mobileMoneyDetails) {
       return NextResponse.json(
         { error: 'Mobile money details must be configured first' },
         { status: 400 }
       )
     }
 
-    const phoneNumber = configDoc.data()!.mobileMoneyDetails.phoneNumber
+    const phoneNumber = haitiProfile.mobileMoneyDetails.phoneNumber
 
     // Generate 6-digit verification code
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
