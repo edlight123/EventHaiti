@@ -109,17 +109,23 @@ After deploying, test with:
 
 # Test 1: Organizer reads own payout config
 Auth: organizer_uid_123
-Path: /organizers/organizer_uid_123/payoutConfig/main
+Path: /organizers/organizer_uid_123/payoutProfiles/haiti
 Operation: get
 Expected: ✅ ALLOW
 
 # Test 2: Organizer reads another organizer's payout config
 Auth: organizer_uid_123
-Path: /organizers/organizer_uid_456/payoutConfig/main
+Path: /organizers/organizer_uid_456/payoutProfiles/haiti
 Operation: get
 Expected: ❌ DENY
 
 # Test 3: Admin reads any organizer's payout config
+Auth: admin_uid_789
+Path: /organizers/organizer_uid_123/payoutProfiles/haiti
+Operation: get
+Expected: ✅ ALLOW
+
+# Test 3b: Legacy payout config (backward compatibility)
 Auth: admin_uid_789
 Path: /organizers/organizer_uid_123/payoutConfig/main
 Operation: get

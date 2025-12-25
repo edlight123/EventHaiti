@@ -5,6 +5,14 @@ import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
 import { resolveEventCountry } from '@/lib/event-country'
 import { normalizeCountryCode } from '@/lib/payment-provider'
+import { getPayoutProfile, getRequiredPayoutProfileIdForEventCountry } from '@/lib/firestore/payout-profiles'
+
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured')
+  }
+  return require('stripe')(process.env.STRIPE_SECRET_KEY)
+}
 
 async function isOrganizerVerified(userId: string): Promise<boolean> {
   const userDoc = await adminDb.collection('users').doc(userId).get()
@@ -68,6 +76,40 @@ export async function POST(
             { error: 'Verification required to publish paid events' },
             { status: 403 }
           )
+        }
+
+        const resolvedCountry = await resolveEventCountry(eventData)
+        const requiredProfileId = getRequiredPayoutProfileIdForEventCountry(resolvedCountry || eventData?.country)
+
+        if (requiredProfileId === 'haiti') {
+          const haitiProfile = await getPayoutProfile(user.id, 'haiti')
+          if (!haitiProfile || haitiProfile.status !== 'active') {
+            return NextResponse.json(
+              { error: 'Payout setup required to publish paid events in Haiti.' },
+              { status: 403 }
+            )
+          }
+        }
+
+        if (requiredProfileId === 'stripe_connect') {
+          const stripeProfile = await getPayoutProfile(user.id, 'stripe_connect')
+          const stripeAccountId = stripeProfile?.stripeAccountId
+          if (!stripeAccountId) {
+            return NextResponse.json(
+              { error: 'Stripe Connect required to publish paid events in the US/Canada.' },
+              { status: 403 }
+            )
+          }
+
+          const stripe = getStripe()
+          const account = await stripe.accounts.retrieve(stripeAccountId)
+          const verifiedStripe = Boolean(account?.details_submitted && account?.charges_enabled && account?.payouts_enabled)
+          if (!verifiedStripe) {
+            return NextResponse.json(
+              { error: 'Stripe Connect onboarding required before publishing paid events in the US/Canada.' },
+              { status: 403 }
+            )
+          }
         }
       }
     }

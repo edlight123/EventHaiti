@@ -1,7 +1,7 @@
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
-import { getPayoutConfig } from '@/lib/firestore/payout'
+import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { serializeData } from '@/lib/utils/serialize'
 import { calculateFees, calculateSettlementDate } from '@/lib/fees'
 import Navbar from '@/components/Navbar'
@@ -230,8 +230,9 @@ export default async function PayoutsSettingsPage({
   }
 
   // Fetch payout data
-  const [config, eventEarnings] = await Promise.all([
-    getPayoutConfig(authUser.uid),
+  const [haitiConfig, stripeConfig, eventEarnings] = await Promise.all([
+    getPayoutProfile(authUser.uid, 'haiti'),
+    getPayoutProfile(authUser.uid, 'stripe_connect'),
     getOrganizerEventSummaries(authUser.uid)
   ])
 
@@ -243,7 +244,8 @@ export default async function PayoutsSettingsPage({
   }
 
   // Serialize data
-  const serializedConfig = serializeData(config) || undefined
+  const serializedHaitiConfig = serializeData(haitiConfig) || undefined
+  const serializedStripeConfig = serializeData(stripeConfig) || undefined
   const serializedEarnings = serializeData(eventEarnings)
   const upcomingPayout = calculateUpcomingPayout(eventEarnings)
 
@@ -252,7 +254,8 @@ export default async function PayoutsSettingsPage({
       <Navbar user={navbarUser} />
 
       <PayoutsPageNew
-        config={serializedConfig}
+        haitiConfig={serializedHaitiConfig}
+        stripeConfig={serializedStripeConfig}
         eventSummaries={serializedEarnings}
         upcomingPayout={upcomingPayout}
         organizerId={authUser.uid}

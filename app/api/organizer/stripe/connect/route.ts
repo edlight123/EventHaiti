@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
+import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
+import { updatePayoutProfileConfig } from '@/lib/firestore/payout'
 
 export const runtime = 'nodejs'
 
@@ -58,19 +60,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}))
     const requestedLocation = String(body?.accountLocation || '').toLowerCase()
 
-    // Read payout config (source of truth)
-    const configRef = adminDb
-      .collection('organizers')
-      .doc(organizerId)
-      .collection('payoutConfig')
-      .doc('main')
-
-    const configSnap = await configRef.get()
-    const config = configSnap.exists ? configSnap.data() : null
+    // Read payout profile (source of truth)
+    const profile = await getPayoutProfile(organizerId, 'stripe_connect')
 
     const accountLocation =
       requestedLocation ||
-      String(config?.accountLocation || config?.bankDetails?.accountLocation || '').toLowerCase()
+      String(profile?.accountLocation || '').toLowerCase()
 
     if (!accountLocation || (accountLocation !== 'united_states' && accountLocation !== 'canada')) {
       return NextResponse.json(
@@ -87,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     const stripeCountry = toStripeCountry(accountLocation)
 
-    let stripeAccountId = config?.stripeAccountId || null
+    let stripeAccountId = profile?.stripeAccountId || null
 
     if (!stripeAccountId) {
       const account = await stripe.accounts.create({
@@ -104,18 +99,17 @@ export async function POST(request: NextRequest) {
       })
 
       stripeAccountId = account.id
+      const createdStripeAccountId = account.id
 
-      await configRef.set(
-        {
-          payoutProvider: 'stripe_connect',
-          method: 'bank_transfer',
-          accountLocation,
-          stripeAccountId,
-          updatedAt: new Date().toISOString(),
-          createdAt: config?.createdAt || new Date().toISOString(),
-        },
-        { merge: true }
-      )
+      const updateResult = await updatePayoutProfileConfig(organizerId, 'stripe_connect', {
+        payoutProvider: 'stripe_connect',
+        accountLocation,
+        stripeAccountId: createdStripeAccountId,
+      })
+
+      if (!updateResult.success) {
+        throw new Error(updateResult.error || 'Failed to save Stripe Connect profile')
+      }
     }
 
     const appUrl = normalizeAppUrl(request)

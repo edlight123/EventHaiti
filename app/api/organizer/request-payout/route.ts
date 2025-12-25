@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
 import { getOrganizerBalance, getAvailableTicketsForPayout } from '@/lib/firestore/payout'
+import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 
 const MINIMUM_PAYOUT = 5000 // $50.00 in cents
 
@@ -62,23 +63,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Get payout config
-    const configDoc = await adminDb
-      .collection('organizers')
-      .doc(organizerId)
-      .collection('payoutConfig')
-      .doc('main')
-      .get()
+    const haitiProfile = await getPayoutProfile(organizerId, 'haiti')
 
-    if (!configDoc.exists) {
+    if (!haitiProfile) {
       return NextResponse.json(
         { error: 'Payout method not configured' },
         { status: 400 }
       )
     }
 
-    const config = configDoc.data()!
-
-    if (config.status !== 'active') {
+    if (haitiProfile.status !== 'active') {
       return NextResponse.json(
         { 
           error: 'Payout account not active',
@@ -109,7 +103,7 @@ export async function POST(request: NextRequest) {
       organizerId,
       amount: totalAmount,
       status: 'pending',
-      method: config.method,
+      method: haitiProfile.method,
       scheduledDate: nextFriday.toISOString(),
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),

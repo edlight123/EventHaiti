@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 
 export async function GET(_req: NextRequest) {
   try {
@@ -9,14 +10,8 @@ export async function GET(_req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const configDoc = await adminDb
-      .collection('organizers')
-      .doc(user.id)
-      .collection('payoutConfig')
-      .doc('main')
-      .get()
-
-    const data = configDoc.exists ? (configDoc.data() as any) : null
+    const haitiProfile = await getPayoutProfile(user.id, 'haiti')
+    const data = haitiProfile as any
 
     return NextResponse.json({
       allowInstantMoncash: Boolean(data?.allowInstantMoncash),

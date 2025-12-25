@@ -64,7 +64,8 @@ This document shows what you can reuse from your existing EventHaiti codebase ve
 - ✅ **`users`** - User accounts
   - `role`, `email`, `is_verified`
   
-- ✅ **`organizers/{id}/payoutConfig/main`** - Payout settings
+- ✅ **`organizers/{id}/payoutProfiles/{haiti|stripe_connect}`** - Payout profiles (primary)
+- ✅ **`organizers/{id}/payoutConfig/main`** - Legacy payout settings (backward compatibility)
 - ✅ **`organizers/{id}/payouts/`** - Payout history
 
 ### 4. Security & Validation

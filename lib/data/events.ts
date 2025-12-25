@@ -7,6 +7,7 @@
 
 import { adminDb } from '@/lib/firebase/admin'
 import { normalizeCountryCode } from '@/lib/payment-provider'
+import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { db } from '@/lib/firebase/client'
 import {
   collection,
@@ -127,20 +128,31 @@ export async function getEventById(eventId: string): Promise<Event | null> {
         const organizerId = String(data?.organizer_id || '').trim()
         if (organizerId) {
           try {
-            const [organizerDoc, payoutConfigDoc, userDoc] = await Promise.all([
+            const [organizerDoc, userDoc, haitiProfile, stripeProfile] = await Promise.all([
               adminDb.collection('organizers').doc(organizerId).get(),
-              adminDb
-                .collection('organizers')
-                .doc(organizerId)
-                .collection('payoutConfig')
-                .doc('main')
-                .get(),
               adminDb.collection('users').doc(organizerId).get(),
+              getPayoutProfile(organizerId, 'haiti'),
+              getPayoutProfile(organizerId, 'stripe_connect'),
             ])
 
             const organizerData = organizerDoc.exists ? (organizerDoc.data() as any) : null
-            const payoutConfig = payoutConfigDoc.exists ? (payoutConfigDoc.data() as any) : null
             const userData = userDoc.exists ? (userDoc.data() as any) : null
+
+            // If both payout profiles exist, inference from payout settings is ambiguous.
+            const hasHaitiProfile = Boolean(haitiProfile)
+            const hasStripeProfile = Boolean(stripeProfile)
+
+            const inferredFromPayout = (() => {
+              if (hasHaitiProfile && !hasStripeProfile) return 'HT'
+              if (hasStripeProfile && !hasHaitiProfile) {
+                return (
+                  inferCountryFromAccountLocation(
+                    stripeProfile?.accountLocation ?? stripeProfile?.bankDetails?.accountLocation
+                  ) || ''
+                )
+              }
+              return ''
+            })()
 
             country =
               normalizeCountryCode(
@@ -153,9 +165,7 @@ export async function getEventById(eventId: string): Promise<Event | null> {
                   userData?.location?.countryCode ??
                   userData?.location?.country_code
               ) ||
-              inferCountryFromAccountLocation(
-                payoutConfig?.accountLocation ?? payoutConfig?.bankDetails?.accountLocation
-              ) ||
+              inferredFromPayout ||
               inferCountryFromAccountLocation(organizerData?.accountLocation ?? userData?.accountLocation) ||
               inferCountryFromTextLocation(
                 [

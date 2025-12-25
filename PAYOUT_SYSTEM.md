@@ -41,6 +41,25 @@ Main payout settings page accessible to organizers. Features:
 
 ### Firestore Collections
 
+#### `organizers/{organizerId}/payoutProfiles/{profileId}`
+
+Payout settings are now stored as **profiles**, so a single organizer can support multiple payout rails:
+
+- `payoutProfiles/haiti` (internal verification + bank/mobile money)
+- `payoutProfiles/stripe_connect` (Stripe Connect account for US/CA)
+
+These docs use the same shape as `PayoutConfig` (see `lib/firestore/payout.ts`), with the relevant fields populated per profile.
+
+**Notes:**
+- Haiti profile status is derived from `verificationDocuments/*` + `verification_requests/*`.
+- Stripe Connect profile readiness is derived from the Stripe account status (charges/payouts enabled).
+
+#### Legacy (backward compatibility)
+
+#### `organizers/{organizerId}/payoutConfig/main`
+
+This is the legacy singleton payout config. It may exist for older organizers, but new logic should prefer `payoutProfiles/*`.
+
 #### `organizers/{organizerId}/payoutConfig/main`
 
 ```typescript
@@ -201,10 +220,10 @@ Main payout settings page accessible to organizers. Features:
 
 ### `lib/firestore/payout.ts`
 
-#### `getPayoutConfig(organizerId: string)`
-Fetch payout configuration from Firestore.
+This module still defines the shared `PayoutConfig` shape, payout status computation, and legacy helpers.
 
-**Returns:** `Promise<PayoutConfig | null>`
+#### `determinePayoutStatus(config: PayoutConfig | null)`
+Computes `'not_setup' | 'pending_verification' | 'active' | 'on_hold'`.
 
 #### `updatePayoutConfig(organizerId: string, updates: Partial<PayoutConfig>)`
 Update payout configuration with automatic data masking.
@@ -239,6 +258,16 @@ Promise<{
 - Sums ticket sales minus platform fees
 - Subtracts completed payouts
 - Calculates next Friday for payout date
+
+### `lib/firestore/payout-profiles.ts`
+
+#### `getPayoutProfile(organizerId: string, profileId: 'haiti' | 'stripe_connect')`
+Fetch a payout profile, with legacy fallback to `payoutConfig/main` when the profile doc does not exist.
+
+#### `getRequiredPayoutProfileIdForEventCountry(country)`
+Maps event country to the required payout profile:
+- `US`/`CA` → `stripe_connect`
+- everything else → `haiti`
 
 ## Security
 

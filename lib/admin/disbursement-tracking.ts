@@ -4,6 +4,7 @@
  */
 
 import { adminDb } from '@/lib/firebase/admin'
+import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 
 export interface EventDisbursementInfo {
   eventId: string
@@ -74,13 +75,7 @@ export async function getEndedEventsForDisbursement(
       const organizer = organizerDoc.data()
 
       // Get payout config
-      const payoutConfigDoc = await adminDb
-        .collection('organizers')
-        .doc(organizerId)
-        .collection('payoutConfig')
-        .doc('main')
-        .get()
-      const payoutConfig = payoutConfigDoc.data()
+      const haitiProfile = await getPayoutProfile(organizerId, 'haiti')
 
       // Get tickets for this event
       const ticketsSnapshot = await adminDb
@@ -131,22 +126,22 @@ export async function getEndedEventsForDisbursement(
         daysEnded >= 0 && 
         totalTicketsSold > 0 && 
         !hasCompletedPayout &&
-        !!payoutConfig?.method
+        !!haitiProfile?.method
 
       // Extract bank info based on payment method
       let bankInfo: any = {}
-      if (payoutConfig) {
-        if (payoutConfig.method === 'bank_transfer') {
+      if (haitiProfile) {
+        if (haitiProfile.method === 'bank_transfer') {
           bankInfo = {
-            accountName: payoutConfig.bankAccountName,
-            accountNumber: payoutConfig.bankAccountNumber,
-            bankName: payoutConfig.bankName,
-            routingNumber: payoutConfig.routingNumber
+            accountName: haitiProfile.bankDetails?.accountName,
+            accountNumber: haitiProfile.bankDetails?.accountNumber,
+            bankName: haitiProfile.bankDetails?.bankName,
+            routingNumber: haitiProfile.bankDetails?.routingNumber,
           }
-        } else if (payoutConfig.method === 'mobile_money') {
+        } else if (haitiProfile.method === 'mobile_money') {
           bankInfo = {
-            mobileNumber: payoutConfig.mobileNumber,
-            provider: payoutConfig.provider
+            mobileNumber: haitiProfile.mobileMoneyDetails?.phoneNumber,
+            provider: haitiProfile.mobileMoneyDetails?.provider,
           }
         }
       }
@@ -168,7 +163,7 @@ export async function getEndedEventsForDisbursement(
         hasPendingPayout,
         hasCompletedPayout,
         payoutEligible,
-        payoutMethod: payoutConfig?.method,
+        payoutMethod: haitiProfile?.method,
         bankInfo
       })
     }

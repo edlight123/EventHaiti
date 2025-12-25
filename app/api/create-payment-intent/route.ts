@@ -13,6 +13,7 @@ import {
 import { adminDb } from '@/lib/firebase/admin'
 import { getPaymentProviderForEventCountry } from '@/lib/payment-provider'
 import { calculateFees } from '@/lib/fees'
+import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 
 // Lazy load Stripe
 function getStripe() {
@@ -212,14 +213,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Event organizer is missing.' }, { status: 400 })
       }
 
-      const configSnap = await adminDb
-        .collection('organizers')
-        .doc(organizerId)
-        .collection('payoutConfig')
-        .doc('main')
-        .get()
-
-      const stripeAccountId = configSnap.exists ? (configSnap.data()?.stripeAccountId as string | undefined) : undefined
+      const stripeProfile = await getPayoutProfile(organizerId, 'stripe_connect')
+      const stripeAccountId = stripeProfile?.stripeAccountId
       if (!stripeAccountId) {
         await logPurchaseAttempt({ userId: user.id, eventId, ipAddress, quantity, fingerprint }, false)
         return NextResponse.json(

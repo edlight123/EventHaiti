@@ -9,9 +9,9 @@ import {
   determinePayoutStatus,
   getOrganizerBalance,
   getOrganizerIdentityVerificationStatus,
-  getPayoutConfig,
   hasPayoutMethod,
 } from '@/lib/firestore/payout'
+import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import OrganizerDashboardClient from './OrganizerDashboardClient'
 import OrganizerUpgradePrompt from './OrganizerUpgradePrompt'
 
@@ -50,12 +50,13 @@ export default async function OrganizerDashboard({
   }
 
   // Fetch organizer data
-  const [nextEvent, stats7d, stats30d, statsLifetime, payoutConfig, balanceData, identityStatus] = await Promise.all([
+  const [nextEvent, stats7d, stats30d, statsLifetime, haitiProfile, stripeProfile, balanceData, identityStatus] = await Promise.all([
     getNextEvent(user.id),
     getOrganizerStats(user.id, '7d'),
     getOrganizerStats(user.id, '30d'),
     getOrganizerStats(user.id, 'lifetime'),
-    getPayoutConfig(user.id),
+    getPayoutProfile(user.id, 'haiti'),
+    getPayoutProfile(user.id, 'stripe_connect'),
     getOrganizerBalance(user.id),
     getOrganizerIdentityVerificationStatus(user.id),
   ])
@@ -63,10 +64,13 @@ export default async function OrganizerDashboard({
   // Default to 7d stats
   const currentStats = stats7d
 
-  const payoutStatus = determinePayoutStatus(payoutConfig)
-  const hasPayoutSetup = hasPayoutMethod(payoutConfig)
+  const haitiHasMethod = hasPayoutMethod(haitiProfile)
+  const stripeHasSetup = Boolean(stripeProfile?.stripeAccountId)
+  const hasPayoutSetup = haitiHasMethod || stripeHasSetup
   const isVerified = identityStatus === 'verified'
+  const payoutStatus = haitiHasMethod ? determinePayoutStatus(haitiProfile) : 'not_setup'
   const payoutWidgetStatus: 'not-setup' | 'setup' | 'pending' | 'active' = (() => {
+    if (stripeHasSetup && !haitiHasMethod) return 'pending'
     switch (payoutStatus) {
       case 'active':
         return 'active'
