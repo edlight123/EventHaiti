@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: [
-      { url: '/favicon.svg?v=2', type: 'image/svg+xml' },
+      { url: '/favicon-color.svg?v=1', type: 'image/svg+xml' },
       { url: '/event_haiti_app_icon.svg', type: 'image/svg+xml' },
       { url: '/icon-192.svg', type: 'image/svg+xml' },
       { url: '/icon-512.svg', type: 'image/svg+xml' },

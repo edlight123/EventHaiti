@@ -15,10 +15,10 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 
 export default async function Icon() {
   const logoBuffer = await fetch(
-    new URL('./_assets/favicon.png', import.meta.url)
+    new URL('./_assets/favicon.svg', import.meta.url)
   ).then((res) => res.arrayBuffer())
 
-  const logoSrc = `data:image/png;base64,${arrayBufferToBase64(logoBuffer)}`
+  const logoSrc = `data:image/svg+xml;base64,${arrayBufferToBase64(logoBuffer)}`
 
   return new ImageResponse(
     (
