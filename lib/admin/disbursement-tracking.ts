@@ -5,6 +5,7 @@
 
 import { adminDb } from '@/lib/firebase/admin'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
+import { getDecryptedBankDestination } from '@/lib/firestore/payout-destinations'
 
 export interface EventDisbursementInfo {
   eventId: string
@@ -35,6 +36,7 @@ export interface EventDisbursementInfo {
   bankInfo?: {
     accountName?: string
     accountNumber?: string
+    accountNumberFull?: string
     bankName?: string
     routingNumber?: string
     swift?: string
@@ -53,6 +55,8 @@ export async function getEndedEventsForDisbursement(
   limit: number = 500
 ): Promise<EventDisbursementInfo[]> {
   try {
+    const decryptedPrimaryBankCache = new Map<string, Awaited<ReturnType<typeof getDecryptedBankDestination>>>()
+
     const now = new Date()
     const cutoffDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000)
 
@@ -139,16 +143,36 @@ export async function getEndedEventsForDisbursement(
         !hasCompletedPayout &&
         !!haitiProfile?.method
 
+      const getCachedPrimaryBank = async () => {
+        if (decryptedPrimaryBankCache.has(organizerId)) {
+          return decryptedPrimaryBankCache.get(organizerId) || null
+        }
+
+        try {
+          const decrypted = await getDecryptedBankDestination({ organizerId, destinationId: 'bank_primary' })
+          decryptedPrimaryBankCache.set(organizerId, decrypted)
+          return decrypted
+        } catch {
+          decryptedPrimaryBankCache.set(organizerId, null)
+          return null
+        }
+      }
+
       // Extract bank info based on payment method
       let bankInfo: EventDisbursementInfo['bankInfo'] | undefined
       if (haitiProfile?.method === 'bank_transfer') {
+        const decryptedPrimaryBank = await getCachedPrimaryBank()
+        const last4 = decryptedPrimaryBank?.accountNumber ? decryptedPrimaryBank.accountNumber.slice(-4) : undefined
+
         bankInfo = {
-          accountName: haitiProfile.bankDetails?.accountName,
-          accountNumber: haitiProfile.bankDetails?.accountNumber,
-          bankName: haitiProfile.bankDetails?.bankName,
-          routingNumber: haitiProfile.bankDetails?.routingNumber,
-          swift: haitiProfile.bankDetails?.swift,
-          iban: haitiProfile.bankDetails?.iban,
+          accountName: decryptedPrimaryBank?.accountHolder || haitiProfile.bankDetails?.accountName,
+          // Keep the table display value small; the modal can use accountNumberFull.
+          accountNumber: haitiProfile.bankDetails?.accountNumber || (last4 ? `****${last4}` : undefined),
+          accountNumberFull: decryptedPrimaryBank?.accountNumber,
+          bankName: decryptedPrimaryBank?.bankName || haitiProfile.bankDetails?.bankName,
+          routingNumber: decryptedPrimaryBank?.routingNumber || haitiProfile.bankDetails?.routingNumber,
+          swift: decryptedPrimaryBank?.swiftCode || haitiProfile.bankDetails?.swift,
+          iban: decryptedPrimaryBank?.iban || haitiProfile.bankDetails?.iban,
         }
       } else if (haitiProfile?.method === 'mobile_money') {
         bankInfo = {

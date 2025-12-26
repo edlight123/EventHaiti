@@ -36,10 +36,14 @@ interface EventDisbursementInfo {
   bankInfo?: {
     accountName?: string
     accountNumber?: string
+    accountNumberFull?: string
     bankName?: string
     routingNumber?: string
+    swift?: string
+    iban?: string
     mobileNumber?: string
     provider?: string
+    mobileAccountName?: string
   }
 }
 
@@ -70,17 +74,18 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
     if (!bankInfo) return false
     return Boolean(
       bankInfo.accountNumber ||
+      bankInfo.accountNumberFull ||
       bankInfo.bankName ||
       bankInfo.accountName ||
       bankInfo.routingNumber ||
-      (bankInfo as any).swift ||
-      (bankInfo as any).iban
+      bankInfo.swift ||
+      bankInfo.iban
     )
   }
 
   const hasMobileDetails = (bankInfo?: EventDisbursementInfo['bankInfo']) => {
     if (!bankInfo) return false
-    return Boolean(bankInfo.mobileNumber || bankInfo.provider || (bankInfo as any).accountName)
+    return Boolean(bankInfo.mobileNumber || bankInfo.provider || bankInfo.mobileAccountName)
   }
 
   const filteredEvents = endedEvents.filter(event => {
@@ -412,7 +417,9 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Account Number:</span>
-                    <span className="font-mono font-medium">{selectedEvent.bankInfo?.accountNumber || 'N/A'}</span>
+                    <span className="font-mono font-medium">
+                      {selectedEvent.bankInfo?.accountNumberFull || selectedEvent.bankInfo?.accountNumber || 'N/A'}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Bank Name:</span>
@@ -424,16 +431,16 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
                       <span className="font-mono font-medium">{selectedEvent.bankInfo.routingNumber}</span>
                     </div>
                   )}
-                  {(selectedEvent.bankInfo as any)?.swift && (
+                  {selectedEvent.bankInfo?.swift && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">SWIFT:</span>
-                      <span className="font-mono font-medium">{(selectedEvent.bankInfo as any).swift}</span>
+                      <span className="font-mono font-medium">{selectedEvent.bankInfo.swift}</span>
                     </div>
                   )}
-                  {(selectedEvent.bankInfo as any)?.iban && (
+                  {selectedEvent.bankInfo?.iban && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">IBAN:</span>
-                      <span className="font-mono font-medium">{(selectedEvent.bankInfo as any).iban}</span>
+                      <span className="font-mono font-medium">{selectedEvent.bankInfo.iban}</span>
                     </div>
                   )}
                 </div>
@@ -454,10 +461,10 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
                     <span className="text-gray-600">Provider:</span>
                     <span className="font-medium">{selectedEvent.bankInfo?.provider || 'N/A'}</span>
                   </div>
-                  {(selectedEvent.bankInfo as any)?.accountName && (
+                  {selectedEvent.bankInfo?.mobileAccountName && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Account Name:</span>
-                      <span className="font-medium">{(selectedEvent.bankInfo as any).accountName}</span>
+                      <span className="font-medium">{selectedEvent.bankInfo.mobileAccountName}</span>
                     </div>
                   )}
                 </div>
