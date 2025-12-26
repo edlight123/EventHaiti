@@ -155,6 +155,7 @@ export default function PayoutsPageNew({
   const [isLoadingStripeStatus, setIsLoadingStripeStatus] = useState(false)
   const [prefunding, setPrefunding] = useState<{ enabled: boolean; available: boolean } | null>(null)
   const [prefundingError, setPrefundingError] = useState<string | null>(null)
+  const [isChangingMobileNumber, setIsChangingMobileNumber] = useState(false)
   const [formData, setFormData] = useState(() => ({
     accountLocation:
       activeProfile === 'stripe_connect'
@@ -191,6 +192,7 @@ export default function PayoutsPageNew({
     setBankVerificationMessage(null)
     setAddBankDestinationMessage(null)
     setShowAddBankDestination(false)
+    setIsChangingMobileNumber(false)
 
     setFormData({
       accountLocation:
@@ -210,6 +212,13 @@ export default function PayoutsPageNew({
       phoneNumber: '',
     })
   }, [activeProfile, config])
+
+  useEffect(() => {
+    if (!payoutChangeVerificationRequired) return
+    // Make sure the step-up prompt is visible even when not editing.
+    const el = document.getElementById('payout-change-stepup')
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [payoutChangeVerificationRequired])
 
   const effectiveAccountLocation = (isEditing
     ? formData.accountLocation
@@ -281,7 +290,8 @@ export default function PayoutsPageNew({
 
     const loadBankDestinations = async () => {
       if (activeProfile !== 'haiti') return
-      if (String(config?.method || '').toLowerCase() !== 'bank_transfer') return
+      const effectiveMethod = String((isEditing ? formData.method : config?.method) || '').toLowerCase()
+      if (effectiveMethod !== 'bank_transfer') return
 
       setIsLoadingBankDestinations(true)
       setBankDestinationsError(null)
@@ -314,7 +324,7 @@ export default function PayoutsPageNew({
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProfile, config?.method])
+  }, [activeProfile, config?.method, isEditing, formData.method])
 
   const normalizeHaitiPhone = (raw: string) => {
     const compact = String(raw || '').replace(/[\s\-()]/g, '')
@@ -452,40 +462,56 @@ export default function PayoutsPageNew({
         setIsSaving(false)
         return
       }
-      if (!formData.bankName) {
-        setError('Please select a bank')
-        setIsSaving(false)
-        return
-      }
-      if (formData.bankName === 'other' && !formData.customBankName.trim()) {
-        setError('Please enter your bank name')
-        setIsSaving(false)
-        return
-      }
-      if (!formData.routingNumber.trim()) {
-        setError('Please enter a routing number')
-        setIsSaving(false)
-        return
-      }
-      if (!formData.accountNumber.trim()) {
-        setError('Please enter an account number')
-        setIsSaving(false)
-        return
-      }
-      if (!formData.accountName.trim()) {
-        setError('Please enter the account holder name')
-        setIsSaving(false)
-        return
+
+      // Haiti bank transfers use saved bank accounts (payout destinations) instead of re-entering details.
+      if (activeProfile === 'haiti') {
+        const destinations = bankDestinations || []
+        const selected = destinations.find((d) => d.id === selectedBankDestinationId) || null
+        if (!selected) {
+          setError('Please add a bank account first, then select it.')
+          setIsSaving(false)
+          const verifyEl = document.getElementById('verify-payouts')
+          if (verifyEl) verifyEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          return
+        }
+      } else {
+        if (!formData.bankName) {
+          setError('Please select a bank')
+          setIsSaving(false)
+          return
+        }
+        if (formData.bankName === 'other' && !formData.customBankName.trim()) {
+          setError('Please enter your bank name')
+          setIsSaving(false)
+          return
+        }
+        if (!formData.routingNumber.trim()) {
+          setError('Please enter a routing number')
+          setIsSaving(false)
+          return
+        }
+        if (!formData.accountNumber.trim()) {
+          setError('Please enter an account number')
+          setIsSaving(false)
+          return
+        }
+        if (!formData.accountName.trim()) {
+          setError('Please enter the account holder name')
+          setIsSaving(false)
+          return
+        }
       }
     }
     if (formData.method === 'mobile_money') {
-      if (!formData.phoneNumber.trim()) {
+      const hasSavedPhone = Boolean(config?.mobileMoneyDetails?.phoneNumberLast4)
+      const needsNewPhone = activeProfile === 'haiti' ? (isChangingMobileNumber || !hasSavedPhone) : true
+      if (needsNewPhone && !formData.phoneNumber.trim()) {
         setError('Please enter a phone number')
         setIsSaving(false)
         return
       }
 
-      if (isHaiti && !isValidHaitiPhone(formData.phoneNumber)) {
+      if (needsNewPhone && isHaiti && !isValidHaitiPhone(formData.phoneNumber)) {
         setError('Please enter a valid Haiti phone number (example: +50912345678)')
         setIsSaving(false)
         return
@@ -499,25 +525,32 @@ export default function PayoutsPageNew({
       }
 
       if (formData.method === 'bank_transfer') {
-        const finalBankName = formData.bankName === 'other' 
-          ? formData.customBankName 
-          : formData.bankName
-        
-        updates.bankDetails = {
-          accountLocation: formData.accountLocation,
-          bankName: finalBankName,
-          routingNumber: formData.routingNumber,
-          accountName: formData.accountName,
-          accountNumber: formData.accountNumber,
-          swift: formData.swift || null,
-          iban: formData.iban || null
+        if (activeProfile !== 'haiti') {
+          const finalBankName = formData.bankName === 'other' ? formData.customBankName : formData.bankName
+
+          updates.bankDetails = {
+            accountLocation: formData.accountLocation,
+            bankName: finalBankName,
+            routingNumber: formData.routingNumber,
+            accountName: formData.accountName,
+            accountNumber: formData.accountNumber,
+            swift: formData.swift || null,
+            iban: formData.iban || null,
+          }
         }
       } else {
+        const hasSavedPhone = Boolean(config?.mobileMoneyDetails?.phoneNumberLast4)
+        const needsNewPhone = activeProfile === 'haiti' ? (isChangingMobileNumber || !hasSavedPhone) : true
+
         updates.mobileMoneyDetails = {
           provider: formData.provider,
-          phoneNumber: isHaiti ? normalizeHaitiPhone(formData.phoneNumber) : formData.phoneNumber,
-          accountName: formData.accountName || formData.phoneNumber
         }
+
+        if (needsNewPhone) {
+          updates.mobileMoneyDetails.phoneNumber = isHaiti ? normalizeHaitiPhone(formData.phoneNumber) : formData.phoneNumber
+          updates.mobileMoneyDetails.accountName = formData.accountName || formData.phoneNumber
+        }
+
         updates.payoutProvider = String(formData.provider || '').toLowerCase() === 'natcash' ? 'natcash' : 'moncash'
       }
 
@@ -534,6 +567,7 @@ export default function PayoutsPageNew({
       }
 
       setIsEditing(false)
+      setIsChangingMobileNumber(false)
       setPayoutChangeVerificationRequired(false)
       setPendingSensitiveUpdate(null)
       setPayoutChangeCode('')
@@ -612,6 +646,8 @@ export default function PayoutsPageNew({
           }
 
           setAddBankDestinationMessage('Bank account added. Please submit verification for this account.')
+          setNewBankDestination({ bankName: '', customBankName: '', accountNumber: '', accountHolder: '', routingNumber: '', swiftCode: '' })
+          setShowAddBankDestination(false)
           try {
             const res2 = await fetch('/api/organizer/payout-destinations/bank', { cache: 'no-store' as any })
             const data2 = await res2.json().catch(() => ({}))
@@ -936,6 +972,48 @@ export default function PayoutsPageNew({
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {payoutChangeVerificationRequired ? (
+          <div id="payout-change-stepup" className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-700 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-yellow-900">Confirm payout details change</p>
+                <p className="text-sm text-yellow-800 mt-1">
+                  {payoutChangeMessage ||
+                    'For your security, confirm this change with the 6-digit code sent to your email.'}
+                </p>
+
+                <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={payoutChangeCode}
+                    onChange={(e) => setPayoutChangeCode(e.target.value)}
+                    placeholder="6-digit code"
+                    className="w-full sm:w-48 px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={verifyPayoutChangeEmailCode}
+                    disabled={isVerifyingPayoutChangeCode || !/^\d{6}$/.test(payoutChangeCode)}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {isVerifyingPayoutChangeCode ? 'Verifying…' : 'Verify & continue'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={sendPayoutChangeEmailCode}
+                    disabled={isSendingPayoutChangeCode}
+                    className="px-4 py-2 bg-white border border-yellow-300 text-yellow-900 rounded-lg font-medium hover:bg-yellow-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSendingPayoutChangeCode ? 'Sending…' : 'Resend code'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <div
           className={
             shouldShowEarningsAndPayouts
@@ -1023,6 +1101,7 @@ export default function PayoutsPageNew({
             {/* Verification Card */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="p-6">
+                <div id="verify-payouts" />
                 <h2 className="text-lg font-semibold text-gray-900">Verify payouts</h2>
                 <p className="text-sm text-gray-600 mt-1 mb-4">
                   After setting up your payout method, complete verification below.
@@ -1505,12 +1584,28 @@ export default function PayoutsPageNew({
                         {isStripeConnectAccount ? (
                           <>Stripe Connect</>
                         ) : config?.method === 'bank_transfer' ? (
-                          <>
-                            Bank transfer · {config?.bankDetails?.bankName || 'Bank'} ·{' '}
-                            <span className="font-mono">
-                              ****{config?.bankDetails?.accountNumberLast4 || config?.bankDetails?.accountNumber?.slice(-4) || '----'}
-                            </span>
-                          </>
+                          (() => {
+                            if (isHaiti) {
+                              const destinations = bankDestinations || []
+                              const primary = destinations.find((d) => d.isPrimary) || destinations[0] || null
+                              if (primary) {
+                                return (
+                                  <>
+                                    Bank transfer · {primary.bankName} · <span className="font-mono">****{primary.accountNumberLast4}</span>
+                                  </>
+                                )
+                              }
+                            }
+
+                            return (
+                              <>
+                                Bank transfer · {config?.bankDetails?.bankName || 'Bank'} ·{' '}
+                                <span className="font-mono">
+                                  ****{config?.bankDetails?.accountNumberLast4 || config?.bankDetails?.accountNumber?.slice(-4) || '----'}
+                                </span>
+                              </>
+                            )
+                          })()
                         ) : (
                           <>
                             Mobile money · {config?.mobileMoneyDetails?.provider || 'Provider'} ·{' '}
@@ -1619,120 +1714,50 @@ export default function PayoutsPageNew({
                     )}
 
                     {/* Bank Transfer Fields */}
-                    {activeProfile === 'haiti' && formData.method === 'bank_transfer' && (
-                      <>
-                        {/* Bank Name */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Bank name <span className="text-red-500">*</span>
-                          </label>
+                    {activeProfile === 'haiti' && formData.method === 'bank_transfer' ? (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Bank account <span className="text-red-500">*</span>
+                        </label>
+
+                        {isLoadingBankDestinations ? (
+                          <div className="text-sm text-gray-500">Loading saved bank accounts…</div>
+                        ) : null}
+
+                        {bankDestinations && bankDestinations.length ? (
                           <select
-                            value={formData.bankName}
-                            onChange={(e) => setFormData({ ...formData, bankName: e.target.value, customBankName: '' })}
+                            value={selectedBankDestinationId}
+                            onChange={(e) => setSelectedBankDestinationId(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           >
-                            {banks.map(bank => (
-                              <option key={bank.value} value={bank.value}>{bank.label}</option>
+                            {bankDestinations.map((d) => (
+                              <option key={d.id} value={d.id}>
+                                {d.bankName} • ****{d.accountNumberLast4}{d.isPrimary ? ' (Primary)' : ''}
+                              </option>
                             ))}
                           </select>
-                        </div>
-
-                        {/* Custom Bank Name (shown when Other is selected) */}
-                        {formData.bankName === 'other' && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Bank name <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={formData.customBankName}
-                              onChange={(e) => setFormData({ ...formData, customBankName: e.target.value })}
-                              placeholder="Type your bank name"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            />
+                        ) : (
+                          <div className="text-sm text-gray-600">
+                            No bank accounts saved yet. Add one in the verification section.
                           </div>
                         )}
 
-                        {/* Routing Number */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Routing number <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.routingNumber}
-                            onChange={(e) => setFormData({ ...formData, routingNumber: e.target.value })}
-                            placeholder="Routing or bank code"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          />
-                          <p className="mt-1 text-xs text-gray-500">
-                            Bank code, routing number, or equivalent
-                          </p>
-                        </div>
+                        {bankDestinationsError ? (
+                          <div className="text-xs text-red-700 mt-1">{bankDestinationsError}</div>
+                        ) : null}
 
-                        {/* Account Holder Name */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Account holder name <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.accountName}
-                            onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
-                            placeholder="John Doe"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          />
-                        </div>
-
-                        {/* Account Number */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Account number <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.accountNumber}
-                            onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
-                            placeholder="1234567890"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          />
-                        </div>
-
-                        {/* SWIFT / BIC (Optional) */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            SWIFT / BIC <span className="text-gray-400 text-xs">(optional)</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.swift}
-                            onChange={(e) => setFormData({ ...formData, swift: e.target.value })}
-                            placeholder="SWIFT or BIC code"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          />
-                          <p className="mt-1 text-xs text-gray-500">
-                            Required for some international payouts. Leave blank if you&apos;re not sure.
-                          </p>
-                        </div>
-
-                        {/* IBAN (Optional) */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            IBAN <span className="text-gray-400 text-xs">(optional)</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.iban}
-                            onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
-                            placeholder="International Bank Account Number"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          />
-                          <p className="mt-1 text-xs text-gray-500">
-                            Used in European and some international transfers.
-                          </p>
-                        </div>
-                      </>
-                    )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const el = document.getElementById('verify-payouts')
+                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                          }}
+                          className="mt-2 text-sm font-medium text-purple-600 hover:text-purple-700"
+                        >
+                          Add / manage bank accounts
+                        </button>
+                      </div>
+                    ) : null}
 
                     {/* Mobile Money Fields */}
                     {formData.method === 'mobile_money' && activeProfile === 'haiti' && (
@@ -1751,66 +1776,50 @@ export default function PayoutsPageNew({
                           </select>
                         </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Phone number
-                          </label>
-                          <input
-                            type="tel"
-                            value={formData.phoneNumber}
-                            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                            placeholder="+50912345678"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          />
-                        </div>
+                        {Boolean(config?.mobileMoneyDetails?.phoneNumberLast4) && !isChangingMobileNumber ? (
+                          <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                            <div className="text-sm text-gray-900 font-medium">Saved phone number</div>
+                            <div className="text-sm text-gray-700 mt-1">
+                              ****{config?.mobileMoneyDetails?.phoneNumberLast4}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setIsChangingMobileNumber(true)}
+                              className="mt-2 text-sm font-medium text-purple-600 hover:text-purple-700"
+                            >
+                              Change number
+                            </button>
+                          </div>
+                        ) : (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Phone number</label>
+                            <input
+                              type="tel"
+                              value={formData.phoneNumber}
+                              onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                              placeholder="+50912345678"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            />
+                            {Boolean(config?.mobileMoneyDetails?.phoneNumberLast4) ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsChangingMobileNumber(false)
+                                  setFormData((p) => ({ ...p, phoneNumber: '' }))
+                                }}
+                                className="mt-2 text-sm font-medium text-gray-600 hover:text-gray-700"
+                              >
+                                Use saved number instead
+                              </button>
+                            ) : null}
+                          </div>
+                        )}
                       </>
                     )}
 
                     {error && (
                       <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
                         {error}
-                      </div>
-                    )}
-
-                    {payoutChangeVerificationRequired && (
-                      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <div className="flex items-start gap-3">
-                          <AlertCircle className="w-5 h-5 text-yellow-700 flex-shrink-0 mt-0.5" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-yellow-900">Confirm payout details change</p>
-                            <p className="text-sm text-yellow-800 mt-1">
-                              {payoutChangeMessage ||
-                                'For your security, confirm this change with the 6-digit code sent to your email.'}
-                            </p>
-
-                            <div className="mt-3 flex flex-col sm:flex-row gap-2">
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                value={payoutChangeCode}
-                                onChange={(e) => setPayoutChangeCode(e.target.value)}
-                                placeholder="6-digit code"
-                                className="w-full sm:w-48 px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                              />
-                              <button
-                                type="button"
-                                onClick={verifyPayoutChangeEmailCode}
-                                disabled={isVerifyingPayoutChangeCode || !/^\d{6}$/.test(payoutChangeCode)}
-                                className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                              >
-                                {isVerifyingPayoutChangeCode ? 'Verifying…' : 'Verify & save'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={sendPayoutChangeEmailCode}
-                                disabled={isSendingPayoutChangeCode}
-                                className="px-4 py-2 bg-white border border-yellow-300 text-yellow-900 rounded-lg font-medium hover:bg-yellow-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {isSendingPayoutChangeCode ? 'Sending…' : 'Resend code'}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
                       </div>
                     )}
 
