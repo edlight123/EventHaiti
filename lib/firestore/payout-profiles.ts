@@ -45,13 +45,45 @@ async function computeVerificationStatus(organizerId: string, raw: any | null): 
     phone: 'pending',
   }
 
+  // Bank verification can now be stored per-bank-destination as:
+  // - verificationDocuments/bank_<destinationId>
+  // Primary bank destination uses destinationId = "bank_primary", so docId == "bank_bank_primary".
+  // Legacy behavior stored a single bank doc as "bank".
+  let primaryBankStatus: 'pending' | 'verified' | 'failed' | null = null
+  let legacyBankStatus: 'pending' | 'verified' | 'failed' | null = null
+
   verificationDocs.docs.forEach((doc: any) => {
-    const docData = doc.data()
-    const type = doc.id as 'identity' | 'bank' | 'phone'
-    if (!(type in derived)) return
-    if (type === 'identity' && organizerIdentityStatus === 'verified') return
-    derived[type] = docData.status || 'pending'
+    const docData = doc.data() as any
+    const docId = String(doc.id || '')
+
+    if (docId === 'phone') {
+      derived.phone = docData.status || 'pending'
+      return
+    }
+
+    if (docId === 'bank') {
+      legacyBankStatus = docData.status || 'pending'
+      return
+    }
+
+    if (docId === 'bank_bank_primary') {
+      primaryBankStatus = docData.status || 'pending'
+      return
+    }
   })
+
+  // Identity is driven primarily by organizer verification request status.
+  if (organizerIdentityStatus !== 'verified') {
+    const identityDoc = verificationDocs.docs.find((d: any) => String(d.id || '') === 'identity')
+    if (identityDoc) {
+      const docData = identityDoc.data() as any
+      derived.identity = docData.status || derived.identity
+    }
+  }
+
+  // Prefer primary destination-specific verification; fall back to legacy bank doc.
+  if (primaryBankStatus) derived.bank = primaryBankStatus
+  else if (legacyBankStatus) derived.bank = legacyBankStatus
 
   return {
     identity: derived.identity,

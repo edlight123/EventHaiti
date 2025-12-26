@@ -6,6 +6,15 @@ import Link from 'next/link'
 import { updatePayoutProfileConfig } from './actions'
 import { useRouter } from 'next/navigation'
 
+type BankDestination = {
+  id: string
+  bankName: string
+  accountName: string
+  accountNumberLast4: string
+  isPrimary: boolean
+  verificationStatus?: 'pending' | 'verified' | 'failed'
+}
+
 // Types
 interface PayoutConfig {
   status?: 'not_setup' | 'pending_verification' | 'active' | 'on_hold'
@@ -109,7 +118,11 @@ export default function PayoutsPageNew({
   const [payoutChangeMessage, setPayoutChangeMessage] = useState<string | null>(null)
   const [isSendingPayoutChangeCode, setIsSendingPayoutChangeCode] = useState(false)
   const [isVerifyingPayoutChangeCode, setIsVerifyingPayoutChangeCode] = useState(false)
-  const [pendingSensitiveUpdate, setPendingSensitiveUpdate] = useState<any | null>(null)
+  const [pendingSensitiveUpdate, setPendingSensitiveUpdate] = useState<
+    | { kind: 'profile_update'; updates: any }
+    | { kind: 'add_bank_destination'; bankDetails: any }
+    | null
+  >(null)
   const [period, setPeriod] = useState<'this_month' | 'last_3_months' | 'all_time'>('all_time')
   const [isSendingPhoneCode, setIsSendingPhoneCode] = useState(false)
   const [isSubmittingPhoneCode, setIsSubmittingPhoneCode] = useState(false)
@@ -119,6 +132,22 @@ export default function PayoutsPageNew({
   const [bankVerificationFile, setBankVerificationFile] = useState<File | null>(null)
   const [isSubmittingBankVerification, setIsSubmittingBankVerification] = useState(false)
   const [bankVerificationMessage, setBankVerificationMessage] = useState<string | null>(null)
+
+  const [bankDestinations, setBankDestinations] = useState<BankDestination[] | null>(null)
+  const [isLoadingBankDestinations, setIsLoadingBankDestinations] = useState(false)
+  const [bankDestinationsError, setBankDestinationsError] = useState<string | null>(null)
+  const [selectedBankDestinationId, setSelectedBankDestinationId] = useState<string>('')
+
+  const [showAddBankDestination, setShowAddBankDestination] = useState(false)
+  const [isAddingBankDestination, setIsAddingBankDestination] = useState(false)
+  const [addBankDestinationMessage, setAddBankDestinationMessage] = useState<string | null>(null)
+  const [newBankDestination, setNewBankDestination] = useState({
+    bankName: '',
+    accountNumber: '',
+    accountHolder: '',
+    routingNumber: '',
+    swiftCode: '',
+  })
   const [stripeStatus, setStripeStatus] = useState<any | null>(null)
   const [stripeStatusError, setStripeStatusError] = useState<string | null>(null)
   const [isLoadingStripeStatus, setIsLoadingStripeStatus] = useState(false)
@@ -155,6 +184,11 @@ export default function PayoutsPageNew({
     setPayoutChangeCode('')
     setPayoutChangeMessage(null)
     setPendingSensitiveUpdate(null)
+
+    setBankVerificationFile(null)
+    setBankVerificationMessage(null)
+    setAddBankDestinationMessage(null)
+    setShowAddBankDestination(false)
 
     setFormData({
       accountLocation:
@@ -239,6 +273,46 @@ export default function PayoutsPageNew({
       cancelled = true
     }
   }, [activeProfile])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadBankDestinations = async () => {
+      if (activeProfile !== 'haiti') return
+      if (String(config?.method || '').toLowerCase() !== 'bank_transfer') return
+
+      setIsLoadingBankDestinations(true)
+      setBankDestinationsError(null)
+      try {
+        const res = await fetch('/api/organizer/payout-destinations/bank', { cache: 'no-store' as any })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(data?.error || data?.message || 'Failed to load bank accounts')
+        const destinations = (Array.isArray(data?.destinations) ? data.destinations : []) as BankDestination[]
+        if (cancelled) return
+        setBankDestinations(destinations)
+
+        const stillExists = selectedBankDestinationId && destinations.some((d) => d.id === selectedBankDestinationId)
+        if (!stillExists) {
+          const primary = destinations.find((d) => d.isPrimary)
+          setSelectedBankDestinationId(primary?.id || destinations[0]?.id || '')
+        }
+      } catch (e: any) {
+        if (cancelled) return
+        setBankDestinations(null)
+        setBankDestinationsError(e?.message || 'Failed to load bank accounts')
+        setSelectedBankDestinationId('')
+      } finally {
+        if (!cancelled) setIsLoadingBankDestinations(false)
+      }
+    }
+
+    void loadBankDestinations()
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProfile, config?.method])
 
   const normalizeHaitiPhone = (raw: string) => {
     const compact = String(raw || '').replace(/[\s\-()]/g, '')
@@ -340,7 +414,7 @@ export default function PayoutsPageNew({
         const updateResult = await updatePayoutProfileConfig('stripe_connect', stripeSetupUpdate as any)
         if (!updateResult?.success) {
           if (updateResult?.requiresVerification) {
-            setPendingSensitiveUpdate(stripeSetupUpdate)
+            setPendingSensitiveUpdate({ kind: 'profile_update', updates: stripeSetupUpdate })
             setPayoutChangeVerificationRequired(true)
             setPayoutChangeMessage('For your security, confirm this payout change with the code we email you.')
             setIsSaving(false)
@@ -448,7 +522,7 @@ export default function PayoutsPageNew({
       const result = await updatePayoutProfileConfig(activeProfile as any, updates)
       if (!result?.success) {
         if (result?.requiresVerification) {
-          setPendingSensitiveUpdate(updates)
+          setPendingSensitiveUpdate({ kind: 'profile_update', updates })
           setPayoutChangeVerificationRequired(true)
           setPayoutChangeMessage('For your security, confirm this payout change with the code we email you.')
           setIsSaving(false)
@@ -505,21 +579,54 @@ export default function PayoutsPageNew({
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || 'Failed to verify code')
 
-      setPayoutChangeMessage('Verified. Saving your payout details…')
       if (pendingSensitiveUpdate) {
-        const result = await updatePayoutProfileConfig(activeProfile as any, pendingSensitiveUpdate)
-        if (!result?.success) {
-          if (result?.requiresVerification) {
-            setPayoutChangeMessage('Verification expired. Please request a new code.')
-            return
+        if (pendingSensitiveUpdate.kind === 'profile_update') {
+          setPayoutChangeMessage('Verified. Saving your payout details…')
+          const result = await updatePayoutProfileConfig(activeProfile as any, pendingSensitiveUpdate.updates)
+          if (!result?.success) {
+            if (result?.requiresVerification) {
+              setPayoutChangeMessage('Verification expired. Please request a new code.')
+              return
+            }
+            throw new Error(result?.error || 'Failed to save payout details. Please try again.')
           }
-          throw new Error(result?.error || 'Failed to save payout details. Please try again.')
+          setIsEditing(false)
         }
-        setIsEditing(false)
+
+        if (pendingSensitiveUpdate.kind === 'add_bank_destination') {
+          setPayoutChangeMessage('Verified. Adding your bank account…')
+          const res = await fetch('/api/organizer/payout-destinations/bank', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bankDetails: pendingSensitiveUpdate.bankDetails }),
+          })
+          const data = await res.json().catch(() => ({}))
+          if (!res.ok) {
+            if (data?.requiresVerification || data?.code === 'PAYOUT_CHANGE_VERIFICATION_REQUIRED') {
+              setPayoutChangeMessage('Verification expired. Please request a new code.')
+              return
+            }
+            throw new Error(data?.error || data?.message || 'Failed to add bank account')
+          }
+
+          setAddBankDestinationMessage('Bank account added. Please submit verification for this account.')
+          try {
+            const res2 = await fetch('/api/organizer/payout-destinations/bank', { cache: 'no-store' as any })
+            const data2 = await res2.json().catch(() => ({}))
+            if (res2.ok) setBankDestinations(Array.isArray(data2?.destinations) ? data2.destinations : [])
+            const newId = String(data?.destinationId || '')
+            if (newId) setSelectedBankDestinationId(newId)
+          } catch {
+            // ignore
+          }
+        }
+
         setPayoutChangeVerificationRequired(false)
         setPendingSensitiveUpdate(null)
         setPayoutChangeCode('')
         router.refresh()
+      } else {
+        setPayoutChangeMessage('Verified.')
       }
     } catch (e: any) {
       setError(e?.message || 'Failed to verify code')
@@ -638,11 +745,19 @@ export default function PayoutsPageNew({
       return
     }
 
+    if (activeProfile === 'haiti' && !selectedBankDestinationId) {
+      setError('Please select a bank account to verify')
+      return
+    }
+
     setIsSubmittingBankVerification(true)
     try {
       const form = new FormData()
       form.append('proofDocument', bankVerificationFile)
       form.append('verificationType', bankVerificationType)
+      if (activeProfile === 'haiti') {
+        form.append('destinationId', selectedBankDestinationId)
+      }
 
       const res = await fetch('/api/organizer/submit-bank-verification', {
         method: 'POST',
@@ -653,11 +768,91 @@ export default function PayoutsPageNew({
 
       setBankVerificationMessage('Bank verification submitted. Awaiting review.')
       setBankVerificationFile(null)
+
+      // Refresh destination list/status.
+      if (activeProfile === 'haiti') {
+        try {
+          const res2 = await fetch('/api/organizer/payout-destinations/bank', { cache: 'no-store' as any })
+          const data2 = await res2.json().catch(() => ({}))
+          if (res2.ok) setBankDestinations(Array.isArray(data2?.destinations) ? data2.destinations : [])
+        } catch {
+          // ignore
+        }
+      }
       router.refresh()
     } catch (err: any) {
       setError(err.message || 'Failed to submit bank verification')
     } finally {
       setIsSubmittingBankVerification(false)
+    }
+  }
+
+  const addBankDestination = async () => {
+    setAddBankDestinationMessage(null)
+    setError(null)
+
+    if (!newBankDestination.bankName.trim()) {
+      setError('Please enter a bank name')
+      return
+    }
+    if (!newBankDestination.accountNumber.trim()) {
+      setError('Please enter an account number')
+      return
+    }
+    if (!newBankDestination.accountHolder.trim()) {
+      setError('Please enter the account holder name')
+      return
+    }
+
+    setIsAddingBankDestination(true)
+    try {
+      const bankDetails = {
+        accountNumber: newBankDestination.accountNumber,
+        bankName: newBankDestination.bankName,
+        accountHolder: newBankDestination.accountHolder,
+        routingNumber: newBankDestination.routingNumber || undefined,
+        swiftCode: newBankDestination.swiftCode || undefined,
+      }
+
+      const res = await fetch('/api/organizer/payout-destinations/bank', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bankDetails }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        if (data?.requiresVerification || data?.code === 'PAYOUT_CHANGE_VERIFICATION_REQUIRED') {
+          setPendingSensitiveUpdate({ kind: 'add_bank_destination', bankDetails })
+          setPayoutChangeVerificationRequired(true)
+          setPayoutChangeMessage('For your security, confirm this new bank account with the code we email you.')
+          return
+        }
+        throw new Error(data?.error || data?.message || 'Failed to add bank account')
+      }
+
+      setAddBankDestinationMessage('Bank account added. Please submit verification for this account.')
+      setNewBankDestination({ bankName: '', accountNumber: '', accountHolder: '', routingNumber: '', swiftCode: '' })
+      setShowAddBankDestination(false)
+
+      // Refresh list
+      try {
+        const res2 = await fetch('/api/organizer/payout-destinations/bank', { cache: 'no-store' as any })
+        const data2 = await res2.json().catch(() => ({}))
+        if (res2.ok) {
+          const destinations = (Array.isArray(data2?.destinations) ? data2.destinations : []) as BankDestination[]
+          setBankDestinations(destinations)
+          const newId = String(data?.destinationId || '')
+          if (newId) setSelectedBankDestinationId(newId)
+        }
+      } catch {
+        // ignore
+      }
+      router.refresh()
+    } catch (e: any) {
+      setError(e?.message || 'Failed to add bank account')
+    } finally {
+      setIsAddingBankDestination(false)
     }
   }
 
@@ -862,44 +1057,175 @@ export default function PayoutsPageNew({
                         </div>
                       </div>
 
-                      {bankStatus !== 'verified' && (
-                        <div className="space-y-3">
+                      <div className="space-y-3">
+                        {isHaiti ? (
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Document type</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Select bank account</label>
                             <select
-                              value={bankVerificationType}
-                              onChange={(e) => setBankVerificationType(e.target.value as any)}
+                              value={selectedBankDestinationId}
+                              onChange={(e) => setSelectedBankDestinationId(e.target.value)}
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             >
-                              <option value="bank_statement">Bank statement</option>
-                              <option value="void_check">Void check</option>
-                              <option value="utility_bill">Utility bill</option>
+                              {(bankDestinations || []).map((d) => (
+                                <option key={d.id} value={d.id}>
+                                  {d.bankName} • ****{d.accountNumberLast4}{d.isPrimary ? ' (Primary)' : ''} ({d.verificationStatus || 'pending'})
+                                </option>
+                              ))}
                             </select>
+                            {isLoadingBankDestinations ? (
+                              <div className="text-xs text-gray-500 mt-1">Loading bank accounts…</div>
+                            ) : null}
+                            {bankDestinationsError ? (
+                              <div className="text-xs text-red-700 mt-1">{bankDestinationsError}</div>
+                            ) : null}
                           </div>
+                        ) : null}
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Upload document</label>
-                            <input
-                              type="file"
-                              accept="image/*,application/pdf"
-                              onChange={(e) => setBankVerificationFile(e.target.files?.[0] || null)}
-                              className="w-full text-sm"
-                            />
+                        {(() => {
+                          const selected = (bankDestinations || []).find((d) => d.id === selectedBankDestinationId) || null
+                          const status = (selected?.verificationStatus || (selectedBankDestinationId === 'bank_primary' ? bankStatus : 'pending')) as
+                            | 'pending'
+                            | 'verified'
+                            | 'failed'
+                          if (!isHaiti) {
+                            // Non-Haiti legacy flow still uses the profile-level bank verification.
+                            if (bankStatus === 'verified') return null
+                          } else {
+                            if (!selectedBankDestinationId) return null
+                            if (status === 'verified') return null
+                          }
+
+                          return (
+                            <>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Document type</label>
+                                <select
+                                  value={bankVerificationType}
+                                  onChange={(e) => setBankVerificationType(e.target.value as any)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                >
+                                  <option value="bank_statement">Bank statement</option>
+                                  <option value="void_check">Void check</option>
+                                  <option value="utility_bill">Utility bill</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Upload document</label>
+                                <input
+                                  type="file"
+                                  accept="image/*,application/pdf"
+                                  onChange={(e) => setBankVerificationFile(e.target.files?.[0] || null)}
+                                  className="w-full text-sm"
+                                />
+                              </div>
+
+                              <button
+                                onClick={submitBankVerification}
+                                disabled={isSubmittingBankVerification}
+                                className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {isSubmittingBankVerification ? 'Submitting…' : 'Submit bank verification'}
+                              </button>
+
+                              {bankVerificationMessage && (
+                                <div className="text-sm text-gray-600">{bankVerificationMessage}</div>
+                              )}
+                            </>
+                          )
+                        })()}
+
+                        {isHaiti ? (
+                          <div className="pt-3 border-t border-gray-200">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="text-sm font-medium text-gray-900">Additional bank accounts</div>
+                              <button
+                                type="button"
+                                onClick={() => setShowAddBankDestination((v) => !v)}
+                                className="text-sm font-medium text-purple-600 hover:text-purple-700"
+                              >
+                                {showAddBankDestination ? 'Cancel' : 'Add bank account'}
+                              </button>
+                            </div>
+
+                            {addBankDestinationMessage ? (
+                              <div className="text-sm text-gray-600 mt-2">{addBankDestinationMessage}</div>
+                            ) : null}
+
+                            {showAddBankDestination ? (
+                              <div className="mt-3 space-y-3">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Bank name</label>
+                                  <input
+                                    type="text"
+                                    value={newBankDestination.bankName}
+                                    onChange={(e) => setNewBankDestination((p) => ({ ...p, bankName: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    placeholder="Unibank"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Account number</label>
+                                  <input
+                                    type="text"
+                                    value={newBankDestination.accountNumber}
+                                    onChange={(e) => setNewBankDestination((p) => ({ ...p, accountNumber: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    placeholder="1234567890"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Account holder name</label>
+                                  <input
+                                    type="text"
+                                    value={newBankDestination.accountHolder}
+                                    onChange={(e) => setNewBankDestination((p) => ({ ...p, accountHolder: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    placeholder="Your legal name"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Routing number (optional)</label>
+                                  <input
+                                    type="text"
+                                    value={newBankDestination.routingNumber}
+                                    onChange={(e) => setNewBankDestination((p) => ({ ...p, routingNumber: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    placeholder=""
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">SWIFT code (optional)</label>
+                                  <input
+                                    type="text"
+                                    value={newBankDestination.swiftCode}
+                                    onChange={(e) => setNewBankDestination((p) => ({ ...p, swiftCode: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    placeholder=""
+                                  />
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={addBankDestination}
+                                  disabled={isAddingBankDestination}
+                                  className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {isAddingBankDestination ? 'Adding…' : 'Add bank account'}
+                                </button>
+
+                                <p className="text-xs text-gray-500">
+                                  You’ll need to submit a bank statement or void check for each bank account.
+                                </p>
+                              </div>
+                            ) : null}
                           </div>
-
-                          <button
-                            onClick={submitBankVerification}
-                            disabled={isSubmittingBankVerification}
-                            className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isSubmittingBankVerification ? 'Submitting…' : 'Submit bank verification'}
-                          </button>
-
-                          {bankVerificationMessage && (
-                            <div className="text-sm text-gray-600">{bankVerificationMessage}</div>
-                          )}
-                        </div>
-                      )}
+                        ) : null}
+                      </div>
                     </div>
                   )}
 
@@ -1053,7 +1379,10 @@ export default function PayoutsPageNew({
                             const result = await updatePayoutProfileConfig('haiti' as any, { allowInstantMoncash: e.target.checked } as any)
                             if (!result?.success) {
                               if (result?.requiresVerification) {
-                                setPendingSensitiveUpdate({ allowInstantMoncash: e.target.checked })
+                                setPendingSensitiveUpdate({
+                                  kind: 'profile_update',
+                                  updates: { allowInstantMoncash: e.target.checked },
+                                })
                                 setPayoutChangeVerificationRequired(true)
                                 setPayoutChangeMessage('For your security, confirm this payout change with the code we email you.')
                                 return

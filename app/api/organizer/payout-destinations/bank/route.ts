@@ -52,7 +52,41 @@ export async function GET(_req: NextRequest) {
     }
 
     const destinations = await listBankDestinations(user.id)
-    return NextResponse.json({ destinations })
+
+    // Attach per-destination verification status.
+    const verificationSnap = await adminDb
+      .collection('organizers')
+      .doc(user.id)
+      .collection('verificationDocuments')
+      .where('type', '==', 'bank')
+      .get()
+
+    const statusByDestinationId = new Map<string, 'pending' | 'verified' | 'failed'>()
+    let legacyPrimaryStatus: 'pending' | 'verified' | 'failed' | null = null
+
+    for (const doc of verificationSnap.docs) {
+      const data = doc.data() as any
+      const docId = String(doc.id || '')
+      const status = (data?.status || 'pending') as 'pending' | 'verified' | 'failed'
+
+      if (docId === 'bank') {
+        legacyPrimaryStatus = status
+        continue
+      }
+
+      if (docId.startsWith('bank_')) {
+        const destinationId = String(data?.destinationId || docId.slice('bank_'.length) || '')
+        if (destinationId) statusByDestinationId.set(destinationId, status)
+      }
+    }
+
+    const enriched = destinations.map((d) => {
+      const verificationStatus =
+        statusByDestinationId.get(d.id) || (d.id === 'bank_primary' ? legacyPrimaryStatus : null) || 'pending'
+      return { ...d, verificationStatus }
+    })
+
+    return NextResponse.json({ destinations: enriched })
   } catch (e: any) {
     return NextResponse.json(
       { error: 'Failed to load bank destinations', message: e?.message || String(e) },

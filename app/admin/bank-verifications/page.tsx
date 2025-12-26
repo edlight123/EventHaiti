@@ -14,6 +14,8 @@ interface BankVerification {
   organizerId: string
   organizerName: string
   organizerEmail: string
+  destinationId: string
+  isPrimary?: boolean
   bankDetails: {
     accountName: string
     accountNumber: string
@@ -53,44 +55,79 @@ export default async function AdminBankVerificationsPage() {
     const userData = userDoc.data()
     const organizerId = userDoc.id
 
-    // Check if they have bank verification submitted
-    const verificationDocRef = adminDb
+    // Pull all bank verification docs (supports per-destination ids: bank_<destinationId>, plus legacy id: bank).
+    const bankVerificationDocsSnap = await adminDb
       .collection('organizers')
       .doc(organizerId)
       .collection('verificationDocuments')
-      .doc('bank')
+      .where('type', '==', 'bank')
+      .get()
 
-    const verificationDoc = await verificationDocRef.get()
+    if (bankVerificationDocsSnap.empty) continue
 
-    if (verificationDoc.exists) {
-      const verificationData = verificationDoc.data()!
+    // Legacy fallback for bank details.
+    const payoutConfigDocPromise = adminDb
+      .collection('organizers')
+      .doc(organizerId)
+      .collection('payoutConfig')
+      .doc('main')
+      .get()
 
-      // Get bank details from payout config
-      const payoutConfigDoc = await adminDb
+    const payoutConfigDoc = await payoutConfigDocPromise
+    const legacyBankDetails = payoutConfigDoc.data()?.bankDetails
+
+    for (const verificationDoc of bankVerificationDocsSnap.docs) {
+      const verificationData = verificationDoc.data() as any
+      const docId = String(verificationDoc.id || '')
+
+      const destinationId = (() => {
+        if (verificationData?.destinationId) return String(verificationData.destinationId)
+        if (docId.startsWith('bank_')) return docId.slice('bank_'.length)
+        // Legacy doc id "bank" historically implied the main/primary bank.
+        if (docId === 'bank') return 'bank_primary'
+        return ''
+      })()
+
+      if (!destinationId) continue
+
+      const destinationDoc = await adminDb
         .collection('organizers')
         .doc(organizerId)
-        .collection('payoutConfig')
-        .doc('main')
+        .collection('payoutDestinations')
+        .doc(destinationId)
         .get()
 
-      const bankDetails = payoutConfigDoc.data()?.bankDetails
+      const destinationData = destinationDoc.exists ? (destinationDoc.data() as any) : null
 
-      if (bankDetails) {
-        bankVerifications.push({
-          organizerId,
-          organizerName: userData.full_name || userData.email || 'Unknown',
-          organizerEmail: userData.email || '',
-          bankDetails,
-          verificationDoc: {
-            type: verificationData.type,
-            verificationType: verificationData.verificationType,
-            status: verificationData.status,
-            submittedAt: verificationData.submittedAt,
-            documentName: verificationData.documentName,
-            documentSize: verificationData.documentSize,
-          },
-        })
-      }
+      const bankDetails = destinationData
+        ? {
+            accountName: String(destinationData.accountName || ''),
+            accountNumber: destinationData.accountNumberLast4
+              ? `****${String(destinationData.accountNumberLast4)}`
+              : '****',
+            bankName: String(destinationData.bankName || ''),
+            routingNumber: undefined,
+          }
+        : legacyBankDetails
+
+      if (!bankDetails) continue
+
+      bankVerifications.push({
+        organizerId,
+        organizerName: userData.full_name || userData.email || 'Unknown',
+        organizerEmail: userData.email || '',
+        destinationId,
+        isPrimary: Boolean(destinationData?.isPrimary) || destinationId === 'bank_primary',
+        bankDetails,
+        verificationDoc: {
+          type: String(verificationData.type || 'bank'),
+          verificationType: String(verificationData.verificationType || ''),
+          status: String(verificationData.status || 'pending'),
+          submittedAt: String(verificationData.submittedAt || ''),
+          documentName: String(verificationData.documentName || ''),
+          documentSize: Number(verificationData.documentSize || 0),
+        },
+      })
     }
   }
 

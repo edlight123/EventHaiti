@@ -19,6 +19,8 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const proofDocument = formData.get('proofDocument') as File
     const verificationType = formData.get('verificationType') as string // 'bank_statement' | 'void_check' | 'utility_bill'
+    const destinationIdRaw = formData.get('destinationId') as string | null
+    const destinationId = String(destinationIdRaw || 'bank_primary')
 
     if (!proofDocument || !verificationType) {
       return NextResponse.json(
@@ -27,12 +29,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Ensure Haiti payout profile has bank details configured first.
+    // Ensure Haiti payout profile exists and is configured for bank transfers.
     const haitiProfile = await getPayoutProfile(organizerId, 'haiti')
-    if (!haitiProfile || !haitiProfile.bankDetails) {
+    if (!haitiProfile || haitiProfile.method !== 'bank_transfer') {
       return NextResponse.json(
-        { error: 'Bank account details must be configured first' },
+        { error: 'Haiti bank transfer payout method must be configured first' },
         { status: 400 }
+      )
+    }
+
+    // Ensure the destination exists.
+    const destinationDoc = await adminDb
+      .collection('organizers')
+      .doc(organizerId)
+      .collection('payoutDestinations')
+      .doc(destinationId)
+      .get()
+
+    if (!destinationDoc.exists || String((destinationDoc.data() as any)?.type || '') !== 'bank') {
+      return NextResponse.json(
+        { error: 'Bank destination not found' },
+        { status: 404 }
       )
     }
 
@@ -41,10 +58,11 @@ export async function POST(request: NextRequest) {
       .collection('organizers')
       .doc(organizerId)
       .collection('verificationDocuments')
-      .doc('bank')
+      .doc(`bank_${destinationId}`)
 
     const verificationData = {
       type: 'bank',
+      destinationId,
       verificationType,
       status: 'pending',
       submittedAt: new Date().toISOString(),

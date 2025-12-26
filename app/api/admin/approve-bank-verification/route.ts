@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized - Admin only' }, { status: 403 })
     }
 
-    const { organizerId, decision, reason } = await request.json()
+    const { organizerId, decision, reason, destinationId } = await request.json()
 
     if (!organizerId || !decision) {
       return NextResponse.json(
@@ -32,12 +32,15 @@ export async function POST(request: NextRequest) {
 
     const newStatus = decision === 'approve' ? 'verified' : 'failed'
 
+    const resolvedDestinationId = destinationId ? String(destinationId) : null
+    const docId = resolvedDestinationId ? `bank_${resolvedDestinationId}` : 'bank'
+
     // Update verification document
     await adminDb
       .collection('organizers')
       .doc(organizerId)
       .collection('verificationDocuments')
-      .doc('bank')
+      .doc(docId)
       .update({
         status: newStatus,
         reviewedAt: new Date().toISOString(),

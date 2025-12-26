@@ -7,6 +7,8 @@ interface BankVerification {
   organizerId: string
   organizerName: string
   organizerEmail: string
+  destinationId: string
+  isPrimary?: boolean
   bankDetails: {
     accountName: string
     accountNumber: string
@@ -41,6 +43,7 @@ export default function BankVerificationReviewCard({ verification }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           organizerId: verification.organizerId,
+          destinationId: verification.destinationId,
           decision: 'approve',
         }),
       })
@@ -68,6 +71,7 @@ export default function BankVerificationReviewCard({ verification }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           organizerId: verification.organizerId,
+          destinationId: verification.destinationId,
           decision: 'reject',
           reason,
         }),
@@ -138,6 +142,9 @@ export default function BankVerificationReviewCard({ verification }: Props) {
               {getStatusBadge()}
             </div>
             <p className="text-sm text-gray-600">{verification.organizerEmail}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Bank account: {verification.isPrimary ? 'Primary' : 'Additional'} ({verification.destinationId})
+            </p>
             <p className="text-xs text-gray-500 mt-1">
               Submitted {new Date(verification.verificationDoc.submittedAt).toLocaleString()}
             </p>
