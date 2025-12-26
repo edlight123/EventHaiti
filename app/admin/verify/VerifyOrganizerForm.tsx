@@ -7,7 +7,14 @@ interface Organizer {
   full_name: string
   email: string
   is_verified: boolean
-  verification_status: 'none' | 'pending' | 'approved' | 'rejected'
+  verification_status:
+    | 'none'
+    | 'pending'
+    | 'pending_review'
+    | 'in_review'
+    | 'approved'
+    | 'changes_requested'
+    | 'rejected'
   created_at: string
 }
 

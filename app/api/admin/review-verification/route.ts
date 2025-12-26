@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { Resend } from 'resend'
 import { adminDb } from '@/lib/firebase/admin'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
+import { FieldValue } from 'firebase-admin/firestore'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@eventhaiti.com').split(',')
@@ -23,14 +23,15 @@ export async function POST(request: NextRequest) {
 
     const { requestId, status, rejectionReason } = await request.json()
 
-    if (!requestId || !status || !['approved', 'rejected'].includes(status)) {
+    if (!requestId || !status || !['approved', 'rejected', 'changes_requested'].includes(status)) {
       return NextResponse.json(
         { error: 'Invalid request data' },
         { status: 400 }
       )
     }
 
-    const supabase = await createClient()
+    // Map the legacy UI "rejected" action to the newer, resubmittable state.
+    const normalizedStatus = status === 'rejected' ? 'changes_requested' : status
 
     // Get verification request
     const verificationRef = adminDb.collection('verification_requests').doc(requestId)
@@ -47,55 +48,45 @@ export async function POST(request: NextRequest) {
 
     // Update verification request using Firebase Admin SDK
     await verificationRef.update({
-      status,
+      status: normalizedStatus,
+      // New/canonical fields
+      reviewedBy: user.id,
+      reviewedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      reviewNotes: normalizedStatus !== 'approved' ? (rejectionReason || null) : null,
+      // Legacy fields (kept for older screens/backfills)
       reviewed_by: user.id,
       reviewed_at: new Date(),
       updated_at: new Date(),
-      rejection_reason: status === 'rejected' ? rejectionReason : null,
-      reviewNotes: status === 'rejected' ? rejectionReason : null,
+      rejection_reason: normalizedStatus !== 'approved' ? (rejectionReason || null) : null,
     })
 
-    console.log(`Updated verification request ${requestId} to status: ${status}`)
+    console.log(`Updated verification request ${requestId} to status: ${normalizedStatus}`)
 
     // Update user verification status
     // Handle both old format (user_id) and new format (userId or document ID)
     const userId = verificationRequest.userId || verificationRequest.user_id || requestId
-    const allUsers = await supabase.from('users').select('*')
-    const userToUpdate = allUsers.data?.find((u: any) => u.id === userId)
-
-    if (!userToUpdate) {
-      console.error('User not found:', userId)
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
-
-    console.log('Updating user:', userId)
-    console.log('Current user data:', userToUpdate)
-    console.log('New verification status:', status)
-
-    // Update the user document directly using Firebase Admin SDK
-    const updatePayload = {
-      ...userToUpdate,
-      is_verified: status === 'approved',
-      verification_status: status,
-      updated_at: new Date().toISOString(),
-    }
-    
-    console.log('Update payload:', updatePayload)
+    const nowIso = new Date().toISOString()
 
     try {
-      // Use Firebase Admin SDK directly to ensure the update works
-      await adminDb.collection('users').doc(userId).set(updatePayload, { merge: true })
-      console.log('User updated successfully via Admin SDK')
+      // Keep the user/organizer docs in sync without overwriting unrelated fields.
+      const approved = normalizedStatus === 'approved'
+      const userVerificationStatus = approved ? 'approved' : 'pending'
 
-      // Keep organizer profile in sync for pages that read from organizers/{id}
+      await adminDb.collection('users').doc(userId).set(
+        {
+          is_verified: approved,
+          verification_status: userVerificationStatus,
+          updated_at: nowIso,
+        },
+        { merge: true }
+      )
+
       await adminDb.collection('organizers').doc(userId).set(
         {
-          is_verified: status === 'approved',
-          verification_status: status,
-          updated_at: new Date().toISOString(),
+          is_verified: approved,
+          verification_status: userVerificationStatus,
+          updated_at: nowIso,
         },
         { merge: true }
       )
@@ -107,12 +98,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user details for email (we already have it from above)
-    const organizer = userToUpdate
+    // Fetch user details for notifications/emails.
+    const organizerDoc = await adminDb.collection('users').doc(userId).get()
+    const organizer = organizerDoc.exists ? organizerDoc.data() : null
 
     // Create in-app notification and send push
     try {
-      if (status === 'approved') {
+      if (normalizedStatus === 'approved') {
         await createNotification(
           userId,
           'verification',
@@ -141,7 +133,7 @@ export async function POST(request: NextRequest) {
           'Verification Update',
           message,
           '/organizer/verify',
-          { status: 'rejected', reason: rejectionReason }
+          { status: normalizedStatus, reason: rejectionReason }
         )
 
         // Send push notification for rejection
@@ -150,7 +142,7 @@ export async function POST(request: NextRequest) {
           'Verification Update',
           'Your verification needs attention. Please review and resubmit.',
           '/organizer/verify',
-          { type: 'verification_rejected' }
+          { type: normalizedStatus === 'changes_requested' ? 'verification_changes_requested' : 'verification_rejected' }
         )
       }
     } catch (notificationError) {
@@ -158,17 +150,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Send notification email to organizer
-    if (organizer?.email && resend) {
+    if ((organizer as any)?.email && resend) {
       try {
-        if (status === 'approved') {
+        if (normalizedStatus === 'approved') {
           await resend.emails.send({
             from: 'EventHaiti <noreply@eventhaiti.com>',
-            to: organizer.email,
+            to: (organizer as any).email,
             subject: '✅ Your EventHaiti Account is Verified!',
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h1 style="color: #059669;">🎉 Congratulations!</h1>
-                <p>Hello ${organizer.full_name},</p>
+                <p>Hello ${(organizer as any).full_name || ''},</p>
                 <p>Great news! Your identity verification has been <strong>approved</strong>.</p>
                 <p>You can now:</p>
                 <ul>
@@ -189,12 +181,12 @@ export async function POST(request: NextRequest) {
         } else {
           await resend.emails.send({
             from: 'EventHaiti <noreply@eventhaiti.com>',
-            to: organizer.email,
+            to: (organizer as any).email,
             subject: 'EventHaiti Verification Update',
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h1 style="color: #DC2626;">Verification Not Approved</h1>
-                <p>Hello ${organizer.full_name},</p>
+                <p>Hello ${(organizer as any).full_name || ''},</p>
                 <p>Unfortunately, we were unable to approve your verification request.</p>
                 ${rejectionReason ? `<p><strong>Reason:</strong> ${rejectionReason}</p>` : ''}
                 <p>Please submit a new verification request with:</p>
@@ -220,7 +212,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Verification ${status}`,
+      message: `Verification ${normalizedStatus}`,
     })
   } catch (error) {
     console.error('Review verification error:', error)

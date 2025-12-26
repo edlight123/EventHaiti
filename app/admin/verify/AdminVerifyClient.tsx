@@ -14,7 +14,7 @@ export default function AdminVerifyClient({ requestsWithUsers, organizers }: Adm
   const { t } = useTranslation('admin')
 
   const pendingRequests = requestsWithUsers.filter((r: any) => 
-    r.status === 'pending' || r.status === 'in_review'
+    r.status === 'pending' || r.status === 'pending_review' || r.status === 'in_review'
   )
 
   return (

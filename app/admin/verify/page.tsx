@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import { redirect } from 'next/navigation'
@@ -45,8 +44,6 @@ export default async function AdminVerifyPage() {
     redirect('/')
   }
 
-  const supabase = await createClient()
-  
   // Fetch all verification requests using Firebase Admin SDK to bypass security rules
   let verificationRequests: any[] = []
   try {
@@ -73,9 +70,21 @@ export default async function AdminVerifyPage() {
     console.error('Error fetching verification requests:', error)
   }
 
-  // Fetch all users to match with verification requests
-  const allUsers = await supabase.from('users').select('*')
-  const users = allUsers.data || []
+  // Fetch all users to match with verification requests (Firestore source of truth)
+  let users: any[] = []
+  try {
+    const usersSnapshot = await adminDb.collection('users').get()
+    users = usersSnapshot.docs.map((doc: any) => {
+      const data = doc.data()
+      const serialized = serializeFirestoreValue(data)
+      return {
+        id: doc.id,
+        ...serialized,
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching users:', error)
+  }
 
   // Manually join user data with verification requests
   // Note: Handle both old format (user_id field) and new format (userId field/document ID)

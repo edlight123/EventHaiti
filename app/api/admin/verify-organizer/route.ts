@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
+import { adminDb } from '@/lib/firebase/admin'
+import { FieldValue } from 'firebase-admin/firestore'
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@eventhaiti.com').split(',')
 
@@ -25,59 +26,53 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
-
-    // Get current user data
-    const { data: userData } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', organizerId)
-      .single()
-
-    if (!userData) {
+    const userDoc = await adminDb.collection('users').doc(organizerId).get()
+    if (!userDoc.exists) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       )
     }
 
-    // Update user verification status using Firebase Admin SDK for reliability
-    try {
-      const { adminDb } = await import('@/lib/firebase/admin')
-      await adminDb.collection('users').doc(organizerId).set({
-        ...userData,
+    const nowIso = new Date().toISOString()
+    const verification_status = isVerified ? 'approved' : 'none'
+
+    // Update user + organizer profile with minimal, canonical fields.
+    await adminDb.collection('users').doc(organizerId).set(
+      {
         is_verified: isVerified,
-        verification_status: isVerified ? 'approved' : 'none',
-        updated_at: new Date().toISOString()
-      }, { merge: true })
-    } catch (error) {
-      console.error('Error updating user via Admin SDK:', error)
-      return NextResponse.json(
-        { error: 'Failed to update user verification' },
-        { status: 500 }
-      )
-    }
+        verification_status,
+        updated_at: nowIso,
+      },
+      { merge: true }
+    )
 
-    // Also update or create verification request if exists
-    const { data: existingRequest } = await supabase
-      .from('verification_requests')
-      .select('*')
-      .eq('id', organizerId)
-      .single()
+    await adminDb.collection('organizers').doc(organizerId).set(
+      {
+        is_verified: isVerified,
+        verification_status,
+        updated_at: nowIso,
+      },
+      { merge: true }
+    )
 
-    if (existingRequest) {
-      try {
-        const { adminDb } = await import('@/lib/firebase/admin')
-        await adminDb.collection('verification_requests').doc(organizerId).set({
-          ...existingRequest,
-          status: isVerified ? 'approved' : 'rejected',
+    // If a verification request exists, keep it consistent too.
+    const requestRef = adminDb.collection('verification_requests').doc(organizerId)
+    const requestDoc = await requestRef.get()
+    if (requestDoc.exists) {
+      await requestRef.set(
+        {
+          status: isVerified ? 'approved' : 'not_started',
+          reviewedBy: user.id,
+          reviewedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          // legacy
           reviewed_by: user.id,
           reviewed_at: new Date(),
-          updated_at: new Date()
-        }, { merge: true })
-      } catch (error) {
-        console.error('Error updating verification request:', error)
-      }
+          updated_at: new Date(),
+        },
+        { merge: true }
+      )
     }
 
     return NextResponse.json({
