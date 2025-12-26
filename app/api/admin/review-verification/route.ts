@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 import { Resend } from 'resend'
 import { adminDb } from '@/lib/firebase/admin'
 import { createNotification } from '@/lib/notifications/helpers'
@@ -7,14 +8,13 @@ import { sendPushNotification } from '@/lib/notification-triggers'
 import { FieldValue } from 'firebase-admin/firestore'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@eventhaiti.com').split(',')
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
 
     // Only allow admin users
-    if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
+    if (!user || !isAdmin(user.email)) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

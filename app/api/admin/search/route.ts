@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e)
+import { isAdmin } from '@/lib/admin'
 
 interface SearchResult {
   id: string
@@ -22,7 +21,7 @@ export async function POST(request: NextRequest) {
   try {
     // Auth check
     const user = await getCurrentUser()
-    if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
+    if (!user || !isAdmin(user.email)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

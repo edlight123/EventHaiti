@@ -1,11 +1,10 @@
 import { getCurrentUser } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 import { redirect } from 'next/navigation'
 import { adminDb } from '@/lib/firebase/admin'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import OrganizerDetailsClient from './OrganizerDetailsClient'
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e)
 
 async function getOrganizerDetails(organizerId: string) {
   try {
@@ -111,7 +110,7 @@ async function getOrganizerDetails(organizerId: string) {
 export default async function OrganizerDetailPage({ params }: { params: { id: string } }) {
   const user = await getCurrentUser()
   
-  if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
+  if (!user || !isAdmin(user.email)) {
     redirect('/')
   }
 

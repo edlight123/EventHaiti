@@ -15,7 +15,43 @@ export async function POST(request: NextRequest) {
     const { eventId, action, reason, adminId, adminEmail } = await request.json()
 
     const eventRef = adminDb.collection('events').doc(eventId)
+    const deletedRef = adminDb.collection('events_deleted').doc(eventId)
+    const effectiveAdminEmail = adminEmail || user.email || 'unknown'
+
     const eventDoc = await eventRef.get()
+
+    // Special-case restore: bring back from events_deleted
+    if (action === 'restore') {
+      const deletedDoc = await deletedRef.get()
+      if (!deletedDoc.exists) {
+        return NextResponse.json({ error: 'Deleted event backup not found' }, { status: 404 })
+      }
+
+      const deletedData = deletedDoc.data() || {}
+      const { deletedAt, deletedBy, deletedReason, ...eventData } = deletedData
+
+      await eventRef.set(
+        {
+          ...eventData,
+          restored_at: new Date(),
+          restored_by: effectiveAdminEmail,
+          updated_at: new Date(),
+        },
+        { merge: true }
+      )
+      await deletedRef.delete()
+
+      await logAdminAction({
+        action: 'event.restore',
+        adminId,
+        adminEmail: effectiveAdminEmail,
+        resourceId: eventId,
+        resourceType: 'event',
+        details: { eventTitle: (eventData as any)?.title || deletedData?.title || 'Untitled' },
+      })
+
+      return NextResponse.json({ success: true })
+    }
 
     if (!eventDoc.exists) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
@@ -59,6 +95,17 @@ export async function POST(request: NextRequest) {
         break
 
       case 'delete':
+        // Backup before deletion to allow recovery from accidents.
+        await deletedRef.set(
+          {
+            ...eventData,
+            id: eventId,
+            deletedAt: new Date().toISOString(),
+            deletedBy: effectiveAdminEmail,
+            deletedReason: typeof reason === 'string' ? reason : null,
+          },
+          { merge: true }
+        )
         await eventRef.delete()
         await logAdminAction({
           action: 'event.delete',

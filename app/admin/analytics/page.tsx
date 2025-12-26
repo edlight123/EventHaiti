@@ -1,17 +1,10 @@
-import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import Link from 'next/link'
-import { revalidatePath } from 'next/cache'
-import {
-  getUserGrowthMetrics,
-  getRevenueGrowthMetrics,
-  getTopPerformingEvents,
-  getCategoryPopularity,
-  getOrganizerRankings,
-} from '@/lib/admin-analytics'
+import { adminDb } from '@/lib/firebase/admin'
+import { isAdmin } from '@/lib/admin'
 import { AdminRevenueAnalytics } from '@/components/admin/AdminRevenueAnalytics'
 
 export const revalidate = 120 // Cache for 2 minutes
@@ -19,50 +12,103 @@ export const revalidate = 120 // Cache for 2 minutes
 export default async function AdminAnalyticsPage() {
   const user = await getCurrentUser()
 
-  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e)
-
-  if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
+  if (!user || !isAdmin(user.email)) {
     redirect('/')
   }
 
-  const supabase = await createClient()
-
-  // Fetch data for analytics
-  const { data: users } = await supabase.from('users').select('*')
-  const { data: events } = await supabase.from('events').select('*')
-  const { data: tickets } = await supabase.from('tickets').select('*')
-
-  const allUsers = users || []
-  const allEvents = events || []
-  const allTickets = tickets || []
-
-  // Calculate metrics
-  const totalRevenue = allTickets
-    .filter((t: any) => t.status === 'confirmed')
-    .reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0)
-
-  const upcomingEvents = allEvents.filter((e: any) => 
-    e.start_datetime && new Date(e.start_datetime) > new Date()
-  ).length
-
-  const pastEvents = allEvents.filter((e: any) => 
-    e.start_datetime && new Date(e.start_datetime) <= new Date()
-  ).length
-
-  const verifiedOrganizers = allUsers.filter((u: any) => u.is_verified).length
-  const totalOrganizers = allUsers.filter((u: any) => u.role === 'organizer').length
-
-  const averageTicketPrice = allTickets.length > 0
-    ? allTickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0) / allTickets.length
-    : 0
-
-  // Events by month (last 6 months)
+  const now = new Date()
+  const nowIso = now.toISOString()
   const sixMonthsAgo = new Date()
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+  const sixMonthsAgoIso = sixMonthsAgo.toISOString()
 
-  const recentEvents = allEvents.filter((e: any) => 
-    e.created_at && new Date(e.created_at) >= sixMonthsAgo
-  )
+  const safeCount = async (queryPromise: Promise<any>): Promise<number> => {
+    try {
+      const snap = await queryPromise
+      return snap.data().count || 0
+    } catch (error) {
+      console.warn('Count query failed:', error)
+      return 0
+    }
+  }
+
+  const safeCountByField = async (field: string, op: FirebaseFirestore.WhereFilterOp, value: any): Promise<number> => {
+    return safeCount(
+      adminDb
+        .collection('events')
+        .where(field, op, value)
+        .count()
+        .get()
+    )
+  }
+
+  // Aggregate metrics (Firestore-first)
+  const [totalUsers, totalEvents, ticketsSoldConfirmed, totalOrganizers, verifiedOrganizers] = await Promise.all([
+    safeCount(adminDb.collection('users').count().get()),
+    safeCount(adminDb.collection('events').count().get()),
+    safeCount(adminDb.collection('tickets').where('status', '==', 'confirmed').count().get()),
+    safeCount(adminDb.collection('users').where('role', '==', 'organizer').count().get()),
+    safeCount(adminDb.collection('users').where('role', '==', 'organizer').where('is_verified', '==', true).count().get()),
+  ])
+
+  // Total revenue: sum daily rollups (fallback to 0 if missing)
+  let totalRevenue = 0
+  try {
+    const statsSnap = await adminDb.collection('platform_stats_daily').get()
+    let sum = 0
+    for (const doc of statsSnap.docs) {
+      const data = doc.data() as any
+      sum += data?.gmvConfirmed || 0
+    }
+    totalRevenue = sum
+  } catch (error) {
+    console.warn('Failed to sum platform_stats_daily:', error)
+    totalRevenue = 0
+  }
+
+  // Upcoming/past events: try timestamp field first; fall back to string field
+  let upcomingEvents = 0
+  let pastEvents = 0
+  try {
+    upcomingEvents = await safeCountByField('startDateTime', '>=', now)
+    pastEvents = await safeCountByField('startDateTime', '<', now)
+  } catch {
+    // ignore (safeCountByField already logs)
+  }
+  if (upcomingEvents === 0 && pastEvents === 0) {
+    // Fallback for legacy snake_case string timestamps
+    try {
+      upcomingEvents = await safeCountByField('start_datetime', '>=', nowIso)
+      pastEvents = await safeCountByField('start_datetime', '<', nowIso)
+    } catch {
+      // ignore
+    }
+  }
+
+  // Recent events (last 6 months)
+  let recentEventsCount = 0
+  try {
+    recentEventsCount = await safeCountByField('createdAt', '>=', sixMonthsAgo)
+  } catch {
+    // ignore
+  }
+  if (recentEventsCount === 0) {
+    try {
+      recentEventsCount = await safeCountByField('created_at', '>=', sixMonthsAgo)
+    } catch {
+      // ignore
+    }
+  }
+  if (recentEventsCount === 0) {
+    try {
+      recentEventsCount = await safeCountByField('created_at', '>=', sixMonthsAgoIso)
+    } catch {
+      // ignore
+    }
+  }
+
+  const attendeesCount = Math.max(0, totalUsers - totalOrganizers)
+  const averageTicketPrice = ticketsSoldConfirmed > 0 ? totalRevenue / ticketsSoldConfirmed : 0
 
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
@@ -116,7 +162,7 @@ export default async function AdminAnalyticsPage() {
               <div>
                 <div className="text-[11px] sm:text-sm font-medium text-gray-600 uppercase tracking-wide">Tickets Sold</div>
                 <div className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">
-                  {allTickets.length.toLocaleString()}
+                  {ticketsSoldConfirmed.toLocaleString()}
                 </div>
               </div>
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -167,7 +213,7 @@ export default async function AdminAnalyticsPage() {
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-[13px] sm:text-base text-gray-600">Total Events</span>
-                <span className="text-xl sm:text-2xl font-bold text-gray-900">{allEvents.length}</span>
+                <span className="text-xl sm:text-2xl font-bold text-gray-900">{totalEvents}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[13px] sm:text-base text-gray-600">Upcoming Events</span>
@@ -179,7 +225,7 @@ export default async function AdminAnalyticsPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[13px] sm:text-base text-gray-600">Events (Last 6 Months)</span>
-                <span className="text-xl sm:text-2xl font-bold text-teal-600">{recentEvents.length}</span>
+                <span className="text-xl sm:text-2xl font-bold text-teal-600">{recentEventsCount}</span>
               </div>
             </div>
           </div>
@@ -189,7 +235,7 @@ export default async function AdminAnalyticsPage() {
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-[13px] sm:text-base text-gray-600">Total Users</span>
-                <span className="text-xl sm:text-2xl font-bold text-gray-900">{allUsers.length}</span>
+                <span className="text-xl sm:text-2xl font-bold text-gray-900">{totalUsers}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[13px] sm:text-base text-gray-600">Organizers</span>
@@ -198,7 +244,7 @@ export default async function AdminAnalyticsPage() {
               <div className="flex items-center justify-between">
                 <span className="text-[13px] sm:text-base text-gray-600">Attendees</span>
                 <span className="text-xl sm:text-2xl font-bold text-blue-600">
-                  {allUsers.filter((u: any) => u.role !== 'organizer').length}
+                  {attendeesCount}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -221,25 +267,25 @@ export default async function AdminAnalyticsPage() {
             <div className="bg-white rounded-lg p-3 sm:p-4">
               <div className="text-[11px] sm:text-xs text-gray-600">Events/Organizer</div>
               <div className="text-lg sm:text-xl font-bold text-gray-900 mt-0.5 sm:mt-1">
-                {totalOrganizers > 0 ? (allEvents.length / totalOrganizers).toFixed(1) : '0'}
+                {totalOrganizers > 0 ? (totalEvents / totalOrganizers).toFixed(1) : '0'}
               </div>
             </div>
             <div className="bg-white rounded-lg p-3 sm:p-4">
               <div className="text-[11px] sm:text-xs text-gray-600">Tickets/Event</div>
               <div className="text-lg sm:text-xl font-bold text-gray-900 mt-0.5 sm:mt-1">
-                {allEvents.length > 0 ? (allTickets.length / allEvents.length).toFixed(1) : '0'}
+                {totalEvents > 0 ? (ticketsSoldConfirmed / totalEvents).toFixed(1) : '0'}
               </div>
             </div>
             <div className="bg-white rounded-lg p-3 sm:p-4">
               <div className="text-[11px] sm:text-xs text-gray-600">Revenue/Event</div>
               <div className="text-lg sm:text-xl font-bold text-gray-900 mt-0.5 sm:mt-1">
-                ${allEvents.length > 0 ? (totalRevenue / allEvents.length).toFixed(0) : '0'}
+                ${totalEvents > 0 ? (totalRevenue / totalEvents).toFixed(0) : '0'}
               </div>
             </div>
             <div className="bg-white rounded-lg p-3 sm:p-4">
               <div className="text-[11px] sm:text-xs text-gray-600">Revenue/Ticket</div>
               <div className="text-lg sm:text-xl font-bold text-gray-900 mt-0.5 sm:mt-1">
-                ${allTickets.length > 0 ? (totalRevenue / allTickets.length).toFixed(2) : '0'}
+                ${ticketsSoldConfirmed > 0 ? (totalRevenue / ticketsSoldConfirmed).toFixed(2) : '0'}
               </div>
             </div>
           </div>

@@ -1,24 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { adminAuth, adminDb } from '@/lib/firebase/admin'
+import { adminDb } from '@/lib/firebase/admin'
+import { requireAuth } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify admin authentication
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('session')?.value
-
-    if (!sessionCookie) {
+    const { user, error } = await requireAuth()
+    if (error || !user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
-    
-    // Check if user is admin
-    const userDoc = await adminDb.collection('users').doc(decodedClaims.uid).get()
-    const userData = userDoc.data()
-
-    if (userData?.role !== 'admin') {
+    if (!isAdmin(user.email)) {
       return NextResponse.json({ error: 'Unauthorized - Admin only' }, { status: 403 })
     }
 
@@ -89,8 +81,8 @@ export async function POST(request: NextRequest) {
 
     // Log the action
     await adminDb.collection('admin_actions').add({
-      admin_id: decodedClaims.uid,
-      admin_email: userData?.email,
+      admin_id: user.id,
+      admin_email: user.email,
       action: action,
       target_user_id: organizerId,
       target_user_email: organizerData?.email,

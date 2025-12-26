@@ -78,13 +78,25 @@ export async function getEndedEventsForDisbursement(
       const haitiProfile = await getPayoutProfile(organizerId, 'haiti')
 
       // Get tickets for this event
-      const ticketsSnapshot = await adminDb
-        .collection('tickets')
-        .where('eventId', '==', eventId)
-        .where('status', '==', 'confirmed')
-        .get()
+      const ticketStatusValues = ['confirmed', 'valid']
+      const [ticketsByEventIdSnap, ticketsByEvent_idSnap] = await Promise.all([
+        adminDb
+          .collection('tickets')
+          .where('eventId', '==', eventId)
+          .where('status', 'in', ticketStatusValues)
+          .get(),
+        adminDb
+          .collection('tickets')
+          .where('event_id', '==', eventId)
+          .where('status', 'in', ticketStatusValues)
+          .get(),
+      ])
 
-      const tickets = ticketsSnapshot.docs.map((doc: any) => doc.data())
+      const ticketsById = new Map<string, any>()
+      for (const doc of ticketsByEventIdSnap.docs) ticketsById.set(doc.id, doc.data())
+      for (const doc of ticketsByEvent_idSnap.docs) ticketsById.set(doc.id, doc.data())
+
+      const tickets = Array.from(ticketsById.values())
       const totalTicketsSold = tickets.length
 
       // Calculate revenue

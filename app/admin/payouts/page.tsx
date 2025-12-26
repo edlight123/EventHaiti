@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { isAdmin } from '@/lib/admin'
 import AdminPayoutQueue from './AdminPayoutQueue'
 
 export const metadata = {
@@ -65,7 +66,7 @@ export default async function AdminPayoutsPage() {
     redirect('/auth/login?redirect=/admin/payouts')
   }
 
-  if (user.role !== 'admin') {
+  if (!isAdmin(user.email)) {
     redirect('/organizer')
   }
 

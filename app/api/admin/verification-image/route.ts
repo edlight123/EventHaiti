@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 import { adminStorage } from '@/lib/firebase/admin'
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@eventhaiti.com').split(',')
 
 function normalizeBucketName(bucket: string): string {
   if (bucket.startsWith('gs://')) return bucket.slice('gs://'.length)
@@ -37,7 +36,7 @@ export async function GET(request: NextRequest) {
     const user = await getCurrentUser()
 
     // Only allow admin users
-    if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
+    if (!user || !isAdmin(user.email)) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

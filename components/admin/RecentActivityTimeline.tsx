@@ -4,7 +4,7 @@ interface ActivityItem {
   id: string
   action: string
   user: string
-  timestamp: Date
+  timestamp: string
   icon?: string
 }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase/admin'
-import { cookies } from 'next/headers'
+import { adminDb } from '@/lib/firebase/admin'
+import { requireAuth } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 
 /**
  * Approve a payout request (admin only)
@@ -9,22 +10,16 @@ import { cookies } from 'next/headers'
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('session')?.value
-
-    if (!sessionCookie) {
+    const { user, error } = await requireAuth()
+    if (error || !user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
-    const adminUserId = decodedClaims.uid
-
-    // Verify admin role
-    const adminDoc = await adminDb.collection('users').doc(adminUserId).get()
-    if (!adminDoc.exists || adminDoc.data()?.role !== 'admin') {
+    if (!isAdmin(user.email)) {
       return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 403 })
     }
+
+    const adminUserId = user.id
 
     // Parse request
     const body = await request.json()

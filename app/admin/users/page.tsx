@@ -1,4 +1,5 @@
 import { getCurrentUser } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
@@ -23,10 +24,8 @@ async function promoteToOrganizer(formData: FormData) {
 
 export default async function AdminUsersPage() {
   const user = await getCurrentUser()
-  
-  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e)
 
-  if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
+  if (!user || !isAdmin(user.email)) {
     redirect('/')
   }
 
@@ -55,7 +54,7 @@ export default async function AdminUsersPage() {
   // Pre-compute admin status for each user to avoid issues with module-level constants
   const usersWithAdminFlag = serializedUsers.map((u: any) => ({
     ...u,
-    isAdminUser: ADMIN_EMAILS.includes(u.email || '')
+    isAdminUser: isAdmin(u.email)
   }))
 
   return (

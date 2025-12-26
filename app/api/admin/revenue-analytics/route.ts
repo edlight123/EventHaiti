@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 import { 
   getPlatformRevenueAnalytics, 
   getCompletePlatformMetrics,
   getRevenueByPeriod 
 } from '@/lib/admin/revenue-analytics'
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e)
-
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser()
 
-    if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
+    if (!user || !isAdmin(user.email)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

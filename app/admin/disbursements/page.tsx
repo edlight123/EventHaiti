@@ -1,4 +1,5 @@
 import { getCurrentUser } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 import { redirect } from 'next/navigation'
 import { getEndedEventsForDisbursement, getDisbursementStats } from '@/lib/admin/disbursement-tracking'
 import { AdminDisbursementDashboard } from '@/components/admin/AdminDisbursementDashboard'
@@ -14,9 +15,7 @@ export const revalidate = 60 // Refresh every minute
 export default async function AdminDisbursementsPage() {
   const user = await getCurrentUser()
 
-  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e)
-
-  if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
+  if (!user || !isAdmin(user.email)) {
     redirect('/auth/login?redirect=/admin/disbursements')
   }
 

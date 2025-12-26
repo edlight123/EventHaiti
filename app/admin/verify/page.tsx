@@ -38,9 +38,7 @@ function serializeFirestoreValue(value: any): any {
 export default async function AdminVerifyPage() {
   const user = await getCurrentUser()
 
-  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@eventhaiti.com').split(',')
-
-  if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
+  if (!user || !isAdmin(user.email)) {
     redirect('/')
   }
 

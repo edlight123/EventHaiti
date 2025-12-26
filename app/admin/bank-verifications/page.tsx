@@ -1,5 +1,6 @@
-import { adminAuth, adminDb } from '@/lib/firebase/admin'
-import { cookies } from 'next/headers'
+import { getCurrentUser } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
+import { adminDb } from '@/lib/firebase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
@@ -30,29 +31,13 @@ interface BankVerification {
 }
 
 export default async function AdminBankVerificationsPage() {
-  // Verify admin authentication
-  const cookieStore = await cookies()
-  const sessionCookie = cookieStore.get('session')?.value
-
-  if (!sessionCookie) {
+  const user = await getCurrentUser()
+  if (!user) {
     redirect('/auth/login?redirect=/admin/bank-verifications')
   }
 
-  let authUser
-  try {
-    const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
-    authUser = decodedClaims
-  } catch (error) {
-    console.error('Error verifying session:', error)
-    redirect('/auth/login?redirect=/admin/bank-verifications')
-  }
-
-  // Check if user is admin
-  const userDoc = await adminDb.collection('users').doc(authUser.uid).get()
-  const userData = userDoc.data()
-
-  if (userData?.role !== 'admin') {
-    redirect('/dashboard')
+  if (!isAdmin(user.email)) {
+    redirect('/organizer')
   }
 
   // Fetch all bank verifications
@@ -119,16 +104,9 @@ export default async function AdminBankVerificationsPage() {
   const verified = bankVerifications.filter(v => v.verificationDoc.status === 'verified')
   const failed = bankVerifications.filter(v => v.verificationDoc.status === 'failed')
 
-  const navbarUser = {
-    id: authUser.uid,
-    email: authUser.email || '',
-    full_name: authUser.name || authUser.email || '',
-    role: 'organizer' as const, // Using organizer role for navbar compatibility
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={navbarUser} />
+      <Navbar user={user} isAdmin={true} />
 
       {/* Header */}
       <div className="bg-gradient-to-br from-purple-600 to-purple-700 border-b border-purple-800">
@@ -232,7 +210,7 @@ export default async function AdminBankVerificationsPage() {
         )}
       </div>
 
-      <MobileNavWrapper user={navbarUser} />
+      <MobileNavWrapper user={user} isAdmin={true} />
     </div>
   )
 }

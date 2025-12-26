@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@eventhaiti.com').split(',')
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
 
     // Only allow admin users
-    if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
+    if (!user || !isAdmin(user.email)) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

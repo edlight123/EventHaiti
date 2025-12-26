@@ -3,6 +3,7 @@
  */
 
 import { createClient } from '@/lib/firebase-db/server'
+import { adminDb } from '@/lib/firebase/admin'
 
 interface PurchaseAttempt {
   userId: string | null
@@ -162,19 +163,47 @@ export async function checkTicketLimit(
  * Log suspicious activity
  */
 export async function logSuspiciousActivity(activity: SuspiciousActivity): Promise<void> {
-  const supabase = await createClient()
   const id = `suspicious_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-  await supabase.from('suspicious_activities').insert({
-    id,
-    user_id: activity.userId,
-    activity_type: activity.activityType,
-    description: activity.description,
-    severity: activity.severity,
-    ip_address: activity.ipAddress,
-    metadata: activity.metadata ? JSON.stringify(activity.metadata) : null,
-    detected_at: new Date().toISOString(),
-  })
+  // Firestore-first: enables admin security dashboard to transition off the legacy DB.
+  // Store detected_at as ISO string for stable ordering.
+  try {
+    await adminDb
+      .collection('suspicious_activities')
+      .doc(id)
+      .set({
+        user_id: activity.userId || null,
+        activity_type: activity.activityType,
+        description: activity.description,
+        severity: activity.severity,
+        ip_address: activity.ipAddress || null,
+        metadata: activity.metadata || null,
+        detected_at: new Date().toISOString(),
+        reviewed: false,
+        reviewed_by: null,
+        reviewed_at: null,
+        action_taken: null,
+      })
+  } catch (err) {
+    console.warn('Failed to write suspicious activity to Firestore:', err)
+  }
+
+  // Legacy fallback: keep existing behavior for deployments still relying on Supabase.
+  try {
+    const supabase = await createClient()
+    await supabase.from('suspicious_activities').insert({
+      id,
+      user_id: activity.userId,
+      activity_type: activity.activityType,
+      description: activity.description,
+      severity: activity.severity,
+      ip_address: activity.ipAddress,
+      metadata: activity.metadata ? JSON.stringify(activity.metadata) : null,
+      detected_at: new Date().toISOString(),
+    })
+  } catch (err) {
+    console.warn('Failed to write suspicious activity to legacy DB:', err)
+  }
 
   // If critical severity, could send admin alert here
   if (activity.severity === 'critical') {

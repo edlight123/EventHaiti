@@ -31,15 +31,27 @@ export async function getCollectionCount(collectionName: string, whereClause?: {
  * Get platform stats counts
  */
 export async function getPlatformCounts() {
-  // Get pending verifications manually since we need OR logic
-  const verificationsSnapshot = await adminDb
-    .collection('verification_requests')
-    .get()
-  
-  const pendingVerifications = verificationsSnapshot.docs.filter((doc: any) => {
-    const status = doc.data().status
-    return status === 'pending' || status === 'in_review'
-  }).length
+  // Pending verifications (support both legacy and canonical statuses)
+  let pendingVerifications = 0
+  const pendingStatuses = ['pending_review', 'in_review', 'pending']
+  try {
+    // Prefer an indexed query (avoids scanning the entire collection)
+    const pendingCountSnap = await adminDb
+      .collection('verification_requests')
+      .where('status', 'in', pendingStatuses)
+      .count()
+      .get()
+    pendingVerifications = pendingCountSnap.data().count || 0
+  } catch (error) {
+    console.warn('Falling back to full scan for pending verifications count:', error)
+    const verificationsSnapshot = await adminDb
+      .collection('verification_requests')
+      .get()
+    pendingVerifications = verificationsSnapshot.docs.filter((doc: any) => {
+      const status = doc.data().status
+      return status === 'pending_review' || status === 'in_review' || status === 'pending'
+    }).length
+  }
 
   const [usersCount, eventsCount, ticketsCount] = await Promise.all([
     getCollectionCount('users'),
@@ -172,16 +184,27 @@ export async function getRecentEvents(limit: number = 8) {
  */
 export async function getPendingVerifications(limit: number = 3) {
   try {
-    // Get all verification requests and filter in memory since Firestore doesn't support OR in where
-    const verificationsSnapshot = await adminDb
-      .collection('verification_requests')
-      .get()
-
-    const pendingDocs = verificationsSnapshot.docs
-      .filter((doc: any) => {
+    const pendingStatuses = ['pending_review', 'in_review', 'pending']
+    let pendingDocs: any[] = []
+    try {
+      // Prefer a query; fallback to scan if index/query isn't available.
+      const snap = await adminDb
+        .collection('verification_requests')
+        .where('status', 'in', pendingStatuses)
+        .get()
+      pendingDocs = snap.docs
+    } catch (error) {
+      console.warn('Falling back to full scan for pending verifications list:', error)
+      const verificationsSnapshot = await adminDb
+        .collection('verification_requests')
+        .get()
+      pendingDocs = verificationsSnapshot.docs.filter((doc: any) => {
         const status = doc.data().status
-        return status === 'pending' || status === 'in_review'
+        return status === 'pending_review' || status === 'in_review' || status === 'pending'
       })
+    }
+
+    pendingDocs = pendingDocs
       .sort((a: any, b: any) => {
         const aDate = a.data().created_at?.toDate?.() || a.data().createdAt?.toDate?.() || new Date(0)
         const bDate = b.data().created_at?.toDate?.() || b.data().createdAt?.toDate?.() || new Date(0)

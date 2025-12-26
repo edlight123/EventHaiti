@@ -4,12 +4,43 @@ export type AuditAction =
   | 'event.publish'
   | 'event.unpublish'
   | 'event.delete'
+  | 'event.restore'
   | 'user.verify'
   | 'user.ban'
   | 'user.unban'
   | 'ticket.refund'
   | 'verification.approve'
   | 'verification.reject'
+
+function toIsoTimestamp(value: unknown): string {
+  if (!value) return ''
+
+  // Firestore Timestamp (admin SDK)
+  const maybeTimestamp = value as any
+  if (maybeTimestamp?.toDate && typeof maybeTimestamp.toDate === 'function') {
+    try {
+      return maybeTimestamp.toDate().toISOString()
+    } catch {
+      return ''
+    }
+  }
+
+  if (value instanceof Date) {
+    return Number.isFinite(value.getTime()) ? value.toISOString() : ''
+  }
+
+  if (typeof value === 'number') {
+    const d = new Date(value)
+    return Number.isFinite(d.getTime()) ? d.toISOString() : ''
+  }
+
+  if (typeof value === 'string') {
+    const d = new Date(value)
+    return Number.isFinite(d.getTime()) ? d.toISOString() : ''
+  }
+
+  return ''
+}
 
 interface LogAuditParams {
   action: AuditAction
@@ -32,6 +63,7 @@ export async function logAdminAction({
   details = {}
 }: LogAuditParams): Promise<void> {
   try {
+    const nowIso = new Date().toISOString()
     await adminDb.collection('admin_audit_log').add({
       action,
       adminId,
@@ -39,8 +71,9 @@ export async function logAdminAction({
       resourceId: resourceId || null,
       resourceType: resourceType || null,
       details,
-      timestamp: new Date().toISOString(),
-      createdAt: new Date().toISOString()
+      timestamp: nowIso,
+      timestampMs: Date.now(),
+      createdAt: nowIso
     })
   } catch (error) {
     console.error('Error logging admin action:', error)
@@ -61,11 +94,16 @@ export async function getRecentAdminActivities(limit: number = 10) {
 
     return snapshot.docs.map((doc: any) => {
       const data = doc.data()
+      const ts =
+        toIsoTimestamp(data.timestamp) ||
+        toIsoTimestamp(data.createdAt) ||
+        toIsoTimestamp(data.timestampMs) ||
+        ''
       return {
         id: doc.id,
         action: getActionDescription(data.action, data.details),
         user: data.adminEmail || 'Unknown Admin',
-        timestamp: (data.timestamp?.toDate() || new Date()).toISOString(),
+        timestamp: ts,
         icon: getActionIcon(data.action)
       }
     })
@@ -83,6 +121,7 @@ function getActionDescription(action: string, details: any = {}): string {
     'event.publish': `Published event "${details.eventTitle || 'Untitled'}"`,
     'event.unpublish': `Unpublished event "${details.eventTitle || 'Untitled'}"`,
     'event.delete': `Deleted event "${details.eventTitle || 'Untitled'}"`,
+    'event.restore': `Restored event "${details.eventTitle || 'Untitled'}"`,
     'user.verify': `Verified user ${details.userName || details.userEmail || 'Unknown'}`,
     'user.ban': `Banned user ${details.userName || details.userEmail || 'Unknown'}`,
     'user.unban': `Unbanned user ${details.userName || details.userEmail || 'Unknown'}`,
@@ -102,6 +141,7 @@ function getActionIcon(action: string): string {
     'event.publish': '✅',
     'event.unpublish': '⏸️',
     'event.delete': '🗑️',
+    'event.restore': '♻️',
     'user.verify': '✓',
     'user.ban': '🚫',
     'user.unban': '✓',

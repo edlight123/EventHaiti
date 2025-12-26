@@ -1,4 +1,5 @@
 import { getCurrentUser } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
@@ -29,9 +30,7 @@ export default async function AdminDashboard() {
       redirect('/auth/login?redirect=/admin')
     }
 
-    const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e)
-
-    if (!ADMIN_EMAILS.includes(user.email || '')) {
+    if (!isAdmin(user.email)) {
       return <AdminAccessDenied userEmail={user.email} />
     }
 

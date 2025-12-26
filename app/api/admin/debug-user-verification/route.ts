@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
-import { createClient } from '@/lib/firebase-db/server'
 import { requireAuth } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 
@@ -33,28 +32,11 @@ export async function GET(request: NextRequest) {
     const uid = firestoreUserDoc?.id || null
     const firestoreUser = firestoreUserDoc?.data() || null
 
-    // Supabase lookup (optional, but helps diagnose mismatches)
-    let supabaseUser: any | null = null
-    try {
-      const supabase = await createClient()
-      const { data, error: supaErr } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .single()
-      if (!supaErr) {
-        supabaseUser = data || null
-      }
-    } catch {
-      // ignore
-    }
-
     if (!uid) {
       return NextResponse.json(
         {
           email,
           error: 'User not found in Firestore users collection',
-          supabaseUser,
         },
         { status: 404 }
       )
@@ -116,9 +98,6 @@ export async function GET(request: NextRequest) {
           byUserIdField: verificationByUserId,
           byUser_idField: verificationByUser_id,
         },
-      },
-      supabase: {
-        user: supabaseUser,
       },
       derived: {
         firestoreUserStatus,
