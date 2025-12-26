@@ -192,7 +192,7 @@ export default async function AdminBankVerificationsPage() {
             <div className="space-y-4">
               {pending.map((verification) => (
                 <BankVerificationReviewCard
-                  key={verification.organizerId}
+                  key={`${verification.organizerId}:${verification.destinationId}`}
                   verification={verification}
                 />
               ))}
@@ -209,7 +209,7 @@ export default async function AdminBankVerificationsPage() {
             <div className="space-y-4">
               {verified.map((verification) => (
                 <BankVerificationReviewCard
-                  key={verification.organizerId}
+                  key={`${verification.organizerId}:${verification.destinationId}`}
                   verification={verification}
                 />
               ))}
@@ -226,7 +226,7 @@ export default async function AdminBankVerificationsPage() {
             <div className="space-y-4">
               {failed.map((verification) => (
                 <BankVerificationReviewCard
-                  key={verification.organizerId}
+                  key={`${verification.organizerId}:${verification.destinationId}`}
                   verification={verification}
                 />
               ))}

@@ -61,29 +61,38 @@ export async function GET(_req: NextRequest) {
       .where('type', '==', 'bank')
       .get()
 
-    const statusByDestinationId = new Map<string, 'pending' | 'verified' | 'failed'>()
-    let legacyPrimaryStatus: 'pending' | 'verified' | 'failed' | null = null
+    type BankVerificationMeta = {
+      status: 'pending' | 'verified' | 'failed'
+      submittedAt?: string | null
+    }
+
+    const verificationByDestinationId = new Map<string, BankVerificationMeta>()
+    let legacyPrimary: BankVerificationMeta | null = null
 
     for (const doc of verificationSnap.docs) {
       const data = doc.data() as any
       const docId = String(doc.id || '')
       const status = (data?.status || 'pending') as 'pending' | 'verified' | 'failed'
+      const submittedAt = data?.submittedAt ? String(data.submittedAt) : null
 
       if (docId === 'bank') {
-        legacyPrimaryStatus = status
+        legacyPrimary = { status, submittedAt }
         continue
       }
 
       if (docId.startsWith('bank_')) {
         const destinationId = String(data?.destinationId || docId.slice('bank_'.length) || '')
-        if (destinationId) statusByDestinationId.set(destinationId, status)
+        if (destinationId) verificationByDestinationId.set(destinationId, { status, submittedAt })
       }
     }
 
     const enriched = destinations.map((d) => {
-      const verificationStatus =
-        statusByDestinationId.get(d.id) || (d.id === 'bank_primary' ? legacyPrimaryStatus : null) || 'pending'
-      return { ...d, verificationStatus }
+      const meta = verificationByDestinationId.get(d.id) || (d.id === 'bank_primary' ? legacyPrimary : null)
+      // IMPORTANT: Do not default to "pending" when no verification exists.
+      // "pending" should mean a verification has been submitted and is awaiting review.
+      const verificationStatus = meta?.status
+      const verificationSubmittedAt = meta?.submittedAt || null
+      return { ...d, verificationStatus, verificationSubmittedAt }
     })
 
     return NextResponse.json({ destinations: enriched })

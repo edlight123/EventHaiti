@@ -13,6 +13,7 @@ type BankDestination = {
   accountNumberLast4: string
   isPrimary: boolean
   verificationStatus?: 'pending' | 'verified' | 'failed'
+  verificationSubmittedAt?: string | null
 }
 
 // Types
@@ -1068,7 +1069,7 @@ export default function PayoutsPageNew({
                             >
                               {(bankDestinations || []).map((d) => (
                                 <option key={d.id} value={d.id}>
-                                  {d.bankName} • ****{d.accountNumberLast4}{d.isPrimary ? ' (Primary)' : ''} ({d.verificationStatus || 'pending'})
+                                  {d.bankName} • ****{d.accountNumberLast4}{d.isPrimary ? ' (Primary)' : ''} ({d.verificationStatus || 'not submitted'})
                                 </option>
                               ))}
                             </select>
@@ -1083,10 +1084,20 @@ export default function PayoutsPageNew({
 
                         {(() => {
                           const selected = (bankDestinations || []).find((d) => d.id === selectedBankDestinationId) || null
-                          const status = (selected?.verificationStatus || (selectedBankDestinationId === 'bank_primary' ? bankStatus : 'pending')) as
+                          const status = (selected?.verificationStatus || null) as
                             | 'pending'
                             | 'verified'
                             | 'failed'
+                            | null
+
+                          if (isHaiti && status === 'pending') {
+                            return (
+                              <div className="text-sm text-gray-600">
+                                Verification submitted{selected?.verificationSubmittedAt ? ` on ${new Date(selected.verificationSubmittedAt).toLocaleDateString()}` : ''}. Awaiting review.
+                              </div>
+                            )
+                          }
+
                           if (!isHaiti) {
                             // Non-Haiti legacy flow still uses the profile-level bank verification.
                             if (bankStatus === 'verified') return null
@@ -1097,6 +1108,12 @@ export default function PayoutsPageNew({
 
                           return (
                             <>
+                              {isHaiti && status === 'failed' ? (
+                                <div className="text-sm text-red-700">
+                                  Verification was rejected. Please upload a new document.
+                                </div>
+                              ) : null}
+
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Document type</label>
                                 <select
