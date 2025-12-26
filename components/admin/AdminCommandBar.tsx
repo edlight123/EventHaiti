@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Search, Bell, Calendar, Users, ShieldCheck, Loader2, MapPin, DollarSign, User } from 'lucide-react'
+import { Search, Bell, Calendar, Users, ShieldCheck, CreditCard, Loader2, MapPin, DollarSign, User } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 interface AdminCommandBarProps {
   pendingVerifications: number
+  pendingBankVerifications?: number
 }
 
 interface SearchResult {
@@ -24,7 +25,7 @@ interface SearchResult {
   }
 }
 
-export function AdminCommandBar({ pendingVerifications }: AdminCommandBarProps) {
+export function AdminCommandBar({ pendingVerifications, pendingBankVerifications = 0 }: AdminCommandBarProps) {
   const { t } = useTranslation('admin')
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
@@ -184,6 +185,19 @@ export function AdminCommandBar({ pendingVerifications }: AdminCommandBarProps) 
               <ShieldCheck className="w-4 h-4" />
               {t('nav.verify')}
             </Link>
+
+            <Link
+              href="/admin/bank-verifications"
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <CreditCard className="w-4 h-4" />
+              Bank verifications
+              {pendingBankVerifications > 0 && (
+                <span className="ml-1 px-2 py-0.5 rounded-full bg-red-500 text-white text-xs font-bold">
+                  {pendingBankVerifications > 9 ? '9+' : pendingBankVerifications}
+                </span>
+              )}
+            </Link>
             <Link
               href="/admin/events"
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
@@ -209,6 +223,18 @@ export function AdminCommandBar({ pendingVerifications }: AdminCommandBarProps) 
               <Bell className="w-4 h-4" />
               <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
                 {pendingVerifications > 9 ? '9+' : pendingVerifications}
+              </span>
+            </Link>
+          )}
+
+          {pendingBankVerifications > 0 && (
+            <Link
+              href="/admin/bank-verifications"
+              className="relative flex items-center gap-2 px-3 py-2 bg-yellow-50 text-yellow-800 rounded-lg hover:bg-yellow-100 transition-colors"
+            >
+              <CreditCard className="w-4 h-4" />
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                {pendingBankVerifications > 9 ? '9+' : pendingBankVerifications}
               </span>
             </Link>
           )}

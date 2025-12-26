@@ -20,6 +20,7 @@ interface BankVerification {
     verificationType: string
     status: string
     submittedAt: string
+    documentPath?: string
     documentName: string
     documentSize: number
   }
@@ -32,6 +33,26 @@ interface Props {
 export default function BankVerificationReviewCard({ verification }: Props) {
   const [processing, setProcessing] = useState(false)
   const [expanded, setExpanded] = useState(verification.verificationDoc.status === 'pending')
+  const [isOpeningDocument, setIsOpeningDocument] = useState(false)
+
+  const openDocument = async () => {
+    const path = verification.verificationDoc.documentPath
+    if (!path) return
+
+    setIsOpeningDocument(true)
+    try {
+      const res = await fetch(`/api/admin/verification-image?path=${encodeURIComponent(path)}`)
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'Failed to open document')
+      if (!data?.url) throw new Error('Signed URL missing')
+
+      window.open(data.url, '_blank', 'noopener,noreferrer')
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed to open document')
+    } finally {
+      setIsOpeningDocument(false)
+    }
+  }
 
   const handleApprove = async () => {
     if (!confirm('Approve this bank account verification?')) return
@@ -256,13 +277,16 @@ export default function BankVerificationReviewCard({ verification }: Props) {
                 <div className="pt-3">
                   <button
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors"
-                    disabled
+                    onClick={openDocument}
+                    disabled={!verification.verificationDoc.documentPath || isOpeningDocument}
                   >
                     <ExternalLink className="w-4 h-4" />
-                    View Document (Not Implemented)
+                    {isOpeningDocument ? 'Opening…' : 'View Document'}
                   </button>
                   <p className="text-xs text-gray-500 text-center mt-2">
-                    In production, this would open the uploaded proof document
+                    {verification.verificationDoc.documentPath
+                      ? 'Opens a secure, time-limited link to the uploaded proof.'
+                      : 'Document unavailable (older submission)'}
                   </p>
                 </div>
               </div>

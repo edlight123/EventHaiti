@@ -5,7 +5,7 @@ import { AdminDashboardHeader } from '@/components/admin/AdminDashboardHeader'
 import { AdminKpiGrid } from '@/components/admin/AdminKpiGrid'
 import { WorkQueueCard } from '@/components/admin/WorkQueueCard'
 import { RecentActivityTimeline } from '@/components/admin/RecentActivityTimeline'
-import { ShieldCheck, AlertCircle, Calendar, BarChart3 } from 'lucide-react'
+import { ShieldCheck, AlertCircle, Calendar, BarChart3, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 
 interface AdminDashboardClientProps {
@@ -16,6 +16,7 @@ interface AdminDashboardClientProps {
   refunds7d: number
   refundsAmount7d: number
   pendingCount: number
+  pendingBankCount: number
   pendingVerifications: any[]
   recentEvents: any[]
   recentActivities: any[]
@@ -29,6 +30,7 @@ export function AdminDashboardClient({
   refunds7d,
   refundsAmount7d,
   pendingCount,
+  pendingBankCount,
   pendingVerifications,
   recentEvents,
   recentActivities
@@ -96,6 +98,22 @@ export function AdminDashboardClient({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
           <span className="font-semibold">Manage Organizers</span>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+
+        <Link
+          href="/admin/bank-verifications"
+          className="relative inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-6 py-3 rounded-xl hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+        >
+          <CreditCard className="w-5 h-5" />
+          <span className="font-semibold">Bank Verifications</span>
+          {pendingBankCount > 0 && (
+            <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+              {pendingBankCount > 9 ? '9+' : pendingBankCount}
+            </span>
+          )}
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>

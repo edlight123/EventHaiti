@@ -44,6 +44,7 @@ export default async function AdminDashboard() {
   ])
 
   const { usersCount, eventsCount, ticketsCount, pendingVerifications: pendingCount } = platformCounts
+  const pendingBankCount = (platformCounts as any).pendingBankVerifications || 0
   const { gmv7d, tickets7d, refunds7d, refundsAmount7d } = metrics7d
 
   // Serialize all data before passing to client component
@@ -71,7 +72,7 @@ export default async function AdminDashboard() {
         <Navbar user={user} isAdmin={true} />
         
         {/* Command Bar */}
-        <AdminCommandBar pendingVerifications={pendingCount} />
+        <AdminCommandBar pendingVerifications={pendingCount} pendingBankVerifications={pendingBankCount} />
 
         <AdminDashboardClient
           usersCount={usersCount}
@@ -81,6 +82,7 @@ export default async function AdminDashboard() {
           refunds7d={refunds7d}
           refundsAmount7d={refundsAmount7d}
           pendingCount={pendingCount}
+          pendingBankCount={pendingBankCount}
           pendingVerifications={serializedPendingVerifications}
           recentEvents={serializedRecentEvents}
           recentActivities={serializedRecentActivities}

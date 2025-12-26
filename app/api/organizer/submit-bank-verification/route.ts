@@ -1,7 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
+import { adminStorage } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
+
+function normalizeBucketName(bucket: string): string {
+  if (bucket.startsWith('gs://')) return bucket.slice('gs://'.length)
+  return bucket
+}
+
+function getStorageBucketName(): string | null {
+  const fromEnv = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+  return fromEnv ? normalizeBucketName(fromEnv) : null
+}
+
+function sanitizeFilename(filename: string): string {
+  return filename.replace(/[^a-zA-Z0-9._-]+/g, '_')
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,13 +75,40 @@ export async function POST(request: NextRequest) {
       .collection('verificationDocuments')
       .doc(`bank_${destinationId}`)
 
+    const bucketName = getStorageBucketName()
+    if (!bucketName) {
+      return NextResponse.json(
+        {
+          error: 'Storage bucket not configured',
+          hint: 'Set FIREBASE_STORAGE_BUCKET (or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) to your Firebase Storage bucket name.',
+        },
+        { status: 500 }
+      )
+    }
+
+    // Upload proof document to Firebase Storage.
+    const objectPath = `verifications/bank/${organizerId}/${destinationId}/${Date.now()}_${sanitizeFilename(
+      proofDocument.name || 'proof'
+    )}`
+    const buffer = Buffer.from(await proofDocument.arrayBuffer())
+    const bucket = adminStorage.bucket(bucketName)
+    const file = bucket.file(objectPath)
+    await file.save(buffer, {
+      contentType: proofDocument.type || 'application/octet-stream',
+      resumable: false,
+      metadata: {
+        cacheControl: 'private, max-age=0, no-transform',
+      },
+    })
+
     const verificationData = {
       type: 'bank',
       destinationId,
       verificationType,
       status: 'pending',
       submittedAt: new Date().toISOString(),
-      // In production, this would be a Storage URL
+      // Stored in Firebase Storage; admins can fetch a signed URL via /api/admin/verification-image.
+      documentPath: objectPath,
       documentName: proofDocument.name,
       documentSize: proofDocument.size,
     }

@@ -33,6 +33,7 @@ export async function getCollectionCount(collectionName: string, whereClause?: {
 export async function getPlatformCounts() {
   // Pending verifications (support both legacy and canonical statuses)
   let pendingVerifications = 0
+  let pendingBankVerifications = 0
   const pendingStatuses = ['pending_review', 'in_review', 'pending']
   try {
     // Prefer an indexed query (avoids scanning the entire collection)
@@ -53,6 +54,38 @@ export async function getPlatformCounts() {
     }).length
   }
 
+  // Pending bank verifications (Haiti bank accounts)
+  try {
+    const pendingBankCountSnap = await adminDb
+      .collectionGroup('verificationDocuments')
+      .where('type', '==', 'bank')
+      .where('status', '==', 'pending')
+      .count()
+      .get()
+    pendingBankVerifications = pendingBankCountSnap.data().count || 0
+  } catch (error) {
+    console.warn('Falling back to limited scan for pending bank verifications count:', error)
+    // Fallback (best-effort): scan organizers list and count pending bank verification docs.
+    try {
+      const usersSnapshot = await adminDb.collection('users').where('role', '==', 'organizer').get()
+      let count = 0
+      for (const userDoc of usersSnapshot.docs) {
+        const organizerId = userDoc.id
+        const snap = await adminDb
+          .collection('organizers')
+          .doc(organizerId)
+          .collection('verificationDocuments')
+          .where('type', '==', 'bank')
+          .where('status', '==', 'pending')
+          .get()
+        count += snap.size
+      }
+      pendingBankVerifications = count
+    } catch {
+      pendingBankVerifications = 0
+    }
+  }
+
   const [usersCount, eventsCount, ticketsCount] = await Promise.all([
     getCollectionCount('users'),
     getCollectionCount('events'),
@@ -63,7 +96,8 @@ export async function getPlatformCounts() {
     usersCount,
     eventsCount,
     ticketsCount,
-    pendingVerifications
+    pendingVerifications,
+    pendingBankVerifications
   }
 }
 

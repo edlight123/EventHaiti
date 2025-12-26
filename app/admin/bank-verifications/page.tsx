@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import BankVerificationReviewCard from '@/components/admin/BankVerificationReviewCard'
+import { getDecryptedBankDestination } from '@/lib/firestore/payout-destinations'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -27,6 +28,7 @@ interface BankVerification {
     verificationType: string
     status: string
     submittedAt: string
+    documentPath?: string
     documentName: string
     documentSize: number
   }
@@ -99,12 +101,24 @@ export default async function AdminBankVerificationsPage() {
 
       const destinationData = destinationDoc.exists ? (destinationDoc.data() as any) : null
 
+      // Attempt to show the full on-file account number for admins.
+      // This is only available when PAYOUT_DETAILS_ENCRYPTION_KEY is configured and the destination has encrypted details.
+      let decryptedAccountNumber: string | null = null
+      try {
+        const decrypted = await getDecryptedBankDestination({ organizerId, destinationId })
+        decryptedAccountNumber = decrypted?.accountNumber ? String(decrypted.accountNumber) : null
+      } catch {
+        decryptedAccountNumber = null
+      }
+
       const bankDetails = destinationData
         ? {
             accountName: String(destinationData.accountName || ''),
-            accountNumber: destinationData.accountNumberLast4
-              ? `****${String(destinationData.accountNumberLast4)}`
-              : '****',
+            accountNumber:
+              decryptedAccountNumber ||
+              (destinationData.accountNumberLast4
+                ? `****${String(destinationData.accountNumberLast4)}`
+                : '****'),
             bankName: String(destinationData.bankName || ''),
             routingNumber: undefined,
           }
@@ -124,6 +138,7 @@ export default async function AdminBankVerificationsPage() {
           verificationType: String(verificationData.verificationType || ''),
           status: String(verificationData.status || 'pending'),
           submittedAt: String(verificationData.submittedAt || ''),
+          documentPath: verificationData.documentPath ? String(verificationData.documentPath) : undefined,
           documentName: String(verificationData.documentName || ''),
           documentSize: Number(verificationData.documentSize || 0),
         },
