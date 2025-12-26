@@ -30,26 +30,24 @@ export default async function AdminDisbursementsPage() {
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={true} />
       
-      <div id="disbursements" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-10">
           <h1 className="text-3xl font-bold text-gray-900">Payout Operations</h1>
-          <p className="mt-2 text-gray-600">
-            Manage event disbursements and organizer withdrawals
-          </p>
         </div>
 
-        <div className="mb-6">
+        <div id="disbursements" className="mb-12">
           <h2 className="text-2xl font-bold text-gray-900">Event Disbursements</h2>
-          <p className="mt-2 text-gray-600">
-            Track events that have ended and process organizer payouts
-          </p>
+          <div className="mt-4">
+            <AdminDisbursementDashboard endedEvents={endedEvents} stats={stats} />
+          </div>
         </div>
 
-        <AdminDisbursementDashboard endedEvents={endedEvents} stats={stats} />
-      </div>
-
-      <div id="withdrawals">
-        <WithdrawalsView />
+        <div id="withdrawals" className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Withdrawals</h2>
+          <div className="mt-4">
+            <WithdrawalsView embedded={true} showHeader={false} />
+          </div>
+        </div>
       </div>
 
       <MobileNavWrapper user={user} isAdmin={true} />

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { formatCurrency } from '@/lib/fees'
 
 interface Withdrawal {
@@ -36,7 +36,12 @@ interface Withdrawal {
   } | null
 }
 
-export default function WithdrawalsView() {
+interface WithdrawalsViewProps {
+  embedded?: boolean
+  showHeader?: boolean
+}
+
+export default function WithdrawalsView({ embedded = false, showHeader = true }: WithdrawalsViewProps) {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'pending' | 'processing' | 'completed' | 'failed'>('pending')
@@ -44,14 +49,10 @@ export default function WithdrawalsView() {
   const [actionNote, setActionNote] = useState('')
   const [processing, setProcessing] = useState(false)
 
-  useEffect(() => {
-    fetchWithdrawals()
-  }, [filter])
-
-  const fetchWithdrawals = async () => {
+  const fetchWithdrawals = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/admin/withdrawals?status=${filter}`)
+      const response = await fetch('/api/admin/withdrawals?status=all&limit=200')
       const data = await response.json()
       setWithdrawals(data.withdrawals || [])
     } catch (error) {
@@ -59,7 +60,15 @@ export default function WithdrawalsView() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchWithdrawals()
+  }, [fetchWithdrawals])
+
+  const visibleWithdrawals = filter === 'all'
+    ? withdrawals
+    : withdrawals.filter(w => w.status === filter)
 
   const handleAction = async (withdrawalId: string, action: 'approve' | 'reject' | 'complete' | 'fail') => {
     if (!confirm(`Are you sure you want to ${action} this withdrawal?`)) return
@@ -108,16 +117,21 @@ export default function WithdrawalsView() {
     return method === 'moncash' ? '📱' : '🏦'
   }
 
+  const containerClassName = embedded
+    ? ''
+    : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">💸 Withdrawal Management</h1>
-        <p className="text-gray-600">Review and process organizer withdrawal requests</p>
-      </div>
+    <div className={containerClassName}>
+      {showHeader && (
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Withdrawal Management</h1>
+          <p className="text-gray-600">Review and process organizer withdrawal requests</p>
+        </div>
+      )}
 
       {/* Filter Tabs */}
-      <div className="bg-white rounded-xl border border-gray-200 p-1 mb-6 inline-flex">
+      <div className="bg-white rounded-xl border border-gray-200 p-1 mb-6 flex flex-wrap">
         {['pending', 'processing', 'completed', 'failed', 'all'].map((tab) => (
           <button
             key={tab}
@@ -129,41 +143,11 @@ export default function WithdrawalsView() {
             }`}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            {tab !== 'all' && (
-              <span className="ml-2 text-xs">
-                ({withdrawals.filter(w => w.status === tab).length})
-              </span>
-            )}
+            <span className="ml-2 text-xs">
+              ({tab === 'all' ? withdrawals.length : withdrawals.filter(w => w.status === tab).length})
+            </span>
           </button>
         ))}
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-200">
-          <div className="text-yellow-600 text-sm font-medium mb-1">Pending</div>
-          <div className="text-2xl font-bold text-yellow-900">
-            {withdrawals.filter(w => w.status === 'pending').length}
-          </div>
-        </div>
-        <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-          <div className="text-blue-600 text-sm font-medium mb-1">Processing</div>
-          <div className="text-2xl font-bold text-blue-900">
-            {withdrawals.filter(w => w.status === 'processing').length}
-          </div>
-        </div>
-        <div className="bg-green-50 rounded-xl p-4 border border-green-200">
-          <div className="text-green-600 text-sm font-medium mb-1">Completed</div>
-          <div className="text-2xl font-bold text-green-900">
-            {withdrawals.filter(w => w.status === 'completed').length}
-          </div>
-        </div>
-        <div className="bg-red-50 rounded-xl p-4 border border-red-200">
-          <div className="text-red-600 text-sm font-medium mb-1">Failed</div>
-          <div className="text-2xl font-bold text-red-900">
-            {withdrawals.filter(w => w.status === 'failed').length}
-          </div>
-        </div>
       </div>
 
       {/* Withdrawals List */}
@@ -171,7 +155,7 @@ export default function WithdrawalsView() {
         <div className="bg-white rounded-xl p-12 text-center">
           <div className="text-gray-400 mb-2">Loading...</div>
         </div>
-      ) : withdrawals.length === 0 ? (
+      ) : visibleWithdrawals.length === 0 ? (
         <div className="bg-white rounded-xl p-12 text-center">
           <span className="text-6xl mb-4 block">📭</span>
           <h3 className="text-xl font-bold text-gray-900 mb-2">No Withdrawals</h3>
@@ -194,7 +178,7 @@ export default function WithdrawalsView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {withdrawals.map((withdrawal) => (
+                {visibleWithdrawals.map((withdrawal) => (
                   <tr key={withdrawal.id} className="hover:bg-gray-50">
                     <td className="px-4 py-4">
                       <div>
@@ -244,7 +228,7 @@ export default function WithdrawalsView() {
 
           {/* Mobile Cards */}
           <div className="md:hidden divide-y divide-gray-200">
-            {withdrawals.map((withdrawal) => (
+            {visibleWithdrawals.map((withdrawal) => (
               <div
                 key={withdrawal.id}
                 className="p-4 hover:bg-gray-50 cursor-pointer"
