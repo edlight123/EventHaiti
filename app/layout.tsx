@@ -15,9 +15,9 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: [
-      { url: '/favicon-color.svg?v=3', type: 'image/svg+xml' },
-      { url: '/icon-192.svg?v=3', type: 'image/svg+xml' },
-      { url: '/icon-512.svg?v=3', type: 'image/svg+xml' },
+      { url: '/color.svg?v=1', type: 'image/svg+xml' },
+      { url: '/icon-192.svg', type: 'image/svg+xml' },
+      { url: '/icon-512.svg', type: 'image/svg+xml' },
     ],
     apple: [
       { url: '/event_haiti_logo_color.png', sizes: '500x500', type: 'image/png' },
