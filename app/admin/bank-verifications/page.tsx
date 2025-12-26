@@ -104,11 +104,14 @@ export default async function AdminBankVerificationsPage() {
       // Attempt to show the full on-file account number for admins.
       // This is only available when PAYOUT_DETAILS_ENCRYPTION_KEY is configured and the destination has encrypted details.
       let decryptedAccountNumber: string | null = null
+      let decryptedRoutingNumber: string | null = null
       try {
         const decrypted = await getDecryptedBankDestination({ organizerId, destinationId })
         decryptedAccountNumber = decrypted?.accountNumber ? String(decrypted.accountNumber) : null
+        decryptedRoutingNumber = decrypted?.routingNumber ? String(decrypted.routingNumber) : null
       } catch {
         decryptedAccountNumber = null
+        decryptedRoutingNumber = null
       }
 
       const bankDetails = destinationData
@@ -120,7 +123,7 @@ export default async function AdminBankVerificationsPage() {
                 ? `****${String(destinationData.accountNumberLast4)}`
                 : '****'),
             bankName: String(destinationData.bankName || ''),
-            routingNumber: undefined,
+            routingNumber: decryptedRoutingNumber || undefined,
           }
         : legacyBankDetails
 
