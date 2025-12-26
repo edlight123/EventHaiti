@@ -214,12 +214,12 @@ if (daysSinceEvent < 7) {
 ## Files Modified
 
 ### Created
-- `app/organizer/settings/payouts/PayoutsPageNew.tsx` (592 lines)
-- `app/organizer/settings/payouts/fees/page.tsx` (258 lines)
-- `app/organizer/settings/payouts/history/page.tsx` (263 lines)
+- `app/organizer/settings/payouts/PayoutsPageNew.tsx` (1628 lines)
+- `app/organizer/settings/payouts/fees/page.tsx` (189 lines)
+- `app/organizer/settings/payouts/history/page.tsx` (266 lines)
 
 ### Modified
-- `app/organizer/settings/payouts/page.tsx` (complete rewrite, now 149 lines)
+- `app/organizer/settings/payouts/page.tsx` (now 81 lines)
 
 ### Unchanged (for reference)
 - `app/organizer/settings/payouts/actions.ts` (server action already existed)
@@ -258,6 +258,13 @@ if (daysSinceEvent < 7) {
    - Earnings trend graph over time
    - Fee breakdown pie chart
    - Month-over-month comparison
+
+## Maintenance Notes (2025-12-26)
+
+- `app/organizer/settings/payouts/page.tsx` currently sets `showEarningsAndPayouts={false}`, so the payouts settings UI needs to stand alone without the right-column earnings panel.
+- `app/organizer/settings/payouts/PayoutsPageNew.tsx` has grown very large; to make future UI work safer, it should be split into smaller components (profile selector, verification card, payout setup form, fees link card, earnings table/payout summary).
+- Layout follow-up: when earnings are hidden, the page now uses a wider left column and a 2-up top section (Profile + Verification) to avoid the “skinny one-column” desktop feel.
+- Visual consistency: the payouts page uses purple accents while other organizer pages (like earnings) lean teal; decide whether to standardize accents across organizer pages.
 
 ## Summary
 

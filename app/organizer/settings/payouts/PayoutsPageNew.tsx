@@ -715,7 +715,15 @@ export default function PayoutsPageNew({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           
           {/* Left Column - Payout Setup + Fees */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className={shouldShowEarningsAndPayouts ? 'lg:col-span-1 space-y-6' : 'lg:col-span-2 space-y-6'}>
+
+            <div
+              className={
+                shouldShowEarningsAndPayouts
+                  ? 'space-y-6'
+                  : 'grid grid-cols-1 lg:grid-cols-2 gap-6'
+              }
+            >
 
             {/* Payout Profile Selector */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -905,6 +913,8 @@ export default function PayoutsPageNew({
                   Verification is required to receive payouts and publish paid events.
                 </p>
               </div>
+            </div>
+
             </div>
             
             {/* Payout Setup Card */}

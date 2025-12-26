@@ -110,7 +110,18 @@ export interface EarningsSummary {
   totalWithdrawn: number
   totalPlatformFees: number
   totalProcessingFees: number
-  currency: string
+  // When an organizer has earnings in more than one currency, this is set to 'mixed'.
+  currency: 'HTG' | 'USD' | 'mixed' | string
+
+  // Optional: totals split by currency for mixed-currency organizers.
+  totalsByCurrency?: Partial<Record<'HTG' | 'USD', {
+    totalGrossSales: number
+    totalNetAmount: number
+    totalAvailableToWithdraw: number
+    totalWithdrawn: number
+    totalPlatformFees: number
+    totalProcessingFees: number
+  }>>
   
   // Breakdown by event
   events: Array<{
@@ -121,6 +132,7 @@ export interface EarningsSummary {
     netAmount: number
     availableToWithdraw: number
     settlementStatus: SettlementStatus
+    currency?: 'HTG' | 'USD'
   }>
 }
 

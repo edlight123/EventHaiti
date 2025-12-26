@@ -4,6 +4,8 @@ import { cookies } from 'next/headers'
 import { adminDb } from '@/lib/firebase/admin'
 import { getOrganizerEarningsSummary } from '@/lib/earnings'
 import EarningsView from './EarningsView'
+import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
 
 export const metadata = {
   title: 'Earnings | EventHaiti',
@@ -36,18 +38,56 @@ export default async function EarningsPage() {
 
     const summary = await getOrganizerEarningsSummary(organizerId)
 
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
-          <div className="mb-6 sm:mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Earnings</h1>
-            <p className="text-sm sm:text-base text-gray-600 mt-2">
-              Track your event revenue and manage payouts
-            </p>
-          </div>
+    const navbarUser = {
+      id: organizerId,
+      email: decodedClaims.email || '',
+      full_name: decodedClaims.name || decodedClaims.email || '',
+      role: 'organizer' as const,
+    }
 
+    return (
+      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+        <Navbar user={navbarUser} />
+
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+              <a href="/organizer" className="hover:text-gray-900">Organizer</a>
+              <span className="text-gray-400">/</span>
+              <span className="text-gray-900 font-medium">Earnings</span>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Earnings</h1>
+            <p className="text-gray-600">Track your event revenue and settlement status.</p>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <a
+                href="/organizer/earnings"
+                className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-teal-600 text-white"
+              >
+                Earnings
+              </a>
+              <a
+                href="/organizer/settings/payouts"
+                className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-white text-gray-900 border border-gray-300 hover:bg-gray-50"
+              >
+                Payout profile
+              </a>
+              <a
+                href="/organizer/settings/payouts/history"
+                className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-white text-gray-900 border border-gray-300 hover:bg-gray-50"
+              >
+                Payout history
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <EarningsView summary={summary} organizerId={organizerId} />
         </div>
+
+        <MobileNavWrapper user={navbarUser} />
       </div>
     )
   } catch (error) {

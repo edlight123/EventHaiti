@@ -608,12 +608,26 @@ export async function getOrganizerEarningsSummary(
   let totalWithdrawn = 0
   let totalPlatformFees = 0
   let totalProcessingFees = 0
-  let currency = 'HTG'
+
+  const totalsByCurrency: NonNullable<EarningsSummary['totalsByCurrency']> = {}
+  const currenciesSeen = new Set<'HTG' | 'USD'>()
 
   const events: EarningsSummary['events'] = []
 
   for (const doc of earningsSnapshot.docs) {
     const data = doc.data() as EventEarnings
+
+    const cur = normalizeCurrency((data as any)?.currency)
+    currenciesSeen.add(cur)
+
+    const bucket = totalsByCurrency[cur] || {
+      totalGrossSales: 0,
+      totalNetAmount: 0,
+      totalAvailableToWithdraw: 0,
+      totalWithdrawn: 0,
+      totalPlatformFees: 0,
+      totalProcessingFees: 0,
+    }
 
     totalGrossSales += data.grossSales
     totalNetAmount += data.netAmount
@@ -621,22 +635,37 @@ export async function getOrganizerEarningsSummary(
     totalWithdrawn += data.withdrawnAmount
     totalPlatformFees += data.platformFee
     totalProcessingFees += data.processingFees
-    currency = data.currency
+
+    bucket.totalGrossSales += data.grossSales
+    bucket.totalNetAmount += data.netAmount
+    bucket.totalAvailableToWithdraw += data.availableToWithdraw
+    bucket.totalWithdrawn += data.withdrawnAmount
+    bucket.totalPlatformFees += data.platformFee
+    bucket.totalProcessingFees += data.processingFees
+    totalsByCurrency[cur] = bucket
 
     // Get event details
     const eventDoc = await adminDb.collection('events').doc(data.eventId).get()
     const event = eventDoc.data()
 
+    const eventDateRaw = (event as any)?.start_datetime || (event as any)?.date_time || (event as any)?.date || (event as any)?.created_at || ''
+    const eventDate = (eventDateRaw as any)?.toDate ? (eventDateRaw as any).toDate() : (eventDateRaw ? new Date(eventDateRaw) : null)
+    const eventDateIso = eventDate && !isNaN(eventDate.getTime()) ? eventDate.toISOString() : ''
+
     events.push({
       eventId: data.eventId,
       eventTitle: event?.title || 'Unknown Event',
-      eventDate: event?.start_datetime || '',
+      eventDate: eventDateIso,
       grossSales: data.grossSales,
       netAmount: data.netAmount,
       availableToWithdraw: data.availableToWithdraw,
       settlementStatus: data.settlementStatus,
+      currency: cur,
     })
   }
+
+  const currency: EarningsSummary['currency'] =
+    currenciesSeen.size <= 1 ? (Array.from(currenciesSeen)[0] || 'HTG') : 'mixed'
 
   return {
     totalGrossSales,
@@ -646,6 +675,7 @@ export async function getOrganizerEarningsSummary(
     totalPlatformFees,
     totalProcessingFees,
     currency,
+    totalsByCurrency: currency === 'mixed' ? totalsByCurrency : undefined,
     events: events.sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime()),
   }
 }

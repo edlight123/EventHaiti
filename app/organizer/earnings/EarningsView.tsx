@@ -12,12 +12,16 @@ interface EarningsViewProps {
 export default function EarningsView({ summary, organizerId }: EarningsViewProps) {
   const [filter, setFilter] = useState<'all' | 'ready' | 'pending' | 'locked'>('all')
 
-  const formatCurrency = (cents: number) => {
+  const formatCurrency = (cents: number, currencyOverride?: 'HTG' | 'USD') => {
     const amount = (cents / 100).toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })
-    return summary.currency === 'HTG' ? `HTG ${amount}` : `$${amount}`
+
+    const currency =
+      currencyOverride || (summary.currency === 'HTG' || summary.currency === 'USD' ? summary.currency : 'USD')
+
+    return currency === 'HTG' ? `HTG ${amount}` : `$${amount}`
   }
 
   const getStatusBadge = (status: string) => {
@@ -37,41 +41,109 @@ export default function EarningsView({ summary, organizerId }: EarningsViewProps
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-          <div className="text-xs sm:text-sm text-gray-600 mb-1">Total Earnings</div>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">
-            {formatCurrency(summary.totalGrossSales)}
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+          <div className="text-xs sm:text-sm text-gray-600 mb-1">Gross Sales</div>
+          {summary.currency === 'mixed' && summary.totalsByCurrency ? (
+            <div className="mt-2 space-y-1">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-gray-500">USD</span>
+                <span className="text-lg sm:text-xl font-bold text-gray-900">
+                  {formatCurrency(summary.totalsByCurrency.USD?.totalGrossSales ?? 0, 'USD')}
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-gray-500">HTG</span>
+                <span className="text-lg sm:text-xl font-bold text-gray-900">
+                  {formatCurrency(summary.totalsByCurrency.HTG?.totalGrossSales ?? 0, 'HTG')}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">
+              {formatCurrency(summary.totalGrossSales)}
+            </div>
+          )}
           <div className="text-xs text-gray-500 mt-1">All time</div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
           <div className="text-xs sm:text-sm text-gray-600 mb-1">Net Amount</div>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">
-            {formatCurrency(summary.totalNetAmount)}
-          </div>
+          {summary.currency === 'mixed' && summary.totalsByCurrency ? (
+            <div className="mt-2 space-y-1">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-gray-500">USD</span>
+                <span className="text-lg sm:text-xl font-bold text-gray-900">
+                  {formatCurrency(summary.totalsByCurrency.USD?.totalNetAmount ?? 0, 'USD')}
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-gray-500">HTG</span>
+                <span className="text-lg sm:text-xl font-bold text-gray-900">
+                  {formatCurrency(summary.totalsByCurrency.HTG?.totalNetAmount ?? 0, 'HTG')}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">
+              {formatCurrency(summary.totalNetAmount)}
+            </div>
+          )}
           <div className="text-xs text-gray-500 mt-1">After fees</div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6 border-l-4 border-green-600">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 border-l-4 border-green-600">
           <div className="text-xs sm:text-sm text-gray-600 mb-1">Available</div>
-          <div className="text-xl sm:text-2xl font-bold text-green-600 mt-2">
-            {formatCurrency(summary.totalAvailableToWithdraw)}
-          </div>
+          {summary.currency === 'mixed' && summary.totalsByCurrency ? (
+            <div className="mt-2 space-y-1">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-gray-500">USD</span>
+                <span className="text-lg sm:text-xl font-bold text-green-600">
+                  {formatCurrency(summary.totalsByCurrency.USD?.totalAvailableToWithdraw ?? 0, 'USD')}
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-gray-500">HTG</span>
+                <span className="text-lg sm:text-xl font-bold text-green-600">
+                  {formatCurrency(summary.totalsByCurrency.HTG?.totalAvailableToWithdraw ?? 0, 'HTG')}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-xl sm:text-2xl font-bold text-green-600 mt-2">
+              {formatCurrency(summary.totalAvailableToWithdraw)}
+            </div>
+          )}
           <div className="text-xs text-gray-500 mt-1">Ready to withdraw</div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
           <div className="text-xs sm:text-sm text-gray-600 mb-1">Withdrawn</div>
-          <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">
-            {formatCurrency(summary.totalWithdrawn)}
-          </div>
+          {summary.currency === 'mixed' && summary.totalsByCurrency ? (
+            <div className="mt-2 space-y-1">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-gray-500">USD</span>
+                <span className="text-lg sm:text-xl font-bold text-gray-900">
+                  {formatCurrency(summary.totalsByCurrency.USD?.totalWithdrawn ?? 0, 'USD')}
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-gray-500">HTG</span>
+                <span className="text-lg sm:text-xl font-bold text-gray-900">
+                  {formatCurrency(summary.totalsByCurrency.HTG?.totalWithdrawn ?? 0, 'HTG')}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">
+              {formatCurrency(summary.totalWithdrawn)}
+            </div>
+          )}
           <div className="text-xs text-gray-500 mt-1">Total paid out</div>
         </div>
       </div>
 
       {/* Fee Breakdown Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
         <div className="flex items-start gap-3">
           <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -90,20 +162,31 @@ export default function EarningsView({ summary, organizerId }: EarningsViewProps
               <div className="flex justify-between pt-1 border-t border-blue-300">
                 <span>Total Fees Paid:</span>
                 <span className="font-semibold">
-                  {formatCurrency(summary.totalPlatformFees + summary.totalProcessingFees)}
+                  {summary.currency === 'mixed' && summary.totalsByCurrency ? (
+                    <span className="inline-flex flex-col items-end gap-0.5">
+                      <span>{formatCurrency((summary.totalsByCurrency.USD?.totalPlatformFees ?? 0) + (summary.totalsByCurrency.USD?.totalProcessingFees ?? 0), 'USD')}</span>
+                      <span>{formatCurrency((summary.totalsByCurrency.HTG?.totalPlatformFees ?? 0) + (summary.totalsByCurrency.HTG?.totalProcessingFees ?? 0), 'HTG')}</span>
+                    </span>
+                  ) : (
+                    formatCurrency(summary.totalPlatformFees + summary.totalProcessingFees)
+                  )}
                 </span>
               </div>
             </div>
           </div>
         </div>
+
       </div>
 
-      {/* Filter Tabs */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {/* Filter Tabs */}
         <div className="border-b border-gray-200 px-4 sm:px-6 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h2 className="text-lg font-semibold text-gray-900">Earnings by Event</h2>
-            
+            <div>
+              <div className="text-sm font-semibold text-gray-900">Events</div>
+              <div className="text-xs text-gray-500">Filter by settlement status</div>
+            </div>
+
             <div className="flex gap-2 overflow-x-auto">
               {(['all', 'ready', 'pending', 'locked'] as const).map((status) => (
                 <button
@@ -158,16 +241,20 @@ export default function EarningsView({ summary, organizerId }: EarningsViewProps
                 <div className="grid grid-cols-2 gap-3 mt-3 text-sm">
                   <div>
                     <div className="text-gray-500">Gross Sales</div>
-                    <div className="font-medium">{formatCurrency(event.grossSales)}</div>
+                    <div className="font-medium">
+                      {formatCurrency(event.grossSales, event.currency || undefined)}
+                    </div>
                   </div>
                   <div>
                     <div className="text-gray-500">Net Amount</div>
-                    <div className="font-medium">{formatCurrency(event.netAmount)}</div>
+                    <div className="font-medium">
+                      {formatCurrency(event.netAmount, event.currency || undefined)}
+                    </div>
                   </div>
                   <div>
                     <div className="text-gray-500">Available</div>
                     <div className="font-semibold text-green-600">
-                      {formatCurrency(event.availableToWithdraw)}
+                      {formatCurrency(event.availableToWithdraw, event.currency || undefined)}
                     </div>
                   </div>
                   <div className="flex items-end justify-end">
@@ -237,13 +324,13 @@ export default function EarningsView({ summary, organizerId }: EarningsViewProps
                       {new Date(event.eventDate).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-right font-medium whitespace-nowrap">
-                      {formatCurrency(event.grossSales)}
+                      {formatCurrency(event.grossSales, event.currency || undefined)}
                     </td>
                     <td className="px-6 py-4 text-right font-medium whitespace-nowrap">
-                      {formatCurrency(event.netAmount)}
+                      {formatCurrency(event.netAmount, event.currency || undefined)}
                     </td>
                     <td className="px-6 py-4 text-right font-semibold text-green-600 whitespace-nowrap">
-                      {formatCurrency(event.availableToWithdraw)}
+                      {formatCurrency(event.availableToWithdraw, event.currency || undefined)}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span
@@ -271,13 +358,24 @@ export default function EarningsView({ summary, organizerId }: EarningsViewProps
       </div>
 
       {/* Quick Actions */}
-      {summary.totalAvailableToWithdraw > 5000 && (
-        <div className="bg-white rounded-lg shadow p-6">
+      {(() => {
+        const anyCurrencyAboveMinimum = summary.currency === 'mixed' && summary.totalsByCurrency
+          ? (summary.totalsByCurrency.USD?.totalAvailableToWithdraw ?? 0) > 5000 || (summary.totalsByCurrency.HTG?.totalAvailableToWithdraw ?? 0) > 5000
+          : summary.totalAvailableToWithdraw > 5000
+
+        if (!anyCurrencyAboveMinimum) return null
+
+        const availableLabel = summary.currency === 'mixed' && summary.totalsByCurrency
+          ? `${formatCurrency(summary.totalsByCurrency.USD?.totalAvailableToWithdraw ?? 0, 'USD')} • ${formatCurrency(summary.totalsByCurrency.HTG?.totalAvailableToWithdraw ?? 0, 'HTG')}`
+          : formatCurrency(summary.totalAvailableToWithdraw)
+
+        return (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Ready to Withdraw</h3>
               <p className="text-sm text-gray-600 mt-1">
-                You have {formatCurrency(summary.totalAvailableToWithdraw)} available to withdraw
+                You have {availableLabel} available to withdraw
               </p>
             </div>
             <Link
@@ -288,7 +386,8 @@ export default function EarningsView({ summary, organizerId }: EarningsViewProps
             </Link>
           </div>
         </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
