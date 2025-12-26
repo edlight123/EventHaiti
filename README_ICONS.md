@@ -1,11 +1,11 @@
 # App Icon Setup for EventHaiti
 
 ## Overview
-This guide explains how to use your `event_haiti_app_icon.svg` as the app icon for mobile devices (PWA - Progressive Web App).
+This guide explains how to use your `favicon-color.svg` as the app icon for mobile devices (PWA - Progressive Web App).
 
 ## Current Setup
 
-The app is now configured to use `event_haiti_app_icon.svg` as the primary app icon. The configuration has been updated in:
+The app is now configured to use `favicon-color.svg` as the primary app icon. The configuration has been updated in:
 
 1. **`public/manifest.json`** - PWA manifest for Android/Chrome
 2. **`app/layout.tsx`** - Next.js metadata for iOS/Safari and general favicon
@@ -23,7 +23,7 @@ For full mobile support, you need PNG versions of your SVG in these sizes:
 
 ### Option 1: Automated Script (Recommended)
 
-**First, add actual SVG content to `event_haiti_app_icon.svg`**
+**Ensure `public/favicon-color.svg` contains your desired icon**
 
 Then run:
 ```bash
@@ -56,17 +56,11 @@ Upload your SVG and download the generated icons to the `public/` folder.
 
 ## Current Status
 
-⚠️ **Important:** Your `event_haiti_app_icon.svg` file is currently empty (0 bytes). You need to:
+Ensure your icon is:
 
-1. **Add SVG content to the file:**
-   - Design your icon in a vector graphics tool
-   - Ensure it's a square aspect ratio (1:1)
-   - Use simple, bold shapes that work well at small sizes
-   - Recommended: 512×512 viewBox
-
-2. **Generate PNG versions** using one of the methods above
-
-3. **Test the icons:**
+1. **A square SVG (1:1 aspect ratio)**
+2. **Simple and high-contrast** (works at small sizes)
+3. **Tested on mobile:**
    - Android: Open site in Chrome → Add to Home Screen
    - iOS: Open site in Safari → Share → Add to Home Screen
 
@@ -99,12 +93,11 @@ After generating icons, verify they work:
 
 - ✅ `public/manifest.json` - Updated PWA icon references
 - ✅ `app/layout.tsx` - Updated Next.js metadata icons
-- ✅ `public/event_haiti_app_icon.svg` - Copied from root (needs content)
 - ✅ `scripts/generate-icons.sh` - Created automation script
 
 ## Next Steps
 
-1. **Add SVG content** to `event_haiti_app_icon.svg`
+1. **Update** `public/favicon-color.svg` with your final icon
 2. **Run icon generation script** or create icons manually
 3. **Commit and deploy** the changes
 4. **Test on mobile devices** by adding to home screen

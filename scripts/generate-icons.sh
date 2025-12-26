@@ -3,7 +3,7 @@
 # Script to generate PWA icons from SVG source
 # Requires ImageMagick or rsvg-convert to be installed
 
-SVG_SOURCE="event_haiti_app_icon.svg"
+SVG_SOURCE="${1:-public/favicon-color.svg}"
 OUTPUT_DIR="public"
 
 echo "Generating PWA icons from $SVG_SOURCE..."
