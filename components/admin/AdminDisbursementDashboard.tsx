@@ -60,6 +60,29 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
   const [showModal, setShowModal] = useState(false)
   const [filter, setFilter] = useState<'all' | 'eligible' | 'pending' | 'completed'>('eligible')
 
+  const getPayoutMethodLabel = (method?: string) => {
+    if (method === 'bank_transfer') return 'Bank Transfer'
+    if (method === 'mobile_money') return 'Mobile Money'
+    return 'Not configured'
+  }
+
+  const hasBankDetails = (bankInfo?: EventDisbursementInfo['bankInfo']) => {
+    if (!bankInfo) return false
+    return Boolean(
+      bankInfo.accountNumber ||
+      bankInfo.bankName ||
+      bankInfo.accountName ||
+      bankInfo.routingNumber ||
+      (bankInfo as any).swift ||
+      (bankInfo as any).iban
+    )
+  }
+
+  const hasMobileDetails = (bankInfo?: EventDisbursementInfo['bankInfo']) => {
+    if (!bankInfo) return false
+    return Boolean(bankInfo.mobileNumber || bankInfo.provider || (bankInfo as any).accountName)
+  }
+
   const filteredEvents = endedEvents.filter(event => {
     if (filter === 'eligible') return event.payoutEligible && !event.hasPendingPayout
     if (filter === 'pending') return event.hasPendingPayout
@@ -189,7 +212,7 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Organizer</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ended</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tickets</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Net Revenue</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">To Send</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment Method</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
@@ -221,21 +244,47 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      {event.payoutMethod === 'bank_transfer' && (
-                        <div className="flex items-center gap-1 text-sm text-gray-700">
-                          <Building2 className="w-4 h-4" />
-                          Bank Transfer
-                        </div>
-                      )}
-                      {event.payoutMethod === 'mobile_money' && (
-                        <div className="flex items-center gap-1 text-sm text-gray-700">
-                          <Smartphone className="w-4 h-4" />
-                          Mobile Money
-                        </div>
-                      )}
-                      {!event.payoutMethod && (
-                        <span className="text-xs text-red-600">Not configured</span>
-                      )}
+                      <div className="space-y-1">
+                        {event.payoutMethod === 'bank_transfer' && (
+                          <div className="flex items-center gap-1 text-sm text-gray-700">
+                            <Building2 className="w-4 h-4" />
+                            Bank Transfer
+                          </div>
+                        )}
+                        {event.payoutMethod === 'mobile_money' && (
+                          <div className="flex items-center gap-1 text-sm text-gray-700">
+                            <Smartphone className="w-4 h-4" />
+                            Mobile Money
+                          </div>
+                        )}
+                        {!event.payoutMethod && (
+                          <div className="flex items-center gap-1 text-sm text-red-700">
+                            <AlertCircle className="w-4 h-4" />
+                            Not configured
+                          </div>
+                        )}
+
+                        {event.payoutMethod === 'bank_transfer' && hasBankDetails(event.bankInfo) && (
+                          <div className="text-xs text-gray-500">
+                            <div>{event.bankInfo?.bankName || 'Bank'}</div>
+                            {event.bankInfo?.accountNumber && (
+                              <div className="font-mono">Acct: {event.bankInfo.accountNumber}</div>
+                            )}
+                            {event.bankInfo?.routingNumber && (
+                              <div className="font-mono">Routing: {event.bankInfo.routingNumber}</div>
+                            )}
+                          </div>
+                        )}
+
+                        {event.payoutMethod === 'mobile_money' && hasMobileDetails(event.bankInfo) && (
+                          <div className="text-xs text-gray-500">
+                            <div>{event.bankInfo?.provider || 'Provider'}</div>
+                            {event.bankInfo?.mobileNumber && (
+                              <div className="font-mono">{event.bankInfo.mobileNumber}</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       {event.hasCompletedPayout && (
@@ -324,55 +373,92 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
                   <span className="font-medium text-red-600">-{formatCurrency(selectedEvent.platformFee, selectedEvent.currency as any)}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
-                  <span className="font-semibold text-gray-900">Net Revenue:</span>
+                  <span className="font-semibold text-gray-900">Amount to Send:</span>
                   <span className="font-bold text-teal-600">{formatCurrency(selectedEvent.netRevenue, selectedEvent.currency as any)}</span>
                 </div>
               </div>
             </div>
 
-            {selectedEvent.bankInfo && (
+            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+              <h4 className="font-semibold text-gray-900 mb-2">Preferred Transfer</h4>
+              <div className="flex items-center gap-2 text-sm">
+                {selectedEvent.payoutMethod === 'bank_transfer' ? (
+                  <Building2 className="w-4 h-4 text-gray-600" />
+                ) : selectedEvent.payoutMethod === 'mobile_money' ? (
+                  <Smartphone className="w-4 h-4 text-gray-600" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-red-600" />
+                )}
+                <span className={selectedEvent.payoutMethod ? 'text-gray-900' : 'text-red-700'}>
+                  {getPayoutMethodLabel(selectedEvent.payoutMethod)}
+                </span>
+              </div>
+              {!selectedEvent.payoutMethod && (
+                <p className="mt-2 text-xs text-gray-600">
+                  This organizer has no Haiti payout method on file yet.
+                </p>
+              )}
+            </div>
+
+            {selectedEvent.payoutMethod === 'bank_transfer' && hasBankDetails(selectedEvent.bankInfo) && (
               <div className="bg-blue-50 rounded-lg p-4 mb-6">
                 <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  {selectedEvent.payoutMethod === 'bank_transfer' ? (
-                    <><Building2 className="w-5 h-5" /> Bank Account Details</>
-                  ) : (
-                    <><Smartphone className="w-5 h-5" /> Mobile Money Details</>
-                  )}
+                  <><Building2 className="w-5 h-5" /> Bank Account Details</>
                 </h4>
                 <div className="space-y-2 text-sm">
-                  {selectedEvent.payoutMethod === 'bank_transfer' && (
-                    <>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Account Name:</span>
-                        <span className="font-medium">{selectedEvent.bankInfo.accountName || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Account Number:</span>
-                        <span className="font-mono font-medium">{selectedEvent.bankInfo.accountNumber || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Bank Name:</span>
-                        <span className="font-medium">{selectedEvent.bankInfo.bankName || 'N/A'}</span>
-                      </div>
-                      {selectedEvent.bankInfo.routingNumber && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Routing Number:</span>
-                          <span className="font-mono font-medium">{selectedEvent.bankInfo.routingNumber}</span>
-                        </div>
-                      )}
-                    </>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Account Name:</span>
+                    <span className="font-medium">{selectedEvent.bankInfo?.accountName || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Account Number:</span>
+                    <span className="font-mono font-medium">{selectedEvent.bankInfo?.accountNumber || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Bank Name:</span>
+                    <span className="font-medium">{selectedEvent.bankInfo?.bankName || 'N/A'}</span>
+                  </div>
+                  {selectedEvent.bankInfo?.routingNumber && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Routing Number:</span>
+                      <span className="font-mono font-medium">{selectedEvent.bankInfo.routingNumber}</span>
+                    </div>
                   )}
-                  {selectedEvent.payoutMethod === 'mobile_money' && (
-                    <>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Mobile Number:</span>
-                        <span className="font-mono font-medium">{selectedEvent.bankInfo.mobileNumber || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Provider:</span>
-                        <span className="font-medium">{selectedEvent.bankInfo.provider || 'N/A'}</span>
-                      </div>
-                    </>
+                  {(selectedEvent.bankInfo as any)?.swift && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">SWIFT:</span>
+                      <span className="font-mono font-medium">{(selectedEvent.bankInfo as any).swift}</span>
+                    </div>
+                  )}
+                  {(selectedEvent.bankInfo as any)?.iban && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">IBAN:</span>
+                      <span className="font-mono font-medium">{(selectedEvent.bankInfo as any).iban}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {selectedEvent.payoutMethod === 'mobile_money' && hasMobileDetails(selectedEvent.bankInfo) && (
+              <div className="bg-blue-50 rounded-lg p-4 mb-6">
+                <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <><Smartphone className="w-5 h-5" /> Mobile Money Details</>
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Mobile Number:</span>
+                    <span className="font-mono font-medium">{selectedEvent.bankInfo?.mobileNumber || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Provider:</span>
+                    <span className="font-medium">{selectedEvent.bankInfo?.provider || 'N/A'}</span>
+                  </div>
+                  {(selectedEvent.bankInfo as any)?.accountName && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Account Name:</span>
+                      <span className="font-medium">{(selectedEvent.bankInfo as any).accountName}</span>
+                    </div>
                   )}
                 </div>
               </div>

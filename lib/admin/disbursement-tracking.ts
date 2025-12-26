@@ -37,8 +37,11 @@ export interface EventDisbursementInfo {
     accountNumber?: string
     bankName?: string
     routingNumber?: string
+    swift?: string
+    iban?: string
     mobileNumber?: string
     provider?: string
+    mobileAccountName?: string
   }
 }
 
@@ -137,20 +140,21 @@ export async function getEndedEventsForDisbursement(
         !!haitiProfile?.method
 
       // Extract bank info based on payment method
-      let bankInfo: any = {}
-      if (haitiProfile) {
-        if (haitiProfile.method === 'bank_transfer') {
-          bankInfo = {
-            accountName: haitiProfile.bankDetails?.accountName,
-            accountNumber: haitiProfile.bankDetails?.accountNumber,
-            bankName: haitiProfile.bankDetails?.bankName,
-            routingNumber: haitiProfile.bankDetails?.routingNumber,
-          }
-        } else if (haitiProfile.method === 'mobile_money') {
-          bankInfo = {
-            mobileNumber: haitiProfile.mobileMoneyDetails?.phoneNumber,
-            provider: haitiProfile.mobileMoneyDetails?.provider,
-          }
+      let bankInfo: EventDisbursementInfo['bankInfo'] | undefined
+      if (haitiProfile?.method === 'bank_transfer') {
+        bankInfo = {
+          accountName: haitiProfile.bankDetails?.accountName,
+          accountNumber: haitiProfile.bankDetails?.accountNumber,
+          bankName: haitiProfile.bankDetails?.bankName,
+          routingNumber: haitiProfile.bankDetails?.routingNumber,
+          swift: haitiProfile.bankDetails?.swift,
+          iban: haitiProfile.bankDetails?.iban,
+        }
+      } else if (haitiProfile?.method === 'mobile_money') {
+        bankInfo = {
+          mobileNumber: haitiProfile.mobileMoneyDetails?.phoneNumber,
+          provider: haitiProfile.mobileMoneyDetails?.provider,
+          mobileAccountName: haitiProfile.mobileMoneyDetails?.accountName,
         }
       }
 
