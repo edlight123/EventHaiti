@@ -144,6 +144,7 @@ export default function PayoutsPageNew({
   const [addBankDestinationMessage, setAddBankDestinationMessage] = useState<string | null>(null)
   const [newBankDestination, setNewBankDestination] = useState({
     bankName: '',
+    customBankName: '',
     accountNumber: '',
     accountHolder: '',
     routingNumber: '',
@@ -793,7 +794,12 @@ export default function PayoutsPageNew({
     setError(null)
 
     if (!newBankDestination.bankName.trim()) {
-      setError('Please enter a bank name')
+      setError('Please choose a bank')
+      return
+    }
+
+    if (newBankDestination.bankName === 'other' && !newBankDestination.customBankName.trim()) {
+      setError('Please enter your bank name')
       return
     }
     if (!newBankDestination.accountNumber.trim()) {
@@ -807,9 +813,14 @@ export default function PayoutsPageNew({
 
     setIsAddingBankDestination(true)
     try {
+      const resolvedBankName =
+        newBankDestination.bankName === 'other'
+          ? newBankDestination.customBankName.trim()
+          : newBankDestination.bankName
+
       const bankDetails = {
         accountNumber: newBankDestination.accountNumber,
-        bankName: newBankDestination.bankName,
+        bankName: resolvedBankName,
         accountHolder: newBankDestination.accountHolder,
         routingNumber: newBankDestination.routingNumber || undefined,
         swiftCode: newBankDestination.swiftCode || undefined,
@@ -833,7 +844,7 @@ export default function PayoutsPageNew({
       }
 
       setAddBankDestinationMessage('Bank account added. Please submit verification for this account.')
-      setNewBankDestination({ bankName: '', accountNumber: '', accountHolder: '', routingNumber: '', swiftCode: '' })
+      setNewBankDestination({ bankName: '', customBankName: '', accountNumber: '', accountHolder: '', routingNumber: '', swiftCode: '' })
       setShowAddBankDestination(false)
 
       // Refresh list
@@ -1012,7 +1023,10 @@ export default function PayoutsPageNew({
             {/* Verification Card */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Verification</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Verify payouts</h2>
+                <p className="text-sm text-gray-600 mt-1 mb-4">
+                  After setting up your payout method, complete verification below.
+                </p>
 
                 <div className="space-y-4">
                   <div className="flex items-start justify-between gap-3">
@@ -1032,15 +1046,6 @@ export default function PayoutsPageNew({
                     >
                       View
                     </Link>
-                  </div>
-
-                  <div className="pt-3 border-t border-gray-200">
-                    <div className="text-sm font-medium text-gray-900">Payout availability</div>
-                    <div className="mt-1 text-xs text-gray-600">
-                      {isHaiti
-                        ? 'Use Haiti bank transfer or Mobile money (MonCash/NatCash).'
-                        : 'US/Canada accounts use Stripe Connect.'}
-                    </div>
                   </div>
 
                   {!isStripeConnectAccount && config?.method === 'bank_transfer' && hasPayoutSetup && (
@@ -1172,15 +1177,41 @@ export default function PayoutsPageNew({
                             {showAddBankDestination ? (
                               <div className="mt-3 space-y-3">
                                 <div>
-                                  <label className="block text-sm font-medium text-gray-700 mb-1">Bank name</label>
-                                  <input
-                                    type="text"
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Bank</label>
+                                  <select
                                     value={newBankDestination.bankName}
-                                    onChange={(e) => setNewBankDestination((p) => ({ ...p, bankName: e.target.value }))}
+                                    onChange={(e) =>
+                                      setNewBankDestination((p) => ({
+                                        ...p,
+                                        bankName: e.target.value,
+                                        customBankName: e.target.value === 'other' ? p.customBankName : '',
+                                      }))
+                                    }
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                    placeholder="Unibank"
-                                  />
+                                  >
+                                    <option value="">Select a bank</option>
+                                    {banks.map((bank) => (
+                                      <option key={bank.value} value={bank.value}>
+                                        {bank.label}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </div>
+
+                                {newBankDestination.bankName === 'other' ? (
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Bank name</label>
+                                    <input
+                                      type="text"
+                                      value={newBankDestination.customBankName}
+                                      onChange={(e) =>
+                                        setNewBankDestination((p) => ({ ...p, customBankName: e.target.value }))
+                                      }
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                      placeholder="Enter your bank name"
+                                    />
+                                  </div>
+                                ) : null}
 
                                 <div>
                                   <label className="block text-sm font-medium text-gray-700 mb-1">Account number</label>
