@@ -3,6 +3,9 @@ import { requireAuth } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import { adminDb } from '@/lib/firebase/admin'
 
+type QueryDoc = FirebaseFirestore.QueryDocumentSnapshot
+type AuditRow = { id: string } & Record<string, any>
+
 export async function GET(request: NextRequest) {
   try {
     const { user, error } = await requireAuth()
@@ -23,12 +26,12 @@ export async function GET(request: NextRequest) {
       .get()
 
     const deletes = snap.docs
-      .map((doc) => ({ id: doc.id, ...(doc.data() as any) }))
-      .filter((row) => row.action === 'event.delete')
-      .slice(0, limit)
+      .map((doc: QueryDoc) => ({ id: doc.id, ...(doc.data() as any) }))
+      .filter((row: AuditRow) => row.action === 'event.delete')
+      .slice(0, limit) as AuditRow[]
 
     const checked = await Promise.all(
-      deletes.map(async (row) => {
+      deletes.map(async (row: AuditRow) => {
         const resourceId = String(row.resourceId || '')
         let existsInEvents: boolean | null = null
 

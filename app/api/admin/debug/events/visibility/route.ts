@@ -3,6 +3,8 @@ import { requireAuth } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import { adminDb } from '@/lib/firebase/admin'
 
+type QueryDoc = FirebaseFirestore.QueryDocumentSnapshot
+
 type ParsedDate = {
   valid: boolean
   iso: string | null
@@ -89,7 +91,7 @@ export async function GET(request: NextRequest) {
 
     const snap = await adminDb.collection('events').orderBy('created_at', 'desc').limit(limit).get()
 
-    const results = snap.docs.map((doc) => {
+    const results = snap.docs.map((doc: QueryDoc) => {
       const data = doc.data() as any
 
       const isPublished =
@@ -129,7 +131,7 @@ export async function GET(request: NextRequest) {
       now: now.toISOString(),
       limit,
       count: results.length,
-      visibleCount: results.filter((r) => r.visibleOnDiscover).length,
+      visibleCount: results.filter((r: any) => r.visibleOnDiscover).length,
       events: results,
     })
   } catch (e: any) {
