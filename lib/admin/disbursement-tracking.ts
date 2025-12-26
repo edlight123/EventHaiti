@@ -46,7 +46,8 @@ export interface EventDisbursementInfo {
  * Get events that have ended and need payout processing
  */
 export async function getEndedEventsForDisbursement(
-  daysAgo: number = 30
+  daysAgo: number = 365,
+  limit: number = 500
 ): Promise<EventDisbursementInfo[]> {
   try {
     const now = new Date()
@@ -58,7 +59,7 @@ export async function getEndedEventsForDisbursement(
       .where('end_datetime', '<=', now)
       .where('end_datetime', '>=', cutoffDate)
       .orderBy('end_datetime', 'desc')
-      .limit(100)
+      .limit(limit)
       .get()
 
     const disbursementInfo: EventDisbursementInfo[] = []
@@ -70,27 +71,30 @@ export async function getEndedEventsForDisbursement(
 
       if (!organizerId) continue
 
-      // Get organizer details
-      const organizerDoc = await adminDb.collection('users').doc(organizerId).get()
-      const organizer = organizerDoc.data()
-
-      // Get payout config
-      const haitiProfile = await getPayoutProfile(organizerId, 'haiti')
-
-      // Get tickets for this event
       const ticketStatusValues = ['confirmed', 'valid']
-      const [ticketsByEventIdSnap, ticketsByEvent_idSnap] = await Promise.all([
-        adminDb
-          .collection('tickets')
-          .where('eventId', '==', eventId)
-          .where('status', 'in', ticketStatusValues)
-          .get(),
-        adminDb
-          .collection('tickets')
-          .where('event_id', '==', eventId)
-          .where('status', 'in', ticketStatusValues)
-          .get(),
-      ])
+      const [organizerDoc, haitiProfile, payoutsSnapshot, ticketsByEventIdSnap, ticketsByEvent_idSnap] =
+        await Promise.all([
+          adminDb.collection('users').doc(organizerId).get(),
+          getPayoutProfile(organizerId, 'haiti'),
+          adminDb
+            .collection('organizers')
+            .doc(organizerId)
+            .collection('payouts')
+            .where('eventId', '==', eventId)
+            .get(),
+          adminDb
+            .collection('tickets')
+            .where('eventId', '==', eventId)
+            .where('status', 'in', ticketStatusValues)
+            .get(),
+          adminDb
+            .collection('tickets')
+            .where('event_id', '==', eventId)
+            .where('status', 'in', ticketStatusValues)
+            .get(),
+        ])
+
+      const organizer = organizerDoc.data()
 
       const ticketsById = new Map<string, any>()
       for (const doc of ticketsByEventIdSnap.docs) ticketsById.set(doc.id, doc.data())
@@ -111,14 +115,6 @@ export async function getEndedEventsForDisbursement(
       const platformFeeRate = 0.05
       const platformFee = grossRevenue * platformFeeRate
       const netRevenue = grossRevenue - platformFee
-
-      // Check if payout already exists
-      const payoutsSnapshot = await adminDb
-        .collection('organizers')
-        .doc(organizerId)
-        .collection('payouts')
-        .where('eventId', '==', eventId)
-        .get()
 
       const hasPendingPayout = payoutsSnapshot.docs.some(
         (doc: any) => doc.data().status === 'pending'

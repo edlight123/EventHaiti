@@ -22,7 +22,8 @@ export default async function AdminDisbursementsPage() {
   }
 
   const [endedEvents, stats] = await Promise.all([
-    getEndedEventsForDisbursement(30), // Last 30 days
+    // Fetch a larger window so older ended events still appear for payout ops.
+    getEndedEventsForDisbursement(365, 500),
     getDisbursementStats()
   ])
 
