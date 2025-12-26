@@ -5,6 +5,7 @@ export type AuditAction =
   | 'event.unpublish'
   | 'event.delete'
   | 'event.restore'
+  | 'admin.backfill'
   | 'user.verify'
   | 'user.ban'
   | 'user.unban'
@@ -122,6 +123,7 @@ function getActionDescription(action: string, details: any = {}): string {
     'event.unpublish': `Unpublished event "${details.eventTitle || 'Untitled'}"`,
     'event.delete': `Deleted event "${details.eventTitle || 'Untitled'}"`,
     'event.restore': `Restored event "${details.eventTitle || 'Untitled'}"`,
+    'admin.backfill': `Backfilled ${details?.name || 'data'} (${details?.updated ?? 0} updated)`,
     'user.verify': `Verified user ${details.userName || details.userEmail || 'Unknown'}`,
     'user.ban': `Banned user ${details.userName || details.userEmail || 'Unknown'}`,
     'user.unban': `Unbanned user ${details.userName || details.userEmail || 'Unknown'}`,
@@ -142,6 +144,7 @@ function getActionIcon(action: string): string {
     'event.unpublish': '⏸️',
     'event.delete': '🗑️',
     'event.restore': '♻️',
+    'admin.backfill': '🧹',
     'user.verify': '✓',
     'user.ban': '🚫',
     'user.unban': '✓',

@@ -241,22 +241,34 @@ export async function getDiscoverEvents(
       // Instead, fetch a larger window of recent events (newest first), then filter in memory.
       const fetchLimit = Math.max(pageSize * 5, 200)
 
-      let queryRef = adminDb.collection('events')
-        .where('is_published', '==', true)
-        .orderBy('start_datetime', 'asc')
+      const buildBaseQuery = (mode: 'is_published' | 'status') => {
+        let queryRef = adminDb.collection('events').orderBy('start_datetime', 'asc')
 
-      // Apply filters
-      if (filters.city) {
-        queryRef = queryRef.where('city', '==', filters.city) as any
+        if (mode === 'is_published') {
+          queryRef = queryRef.where('is_published', '==', true) as any
+        } else {
+          queryRef = queryRef.where('status', '==', 'published') as any
+        }
+
+        // Apply filters
+        if (filters.city) {
+          queryRef = queryRef.where('city', '==', filters.city) as any
+        }
+
+        if (filters.category) {
+          queryRef = queryRef.where('category', '==', filters.category) as any
+        }
+
+        queryRef = queryRef.limit(fetchLimit) as any
+        return queryRef
       }
 
-      if (filters.category) {
-        queryRef = queryRef.where('category', '==', filters.category) as any
+      // Primary: canonical Firestore field `is_published: true`
+      let snapshot = await buildBaseQuery('is_published').get()
+      // Fallback: legacy field `status: 'published'`
+      if (snapshot.empty) {
+        snapshot = await buildBaseQuery('status').get()
       }
-
-      queryRef = queryRef.limit(fetchLimit) as any
-
-      const snapshot = await queryRef.get()
       
       let events = snapshot.docs.map((doc: any) => {
         const data = doc.data()
