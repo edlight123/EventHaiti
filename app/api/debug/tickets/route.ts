@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
+import { isAdmin } from '@/lib/admin'
 
 export async function GET() {
   try {
     const user = await getCurrentUser()
     
-    if (!user) {
+    if (!user || !isAdmin(user.email || '')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

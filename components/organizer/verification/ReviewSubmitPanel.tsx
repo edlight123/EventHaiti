@@ -16,7 +16,7 @@ interface Props {
 export default function ReviewSubmitPanel({ request, onSubmit, onBack, isReadOnly = false }: Props) {
   const canSubmit = canSubmitForReview(request)
   const blockingIssues = getBlockingIssues(request)
-  const isSubmitted = ['pending', 'in_review', 'approved'].includes(request.status)
+  const isSubmitted = ['pending', 'pending_review', 'in_review', 'approved'].includes(request.status)
 
   const hasAnyDetails =
     Object.values(request.steps || {}).some((step) => step?.status === 'complete') ||

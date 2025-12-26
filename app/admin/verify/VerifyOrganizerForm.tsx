@@ -88,7 +88,9 @@ export default function VerifyOrganizerForm({ organizers }: Props) {
                 {organizer.verification_status && organizer.verification_status !== 'none' && (
                   <span className={`px-2 py-0.5 text-xs font-medium rounded ${
                     organizer.verification_status === 'approved' ? 'bg-green-100 text-green-700' :
-                    organizer.verification_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                    organizer.verification_status === 'pending' || organizer.verification_status === 'pending_review' || organizer.verification_status === 'in_review'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      :
                     organizer.verification_status === 'rejected' ? 'bg-red-100 text-red-700' :
                     'bg-gray-100 text-gray-700'
                   }`}>

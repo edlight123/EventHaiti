@@ -61,6 +61,17 @@ export default function VerificationStatusHero({
       title: 'Complete Your Verification',
       description: `You're ${completionPercentage}% complete. Finish the required steps to submit for review.`
     },
+    pending_review: {
+      icon: Eye,
+      bgColor: 'bg-yellow-50',
+      borderColor: 'border-yellow-200',
+      iconBgColor: 'bg-yellow-100',
+      iconColor: 'text-yellow-600',
+      title: 'Verification Submitted',
+      description: 'Your verification is pending review. Our team will review within 24-48 hours.',
+      readonly: true
+    },
+    // Legacy alias (older documents used "pending")
     pending: {
       icon: Eye,
       bgColor: 'bg-yellow-50',
@@ -209,7 +220,7 @@ export default function VerificationStatusHero({
             </div>
           ) : null}
 
-          {status === 'pending' || status === 'in_review' ? (
+          {status === 'pending' || status === 'pending_review' || status === 'in_review' ? (
             <div className="mt-4">
               <Link
                 href="/organizer/events"

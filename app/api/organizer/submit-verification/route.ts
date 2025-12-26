@@ -5,6 +5,7 @@ import { Resend } from 'resend'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
 import { adminDb } from '@/lib/firebase/admin'
+import { FieldValue } from 'firebase-admin/firestore'
 
 const resend = new Resend(process.env.RESEND_API_KEY || '')
 
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
         id_front_url: idFrontUrl,
         id_back_url: idBackUrl,
         face_photo_url: facePhotoUrl,
-        status: 'pending',
+        status: 'pending_review',
       })
       .select()
       .single()
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     // Update user verification status to pending
     const { error: updateError } = await supabase
       .from('users')
-      .update({ verification_status: 'pending' })
+      .update({ verification_status: 'pending_review' })
       .eq('id', userId)
 
     if (updateError) {
@@ -83,15 +84,15 @@ export async function POST(request: NextRequest) {
         await verificationRef.set(
           {
             userId,
-            status: 'pending',
-            submittedAt: now,
+            status: 'pending_review',
+            submittedAt: FieldValue.serverTimestamp(),
             reviewedAt: null,
             reviewed_by: null,
             reviewed_at: null,
             rejection_reason: null,
             reviewNotes: null,
             createdAt: existing.exists ? (existing.data() as any)?.createdAt || now : now,
-            updatedAt: now,
+            updatedAt: FieldValue.serverTimestamp(),
             // Legacy flat URLs (still supported)
             id_front_url: idFrontUrl,
             id_back_url: idBackUrl,
@@ -161,9 +162,9 @@ export async function POST(request: NextRequest) {
         // Keep existing structured payload, but ensure admin can still see proof + timing.
         await verificationRef.set(
           {
-            status: 'pending',
-            submittedAt: now,
-            updatedAt: now,
+            status: 'pending_review',
+            submittedAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
             id_front_url: idFrontUrl,
             id_back_url: idBackUrl,
             face_photo_url: facePhotoUrl,
@@ -171,6 +172,25 @@ export async function POST(request: NextRequest) {
           { merge: true }
         )
       }
+
+      // Keep Firestore user/organizer docs in sync for flows that read from Firestore.
+      const nowIso = new Date().toISOString()
+      await adminDb.collection('users').doc(userId).set(
+        {
+          is_verified: false,
+          verification_status: 'pending_review',
+          updated_at: nowIso,
+        },
+        { merge: true }
+      )
+      await adminDb.collection('organizers').doc(userId).set(
+        {
+          is_verified: false,
+          verification_status: 'pending_review',
+          updated_at: nowIso,
+        },
+        { merge: true }
+      )
     } catch (firestoreError) {
       console.error('Error mirroring verification request into Firestore:', firestoreError)
       // Non-fatal: the primary submission is already stored.
@@ -184,7 +204,7 @@ export async function POST(request: NextRequest) {
         '📝 Verification Submitted',
         'Your verification request has been received. We\'ll review it within 24-48 hours.',
         '/organizer/verify',
-        { status: 'pending' }
+        { status: 'pending_review' }
       )
 
       // Send push notification

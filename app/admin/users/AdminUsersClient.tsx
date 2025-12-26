@@ -165,7 +165,9 @@ export default function AdminUsersClient({ counts, usersWithAdminFlag, promoteTo
                               <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✓ {t('users.verified')}</span>
                             ) : (
                               <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                {u.verification_status === 'pending' ? 'Pending' : 'Not Verified'}
+                                {u.verification_status === 'pending' || u.verification_status === 'pending_review' || u.verification_status === 'in_review'
+                                  ? 'Pending'
+                                  : 'Not Verified'}
                               </span>
                             )
                           ) : (

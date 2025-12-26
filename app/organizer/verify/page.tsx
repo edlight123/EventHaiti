@@ -69,7 +69,7 @@ export default function VerifyOrganizerPage() {
   useEffect(() => {
     if (!request) return
     if (!wantsDetails) return
-    if (!['pending', 'in_review'].includes(request.status)) return
+    if (!['pending', 'pending_review', 'in_review'].includes(request.status)) return
     setViewMode('review')
   }, [request, wantsDetails])
 
@@ -249,7 +249,7 @@ export default function VerifyOrganizerPage() {
   const handleEditStep = (stepId: keyof VerificationRequest['steps']) => {
     // During read-only states, keep the flow read-only and show the submitted details instead.
     const statusToUse = request ? (userIsVerified ? 'approved' : request.status) : null
-    if (statusToUse && ['pending', 'in_review', 'approved', 'rejected'].includes(statusToUse)) {
+    if (statusToUse && ['pending', 'pending_review', 'in_review', 'approved', 'rejected'].includes(statusToUse)) {
       setViewMode('review')
       return
     }

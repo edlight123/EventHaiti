@@ -29,7 +29,16 @@ export interface User {
   phone_number?: string
   role: 'attendee' | 'organizer' | 'admin'
   is_verified: boolean
-  verification_status: 'none' | 'pending' | 'approved' | 'rejected'
+  verification_status:
+    | 'none'
+    | 'not_started'
+    | 'in_progress'
+    | 'pending'
+    | 'pending_review'
+    | 'in_review'
+    | 'changes_requested'
+    | 'approved'
+    | 'rejected'
   created_at: string
   updated_at: string
   [key: string]: any
