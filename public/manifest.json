@@ -9,7 +9,7 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/event_haiti_app_icon.svg",
+      "src": "/favicon-color.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
