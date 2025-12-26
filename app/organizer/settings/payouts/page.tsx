@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { serializeData } from '@/lib/utils/serialize'
+import { normalizeCountryCode } from '@/lib/payment-provider'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import PayoutsPageNew from './PayoutsPageNew'
@@ -36,12 +37,17 @@ export default async function PayoutsSettingsPage({
   }
 
   // Ensure this user is an organizer (attendees should go through the upgrade flow)
+  let organizerDefaultCountry: string | undefined
   try {
     const userDoc = await adminDb.collection('users').doc(authUser.uid).get()
-    const role = userDoc.exists ? userDoc.data()?.role : null
+    const userData = userDoc.exists ? (userDoc.data() as any) : null
+    const role = userData?.role || null
     if (role !== 'organizer') {
       redirect(`/organizer?redirect=${encodeURIComponent(payoutPath)}`)
     }
+
+    const normalized = normalizeCountryCode(userData?.default_country || userData?.country)
+    organizerDefaultCountry = normalized || undefined
   } catch (error) {
     console.error('Error checking user role:', error)
     redirect(`/organizer?redirect=${encodeURIComponent(payoutPath)}`)
@@ -73,6 +79,8 @@ export default async function PayoutsSettingsPage({
         stripeConfig={serializedStripeConfig}
         showEarningsAndPayouts={false}
         organizerId={authUser.uid}
+        organizerDefaultCountry={organizerDefaultCountry}
+        initialActiveProfile={stripeParam ? 'stripe_connect' : undefined}
       />
       
       <MobileNavWrapper user={navbarUser} />

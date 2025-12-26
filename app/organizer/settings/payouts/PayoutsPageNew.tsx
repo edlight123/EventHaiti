@@ -61,6 +61,8 @@ interface PayoutsPageProps {
   }
   organizerId: string
   showEarningsAndPayouts?: boolean
+  organizerDefaultCountry?: string
+  initialActiveProfile?: 'haiti' | 'stripe_connect'
 }
 
 export default function PayoutsPageNew({
@@ -70,17 +72,32 @@ export default function PayoutsPageNew({
   upcomingPayout,
   organizerId,
   showEarningsAndPayouts,
+  organizerDefaultCountry,
+  initialActiveProfile,
 }: PayoutsPageProps) {
   const router = useRouter()
 
   const shouldShowEarningsAndPayouts = showEarningsAndPayouts !== false
   const normalizedEventSummaries = Array.isArray(eventSummaries) ? eventSummaries : []
 
-  const [activeProfile, setActiveProfile] = useState<'haiti' | 'stripe_connect'>(() => {
-    if (haitiConfig) return 'haiti'
-    if (stripeConfig) return 'stripe_connect'
+  const normalizedOrganizerCountry = String(organizerDefaultCountry || '').toUpperCase()
+
+  const primaryProfile: 'haiti' | 'stripe_connect' = (() => {
+    // If only one profile exists, it should be the default.
+    if (haitiConfig && !stripeConfig) return 'haiti'
+    if (stripeConfig && !haitiConfig) return 'stripe_connect'
+
+    // Otherwise, prefer organizer's default country.
+    if (normalizedOrganizerCountry === 'US' || normalizedOrganizerCountry === 'CA') return 'stripe_connect'
     return 'haiti'
+  })()
+
+  const [activeProfile, setActiveProfile] = useState<'haiti' | 'stripe_connect'>(() => {
+    if (initialActiveProfile) return initialActiveProfile
+    return primaryProfile
   })
+
+  const [showAdditionalProfiles, setShowAdditionalProfiles] = useState(false)
 
   const config = activeProfile === 'haiti' ? haitiConfig : stripeConfig
 
@@ -736,38 +753,63 @@ export default function PayoutsPageNew({
               <div className="p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-2">Payout profile</h2>
                 <p className="text-sm text-gray-600 mb-4">
-                  Set up both profiles. Each event uses the profile implied by its country.
+                  Set up where your payouts go. You can add an additional payout profile if you host events in another country.
                 </p>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveProfile('haiti')}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                      activeProfile === 'haiti'
-                        ? 'bg-purple-600 text-white border-purple-600'
-                        : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    Haiti
-                  </button>
+                {showAdditionalProfiles ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveProfile('haiti')}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                        activeProfile === 'haiti'
+                          ? 'bg-purple-600 text-white border-purple-600'
+                          : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Haiti
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setActiveProfile('stripe_connect')}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                      activeProfile === 'stripe_connect'
-                        ? 'bg-purple-600 text-white border-purple-600'
-                        : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    US/Canada
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveProfile('stripe_connect')}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                        activeProfile === 'stripe_connect'
+                          ? 'bg-purple-600 text-white border-purple-600'
+                          : 'bg-white text-gray-900 border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      US/Canada
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-medium text-gray-900">
+                        {primaryProfile === 'stripe_connect' ? 'US/Canada' : 'Haiti'}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAdditionalProfiles(true)}
+                        className="text-sm font-medium text-purple-600 hover:text-purple-700"
+                      >
+                        Add additional profile
+                      </button>
+                    </div>
 
-                <div className="mt-3 text-xs text-gray-600">
-                  Haiti profile: {haitiConfig ? 'Configured' : 'Not set up'} · US/Canada profile: {stripeConfig ? 'Configured' : 'Not set up'}
-                </div>
+                    <div className="text-xs text-gray-600">
+                      {primaryProfile === 'haiti'
+                        ? `Status: ${haitiConfig ? 'Configured' : 'Not set up'}`
+                        : `Status: ${stripeConfig ? 'Configured' : 'Not set up'}`}
+                    </div>
+                  </div>
+                )}
+
+                {showAdditionalProfiles ? (
+                  <div className="mt-3 text-xs text-gray-600">
+                    Haiti profile: {haitiConfig ? 'Configured' : 'Not set up'} · US/Canada profile: {stripeConfig ? 'Configured' : 'Not set up'}
+                  </div>
+                ) : null}
               </div>
             </div>
 
