@@ -52,7 +52,7 @@ interface EventPayoutSummary {
 interface PayoutsPageProps {
   haitiConfig?: PayoutConfig
   stripeConfig?: PayoutConfig
-  eventSummaries: EventPayoutSummary[]
+  eventSummaries?: EventPayoutSummary[]
   upcomingPayout?: {
     amount: number
     currency: string
@@ -60,6 +60,7 @@ interface PayoutsPageProps {
     eventCount: number
   }
   organizerId: string
+  showEarningsAndPayouts?: boolean
 }
 
 export default function PayoutsPageNew({
@@ -67,9 +68,13 @@ export default function PayoutsPageNew({
   stripeConfig,
   eventSummaries,
   upcomingPayout,
-  organizerId
+  organizerId,
+  showEarningsAndPayouts,
 }: PayoutsPageProps) {
   const router = useRouter()
+
+  const shouldShowEarningsAndPayouts = showEarningsAndPayouts !== false
+  const normalizedEventSummaries = Array.isArray(eventSummaries) ? eventSummaries : []
 
   const [activeProfile, setActiveProfile] = useState<'haiti' | 'stripe_connect'>(() => {
     if (haitiConfig) return 'haiti'
@@ -640,7 +645,7 @@ export default function PayoutsPageNew({
   }
 
   // Filter earnings by period
-  const filteredEarnings = eventSummaries.filter((event) => {
+  const filteredEarnings = normalizedEventSummaries.filter((event) => {
     const eventDate = new Date(event.date)
     const now = new Date()
     
@@ -677,8 +682,31 @@ export default function PayoutsPageNew({
             Payouts
           </h1>
           <p className="text-gray-600">
-            Set up where your money goes and track earnings by event.
+            {shouldShowEarningsAndPayouts
+              ? 'Set up where your money goes and track earnings by event.'
+              : 'Set up where your payouts go.'}
           </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Link
+              href="/organizer/settings/payouts"
+              className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-purple-600 text-white"
+            >
+              Payout profile
+            </Link>
+            <Link
+              href="/organizer/earnings"
+              className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-white text-gray-900 border border-gray-300 hover:bg-gray-50"
+            >
+              Earnings
+            </Link>
+            <Link
+              href="/organizer/settings/payouts/history"
+              className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-white text-gray-900 border border-gray-300 hover:bg-gray-50"
+            >
+              Payout history
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -1402,6 +1430,7 @@ export default function PayoutsPageNew({
           </div>
 
           {/* Right Column - Earnings + Payouts */}
+          {shouldShowEarningsAndPayouts && (
           <div className="lg:col-span-2 space-y-6">
             
             {/* Earnings by Event Card */}
@@ -1581,6 +1610,7 @@ export default function PayoutsPageNew({
               </div>
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>
