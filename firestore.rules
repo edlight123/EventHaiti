@@ -6,6 +6,51 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
+
+    function eventDoc(eventId) {
+      return get(/databases/$(database)/documents/events/$(eventId));
+    }
+
+    function isEventOrganizer(eventId) {
+      return isSignedIn() && eventDoc(eventId).data.organizer_id == request.auth.uid;
+    }
+
+    function isEventOwner(eventId) {
+      return isEventOrganizer(eventId) || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/events/$(eventId)/members/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/events/$(eventId)/members/$(request.auth.uid)).data.role == 'owner'
+      );
+    }
+
+    function isEventMember(eventId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/events/$(eventId)/members/$(request.auth.uid));
+    }
+
+    function canCheckin(eventId) {
+      return isEventOwner(eventId) || (
+        isEventMember(eventId) &&
+        get(/databases/$(database)/documents/events/$(eventId)/members/$(request.auth.uid)).data.permissions.checkin == true
+      );
+    }
+
+    function canViewAttendees(eventId) {
+      return isEventOwner(eventId) || (
+        isEventMember(eventId) &&
+        get(/databases/$(database)/documents/events/$(eventId)/members/$(request.auth.uid)).data.permissions.viewAttendees == true
+      );
+    }
+
+    function isTicketOwner() {
+      return isSignedIn() && (
+        (resource.data.user_id == request.auth.uid) ||
+        (resource.data.attendee_id == request.auth.uid)
+      );
+    }
+
+    function ticketEventId() {
+      return resource.data.event_id;
+    }
     
     // Helper function to check if user owns the resource
     function isOwner(userId) {
@@ -42,6 +87,18 @@ service cloud.firestore {
          request.resource.data.tickets_sold > resource.data.tickets_sold)
       );
       allow delete: if isSignedIn() && resource.data.organizer_id == request.auth.uid;
+
+      // Event members - event-scoped staff/owner roles
+      match /members/{memberId} {
+        allow read: if isEventOwner(eventId) || (isSignedIn() && request.auth.uid == memberId);
+        allow create, update, delete: if false; // Managed server-side via Admin SDK / callable functions
+      }
+
+      // Event invites - owner-only visibility, no client writes
+      match /invites/{inviteId} {
+        allow read: if isEventOwner(eventId);
+        allow create, update, delete: if false; // Managed server-side via callable functions
+      }
       
       // Event updates subcollection
       match /updates/{updateId} {
@@ -62,9 +119,34 @@ service cloud.firestore {
     
     // Tickets collection - users can access their own tickets, organizers can access all tickets
     match /tickets/{ticketId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
+      allow read: if isSignedIn() && (
+        isTicketOwner() ||
+        isEventOwner(ticketEventId()) ||
+        canViewAttendees(ticketEventId())
+      );
+
+      // Ticket creation allowed for signed-in users creating their own ticket record.
+      // (Some flows use user_id, others attendee_id.)
+      allow create: if isSignedIn() && (
+        request.resource.data.user_id == request.auth.uid ||
+        request.resource.data.attendee_id == request.auth.uid
+      );
+
+      // Only allow event owners full control; staff may only update check-in related fields.
+      allow update: if isSignedIn() && (
+        isEventOwner(ticketEventId()) ||
+        (
+          canCheckin(ticketEventId()) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'checked_in',
+            'checked_in_at',
+            'checked_in_by',
+            'entry_point',
+            'updated_at',
+            'reentry_override'
+          ])
+        )
+      );
     }
     
     // Ticket tiers - public read, organizers can manage their event's tiers

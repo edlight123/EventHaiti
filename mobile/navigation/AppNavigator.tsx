@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import * as ExpoLinking from 'expo-linking';
+import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useAppMode } from '../contexts/AppModeContext';
 import { COLORS } from '../config/brand';
 import { getVerificationRequest } from '../lib/verification';
+import { getPendingInvite } from '../lib/pendingInvite';
 
 // Auth Screens
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -30,6 +32,12 @@ import TicketScannerScreen from '../screens/organizer/TicketScannerScreen';
 import EventAttendeesScreen from '../screens/organizer/EventAttendeesScreen';
 import SendEventUpdateScreen from '../screens/organizer/SendEventUpdateScreen';
 
+// Staff Screens
+import StaffEventsScreen from '../screens/staff/StaffEventsScreen';
+
+// Invite Screen
+import InviteRedeemScreen from '../screens/InviteRedeemScreen';
+
 // Detail Screens
 import EventDetailScreen from '../screens/EventDetailScreen';
 import EventTicketsScreen from '../screens/EventTicketsScreen';
@@ -46,6 +54,7 @@ import SelfieUploadScreen from '../screens/verification/SelfieUploadScreen';
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
+  InviteRedeem: { eventId?: string; token?: string };
   EventDetail: { eventId: string };
   EventTickets: { eventId: string };
   TicketDetail: { ticketId: string };
@@ -84,10 +93,16 @@ export type OrganizerTabParamList = {
   Profile: undefined;
 };
 
+export type StaffTabParamList = {
+  Events: undefined;
+  Profile: undefined;
+};
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AttendeeTab = createBottomTabNavigator<AttendeeTabParamList>();
 const OrganizerTab = createBottomTabNavigator<OrganizerTabParamList>();
+const StaffTab = createBottomTabNavigator<StaffTabParamList>();
 
 function AuthNavigator() {
   return (
@@ -169,14 +184,58 @@ function OrganizerTabNavigator() {
   );
 }
 
+function StaffTabNavigator() {
+  return (
+    <StaffTab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap = 'home';
+
+          if (route.name === 'Events') {
+            iconName = focused ? 'calendar' : 'calendar-outline';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person-outline';
+          }
+
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.textSecondary,
+        headerShown: false,
+      })}
+    >
+      <StaffTab.Screen name="Events" component={StaffEventsScreen} />
+      <StaffTab.Screen name="Profile" component={ProfileScreen} />
+    </StaffTab.Navigator>
+  );
+}
+
 export default function AppNavigator() {
   const { user, loading, userProfile } = useAuth();
   const { mode, isLoading: modeLoading } = useAppMode();
   const [isVerified, setIsVerified] = useState(false);
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
 
   useEffect(() => {
     checkVerificationStatus();
   }, [userProfile?.id]);
+
+  useEffect(() => {
+    // If a staff invite link was opened while logged out, resume it after login.
+    const maybeResumeInvite = async () => {
+      if (!user) return;
+      try {
+        const pending = await getPendingInvite();
+        if (pending?.eventId && pending?.token) {
+          navigationRef.navigate('InviteRedeem', pending);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    maybeResumeInvite();
+  }, [user, navigationRef]);
 
   const checkVerificationStatus = async () => {
     if (!userProfile?.id) {
@@ -203,18 +262,39 @@ export default function AppNavigator() {
     isVerified;
   
   const MainTabNavigator = 
-    mode === 'organizer' && canUseOrganizerMode
-      ? OrganizerTabNavigator
-      : AttendeeTabNavigator;
+    mode === 'staff'
+      ? StaffTabNavigator
+      : mode === 'organizer' && canUseOrganizerMode
+        ? OrganizerTabNavigator
+        : AttendeeTabNavigator;
+
+  const linking = {
+    prefixes: [
+      ExpoLinking.createURL('/'),
+      'eventhaiti://',
+      'https://eventhaiti.vercel.app',
+      'https://eventhaiti.com',
+      'https://www.eventhaiti.com',
+    ],
+    config: {
+      screens: {
+        InviteRedeem: 'invite',
+      },
+    },
+  };
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef} linking={linking as any}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!user ? (
-          <Stack.Screen name="Auth" component={AuthNavigator} />
+          <>
+            <Stack.Screen name="Auth" component={AuthNavigator} />
+            <Stack.Screen name="InviteRedeem" component={InviteRedeemScreen} options={{ headerShown: false }} />
+          </>
         ) : (
           <>
             <Stack.Screen name="Main" component={MainTabNavigator} />
+            <Stack.Screen name="InviteRedeem" component={InviteRedeemScreen} options={{ headerShown: false }} />
             <Stack.Screen name="EventDetail" component={EventDetailScreen} />
             <Stack.Screen name="EventTickets" component={EventTicketsScreen} />
             <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />

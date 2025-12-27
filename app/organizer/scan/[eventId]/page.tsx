@@ -25,17 +25,9 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
     redirect(`/auth/login?redirect=/organizer/scan/${eventId}`)
   }
 
-  // Ensure this user is an organizer (attendees should go through the upgrade flow)
-  try {
-    const userDoc = await adminDb.collection('users').doc(authUser.uid).get()
-    const role = userDoc.exists ? userDoc.data()?.role : null
-    if (role !== 'organizer') {
-      redirect(`/organizer?redirect=/organizer/scan/${eventId}`)
-    }
-  } catch (error) {
-    console.error('Error checking user role:', error)
-    redirect(`/organizer?redirect=/organizer/scan/${eventId}`)
-  }
+  // Allow either event owner (organizer) or event-scoped staff with check-in permission.
+  const userDoc = await adminDb.collection('users').doc(authUser.uid).get()
+  const userRole = userDoc.exists ? userDoc.data()?.role : null
 
   // Fetch event
   const eventDoc = await adminDb.collection('events').doc(eventId).get()
@@ -56,12 +48,30 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
     entry_points: eventData.entry_points
   }
 
-  // Verify organizer
-  if (event.organizer_id !== authUser.uid) {
+  const isEventOrganizerOwner = event.organizer_id === authUser.uid
+
+  let isEventStaff = false
+  let canViewAttendees = false
+  if (!isEventOrganizerOwner) {
+    const memberSnap = await adminDb.collection('events').doc(eventId).collection('members').doc(authUser.uid).get()
+    if (memberSnap.exists) {
+      const member = memberSnap.data() as any
+      isEventStaff = Boolean(member?.permissions?.checkin)
+      canViewAttendees = Boolean(member?.permissions?.viewAttendees)
+    }
+  }
+
+  if (!isEventOrganizerOwner && !isEventStaff) {
+    // Keep existing organizer routes gated; staff should only land here via invite and direct link.
     redirect('/organizer/scan')
   }
 
-  // Fetch all confirmed tickets for this event
+  // If not an organizer, still allow access for staff.
+  if (!isEventOrganizerOwner && userRole !== 'organizer') {
+    // ok
+  }
+
+  // Fetch all confirmed tickets for this event (limited attendee fields for staff)
   const ticketsSnapshot = await adminDb
     .collection('tickets')
     .where('event_id', '==', eventId)
@@ -72,7 +82,7 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
     ticketsSnapshot.docs.map(async (doc: any) => {
       const ticketData = doc.data()
       
-      // Fetch attendee user data
+      // Fetch attendee user data (only include limited fields for staff)
       let attendee = null
       if (ticketData.attendee_id) {
         try {
@@ -82,9 +92,13 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
             // Only include primitive fields from user data
             attendee = {
               id: userDoc.id,
-              email: userData.email || '',
               full_name: userData.full_name || '',
-              phone_number: userData.phone_number || ''
+              ...(isEventOrganizerOwner || canViewAttendees
+                ? {
+                    email: userData.email || '',
+                    phone_number: userData.phone_number || '',
+                  }
+                : {}),
             }
           }
         } catch (error) {

@@ -13,7 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../config/brand';
 import { db } from '../../config/firebase';
-import { doc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { auth } from '../../config/firebase';
 
 type RouteParams = {
   TicketScanner: {
@@ -158,8 +159,10 @@ export default function TicketScannerScreen() {
     try {
       const ticketRef = doc(db, 'tickets', scanResult.ticketId);
       await updateDoc(ticketRef, {
-        checked_in_at: Timestamp.now(),
-        status: 'checked_in',
+        checked_in: true,
+        checked_in_at: serverTimestamp(),
+        checked_in_by: auth.currentUser?.uid || null,
+        updated_at: serverTimestamp(),
       });
 
       Vibration.vibrate([0, 100, 100, 100]);

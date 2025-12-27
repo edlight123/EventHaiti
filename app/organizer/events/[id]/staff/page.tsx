@@ -1,0 +1,38 @@
+import { requireAuth } from '@/lib/auth'
+import { adminDb } from '@/lib/firebase/admin'
+import { notFound, redirect } from 'next/navigation'
+import Navbar from '@/components/Navbar'
+import { isAdmin } from '@/lib/admin'
+import EventStaffManager from './EventStaffManager'
+
+export const revalidate = 0
+
+export default async function EventStaffPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const { user, error } = await requireAuth('organizer')
+
+  if (error || !user) {
+    redirect(`/auth/login?redirect=/organizer/events/${id}/staff`)
+  }
+
+  const eventDoc = await adminDb.collection('events').doc(id).get()
+  if (!eventDoc.exists) notFound()
+
+  const eventData = eventDoc.data() as any
+  if (eventData?.organizer_id !== user.id) {
+    notFound()
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-2xl font-bold text-gray-900">Event Staff</h1>
+        <p className="mt-1 text-sm text-gray-600">Invite and manage check-in staff for this event.</p>
+        <div className="mt-6">
+          <EventStaffManager eventId={id} />
+        </div>
+      </div>
+    </div>
+  )
+}

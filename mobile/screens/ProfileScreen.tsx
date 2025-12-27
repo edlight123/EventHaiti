@@ -71,10 +71,9 @@ export default function ProfileScreen() {
   const handleModeSwitch = async () => {
     const newMode = mode === 'attendee' ? 'organizer' : 'attendee';
     await setMode(newMode);
-    
+
     // Reset navigation to the appropriate tab navigator and initial screen
     if (newMode === 'organizer') {
-      // Switch to organizer mode - navigate to OrganizerTabs with Dashboard as initial screen
       navigation.reset({
         index: 0,
         routes: [
@@ -87,21 +86,39 @@ export default function ProfileScreen() {
           },
         ],
       });
-    } else {
-      // Switch to attendee mode - navigate to AttendeeTabs with Home as initial screen
-      navigation.reset({
-        index: 0,
-        routes: [
-          {
-            name: 'Main' as never,
-            state: {
-              index: 0,
-              routes: [{ name: 'Home' as never }],
-            },
-          },
-        ],
-      });
+      return;
     }
+
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'Main' as never,
+          state: {
+            index: 0,
+            routes: [{ name: 'Home' as never }],
+          },
+        },
+      ],
+    });
+  };
+
+  const handleStaffModeSwitch = async () => {
+    const newMode = mode === 'staff' ? 'attendee' : 'staff';
+    await setMode(newMode as any);
+
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'Main' as never,
+          state: {
+            index: 0,
+            routes: [{ name: (newMode === 'staff' ? 'Events' : 'Home') as never }],
+          },
+        },
+      ],
+    });
   };
 
   const memberSince = 'Recently';
@@ -296,6 +313,26 @@ export default function ProfileScreen() {
             </View>
           </View>
       )}
+
+      {/* Staff Mode Card */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Briefcase size={20} color={COLORS.primary} />
+          <Text style={styles.cardTitle}>Staff Mode</Text>
+        </View>
+        <View style={styles.organizerSection}>
+          <Text style={styles.organizerDesc}>
+            {mode === 'staff'
+              ? 'You are in staff mode. Scan tickets for events you were assigned to.'
+              : 'Use staff mode to scan tickets for events you are assigned to.'}
+          </Text>
+          <TouchableOpacity style={styles.switchModeButton} onPress={handleStaffModeSwitch}>
+            <Text style={styles.switchModeButtonText}>
+              {mode === 'staff' ? 'Switch to Attendee Mode' : 'Switch to Staff Mode'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {/* Preferences Card */}
       <View style={styles.card}>

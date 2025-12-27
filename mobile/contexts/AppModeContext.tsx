@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type AppMode = 'attendee' | 'organizer';
+export type AppMode = 'attendee' | 'organizer' | 'staff';
 
 interface AppModeContextType {
   mode: AppMode;
@@ -31,7 +31,7 @@ export const AppModeProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const loadMode = async () => {
     try {
       const savedMode = await AsyncStorage.getItem(MODE_STORAGE_KEY);
-      if (savedMode === 'organizer' || savedMode === 'attendee') {
+      if (savedMode === 'organizer' || savedMode === 'attendee' || savedMode === 'staff') {
         setModeState(savedMode);
       }
     } catch (error) {

@@ -1,0 +1,106 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { httpsCallable } from 'firebase/functions'
+import { auth, functions } from '@/lib/firebase/client'
+import { onAuthStateChanged } from 'firebase/auth'
+
+type Status = 'loading' | 'ready' | 'success' | 'error'
+
+export default function InvitePage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const eventId = useMemo(() => searchParams.get('eventId') || '', [searchParams])
+  const token = useMemo(() => searchParams.get('token') || '', [searchParams])
+  const appInviteUrl = useMemo(() => {
+    if (!eventId || !token) return ''
+    return `eventhaiti://invite?eventId=${encodeURIComponent(eventId)}&token=${encodeURIComponent(token)}`
+  }, [eventId, token])
+
+  const isMobile = useMemo(() => {
+    if (typeof navigator === 'undefined') return false
+    return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+  }, [])
+
+  const [status, setStatus] = useState<Status>('loading')
+  const [message, setMessage] = useState<string>('')
+
+  useEffect(() => {
+    if (!eventId || !token) {
+      setStatus('error')
+      setMessage('Invalid invite link.')
+      return
+    }
+
+    // On mobile, prefer opening the native app so redemption happens there (avoids consuming the one-time token in the browser).
+    if (isMobile) {
+      setStatus('ready')
+      setMessage('Open the EventHaiti app to accept this staff invite.')
+      return
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        const redirect = `/invite?eventId=${encodeURIComponent(eventId)}&token=${encodeURIComponent(token)}`
+        router.replace(`/auth/login?redirect=${encodeURIComponent(redirect)}`)
+        return
+      }
+
+      setStatus('ready')
+      try {
+        const redeem = httpsCallable(functions, 'redeemEventInvite')
+        await redeem({ eventId, token })
+
+        setStatus('success')
+        setMessage('Invite accepted. Redirecting…')
+        router.replace(`/organizer/scan/${encodeURIComponent(eventId)}`)
+      } catch (err: any) {
+        const code = String(err?.code || '')
+        const friendly =
+          code === 'already-exists'
+            ? 'This invite was already claimed.'
+            : code === 'deadline-exceeded'
+              ? 'This invite has expired.'
+              : code === 'permission-denied'
+                ? 'This invite is restricted to a different account.'
+                : code === 'not-found'
+                  ? 'Invite not found.'
+                  : err?.message || 'Failed to redeem invite.'
+
+        setStatus('error')
+        setMessage(friendly)
+      }
+    })
+
+    return () => unsubscribe()
+  }, [eventId, token, router, isMobile])
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-md bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h1 className="text-xl font-bold text-gray-900">Event Invite</h1>
+        <p className="mt-2 text-sm text-gray-600">
+          {status === 'loading' && 'Loading…'}
+          {status === 'ready' && 'Accepting invite…'}
+          {status === 'success' && message}
+          {status === 'error' && message}
+        </p>
+
+        {isMobile && status !== 'error' && appInviteUrl ? (
+          <div className="mt-5 space-y-3">
+            <a
+              href={appInviteUrl}
+              className="block w-full text-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Open in app
+            </a>
+            <p className="text-xs text-gray-500">
+              If you don’t have the app installed, you can still accept on desktop.
+            </p>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
+}

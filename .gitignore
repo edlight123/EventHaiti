@@ -5,6 +5,12 @@
 /.pnp
 .pnp.js
 
+# firebase functions
+/functions/node_modules
+/functions/lib
+/functions/.firebase
+/functions/.runtimeconfig.json
+
 # testing
 /coverage
 
