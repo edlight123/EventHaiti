@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   FlatList,
   Alert,
   Platform,
+  ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -38,6 +40,7 @@ export default function StaffScanScreen() {
   const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<EventSummary | null>(null);
   const [showEventSelector, setShowEventSelector] = useState(false);
@@ -47,16 +50,18 @@ export default function StaffScanScreen() {
     return 'No assigned events yet.';
   }, [uid]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
+  const loadEvents = useCallback(
+    async (options?: { silent?: boolean; isCancelled?: () => boolean }) => {
       if (!uid) {
+        setEvents([]);
+        setSelectedEvent(null);
         setLoading(false);
         return;
       }
 
-      setLoading(true);
+      const silent = Boolean(options?.silent);
+      if (!silent) setLoading(true);
+
       try {
         const memberQuery = query(collectionGroup(db, 'members'), where('uid', '==', uid));
         const memberSnap = await getDocs(memberQuery);
@@ -85,7 +90,7 @@ export default function StaffScanScreen() {
           });
         }
 
-        if (cancelled) return;
+        if (options?.isCancelled?.()) return;
 
         setEvents(loaded);
         setSelectedEvent((prev) => {
@@ -93,21 +98,35 @@ export default function StaffScanScreen() {
           return loaded.length > 0 ? loaded[0] : null;
         });
       } catch (e) {
-        if (!cancelled) {
-          setEvents([]);
-          setSelectedEvent(null);
-        }
+        if (options?.isCancelled?.()) return;
+        setEvents([]);
+        setSelectedEvent(null);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (options?.isCancelled?.()) return;
+        if (!silent) setLoading(false);
       }
-    }
+    },
+    [uid]
+  );
 
-    load();
+  useEffect(() => {
+    let cancelled = false;
+
+    loadEvents({ isCancelled: () => cancelled });
 
     return () => {
       cancelled = true;
     };
-  }, [uid]);
+  }, [loadEvents]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadEvents({ silent: true });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadEvents]);
 
   const handleStartScanning = () => {
     if (!selectedEvent) {
@@ -120,67 +139,75 @@ export default function StaffScanScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Camera section (visual anchor) */}
-      <View
-        style={[
-          styles.cameraSection,
-          {
-            // Keep the banner compact while ensuring content is below the iOS notch.
-            height: 120 + (Platform.OS === 'ios' ? Math.max(0, insets.top - 24) : 0),
-            paddingTop: Platform.OS === 'ios' ? insets.top : 0,
-          },
-        ]}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.primary} />
+        }
       >
-        <View style={styles.cameraPlaceholder}>
-          <Text style={styles.cameraText}>Ready to Scan</Text>
-          <Text style={styles.cameraSubtext}>Select an assigned event below</Text>
+        {/* Camera section (visual anchor) */}
+        <View
+          style={[
+            styles.cameraSection,
+            {
+              // Keep the banner compact while ensuring content is below the iOS notch.
+              height: 120 + (Platform.OS === 'ios' ? Math.max(0, insets.top - 24) : 0),
+              paddingTop: Platform.OS === 'ios' ? insets.top : 0,
+            },
+          ]}
+        >
+          <View style={styles.cameraPlaceholder}>
+            <Text style={styles.cameraText}>Ready to Scan</Text>
+            <Text style={styles.cameraSubtext}>Select an assigned event below</Text>
+          </View>
         </View>
-      </View>
 
-      {/* Header below camera */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Scan Tickets</Text>
-        <Text style={styles.subtitle}>Staff access • assigned events only</Text>
-      </View>
+        {/* Header below camera */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Scan Tickets</Text>
+          <Text style={styles.subtitle}>Staff access • assigned events only</Text>
+        </View>
 
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={COLORS.primary} />
-        </View>
-      ) : events.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={styles.empty}>{emptyText}</Text>
-        </View>
-      ) : (
-        <View style={styles.content}>
-          <Text style={styles.selectorLabel}>Select Event</Text>
-          <TouchableOpacity style={styles.selectorButton} onPress={() => setShowEventSelector(true)}>
-            <View style={styles.selectorContent}>
-              {selectedEvent ? (
-                <View style={styles.selectorTextCol}>
-                  <Text style={styles.selectorTitle}>{selectedEvent.title}</Text>
-                  <Text style={styles.selectorSubtitle}>
-                    {selectedEvent.venue_name ? selectedEvent.venue_name : 'Venue'}
-                    {selectedEvent.city ? ` • ${selectedEvent.city}` : ''}
-                  </Text>
-                </View>
-              ) : (
-                <Text style={styles.selectorPlaceholder}>Select an event...</Text>
-              )}
-              <Ionicons name="chevron-down" size={22} color={COLORS.textSecondary} />
-            </View>
-          </TouchableOpacity>
+        {loading ? (
+          <View style={styles.center}>
+            <ActivityIndicator color={COLORS.primary} />
+          </View>
+        ) : events.length === 0 ? (
+          <View style={styles.center}>
+            <Text style={styles.empty}>{emptyText}</Text>
+          </View>
+        ) : (
+          <View style={styles.content}>
+            <Text style={styles.selectorLabel}>Select Event</Text>
+            <TouchableOpacity style={styles.selectorButton} onPress={() => setShowEventSelector(true)}>
+              <View style={styles.selectorContent}>
+                {selectedEvent ? (
+                  <View style={styles.selectorTextCol}>
+                    <Text style={styles.selectorTitle}>{selectedEvent.title}</Text>
+                    <Text style={styles.selectorSubtitle}>
+                      {selectedEvent.venue_name ? selectedEvent.venue_name : 'Venue'}
+                      {selectedEvent.city ? ` • ${selectedEvent.city}` : ''}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.selectorPlaceholder}>Select an event...</Text>
+                )}
+                <Ionicons name="chevron-down" size={22} color={COLORS.textSecondary} />
+              </View>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.startButton, !selectedEvent && styles.startButtonDisabled]}
-            onPress={handleStartScanning}
-            disabled={!selectedEvent}
-          >
-            <Ionicons name="camera-outline" size={22} color={COLORS.white} />
-            <Text style={styles.startButtonText}>Start Scanning</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+            <TouchableOpacity
+              style={[styles.startButton, !selectedEvent && styles.startButtonDisabled]}
+              onPress={handleStartScanning}
+              disabled={!selectedEvent}
+            >
+              <Ionicons name="camera-outline" size={22} color={COLORS.white} />
+              <Text style={styles.startButtonText}>Start Scanning</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
 
       <Modal
         visible={showEventSelector}
@@ -232,6 +259,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 24,
   },
   cameraSection: {
     backgroundColor: COLORS.primary,

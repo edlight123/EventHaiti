@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +25,7 @@ export default function StaffEventsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [events, setEvents] = useState<EventSummary[]>([]);
   const uid = auth.currentUser?.uid || null;
 
@@ -39,16 +40,17 @@ export default function StaffEventsScreen() {
     return 'No assigned events yet.';
   }, [uid]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
+  const loadEvents = useCallback(
+    async (options?: { silent?: boolean; isCancelled?: () => boolean }) => {
       if (!uid) {
+        setEvents([]);
         setLoading(false);
         return;
       }
 
-      setLoading(true);
+      const silent = Boolean(options?.silent);
+      if (!silent) setLoading(true);
+
       try {
         const memberQuery = query(collectionGroup(db, 'members'), where('uid', '==', uid));
         const memberSnap = await getDocs(memberQuery);
@@ -77,20 +79,37 @@ export default function StaffEventsScreen() {
           });
         }
 
-        if (!cancelled) setEvents(loaded);
+        if (options?.isCancelled?.()) return;
+        setEvents(loaded);
       } catch (e) {
-        if (!cancelled) setEvents([]);
+        if (options?.isCancelled?.()) return;
+        setEvents([]);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (options?.isCancelled?.()) return;
+        if (!silent) setLoading(false);
       }
-    }
+    },
+    [uid]
+  );
 
-    load();
+  useEffect(() => {
+    let cancelled = false;
+
+    loadEvents({ isCancelled: () => cancelled });
 
     return () => {
       cancelled = true;
     };
-  }, [uid]);
+  }, [loadEvents]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadEvents({ silent: true });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadEvents]);
 
   return (
     <View style={styles.container}>
@@ -108,34 +127,35 @@ export default function StaffEventsScreen() {
         <Text style={styles.subtitle}>Select an event to open the scanner</Text>
       </View>
 
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={COLORS.primary} />
-        </View>
-      ) : events.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={styles.empty}>{emptyText}</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={events}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => (navigation as any).navigate('TicketScanner', { eventId: item.id })}
-            >
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardMeta}>
-                {item.venue_name ? item.venue_name : 'Venue'}
-                {item.city ? ` • ${item.city}` : ''}
-              </Text>
-              <Text style={styles.cardAction}>Open Scanner</Text>
-            </TouchableOpacity>
-          )}
-        />
-      )}
+      <FlatList
+        data={events}
+        keyExtractor={(item) => item.id}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        contentContainerStyle={[styles.list, events.length === 0 && styles.listEmpty]}
+        ListEmptyComponent={
+          <View style={styles.center}>
+            {loading ? (
+              <ActivityIndicator color={COLORS.primary} />
+            ) : (
+              <Text style={styles.empty}>{emptyText}</Text>
+            )}
+          </View>
+        }
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => (navigation as any).navigate('TicketScanner', { eventId: item.id })}
+          >
+            <Text style={styles.cardTitle}>{item.title}</Text>
+            <Text style={styles.cardMeta}>
+              {item.venue_name ? item.venue_name : 'Venue'}
+              {item.city ? ` • ${item.city}` : ''}
+            </Text>
+            <Text style={styles.cardAction}>Open Scanner</Text>
+          </TouchableOpacity>
+        )}
+      />
     </View>
   );
 }
@@ -194,6 +214,9 @@ const styles = StyleSheet.create({
   list: {
     padding: 16,
     gap: 12,
+  },
+  listEmpty: {
+    flexGrow: 1,
   },
   card: {
     backgroundColor: COLORS.white,
