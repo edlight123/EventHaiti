@@ -46,7 +46,7 @@ async function assertEventOwner(params: { eventId: string; uid: string }): Promi
   }
 
   const event = eventSnap.data() as any
-  const organizerId = String(event?.organizer_id || '')
+  const organizerId = String(event?.organizer_id || event?.organizerId || '')
 
   const memberRole = memberSnap.exists ? String((memberSnap.data() as any)?.role || '') : ''
 

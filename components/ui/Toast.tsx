@@ -22,7 +22,13 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 export function useToast() {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error('useToast must be used within ToastProvider');
+    // Fail-safe: some routes may not mount ToastProvider.
+    // We prefer a no-op toast over crashing the entire app.
+    return {
+      showToast: () => {
+        // Intentionally no-op
+      },
+    };
   }
   return context;
 }

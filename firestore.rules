@@ -12,7 +12,10 @@ service cloud.firestore {
     }
 
     function isEventOrganizer(eventId) {
-      return isSignedIn() && eventDoc(eventId).data.organizer_id == request.auth.uid;
+      return isSignedIn() && (
+        eventDoc(eventId).data.organizer_id == request.auth.uid ||
+        eventDoc(eventId).data.organizerId == request.auth.uid
+      );
     }
 
     function isEventOwner(eventId) {

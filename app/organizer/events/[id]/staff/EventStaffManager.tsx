@@ -35,6 +35,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
   const [members, setMembers] = useState<EventMember[]>([])
   const [authReady, setAuthReady] = useState(false)
   const [authUid, setAuthUid] = useState<string | null>(null)
+  const [listenerError, setListenerError] = useState<string | null>(null)
 
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [method, setMethod] = useState<InviteMethod>('link')
@@ -63,8 +64,11 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
       // Not signed in yet (or session-only auth); avoid starting listeners that will permission-deny.
       setInvites([])
       setMembers([])
+      setListenerError(null)
       return
     }
+
+    setListenerError(null)
 
     const invitesRef = collection(db, 'events', eventId, 'invites')
     const membersRef = collection(db, 'events', eventId, 'members')
@@ -78,7 +82,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
       (error) => {
         // Prevent unhandled snapshot errors from crashing the page.
         console.error('Invites listener error:', error)
-        showToast({ title: 'Error', message: 'Unable to load invites. Please refresh.', type: 'error' })
+        setListenerError('Unable to load invites. You may not have permission for this event.')
       }
     )
 
@@ -90,7 +94,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
       },
       (error) => {
         console.error('Members listener error:', error)
-        showToast({ title: 'Error', message: 'Unable to load staff members. Please refresh.', type: 'error' })
+        setListenerError('Unable to load staff members. You may not have permission for this event.')
       }
     )
 
@@ -183,6 +187,12 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
 
   return (
     <div className="space-y-6">
+      {listenerError ? (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          {listenerError}
+        </div>
+      ) : null}
+
       <div className="flex justify-end">
         <button
           onClick={() => setShowInviteModal(true)}
