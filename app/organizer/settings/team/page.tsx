@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, CalendarDays, ShieldCheck, Users } from 'lucide-react'
 import { createClient } from '@/lib/firebase-db/server'
+import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
 import EventStaffHub from './EventStaffHub'
 
 export const revalidate = 0
@@ -23,10 +25,18 @@ async function getOrganizerEvents(organizerId: string): Promise<OrganizerEvent[]
     .from('events')
     .select('id,title,start_datetime,city,is_published,is_cancelled,organizer_id')
     .eq('organizer_id', organizerId)
-    .order('start_datetime', { ascending: false })
     .limit(200)
 
-  return (res.data as OrganizerEvent[] | null) || []
+  if ((res as any)?.error) {
+    console.error('Failed to load organizer events for team settings:', (res as any).error)
+  }
+
+  const events = ((res as any)?.data as OrganizerEvent[] | null) || []
+  return events.sort((a, b) => {
+    const aTime = a?.start_datetime ? new Date(a.start_datetime).getTime() : 0
+    const bTime = b?.start_datetime ? new Date(b.start_datetime).getTime() : 0
+    return bTime - aTime
+  })
 }
 
 export default async function TeamSettingsPage({
@@ -48,6 +58,7 @@ export default async function TeamSettingsPage({
 
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+      <Navbar user={user} />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link
           href="/organizer/settings"
@@ -137,6 +148,8 @@ export default async function TeamSettingsPage({
           </div>
         </div>
       </div>
+
+      <MobileNavWrapper user={user} />
     </div>
   )
 }
