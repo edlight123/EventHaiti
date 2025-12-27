@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { collectionGroup, getDoc, doc, getDocs, query, where } from 'firebase/firestore';
 import { db, auth } from '../../config/firebase';
 import { COLORS } from '../../config/brand';
@@ -90,7 +89,6 @@ export default function StaffEventsScreen() {
       {/* Camera section (visual) */}
       <View style={styles.cameraSection}>
         <View style={styles.cameraPlaceholder}>
-          <Ionicons name="qr-code-outline" size={44} color={COLORS.white} />
           <Text style={styles.cameraText}>Staff Mode</Text>
           <Text style={styles.cameraSubtext}>Events you can scan for</Text>
         </View>
@@ -140,7 +138,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   cameraSection: {
-    height: 220,
+    height: 120,
     backgroundColor: COLORS.primary,
   },
   cameraPlaceholder: {
@@ -150,7 +148,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   cameraText: {
-    marginTop: 10,
+    marginTop: 0,
     fontSize: 18,
     fontWeight: '700',
     color: COLORS.white,

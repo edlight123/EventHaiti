@@ -120,7 +120,6 @@ export default function StaffScanScreen() {
       {/* Camera section (visual anchor) */}
       <View style={styles.cameraSection}>
         <View style={styles.cameraPlaceholder}>
-          <Ionicons name="qr-code-outline" size={44} color={COLORS.white} />
           <Text style={styles.cameraText}>Ready to Scan</Text>
           <Text style={styles.cameraSubtext}>Select an assigned event below</Text>
         </View>
@@ -223,7 +222,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   cameraSection: {
-    height: 220,
+    height: 120,
     backgroundColor: COLORS.primary,
   },
   cameraPlaceholder: {
@@ -233,7 +232,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   cameraText: {
-    marginTop: 10,
+    marginTop: 0,
     fontSize: 18,
     fontWeight: '700',
     color: COLORS.white,
