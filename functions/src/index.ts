@@ -7,6 +7,11 @@ initializeApp()
 
 const db = getFirestore()
 
+const cors = [
+  'https://eventhaiti.vercel.app',
+  'http://localhost:3000',
+]
+
 type InviteMethod = 'email' | 'phone' | 'link'
 
 type EventInvitePermissions = {
@@ -50,7 +55,7 @@ async function assertEventOwner(params: { eventId: string; uid: string }): Promi
   }
 }
 
-export const createEventInvite = onCall(async (request) => {
+export const createEventInvite = onCall({ cors }, async (request) => {
   const uid = request.auth?.uid
   if (!uid) throw new HttpsError('unauthenticated', 'Authentication required')
 
@@ -111,7 +116,7 @@ export const createEventInvite = onCall(async (request) => {
   }
 })
 
-export const redeemEventInvite = onCall(async (request) => {
+export const redeemEventInvite = onCall({ cors }, async (request) => {
   const uid = request.auth?.uid
   if (!uid) throw new HttpsError('unauthenticated', 'Authentication required')
 
@@ -201,7 +206,7 @@ export const redeemEventInvite = onCall(async (request) => {
   return { success: true }
 })
 
-export const revokeEventInvite = onCall(async (request) => {
+export const revokeEventInvite = onCall({ cors }, async (request) => {
   const uid = request.auth?.uid
   if (!uid) throw new HttpsError('unauthenticated', 'Authentication required')
 
@@ -234,7 +239,7 @@ export const revokeEventInvite = onCall(async (request) => {
   return { success: true }
 })
 
-export const removeEventMember = onCall(async (request) => {
+export const removeEventMember = onCall({ cors }, async (request) => {
   const uid = request.auth?.uid
   if (!uid) throw new HttpsError('unauthenticated', 'Authentication required')
 

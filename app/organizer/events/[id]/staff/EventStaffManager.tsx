@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { httpsCallable } from 'firebase/functions'
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
-import { db, functions } from '@/lib/firebase/client'
+import { auth, db, functions } from '@/lib/firebase/client'
+import { onAuthStateChanged } from 'firebase/auth'
 import { useToast } from '@/components/ui/Toast'
 
 type InviteMethod = 'link' | 'email' | 'phone'
@@ -32,6 +33,8 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
 
   const [invites, setInvites] = useState<EventInvite[]>([])
   const [members, setMembers] = useState<EventMember[]>([])
+  const [authReady, setAuthReady] = useState(false)
+  const [authUid, setAuthUid] = useState<string | null>(null)
 
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [method, setMethod] = useState<InviteMethod>('link')
@@ -47,27 +50,63 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
   }, [method, targetEmail, targetPhone])
 
   useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setAuthUid(user?.uid || null)
+      setAuthReady(true)
+    })
+    return () => unsub()
+  }, [])
+
+  useEffect(() => {
+    if (!authReady) return
+    if (!authUid) {
+      // Not signed in yet (or session-only auth); avoid starting listeners that will permission-deny.
+      setInvites([])
+      setMembers([])
+      return
+    }
+
     const invitesRef = collection(db, 'events', eventId, 'invites')
     const membersRef = collection(db, 'events', eventId, 'members')
 
-    const unsubInvites = onSnapshot(query(invitesRef, orderBy('createdAt', 'desc')), (snap) => {
-      const next: EventInvite[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))
-      setInvites(next)
-    })
+    const unsubInvites = onSnapshot(
+      query(invitesRef, orderBy('createdAt', 'desc')),
+      (snap) => {
+        const next: EventInvite[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))
+        setInvites(next)
+      },
+      (error) => {
+        // Prevent unhandled snapshot errors from crashing the page.
+        console.error('Invites listener error:', error)
+        showToast({ title: 'Error', message: 'Unable to load invites. Please refresh.', type: 'error' })
+      }
+    )
 
-    const unsubMembers = onSnapshot(query(membersRef, orderBy('createdAt', 'desc')), (snap) => {
-      const next: EventMember[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))
-      setMembers(next)
-    })
+    const unsubMembers = onSnapshot(
+      query(membersRef, orderBy('createdAt', 'desc')),
+      (snap) => {
+        const next: EventMember[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))
+        setMembers(next)
+      },
+      (error) => {
+        console.error('Members listener error:', error)
+        showToast({ title: 'Error', message: 'Unable to load staff members. Please refresh.', type: 'error' })
+      }
+    )
 
     return () => {
       unsubInvites()
       unsubMembers()
     }
-  }, [eventId])
+  }, [authReady, authUid, eventId, showToast])
 
   const handleCreateInvite = useCallback(async () => {
     if (!canSubmit) return
+
+    if (!auth.currentUser) {
+      showToast({ title: 'Please sign in', message: 'You must be signed in to create invites.', type: 'error' })
+      return
+    }
 
     setIsSubmitting(true)
     try {
@@ -107,6 +146,11 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
   const handleRevokeInvite = useCallback(
     async (inviteId: string) => {
       if (!confirm('Revoke this invite?')) return
+
+      if (!auth.currentUser) {
+        showToast({ title: 'Please sign in', message: 'You must be signed in to revoke invites.', type: 'error' })
+        return
+      }
       try {
         const revoke = httpsCallable(functions, 'revokeEventInvite')
         await revoke({ eventId, inviteId })
@@ -121,6 +165,11 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
   const handleRemoveMember = useCallback(
     async (memberId: string) => {
       if (!confirm('Remove this staff member?')) return
+
+      if (!auth.currentUser) {
+        showToast({ title: 'Please sign in', message: 'You must be signed in to remove members.', type: 'error' })
+        return
+      }
       try {
         const remove = httpsCallable(functions, 'removeEventMember')
         await remove({ eventId, memberId })
