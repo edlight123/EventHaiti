@@ -4,7 +4,7 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "engines": {
-    "node": "18"
+    "node": "20"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
