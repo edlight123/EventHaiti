@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { collectionGroup, getDoc, doc, getDocs, query, where } from 'firebase/firestore';
 import { db, auth } from '../../config/firebase';
 import { COLORS } from '../../config/brand';
@@ -22,9 +23,16 @@ type EventSummary = {
 
 export default function StaffEventsScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<EventSummary[]>([]);
   const uid = auth.currentUser?.uid || null;
+
+  // Keep the banner compact while ensuring content is below the iOS notch.
+  const bannerBaseHeight = 120;
+  const bannerPaddingTop = Platform.OS === 'ios' ? insets.top : 0;
+  const bannerExtraHeight = Platform.OS === 'ios' ? Math.max(0, insets.top - 24) : 0;
+  const bannerHeight = bannerBaseHeight + bannerExtraHeight;
 
   const emptyText = useMemo(() => {
     if (!uid) return 'Please sign in.';
@@ -87,7 +95,7 @@ export default function StaffEventsScreen() {
   return (
     <View style={styles.container}>
       {/* Camera section (visual) */}
-      <View style={styles.cameraSection}>
+      <View style={[styles.cameraSection, { height: bannerHeight, paddingTop: bannerPaddingTop }]}>
         <View style={styles.cameraPlaceholder}>
           <Text style={styles.cameraText}>Staff Mode</Text>
           <Text style={styles.cameraSubtext}>Events you can scan for</Text>
@@ -138,7 +146,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   cameraSection: {
-    height: 120,
     backgroundColor: COLORS.primary,
   },
   cameraPlaceholder: {

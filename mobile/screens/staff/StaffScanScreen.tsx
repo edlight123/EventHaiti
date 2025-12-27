@@ -8,10 +8,12 @@ import {
   Modal,
   FlatList,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { collectionGroup, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { auth, db } from '../../config/firebase';
 import { COLORS } from '../../config/brand';
 
@@ -33,6 +35,7 @@ type EventSummary = {
 export default function StaffScanScreen() {
   const navigation = useNavigation();
   const uid = auth.currentUser?.uid || null;
+  const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<EventSummary[]>([]);
@@ -118,7 +121,16 @@ export default function StaffScanScreen() {
   return (
     <View style={styles.container}>
       {/* Camera section (visual anchor) */}
-      <View style={styles.cameraSection}>
+      <View
+        style={[
+          styles.cameraSection,
+          {
+            // Keep the banner compact while ensuring content is below the iOS notch.
+            height: 120 + (Platform.OS === 'ios' ? Math.max(0, insets.top - 24) : 0),
+            paddingTop: Platform.OS === 'ios' ? insets.top : 0,
+          },
+        ]}
+      >
         <View style={styles.cameraPlaceholder}>
           <Text style={styles.cameraText}>Ready to Scan</Text>
           <Text style={styles.cameraSubtext}>Select an assigned event below</Text>
@@ -222,7 +234,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   cameraSection: {
-    height: 120,
     backgroundColor: COLORS.primary,
   },
   cameraPlaceholder: {
