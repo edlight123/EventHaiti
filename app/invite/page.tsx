@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { httpsCallable } from 'firebase/functions'
-import { auth, functions } from '@/lib/firebase/client'
+import { auth } from '@/lib/firebase/client'
 import { onAuthStateChanged } from 'firebase/auth'
 
 type Status = 'loading' | 'ready' | 'success' | 'error'
@@ -49,27 +48,36 @@ export default function InvitePage() {
 
       setStatus('ready')
       try {
-        const redeem = httpsCallable(functions, 'redeemEventInvite')
-        await redeem({ eventId, token })
+        const res = await fetch('/api/staff/invites/redeem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId, token }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          const code = String(json?.code || '')
+          const friendly =
+            code === 'already-exists'
+              ? 'This invite was already claimed.'
+              : code === 'deadline-exceeded'
+                ? 'This invite has expired.'
+                : code === 'permission-denied'
+                  ? 'This invite is restricted to a different account.'
+                  : code === 'not-found'
+                    ? 'Invite not found.'
+                    : String(json?.error || 'Failed to redeem invite.')
+
+          setStatus('error')
+          setMessage(friendly)
+          return
+        }
 
         setStatus('success')
         setMessage('Invite accepted. Redirecting…')
         router.replace(`/organizer/scan/${encodeURIComponent(eventId)}`)
       } catch (err: any) {
-        const code = String(err?.code || '')
-        const friendly =
-          code === 'already-exists'
-            ? 'This invite was already claimed.'
-            : code === 'deadline-exceeded'
-              ? 'This invite has expired.'
-              : code === 'permission-denied'
-                ? 'This invite is restricted to a different account.'
-                : code === 'not-found'
-                  ? 'Invite not found.'
-                  : err?.message || 'Failed to redeem invite.'
-
         setStatus('error')
-        setMessage(friendly)
+        setMessage(err?.message || 'Failed to redeem invite.')
       }
     })
 

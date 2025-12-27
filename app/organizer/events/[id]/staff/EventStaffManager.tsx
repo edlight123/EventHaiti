@@ -1,9 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { httpsCallable } from 'firebase/functions'
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
-import { auth, db, functions } from '@/lib/firebase/client'
+import { auth, db } from '@/lib/firebase/client'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useToast } from '@/components/ui/Toast'
 
@@ -107,23 +106,28 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
   const handleCreateInvite = useCallback(async () => {
     if (!canSubmit) return
 
-    if (!auth.currentUser) {
-      showToast({ title: 'Please sign in', message: 'You must be signed in to create invites.', type: 'error' })
-      return
-    }
-
     setIsSubmitting(true)
     try {
-      const create = httpsCallable(functions, 'createEventInvite')
-      const res = await create({
+      const res = await fetch('/api/staff/invites/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
         eventId,
         method,
         ...(method === 'email' ? { targetEmail: targetEmail.trim() } : {}),
         ...(method === 'phone' ? { targetPhone: targetPhone.trim() } : {}),
         permissions: { viewAttendees },
+        }),
       })
 
-      const inviteUrl = (res.data as any)?.inviteUrl as string | undefined
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        const message = String(json?.error || 'Failed to create invite')
+        showToast({ title: 'Error', message, type: 'error' })
+        return
+      }
+
+      const inviteUrl = (json as any)?.inviteUrl as string | undefined
       if (inviteUrl) {
         try {
           await navigator.clipboard.writeText(inviteUrl)
@@ -150,14 +154,17 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
   const handleRevokeInvite = useCallback(
     async (inviteId: string) => {
       if (!confirm('Revoke this invite?')) return
-
-      if (!auth.currentUser) {
-        showToast({ title: 'Please sign in', message: 'You must be signed in to revoke invites.', type: 'error' })
-        return
-      }
       try {
-        const revoke = httpsCallable(functions, 'revokeEventInvite')
-        await revoke({ eventId, inviteId })
+        const res = await fetch('/api/staff/invites/revoke', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId, inviteId }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          showToast({ title: 'Error', message: String(json?.error || 'Failed to revoke invite'), type: 'error' })
+          return
+        }
         showToast({ title: 'Invite revoked', message: 'The link can no longer be used.', type: 'success' })
       } catch (err: any) {
         showToast({ title: 'Error', message: err?.message || 'Failed to revoke invite', type: 'error' })
@@ -169,14 +176,17 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
   const handleRemoveMember = useCallback(
     async (memberId: string) => {
       if (!confirm('Remove this staff member?')) return
-
-      if (!auth.currentUser) {
-        showToast({ title: 'Please sign in', message: 'You must be signed in to remove members.', type: 'error' })
-        return
-      }
       try {
-        const remove = httpsCallable(functions, 'removeEventMember')
-        await remove({ eventId, memberId })
+        const res = await fetch('/api/staff/members/remove', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId, memberId }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          showToast({ title: 'Error', message: String(json?.error || 'Failed to remove member'), type: 'error' })
+          return
+        }
         showToast({ title: 'Member removed', message: 'Staff access removed.', type: 'success' })
       } catch (err: any) {
         showToast({ title: 'Error', message: err?.message || 'Failed to remove member', type: 'error' })
