@@ -11,6 +11,7 @@ import {
   Building2,
   Smartphone,
   CreditCard,
+  Copy,
   Eye,
   Send
 } from 'lucide-react'
@@ -63,6 +64,18 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
   const [selectedEvent, setSelectedEvent] = useState<EventDisbursementInfo | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [filter, setFilter] = useState<'all' | 'eligible' | 'pending' | 'completed'>('eligible')
+  const [copiedValue, setCopiedValue] = useState<string | null>(null)
+
+  const copyToClipboard = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopiedValue(value)
+      window.setTimeout(() => setCopiedValue((current) => (current === value ? null : current)), 1500)
+    } catch {
+      // Clipboard may be blocked by browser settings; fall back to a manual copy prompt.
+      window.prompt('Copy to clipboard:', value)
+    }
+  }
 
   const getPayoutMethodLabel = (method?: string) => {
     if (method === 'bank_transfer') return 'Bank Transfer'
@@ -417,9 +430,29 @@ export function AdminDisbursementDashboard({ endedEvents, stats }: Props) {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Account Number:</span>
-                    <span className="font-mono font-medium">
-                      {selectedEvent.bankInfo?.accountNumberFull || selectedEvent.bankInfo?.accountNumber || 'N/A'}
-                    </span>
+                    {(() => {
+                      const value =
+                        selectedEvent.bankInfo?.accountNumberFull ||
+                        selectedEvent.bankInfo?.accountNumber ||
+                        ''
+
+                      if (!value) return <span className="font-mono font-medium">N/A</span>
+
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(value)}
+                          className="font-mono font-medium inline-flex items-center gap-2 text-teal-700 hover:text-teal-900"
+                          title="Click to copy"
+                        >
+                          <span>{value}</span>
+                          <Copy className="w-4 h-4" />
+                          {copiedValue === value && (
+                            <span className="text-xs text-gray-600">Copied</span>
+                          )}
+                        </button>
+                      )
+                    })()}
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Bank Name:</span>
