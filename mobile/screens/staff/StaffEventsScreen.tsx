@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { collectionGroup, getDoc, doc, getDocs, query, where } from 'firebase/firestore';
 import { db, auth } from '../../config/firebase';
 import { COLORS } from '../../config/brand';
@@ -86,9 +87,19 @@ export default function StaffEventsScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Camera section (visual) */}
+      <View style={styles.cameraSection}>
+        <View style={styles.cameraPlaceholder}>
+          <Ionicons name="qr-code-outline" size={44} color={COLORS.white} />
+          <Text style={styles.cameraText}>Staff Mode</Text>
+          <Text style={styles.cameraSubtext}>Events you can scan for</Text>
+        </View>
+      </View>
+
+      {/* Header below camera section */}
       <View style={styles.header}>
-        <Text style={styles.title}>Staff Mode</Text>
-        <Text style={styles.subtitle}>Select an event to scan tickets</Text>
+        <Text style={styles.title}>Assigned Events</Text>
+        <Text style={styles.subtitle}>Select an event to open the scanner</Text>
       </View>
 
       {loading ? (
@@ -128,9 +139,31 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  cameraSection: {
+    height: 220,
+    backgroundColor: COLORS.primary,
+  },
+  cameraPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  cameraText: {
+    marginTop: 10,
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
+  cameraSubtext: {
+    marginTop: 6,
+    fontSize: 13,
+    color: COLORS.white,
+    opacity: 0.95,
+  },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingTop: 14,
     paddingBottom: 12,
   },
   title: {

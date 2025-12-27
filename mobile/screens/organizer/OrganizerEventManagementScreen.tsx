@@ -102,6 +102,16 @@ export default function OrganizerEventManagementScreen() {
     navigation.navigate('EventDetail', { eventId });
   };
 
+  const handleManageStaff = async () => {
+    const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL || 'https://eventhaiti.vercel.app';
+    const url = `${String(webBaseUrl).replace(/\/$/, '')}/organizer/events/${eventId}/staff`;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Error', 'Unable to open staff management.');
+    }
+  };
+
   const handleToggleSales = async () => {
     const action = isPaused ? 'resume' : 'pause';
     Alert.alert(
@@ -236,6 +246,10 @@ export default function OrganizerEventManagementScreen() {
           <TouchableOpacity style={styles.actionCard} onPress={handleScanTickets}>
             <Ionicons name="qr-code-outline" size={32} color={COLORS.primary} />
             <Text style={styles.actionText}>Scan Tickets</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionCard} onPress={handleManageStaff}>
+            <Ionicons name="people-outline" size={32} color={COLORS.primary} />
+            <Text style={styles.actionText}>Staff</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionCard} onPress={handleViewAttendees}>
             <Ionicons name="people-outline" size={32} color={COLORS.primary} />

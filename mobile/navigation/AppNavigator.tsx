@@ -34,6 +34,7 @@ import SendEventUpdateScreen from '../screens/organizer/SendEventUpdateScreen';
 
 // Staff Screens
 import StaffEventsScreen from '../screens/staff/StaffEventsScreen';
+import StaffScanScreen from '../screens/staff/StaffScanScreen';
 
 // Invite Screen
 import InviteRedeemScreen from '../screens/InviteRedeemScreen';
@@ -95,6 +96,7 @@ export type OrganizerTabParamList = {
 
 export type StaffTabParamList = {
   Events: undefined;
+  Scan: undefined;
   Profile: undefined;
 };
 
@@ -193,6 +195,8 @@ function StaffTabNavigator() {
 
           if (route.name === 'Events') {
             iconName = focused ? 'calendar' : 'calendar-outline';
+          } else if (route.name === 'Scan') {
+            iconName = focused ? 'qr-code' : 'qr-code-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           }
@@ -205,6 +209,7 @@ function StaffTabNavigator() {
       })}
     >
       <StaffTab.Screen name="Events" component={StaffEventsScreen} />
+      <StaffTab.Screen name="Scan" component={StaffScanScreen} />
       <StaffTab.Screen name="Profile" component={ProfileScreen} />
     </StaffTab.Navigator>
   );

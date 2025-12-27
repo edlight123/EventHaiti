@@ -114,7 +114,7 @@ export default function ProfileScreen() {
           name: 'Main' as never,
           state: {
             index: 0,
-            routes: [{ name: (newMode === 'staff' ? 'Events' : 'Home') as never }],
+            routes: [{ name: (newMode === 'staff' ? 'Scan' : 'Home') as never }],
           },
         },
       ],

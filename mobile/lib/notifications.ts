@@ -115,3 +115,42 @@ export async function markAllAsRead(userId: string): Promise<void> {
     throw error;
   }
 }
+
+/**
+ * Delete all notifications for a user.
+ *
+ * Note: Firestore batches are limited (500 ops). We loop in chunks.
+ */
+export async function clearAllNotifications(userId: string): Promise<number> {
+  const notificationsRef = collection(db, 'users', userId, 'notifications');
+  let deleted = 0;
+
+  try {
+    // Keep deleting until the collection is empty.
+    // Use a chunk size safely below 500 to leave room for any future ops.
+    const CHUNK_SIZE = 450;
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const q = query(notificationsRef, limit(CHUNK_SIZE));
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        break;
+      }
+
+      const batch = writeBatch(db);
+      snapshot.forEach((document) => {
+        batch.delete(document.ref);
+        deleted += 1;
+      });
+
+      await batch.commit();
+    }
+
+    return deleted;
+  } catch (error) {
+    console.error('Error clearing all notifications:', error);
+    throw error;
+  }
+}

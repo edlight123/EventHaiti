@@ -64,7 +64,8 @@ export default function TicketScannerScreen() {
       console.log('Event ID:', eventId);
       console.log('Firestore Config:', {
         projectId: db.app.options.projectId,
-        databaseId: db.app.options.databaseId || '(default)',
+        // databaseId is not part of FirebaseOptions in this SDK build
+        databaseId: '(default)',
       });
 
       // Get ticket from Firestore
@@ -214,55 +215,45 @@ export default function TicketScannerScreen() {
 
   return (
     <View style={styles.container}>
-      <CameraView
-        style={styles.camera}
-        facing="back"
-        enableTorch={flashOn}
-        onBarcodeScanned={isProcessing ? undefined : handleBarCodeScanned}
-        barcodeScannerSettings={{
-          barcodeTypes: ['qr'],
-        }}
-      >
-        <View style={styles.overlay}>
-          {/* Top bar */}
-          <View style={styles.topBar}>
-            <TouchableOpacity
-              style={styles.topButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="close" size={28} color={COLORS.white} />
-            </TouchableOpacity>
-            <Text style={styles.topBarTitle}>Scan Ticket</Text>
-            <TouchableOpacity
-              style={styles.topButton}
-              onPress={() => setFlashOn(!flashOn)}
-            >
-              <Ionicons
-                name={flashOn ? 'flash' : 'flash-off'}
-                size={24}
-                color={COLORS.white}
-              />
-            </TouchableOpacity>
-          </View>
+      <View style={styles.cameraSection}>
+        <CameraView
+          style={styles.camera}
+          facing="back"
+          enableTorch={flashOn}
+          onBarcodeScanned={isProcessing ? undefined : handleBarCodeScanned}
+          barcodeScannerSettings={{
+            barcodeTypes: ['qr'],
+          }}
+        >
+          <View style={styles.overlay}>
+            {/* Scanning frame */}
+            <View style={styles.scanFrame}>
+              <View style={[styles.corner, styles.cornerTopLeft]} />
+              <View style={[styles.corner, styles.cornerTopRight]} />
+              <View style={[styles.corner, styles.cornerBottomLeft]} />
+              <View style={[styles.corner, styles.cornerBottomRight]} />
+            </View>
 
-          {/* Scanning frame */}
-          <View style={styles.scanFrame}>
-            <View style={[styles.corner, styles.cornerTopLeft]} />
-            <View style={[styles.corner, styles.cornerTopRight]} />
-            <View style={[styles.corner, styles.cornerBottomLeft]} />
-            <View style={[styles.corner, styles.cornerBottomRight]} />
+            {/* Instructions */}
+            <View style={styles.instructionContainer}>
+              <Text style={styles.instruction}>
+                {isProcessing ? 'Processing...' : 'Position the QR code within the frame'}
+              </Text>
+            </View>
           </View>
+        </CameraView>
+      </View>
 
-          {/* Instructions */}
-          <View style={styles.instructionContainer}>
-            <Text style={styles.instruction}>
-              {isProcessing
-                ? 'Processing...'
-                : 'Position the QR code within the frame'}
-            </Text>
-          </View>
-        </View>
-      </CameraView>
+      {/* Header below camera */}
+      <View style={styles.belowHeader}>
+        <TouchableOpacity style={styles.belowHeaderButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="close" size={26} color={COLORS.text} />
+        </TouchableOpacity>
+        <Text style={styles.belowHeaderTitle}>Scan Ticket</Text>
+        <TouchableOpacity style={styles.belowHeaderButton} onPress={() => setFlashOn(!flashOn)}>
+          <Ionicons name={flashOn ? 'flash' : 'flash-off'} size={22} color={COLORS.text} />
+        </TouchableOpacity>
+      </View>
 
       {/* Bottom sheet modal */}
       <Modal
@@ -373,9 +364,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  cameraSection: {
+    flex: 1,
+    width: '100%',
+  },
   camera: {
     flex: 1,
     width: '100%',
+  },
+  belowHeader: {
+    height: 64,
+    width: '100%',
+    backgroundColor: COLORS.white,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+  },
+  belowHeaderButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  belowHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
   },
   overlay: {
     flex: 1,

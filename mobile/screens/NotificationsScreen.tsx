@@ -19,6 +19,7 @@ import {
   markAsRead,
   markAllAsRead,
   getUnreadCount,
+  clearAllNotifications,
 } from '../lib/notifications';
 import type { Notification } from '../types/notifications';
 
@@ -96,6 +97,9 @@ export default function NotificationsScreen() {
   };
 
   const handleClearAll = async () => {
+    const uid = user?.uid;
+    if (!uid) return;
+
     Alert.alert(
       'Clear All Notifications',
       'Are you sure you want to delete all notifications? This action cannot be undone.',
@@ -107,13 +111,7 @@ export default function NotificationsScreen() {
           onPress: async () => {
             setIsClearing(true);
             try {
-              const response = await fetch('/api/notifications/clear-all', {
-                method: 'DELETE',
-              });
-
-              if (!response.ok) {
-                throw new Error('Failed to clear notifications');
-              }
+              await clearAllNotifications(uid);
 
               setNotifications([]);
               setUnreadCount(0);
