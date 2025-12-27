@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { assertEventOwner } from '@/app/api/staff/_utils'
-import { Transaction } from 'firebase-admin/firestore'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,20 +19,18 @@ export async function POST(request: NextRequest) {
 
     await assertEventOwner({ eventId, uid: user.id })
 
-    const memberRef = adminDb.collection('events').doc(eventId).collection('members').doc(memberId)
+    const memberRef = adminDb.doc(`events/${eventId}/members/${memberId}`)
+    const snap = await memberRef.get()
+    if (!snap.exists) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+    }
 
-    await adminDb.runTransaction(async (tx: Transaction) => {
-      const snap = await tx.get(memberRef)
-      if (!snap.exists) {
-        throw new Error('Member not found')
-      }
-      tx.delete(memberRef)
-    })
+    await memberRef.delete()
 
     return NextResponse.json({ success: true })
   } catch (err: any) {
     const message = err?.message || 'Failed to remove member'
-    const status = message === 'Member not found' ? 404 : message.includes('Only the event owner') ? 403 : 500
+    const status = message.includes('Only the event owner') ? 403 : 500
     return NextResponse.json({ error: message }, { status })
   }
 }
