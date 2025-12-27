@@ -26,17 +26,45 @@ export default function InvitePage() {
   const [message, setMessage] = useState<string>('')
 
   useEffect(() => {
+    if ((!eventId || !token) && typeof window !== 'undefined') {
+      // If the query params were lost (common after auth redirects), recover the invite from storage.
+      try {
+        const raw = window.localStorage.getItem('eh:pendingInvite')
+        if (raw) {
+          const parsed = JSON.parse(raw) as { eventId?: string; token?: string; createdAt?: number }
+          const storedEventId = String(parsed?.eventId || '')
+          const storedToken = String(parsed?.token || '')
+          if (storedEventId && storedToken) {
+            router.replace(
+              `/invite?eventId=${encodeURIComponent(storedEventId)}&token=${encodeURIComponent(storedToken)}`
+            )
+            return
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     if (!eventId || !token) {
       setStatus('error')
       setMessage('Invalid invite link.')
       return
     }
 
-    // On mobile, prefer opening the native app so redemption happens there (avoids consuming the one-time token in the browser).
-    if (isMobile) {
-      setStatus('ready')
-      setMessage('Open the EventHaiti app to accept this staff invite.')
-      return
+    // Persist the invite so a login roundtrip can continue without re-pasting the link.
+    // This is safe because the token is already present in the URL.
+    try {
+      if (typeof window !== 'undefined') {
+        const redirect = `/invite?eventId=${encodeURIComponent(eventId)}&token=${encodeURIComponent(token)}`
+        window.localStorage.setItem('eh:pendingRedirect', redirect)
+        window.localStorage.setItem(
+          'eh:pendingInvite',
+          JSON.stringify({ eventId, token, createdAt: Date.now() })
+        )
+      }
+    } catch {
+      // ignore storage failures
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -74,6 +102,14 @@ export default function InvitePage() {
 
         setStatus('success')
         setMessage('Invite accepted. Redirecting…')
+        try {
+          if (typeof window !== 'undefined') {
+            window.localStorage.removeItem('eh:pendingRedirect')
+            window.localStorage.removeItem('eh:pendingInvite')
+          }
+        } catch {
+          // ignore
+        }
         router.replace(`/organizer/scan/${encodeURIComponent(eventId)}`)
       } catch (err: any) {
         setStatus('error')

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { parseTicketId } from './parseTicketId'
 import type { CheckInResult } from './checkInTicket'
 
@@ -24,6 +24,19 @@ export function useScanController(options: UseScanControllerOptions) {
   }>({ ticketId: null, timestamp: 0 })
 
   const processingRef = useRef(false)
+  const cooldownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      if (cooldownTimeoutRef.current) {
+        clearTimeout(cooldownTimeoutRef.current)
+        cooldownTimeoutRef.current = null
+      }
+    }
+  }, [])
 
   const handleScan = useCallback(async (scanResult: string) => {
     // Ignore if currently processing
@@ -58,18 +71,22 @@ export function useScanController(options: UseScanControllerOptions) {
 
     // Lock processing
     processingRef.current = true
-    setState('PROCESSING')
+    if (mountedRef.current) setState('PROCESSING')
 
     try {
       // Perform check-in
       const checkInResult = await onScan(ticketId)
       
       // Show result
-      setResult(checkInResult)
-      setState('RESULT')
+      if (mountedRef.current) {
+        setResult(checkInResult)
+        setState('RESULT')
+      }
 
       // Auto-return to scanning after cooldown
-      setTimeout(() => {
+      if (cooldownTimeoutRef.current) clearTimeout(cooldownTimeoutRef.current)
+      cooldownTimeoutRef.current = setTimeout(() => {
+        if (!mountedRef.current) return
         setState('SCANNING')
         setResult(null)
         processingRef.current = false
@@ -78,8 +95,10 @@ export function useScanController(options: UseScanControllerOptions) {
       console.error('Scan error:', error)
       
       // Return to scanning on error
-      setState('SCANNING')
-      setResult(null)
+      if (mountedRef.current) {
+        setState('SCANNING')
+        setResult(null)
+      }
       processingRef.current = false
     }
   }, [state, onScan, cooldownMs, duplicateWindowMs])
@@ -90,6 +109,10 @@ export function useScanController(options: UseScanControllerOptions) {
   }, [handleScan])
 
   const reset = useCallback(() => {
+    if (cooldownTimeoutRef.current) {
+      clearTimeout(cooldownTimeoutRef.current)
+      cooldownTimeoutRef.current = null
+    }
     setState('SCANNING')
     setResult(null)
     processingRef.current = false

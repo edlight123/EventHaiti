@@ -31,7 +31,18 @@ export default function LoginPage() {
 
   // Check for redirect parameter (from mobile app)
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
-  const redirectTo = sanitizeRedirectTarget(searchParams?.get('redirect') || null)
+  const redirectToFromQuery = sanitizeRedirectTarget(searchParams?.get('redirect') || null)
+  const redirectTo = (() => {
+    if (redirectToFromQuery && redirectToFromQuery !== '/') return redirectToFromQuery
+    try {
+      if (typeof window === 'undefined') return redirectToFromQuery
+      const pending = window.localStorage.getItem('eh:pendingRedirect')
+      const sanitized = sanitizeRedirectTarget(pending)
+      return sanitized || redirectToFromQuery
+    } catch {
+      return redirectToFromQuery
+    }
+  })()
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault()
@@ -62,6 +73,12 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken }),
       })
+
+      try {
+        window.localStorage.removeItem('eh:pendingRedirect')
+      } catch {
+        // ignore
+      }
 
       // Force router refresh and navigate
       window.location.href = redirectTo
@@ -103,6 +120,12 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken }),
       })
+
+      try {
+        window.localStorage.removeItem('eh:pendingRedirect')
+      } catch {
+        // ignore
+      }
 
       // Redirect to specified page or home
       window.location.href = redirectTo

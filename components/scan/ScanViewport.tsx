@@ -12,8 +12,56 @@ export function ScanViewport({ onScan, isProcessing }: ScanViewportProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [showOpenInApp, setShowOpenInApp] = useState(false)
+
+  const openInAppUrl = 'eventhaiti://'
+
+  const isMobile = (() => {
+    if (typeof navigator === 'undefined') return false
+    return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+  })()
+
+  const isIOS = (() => {
+    if (typeof navigator === 'undefined') return false
+    return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+  })()
+
+  const isStandalone = (() => {
+    if (typeof window === 'undefined') return false
+    const mql = window.matchMedia?.('(display-mode: standalone)')
+    const iosStandalone = (navigator as any)?.standalone
+    return Boolean(mql?.matches || iosStandalone)
+  })()
 
   useEffect(() => {
+    let cancelled = false
+
+    const allowCamera = (() => {
+      if (typeof window === 'undefined') return false
+      // getUserMedia generally requires HTTPS (or localhost).
+      const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost'
+      const hasGetUserMedia = !!navigator.mediaDevices?.getUserMedia
+      return isSecure && hasGetUserMedia
+    })()
+
+    // If scanning doesn't work reliably on this device/context, show a friendly path forward.
+    if (!isMobile) {
+      setError('Scanning is only available on a mobile device.')
+      setShowOpenInApp(true)
+      return
+    }
+
+    // Prefer (but don't require) the installed experience on iOS.
+    if (isIOS && !isStandalone) {
+      setShowOpenInApp(true)
+    }
+
+    if (!allowCamera) {
+      setError('Camera access is not available in this browser. Please use the EventHaiti app.')
+      setShowOpenInApp(true)
+      return
+    }
+
     const scanner = new Html5Qrcode('qr-reader')
     scannerRef.current = scanner
 
@@ -33,20 +81,42 @@ export function ScanViewport({ onScan, isProcessing }: ScanViewportProps) {
         }
       )
       .then(() => {
+        if (cancelled) return
         setIsInitialized(true)
         setError(null)
       })
       .catch((err) => {
         console.error('Scanner start error:', err)
+        if (cancelled) return
         setError('Camera access denied or not available')
+        setShowOpenInApp(true)
       })
 
     return () => {
-      if (scanner.isScanning) {
-        scanner.stop().catch(console.error)
+      cancelled = true
+      const current = scannerRef.current
+      scannerRef.current = null
+      if (!current) return
+
+      const stopIfNeeded = async () => {
+        try {
+          if ((current as any).isScanning) {
+            await current.stop()
+          }
+        } catch {
+          // ignore stop errors on unmount/navigation
+        }
+        try {
+          // Ensure the video element + overlays are removed cleanly
+          await (current as any).clear?.()
+        } catch {
+          // ignore
+        }
       }
+
+      void stopIfNeeded()
     }
-  }, [])
+  }, [isIOS, isMobile, isStandalone])
 
   // Pause/resume scanning based on processing state
   useEffect(() => {
@@ -93,6 +163,17 @@ export function ScanViewport({ onScan, isProcessing }: ScanViewportProps) {
             </div>
             <p className="text-white font-semibold mb-2">Camera Error</p>
             <p className="text-gray-400 text-sm">{error}</p>
+
+            {showOpenInApp ? (
+              <div className="mt-4">
+                <a
+                  href={openInAppUrl}
+                  className="inline-block px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
+                >
+                  Open EventHaiti app
+                </a>
+              </div>
+            ) : null}
           </div>
         </div>
       )}
