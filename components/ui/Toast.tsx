@@ -19,15 +19,17 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
+const noopShowToast: ToastContextType['showToast'] = () => {
+  // Intentionally no-op
+};
+
 export function useToast() {
   const context = useContext(ToastContext);
   if (!context) {
     // Fail-safe: some routes may not mount ToastProvider.
     // We prefer a no-op toast over crashing the entire app.
     return {
-      showToast: () => {
-        // Intentionally no-op
-      },
+      showToast: noopShowToast,
     };
   }
   return context;

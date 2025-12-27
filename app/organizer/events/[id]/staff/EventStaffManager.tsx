@@ -102,7 +102,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
       unsubInvites()
       unsubMembers()
     }
-  }, [authReady, authUid, eventId, showToast])
+  }, [authReady, authUid, eventId])
 
   const handleCreateInvite = useCallback(async () => {
     if (!canSubmit) return
