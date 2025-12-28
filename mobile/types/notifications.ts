@@ -20,4 +20,5 @@ export type NotificationType =
   | 'event_cancelled'
   | 'ticket_transferred'
   | 'ticket_received'
-  | 'new_follower';
+  | 'new_follower'
+  | 'staff_invite';

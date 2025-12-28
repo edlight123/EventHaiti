@@ -13,6 +13,7 @@ export type NotificationType =
   | 'event_reminder_30min'
   | 'event_cancelled'
   | 'verification'
+  | 'staff_invite'
 
 export interface Database {
   public: {

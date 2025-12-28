@@ -31,6 +31,42 @@ export function NotificationsClient({
   const [isLoading, setIsLoading] = useState(false)
   const [isClearing, setIsClearing] = useState(false)
 
+  const handleAcceptStaffInvite = async (notification: Notification) => {
+    const metadata = (notification as any)?.metadata || {}
+    const eventId = String(metadata?.eventId || notification.eventId || '')
+    const token = String(metadata?.token || '')
+
+    if (!eventId || !token) {
+      alert('Missing invite details. Please open the invite link.')
+      return
+    }
+
+    try {
+      const res = await fetch('/api/staff/invites/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, token }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        const msg = data?.error || 'Failed to accept invite'
+        alert(msg)
+        return
+      }
+
+      if (!notification.isRead) {
+        await handleMarkAsRead(notification.id)
+      }
+
+      // Send the user to the staff hub.
+      router.push('/staff')
+    } catch (error) {
+      console.error('Error accepting staff invite:', error)
+      alert('Failed to accept invite')
+    }
+  }
+
   const handleMarkAsRead = async (notificationId: string) => {
     try {
       await markAsRead(userId, notificationId)
@@ -104,6 +140,8 @@ export function NotificationsClient({
         return '⏰'
       case 'event_cancelled':
         return '❌'
+      case 'staff_invite':
+        return '👥'
       default:
         return '🔔'
     }
@@ -210,6 +248,20 @@ export function NotificationsClient({
                     <p className="text-sm text-gray-600 mb-2">
                       {notification.message}
                     </p>
+
+                    {notification.type === 'staff_invite' && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleAcceptStaffInvite(notification)
+                          }}
+                          className="px-3 py-1.5 text-sm font-medium bg-brand-600 text-white rounded-md hover:bg-brand-700 transition-colors"
+                        >
+                          Accept invite
+                        </button>
+                      </div>
+                    )}
 
                     <div className="flex items-center gap-4 text-xs text-gray-500">
                       <span>

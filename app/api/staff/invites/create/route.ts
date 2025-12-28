@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
-import { adminDb } from '@/lib/firebase/admin'
+import { adminAuth, adminDb } from '@/lib/firebase/admin'
+import { createNotification } from '@/lib/notifications/helpers'
 import {
   assertEventOwner,
   expiresIn48h,
@@ -11,6 +12,72 @@ import {
   sha256Hex,
   serverTimestamp,
 } from '@/app/api/staff/_utils'
+
+async function resolveExistingUserId(params: {
+  method: InviteMethod
+  targetEmail?: string
+  targetPhone?: string
+}): Promise<string | null> {
+  const { method, targetEmail, targetPhone } = params
+
+  if (method === 'email' && targetEmail) {
+    // Prefer Auth lookup.
+    try {
+      const record = await adminAuth.getUserByEmail(targetEmail)
+      if (record?.uid) return record.uid
+    } catch {
+      // fall through
+    }
+
+    // Fallback to users collection.
+    try {
+      const snap = await adminDb.collection('users').where('email', '==', targetEmail).limit(1).get()
+      if (!snap.empty) return snap.docs[0].id
+    } catch {
+      // ignore
+    }
+  }
+
+  if (method === 'phone' && targetPhone) {
+    const raw = String(targetPhone).trim()
+    const digits = raw.replace(/[^0-9]/g, '')
+
+    // Try a few common representations (raw, E.164-ish Haiti).
+    const candidates = Array.from(
+      new Set(
+        [
+          raw,
+          digits,
+          digits.length === 8 ? `+509${digits}` : null,
+          digits.length === 11 && digits.startsWith('509') ? `+${digits}` : null,
+          raw.startsWith('+') ? raw : null,
+        ].filter(Boolean) as string[]
+      )
+    )
+
+    for (const candidate of candidates) {
+      try {
+        const record = await adminAuth.getUserByPhoneNumber(candidate)
+        if (record?.uid) return record.uid
+      } catch {
+        // try next
+      }
+    }
+
+    // Fallback to users collection.
+    try {
+      const phoneCandidates = Array.from(new Set([raw, digits, ...candidates]))
+      for (const phone of phoneCandidates) {
+        const snap = await adminDb.collection('users').where('phone_number', '==', phone).limit(1).get()
+        if (!snap.empty) return snap.docs[0].id
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return null
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,6 +127,42 @@ export async function POST(request: NextRequest) {
     })
 
     const inviteUrl = inviteUrlFor(eventId, token)
+
+    // If the invited email/phone already belongs to an existing user, also surface the invite
+    // in their in-app Notifications so they can accept from there.
+    if (method === 'email' || method === 'phone') {
+      try {
+        const existingUserId = await resolveExistingUserId({ method, targetEmail, targetPhone })
+
+        if (existingUserId) {
+          const eventSnap = await adminDb.collection('events').doc(eventId).get()
+          const eventTitle = eventSnap.exists
+            ? String((eventSnap.data() as any)?.title || (eventSnap.data() as any)?.name || 'an event')
+            : 'an event'
+
+          const actionUrl = `/invite?eventId=${encodeURIComponent(eventId)}&token=${encodeURIComponent(token)}`
+
+          await createNotification(
+            existingUserId,
+            'staff_invite',
+            'Staff invitation',
+            `You have been invited to join "${eventTitle}" as staff.`,
+            actionUrl,
+            {
+              eventId,
+              inviteId: inviteRef.id,
+              token,
+              method,
+              role: 'staff',
+              permissions: normalizePermissions(body?.permissions),
+              eventTitle,
+            }
+          )
+        }
+      } catch (notificationError) {
+        console.error('Failed to create staff invite notification:', notificationError)
+      }
+    }
 
     return NextResponse.json({
       inviteId: inviteRef.id,
