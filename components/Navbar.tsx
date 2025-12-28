@@ -17,7 +17,7 @@ interface NavbarProps {
     id: string
     full_name: string
     email: string
-    role: 'attendee' | 'organizer'
+    role: 'attendee' | 'organizer' | 'staff'
   } | null
   isAdmin?: boolean
 }
@@ -90,6 +90,14 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
                     }`}
                   >
                     {t('nav.dashboard')}
+                  </Link>
+                  <Link
+                    href="/staff"
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      pathname === '/staff' ? 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 shadow-sm' : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {t('nav.staff')}
                   </Link>
                   <Link
                     href="/tickets"
@@ -209,6 +217,15 @@ export default function Navbar({ user, isAdmin = false }: NavbarProps) {
               </Link>
               {user && (
                 <>
+                  <Link
+                    href="/staff"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`block px-3 py-2 rounded-lg text-sm font-medium ${
+                      pathname === '/staff' ? 'bg-teal-50 text-teal-700' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {t('nav.staff')}
+                  </Link>
                   <Link
                     href="/tickets"
                     onClick={() => setMobileMenuOpen(false)}
