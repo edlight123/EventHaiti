@@ -27,11 +27,17 @@ type EventMember = {
   createdAt: any
 }
 
+type MemberProfile = {
+  email: string | null
+  full_name: string | null
+}
+
 export default function EventStaffManager({ eventId }: { eventId: string }) {
   const { showToast } = useToast()
 
   const [invites, setInvites] = useState<EventInvite[]>([])
   const [members, setMembers] = useState<EventMember[]>([])
+  const [memberProfiles, setMemberProfiles] = useState<Record<string, MemberProfile>>({})
   const [authReady, setAuthReady] = useState(false)
   const [authUid, setAuthUid] = useState<string | null>(null)
   const [listenerError, setListenerError] = useState<string | null>(null)
@@ -63,6 +69,7 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
       // Not signed in yet (or session-only auth); avoid starting listeners that will permission-deny.
       setInvites([])
       setMembers([])
+      setMemberProfiles({})
       setListenerError(null)
       return
     }
@@ -102,6 +109,51 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
       unsubMembers()
     }
   }, [authReady, authUid, eventId])
+
+  useEffect(() => {
+    if (!authReady || !authUid) return
+    if (members.length === 0) {
+      setMemberProfiles({})
+      return
+    }
+
+    const missingUids = Array.from(
+      new Set(
+        members
+          .map((m) => m.id)
+          .filter((uid) => uid && !memberProfiles[uid])
+      )
+    )
+
+    if (missingUids.length === 0) return
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/staff/members/resolve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId, uids: missingUids }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          console.error('Failed to resolve profiles:', json?.error || res.statusText)
+          return
+        }
+
+        const profiles = (json as any)?.profiles as Record<string, MemberProfile> | undefined
+        if (!profiles || cancelled) return
+
+        setMemberProfiles((prev) => ({ ...prev, ...profiles }))
+      } catch (e) {
+        console.error('Failed to resolve member profiles:', e)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [authReady, authUid, eventId, members, memberProfiles])
 
   const handleCreateInvite = useCallback(async () => {
     if (!canSubmit) return
@@ -230,24 +282,33 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {members.map((m) => (
-                  <tr key={m.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{m.id}</div>
-                      <div className="text-sm text-gray-500">{m.role || 'staff'}</div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">
-                      Check-in: {m.permissions?.checkin ? 'Yes' : 'No'}
-                      <br />
-                      View attendees: {m.permissions?.viewAttendees ? 'Yes' : 'No'}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button onClick={() => handleRemoveMember(m.id)} className="text-red-600 hover:text-red-800">
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {members.map((m) => {
+                  const profile = memberProfiles[m.id]
+                  const displayName = profile?.full_name || profile?.email || m.id
+                  const showEmail = profile?.full_name && profile?.email
+
+                  return (
+                    <tr key={m.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-gray-900">{displayName}</div>
+                        <div className="text-sm text-gray-500">{m.role || 'staff'}</div>
+                        {showEmail && (
+                          <div className="text-xs text-gray-500 mt-0.5">{profile.email}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        Check-in: {m.permissions?.checkin ? 'Yes' : 'No'}
+                        <br />
+                        View attendees: {m.permissions?.viewAttendees ? 'Yes' : 'No'}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button onClick={() => handleRemoveMember(m.id)} className="text-red-600 hover:text-red-800">
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
