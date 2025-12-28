@@ -67,6 +67,20 @@ export function NotificationsClient({
     }
   }
 
+  const handleDeclineStaffInvite = async (notification: Notification) => {
+    try {
+      if (!notification.isRead) {
+        await handleMarkAsRead(notification.id)
+      }
+
+      // Dismiss it from the list (it will still exist in Firestore as read).
+      setNotifications((prev) => prev.filter((n) => n.id !== notification.id))
+    } catch (error) {
+      console.error('Error declining staff invite:', error)
+      alert('Failed to decline invite')
+    }
+  }
+
   const handleMarkAsRead = async (notificationId: string) => {
     try {
       await markAsRead(userId, notificationId)
@@ -259,6 +273,16 @@ export function NotificationsClient({
                           className="px-3 py-1.5 text-sm font-medium bg-brand-600 text-white rounded-md hover:bg-brand-700 transition-colors"
                         >
                           Accept invite
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeclineStaffInvite(notification)
+                          }}
+                          className="px-3 py-1.5 text-sm font-medium bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                        >
+                          Decline
                         </button>
                       </div>
                     )}
