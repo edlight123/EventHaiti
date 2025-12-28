@@ -26,6 +26,15 @@ function toISOString(value: any): string | undefined {
   return undefined
 }
 
+function isIndexBuildingOrMissing(err: unknown): boolean {
+  const anyErr = err as any
+  return (
+    anyErr?.code === 9 ||
+    String(anyErr?.details || anyErr?.message || '').toLowerCase().includes('requires an index') ||
+    String(anyErr?.details || anyErr?.message || '').toLowerCase().includes('index is currently building')
+  )
+}
+
 export default async function StaffHomePage() {
   const { user, error } = await requireAuth()
   if (error || !user) {
@@ -33,15 +42,25 @@ export default async function StaffHomePage() {
   }
 
   // Find events where this user is a staff member (across all events).
-  const membersSnap = await adminDb
-    .collectionGroup('members')
-    .where('uid', '==', user.id)
-    .where('role', '==', 'staff')
-    .get()
+  let membersSnap
+  try {
+    membersSnap = await adminDb
+      .collectionGroup('members')
+      .where('uid', '==', user.id)
+      .where('role', '==', 'staff')
+      .get()
+  } catch (err) {
+    // Composite index may still be building right after deploy. Fall back to uid-only query
+    // (single-field index), then filter by role in-memory.
+    if (!isIndexBuildingOrMissing(err)) throw err
+
+    membersSnap = await adminDb.collectionGroup('members').where('uid', '==', user.id).get()
+  }
 
   const memberRows: MemberRow[] = membersSnap.docs
     .map((d: QueryDocumentSnapshot) => ({ id: d.id, data: d.data() as any }))
     .filter((row: MemberRow) => Boolean(row.data?.eventId))
+    .filter((row: MemberRow) => String(row.data?.role || '') === 'staff')
 
   const uniqueEventIds = Array.from(new Set(memberRows.map((r) => String(r.data.eventId))))
 
