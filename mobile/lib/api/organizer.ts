@@ -27,6 +27,14 @@ export interface OrganizerEvent {
   status: 'draft' | 'published' | 'cancelled' | 'completed';
   created_at: string;
   updated_at: string;
+
+  // Optional fields used by edit flows / legacy event shapes
+  ticket_tiers?: any[];
+  category?: string;
+  venue_name?: string;
+  commune?: string;
+  address?: string;
+  currency?: string;
 }
 
 export interface OrganizerStats {

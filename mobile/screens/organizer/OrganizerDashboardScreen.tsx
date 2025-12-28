@@ -20,7 +20,7 @@ import {
 } from '../../lib/api/organizer';
 
 export default function OrganizerDashboardScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const { userProfile } = useAuth();
   const [todayEvents, setTodayEvents] = useState<TodayEvent[]>([]);
   const [stats, setStats] = useState<OrganizerStats | null>(null);

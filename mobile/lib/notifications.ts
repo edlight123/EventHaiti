@@ -38,6 +38,8 @@ export async function getUserNotifications(
         type: data.type,
         title: data.title,
         message: data.message,
+        actionUrl: data.actionUrl,
+        metadata: data.metadata,
         eventId: data.eventId,
         ticketId: data.ticketId,
         isRead: data.isRead ?? false,

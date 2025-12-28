@@ -1,13 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, SafeAreaView, Text, TouchableOpacity, View } from 'react-native'
 import { NativeStackScreenProps } from '@react-navigation/native-stack'
-import { httpsCallable } from 'firebase/functions'
 
 import { RootStackParamList } from '../navigation/AppNavigator'
 import { useAuth } from '../contexts/AuthContext'
 import { useAppMode } from '../contexts/AppModeContext'
-import { functions } from '../config/firebase'
 import { clearPendingInvite, setPendingInvite } from '../lib/pendingInvite'
+import { backendJson } from '../lib/api/backend'
 import { COLORS } from '../config/brand'
 
 type Props = NativeStackScreenProps<RootStackParamList, 'InviteRedeem'>
@@ -20,6 +19,8 @@ function getFriendlyError(message: string) {
   if (lower.includes('authentication required')) return 'Please log in to accept this invite.'
   if (lower.includes('restricted to a different email')) return 'This invite is restricted to a different email address.'
   if (lower.includes('restricted to a different phone')) return 'This invite is restricted to a different phone number.'
+  if (lower.includes('invite email mismatch')) return 'This invite is restricted to a different email address.'
+  if (lower.includes('invite phone mismatch')) return 'This invite is restricted to a different phone number.'
   return message
 }
 
@@ -58,8 +59,10 @@ export default function InviteRedeemScreen({ route, navigation }: Props) {
       setMessage('Accepting invite…')
 
       try {
-        const fn = httpsCallable(functions, 'redeemEventInvite')
-        await fn({ eventId, token })
+        await backendJson('/api/staff/invites/redeem', {
+          method: 'POST',
+          body: JSON.stringify({ eventId, token }),
+        })
 
         await clearPendingInvite()
         await setMode('staff')

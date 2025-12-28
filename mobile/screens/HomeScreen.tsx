@@ -46,7 +46,7 @@ export default function HomeScreen({ navigation }: any) {
 
       const snapshot = await getDocs(q);
 
-      const eventsData = snapshot.docs.map((doc) => {
+      const eventsData: any[] = snapshot.docs.map((doc) => {
         const data = doc.data();
 
         // Convert Firestore Timestamp to Date
@@ -70,7 +70,7 @@ export default function HomeScreen({ navigation }: any) {
 
       // Filter out past events
       const now = new Date();
-      const futureEvents = eventsData.filter((e) => e.start_datetime >= now);
+      const futureEvents: any[] = eventsData.filter((e) => e.start_datetime >= now);
 
       setEvents(futureEvents);
 

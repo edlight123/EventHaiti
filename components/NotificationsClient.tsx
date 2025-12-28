@@ -68,7 +68,29 @@ export function NotificationsClient({
   }
 
   const handleDeclineStaffInvite = async (notification: Notification) => {
+    const metadata = (notification as any)?.metadata || {}
+    const eventId = String(metadata?.eventId || notification.eventId || '')
+    const token = String(metadata?.token || '')
+
+    if (!eventId || !token) {
+      alert('Missing invite details. Please open the invite link.')
+      return
+    }
+
     try {
+      const res = await fetch('/api/staff/invites/decline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, token }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        const msg = data?.error || 'Failed to decline invite'
+        alert(msg)
+        return
+      }
+
       if (!notification.isRead) {
         await handleMarkAsRead(notification.id)
       }

@@ -16,7 +16,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getOrganizerEvents, OrganizerEvent, getTodayEvents, TodayEvent } from '../../lib/api/organizer';
 
 export default function OrganizerScanScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const { userProfile } = useAuth();
   const [isScanning, setIsScanning] = useState(false);
   const [todayEvents, setTodayEvents] = useState<TodayEvent[]>([]);

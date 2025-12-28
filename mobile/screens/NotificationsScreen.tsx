@@ -14,6 +14,7 @@ import { Bell, Check, CheckCheck, Trash2, ExternalLink } from 'lucide-react-nati
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../config/brand';
 import { useAuth } from '../contexts/AuthContext';
+import { useAppMode } from '../contexts/AppModeContext';
 import {
   getUserNotifications,
   markAsRead,
@@ -21,16 +22,96 @@ import {
   getUnreadCount,
   clearAllNotifications,
 } from '../lib/notifications';
+import { backendJson } from '../lib/api/backend';
 import type { Notification } from '../types/notifications';
 
 export default function NotificationsScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
+  const { setMode } = useAppMode();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+
+  const getInviteDetails = (notification: Notification): { eventId: string; token: string } | null => {
+    const metadata: any = (notification as any)?.metadata || {};
+    const eventId = String(metadata?.eventId || notification.eventId || '');
+    const token = String(metadata?.token || '');
+    if (eventId && token) return { eventId, token };
+
+    const actionUrl = String((notification as any)?.actionUrl || '');
+    if (actionUrl) {
+      try {
+        const full = actionUrl.startsWith('http')
+          ? actionUrl
+          : `https://eventhaiti.vercel.app${actionUrl.startsWith('/') ? '' : '/'}${actionUrl}`;
+        const url = new URL(full);
+        const parsedEventId = url.searchParams.get('eventId') || '';
+        const parsedToken = url.searchParams.get('token') || '';
+        if (parsedEventId && parsedToken) {
+          return { eventId: parsedEventId, token: parsedToken };
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    return null;
+  };
+
+  const acceptStaffInvite = async (notification: Notification) => {
+    const details = getInviteDetails(notification);
+    if (!details) {
+      Alert.alert('Missing invite details', 'Please open the invite link again.');
+      return;
+    }
+
+    try {
+      await backendJson('/api/staff/invites/redeem', {
+        method: 'POST',
+        body: JSON.stringify(details),
+      });
+
+      if (user?.uid && !notification.isRead) {
+        await handleMarkAsRead(notification.id);
+      }
+
+      await setMode('staff');
+      // @ts-ignore
+      navigation.navigate('Main');
+      // @ts-ignore
+      navigation.navigate('TicketScanner', { eventId: details.eventId });
+    } catch (error: any) {
+      const msg = error?.message ? String(error.message) : 'Failed to accept invite.';
+      Alert.alert('Could not accept invite', msg);
+    }
+  };
+
+  const declineStaffInvite = async (notification: Notification) => {
+    const details = getInviteDetails(notification);
+    if (!details) {
+      Alert.alert('Missing invite details', 'Please open the invite link again.');
+      return;
+    }
+
+    try {
+      await backendJson('/api/staff/invites/decline', {
+        method: 'POST',
+        body: JSON.stringify(details),
+      });
+
+      if (user?.uid && !notification.isRead) {
+        await handleMarkAsRead(notification.id);
+      }
+
+      setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+    } catch (error: any) {
+      const msg = error?.message ? String(error.message) : 'Failed to decline invite.';
+      Alert.alert('Could not decline invite', msg);
+    }
+  };
 
   const loadNotifications = async (showLoader = true) => {
     if (!user?.uid) return;
@@ -139,12 +220,20 @@ export default function NotificationsScreen() {
         return '⏰';
       case 'event_cancelled':
         return '❌';
+      case 'staff_invite':
+        return '👥';
       default:
         return '🔔';
     }
   };
 
   const getNotificationLink = (notification: Notification): { screen: string; params?: any } | null => {
+    if (notification.type === 'staff_invite') {
+      const details = getInviteDetails(notification);
+      if (details) {
+        return { screen: 'InviteRedeem', params: details };
+      }
+    }
     if (notification.ticketId) {
       return { screen: 'TicketDetail', params: { ticketId: notification.ticketId } };
     }
@@ -249,6 +338,32 @@ export default function NotificationsScreen() {
                   <Text style={styles.notificationMessage} numberOfLines={3}>
                     {notification.message}
                   </Text>
+
+                  {notification.type === 'staff_invite' && (
+                    <View style={styles.staffInviteActions}>
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          acceptStaffInvite(notification);
+                        }}
+                        style={styles.staffInviteAcceptButton}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.staffInviteAcceptText}>Accept</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          declineStaffInvite(notification);
+                        }}
+                        style={styles.staffInviteDeclineButton}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.staffInviteDeclineText}>Decline</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
 
                   <View style={styles.notificationFooter}>
                     <Text style={styles.notificationTime}>
@@ -423,6 +538,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  staffInviteActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+    marginBottom: 2,
+  },
+  staffInviteAcceptButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: COLORS.primary,
+  },
+  staffInviteAcceptText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  staffInviteDeclineButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  staffInviteDeclineText: {
+    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: '600',
   },
   notificationTime: {
     fontSize: 12,

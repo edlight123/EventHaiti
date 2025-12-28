@@ -4,6 +4,8 @@ export interface Notification {
   type: string;
   title: string;
   message: string;
+  actionUrl?: string;
+  metadata?: any;
   eventId?: string;
   ticketId?: string;
   isRead: boolean;

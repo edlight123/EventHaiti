@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
+import { sendEmail } from '@/lib/email'
+import { sendSms } from '@/lib/sms'
 import { createNotification } from '@/lib/notifications/helpers'
 import {
   assertEventOwner,
   expiresIn48h,
   InviteMethod,
+  inviteDeepLinkFor,
   inviteUrlFor,
   normalizePermissions,
   randomToken,
@@ -79,6 +82,23 @@ async function resolveExistingUserId(params: {
   return null
 }
 
+function normalizeInvitePhoneE164(rawPhone: string): string | null {
+  const raw = String(rawPhone || '').trim()
+  if (!raw) return null
+  if (raw.startsWith('+')) return raw
+
+  const digits = raw.replace(/[^0-9]/g, '')
+  if (!digits) return null
+
+  // Haiti local numbers are often 8 digits.
+  if (digits.length === 8) return `+509${digits}`
+  // Already has country code.
+  if (digits.length === 11 && digits.startsWith('509')) return `+${digits}`
+  // Fallback: best-effort, prefix '+' if it looks like E.164.
+  if (digits.length >= 10 && digits.length <= 15) return `+${digits}`
+  return null
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { user, error } = await requireAuth('organizer')
@@ -127,6 +147,52 @@ export async function POST(request: NextRequest) {
     })
 
     const inviteUrl = inviteUrlFor(eventId, token)
+    const inviteDeepLink = inviteDeepLinkFor(eventId, token)
+
+    // Always send delivery message for email/phone invites.
+    if (method === 'email' && targetEmail) {
+      try {
+        const eventSnap = await adminDb.collection('events').doc(eventId).get()
+        const eventTitle = eventSnap.exists
+          ? String((eventSnap.data() as any)?.title || (eventSnap.data() as any)?.name || 'an event')
+          : 'an event'
+
+        const subject = `You're invited to be staff: ${eventTitle}`
+        const html = `
+          <!doctype html>
+          <html>
+            <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+              <h2>EventHaiti staff invitation</h2>
+              <p>You have been invited to join <strong>${eventTitle}</strong> as staff.</p>
+              <p><a href="${inviteDeepLink}">Open in the EventHaiti app</a></p>
+              <p><a href="${inviteUrl}">Accept your invite</a></p>
+              <p style="color:#6b7280;font-size:12px;">This invite expires in 48 hours.</p>
+            </body>
+          </html>
+        `.trim()
+
+        await sendEmail({ to: targetEmail, subject, html })
+      } catch (emailError) {
+        console.error('Failed to send staff invite email:', emailError)
+      }
+    }
+
+    if (method === 'phone' && targetPhone) {
+      try {
+        const to = normalizeInvitePhoneE164(targetPhone)
+        if (to) {
+          const eventSnap = await adminDb.collection('events').doc(eventId).get()
+          const eventTitle = eventSnap.exists
+            ? String((eventSnap.data() as any)?.title || (eventSnap.data() as any)?.name || 'an event')
+            : 'an event'
+
+          const message = `EventHaiti staff invite: ${eventTitle}. Open in app: ${inviteDeepLink} (or web: ${inviteUrl})`
+          await sendSms({ to, message })
+        }
+      } catch (smsError) {
+        console.error('Failed to send staff invite SMS:', smsError)
+      }
+    }
 
     // If the invited email/phone already belongs to an existing user, also surface the invite
     // in their in-app Notifications so they can accept from there.

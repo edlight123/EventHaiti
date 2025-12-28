@@ -181,9 +181,11 @@ export default function TieredTicketSelector({
     if (promoValidation?.valid) {
       return null; // Don't apply group discount if promo code is used
     }
+
+    const totalQty = getTotalQuantity();
     
     const applicable = groupDiscounts
-      .filter(d => d.min_quantity <= quantity)
+      .filter(d => d.is_active && d.min_quantity <= totalQty)
       .sort((a, b) => b.discount_percentage - a.discount_percentage);
     
     return applicable[0] || null;
