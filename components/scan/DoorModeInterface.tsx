@@ -16,6 +16,7 @@ interface DoorModeInterfaceProps {
   scannedBy: string
   tickets: any[]
   defaultEntryPoints?: string[]
+  exitHref?: string
 }
 
 export function DoorModeInterface({
@@ -24,6 +25,7 @@ export function DoorModeInterface({
   scannedBy,
   tickets,
   defaultEntryPoints = ['Main Entrance', 'VIP Entrance', 'Gate A', 'Gate B'],
+  exitHref,
 }: DoorModeInterfaceProps) {
   const [entryPoint, setEntryPoint] = useState(defaultEntryPoints[0])
   const [showManualLookup, setShowManualLookup] = useState(false)
@@ -87,6 +89,7 @@ export function DoorModeInterface({
       <DoorModeTopBar
         eventTitle={eventTitle}
         eventId={eventId}
+        exitHref={exitHref}
         entryPoint={entryPoint}
         entryPoints={defaultEntryPoints}
         onEntryPointChange={setEntryPoint}

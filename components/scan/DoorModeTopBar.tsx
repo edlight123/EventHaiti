@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 interface DoorModeTopBarProps {
   eventTitle: string
   eventId: string
+  exitHref?: string
   entryPoint: string
   entryPoints: string[]
   onEntryPointChange: (point: string) => void
@@ -16,6 +17,7 @@ interface DoorModeTopBarProps {
 export function DoorModeTopBar({
   eventTitle,
   eventId,
+  exitHref,
   entryPoint,
   entryPoints,
   onEntryPointChange,
@@ -24,6 +26,8 @@ export function DoorModeTopBar({
 }: DoorModeTopBarProps) {
   const router = useRouter()
   const totalTickets = checkedInCount + remainingCount
+
+  const resolvedExitHref = exitHref || `/organizer/scan`
 
   return (
     <div className="sticky top-0 z-50 bg-gray-900 text-white border-b border-gray-700">
@@ -34,7 +38,7 @@ export function DoorModeTopBar({
 
           {/* Exit Button */}
           <button
-            onClick={() => router.push(`/organizer/events/${eventId}`)}
+            onClick={() => router.push(resolvedExitHref)}
             className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-sm font-medium"
           >
             <X className="w-4 h-4" />

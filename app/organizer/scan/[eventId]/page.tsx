@@ -66,6 +66,8 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
     redirect('/organizer/scan')
   }
 
+  const exitHref = isEventOrganizerOwner ? `/organizer/events/${eventId}` : '/staff'
+
   // If not an organizer, still allow access for staff.
   if (!isEventOrganizerOwner && userRole !== 'organizer') {
     // ok
@@ -135,6 +137,7 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
       scannedBy={authUser.uid}
       tickets={tickets}
       defaultEntryPoints={entryPoints}
+      exitHref={exitHref}
     />
   )
 }
