@@ -13,11 +13,18 @@ export async function getServerSession() {
       const authHeader = headerStore.get('authorization') || headerStore.get('Authorization')
       const bearer = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length).trim() : null
 
-      if (!bearer) {
+      const tokenFromAltHeader =
+        headerStore.get('x-firebase-token') ||
+        headerStore.get('X-Firebase-Token') ||
+        headerStore.get('x-firebase-token'.toLowerCase())
+
+      const token = bearer || (tokenFromAltHeader ? String(tokenFromAltHeader).trim() : null)
+
+      if (!token) {
         return { user: null, error: 'No session cookie' }
       }
 
-      const decodedClaims = await adminAuth.verifyIdToken(bearer, true)
+      const decodedClaims = await adminAuth.verifyIdToken(token, true)
       const user = await adminAuth.getUser(decodedClaims.uid)
 
       return {
