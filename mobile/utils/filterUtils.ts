@@ -95,9 +95,27 @@ export function getPriceRange(priceFilter: PriceFilter, customRange?: { min: num
 export function applyFilters(events: any[], filters: EventFilters): any[] {
   let filtered = events;
 
+  const normalizeCountry = (raw: unknown): string => {
+    const value = String(raw || '').trim()
+    if (!value) return ''
+
+    const upper = value.toUpperCase()
+    if (upper.length === 2) return upper
+
+    const compact = value.toLowerCase().replace(/[^a-z]/g, '')
+    if (compact === 'haiti') return 'HT'
+    if (compact === 'unitedstates' || compact === 'usa' || compact === 'us') return 'US'
+    if (compact === 'canada' || compact === 'ca') return 'CA'
+    if (compact === 'france' || compact === 'fr') return 'FR'
+    if (compact === 'dominicanrepublic' || compact === 'dominicanrep' || compact === 'do') return 'DO'
+
+    return upper
+  }
+
   // Country filter
   if (filters.country) {
-    filtered = filtered.filter(event => (event.country || 'HT') === filters.country)
+    const target = normalizeCountry(filters.country)
+    filtered = filtered.filter((event) => normalizeCountry(event?.country || 'HT') === target)
   }
 
   // Date filter
