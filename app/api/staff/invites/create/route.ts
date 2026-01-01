@@ -4,6 +4,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { sendEmail } from '@/lib/email'
 import { sendSms } from '@/lib/sms'
 import { createNotification } from '@/lib/notifications/helpers'
+import { sendPushNotification } from '@/lib/notification-triggers'
 import {
   assertEventOwner,
   expiresIn48h,
@@ -101,9 +102,13 @@ function normalizeInvitePhoneE164(rawPhone: string): string | null {
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth('organizer')
+    const { user, error } = await requireAuth()
     if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (user.role !== 'organizer' && user.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const body = await request.json().catch(() => ({}))
@@ -123,7 +128,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'targetPhone is required for phone invites' }, { status: 400 })
     }
 
-    await assertEventOwner({ eventId, uid: user.id })
+    if (user.role !== 'admin') {
+      await assertEventOwner({ eventId, uid: user.id })
+    }
 
     const token = randomToken(32)
     const tokenHash = sha256Hex(token)
@@ -223,6 +230,15 @@ export async function POST(request: NextRequest) {
               permissions: normalizePermissions(body?.permissions),
               eventTitle,
             }
+          )
+
+          // Best-effort push (mobile + web)
+          await sendPushNotification(
+            existingUserId,
+            'Staff invitation',
+            `You have been invited to join "${eventTitle}" as staff.`,
+            inviteUrl,
+            { type: 'staff_invite', eventId, inviteId: inviteRef.id, deepLink: inviteDeepLink }
           )
         }
       } catch (notificationError) {

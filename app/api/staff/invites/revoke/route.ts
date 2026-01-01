@@ -5,9 +5,13 @@ import { assertEventOwner, serverTimestamp } from '@/app/api/staff/_utils'
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth('organizer')
+    const { user, error } = await requireAuth()
     if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (user.role !== 'organizer' && user.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const body = await request.json().catch(() => ({}))
@@ -17,7 +21,9 @@ export async function POST(request: NextRequest) {
     if (!eventId) return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
     if (!inviteId) return NextResponse.json({ error: 'inviteId is required' }, { status: 400 })
 
-    await assertEventOwner({ eventId, uid: user.id })
+    if (user.role !== 'admin') {
+      await assertEventOwner({ eventId, uid: user.id })
+    }
 
     const inviteRef = adminDb.doc(`events/${eventId}/invites/${inviteId}`)
 

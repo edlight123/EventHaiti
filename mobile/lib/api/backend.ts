@@ -1,17 +1,96 @@
 import { auth } from '../../config/firebase'
+import { onAuthStateChanged } from 'firebase/auth'
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000'
+const API_URL = String(
+  process.env.EXPO_PUBLIC_API_URL ||
+    process.env.EXPO_PUBLIC_WEB_URL ||
+    'https://eventhaiti.vercel.app'
+).replace(/\/$/, '')
+
+const DEBUG_API = process.env.EXPO_PUBLIC_DEBUG_API === 'true'
+
+let sessionCookieValue: string | null = null
 
 type FetchInit = Omit<RequestInit, 'headers'> & { headers?: Record<string, string> }
+
+async function ensureWebSessionCookie(idToken: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_URL}/api/auth/session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+      // RN fetch cookie behavior differs by platform; best-effort include.
+      credentials: 'include',
+    })
+
+    // Best-effort: capture the cookie manually so we can re-send it even if the
+    // platform cookie jar doesn't persist it.
+    const setCookie =
+      (res.headers?.get?.('set-cookie') as string | null) ||
+      (res.headers?.get?.('Set-Cookie') as string | null) ||
+      null
+
+    if (DEBUG_API) {
+      console.warn('[ensureWebSessionCookie]', {
+        ok: res.ok,
+        status: res.status,
+        hasSetCookieHeader: Boolean(setCookie),
+      })
+    }
+
+    if (setCookie) {
+      const match = setCookie.match(/(?:^|\s|;)session=([^;]+)/)
+      if (match?.[1]) {
+        sessionCookieValue = match[1]
+        if (DEBUG_API) {
+          console.warn('[ensureWebSessionCookie] captured session cookie', {
+            hasSessionCookie: true,
+            length: sessionCookieValue.length,
+          })
+        }
+      } else if (DEBUG_API) {
+        console.warn('[ensureWebSessionCookie] set-cookie present but no session cookie matched')
+      }
+    }
+
+    return res.ok
+  } catch {
+    return false
+  }
+}
 
 export async function backendFetch(path: string, init: FetchInit = {}) {
   const url = path.startsWith('http') ? path : `${API_URL}${path.startsWith('/') ? '' : '/'}${path}`
 
-  const currentUser = auth.currentUser
+  const currentUser = await (async () => {
+    if (auth.currentUser) return auth.currentUser
+    // Wait briefly for auth state to resolve (common right after app boot).
+    return await new Promise<any>((resolve) => {
+      const timeout = setTimeout(() => {
+        unsub()
+        resolve(auth.currentUser)
+      }, 1500)
+
+      const unsub = onAuthStateChanged(auth, (u) => {
+        clearTimeout(timeout)
+        unsub()
+        resolve(u)
+      })
+    })
+  })()
+
   const token = currentUser ? await currentUser.getIdToken() : null
 
   const headers: Record<string, string> = {
     ...(init.headers || {}),
+  }
+
+  // Attach session cookie (webapp auth) if we have one.
+  if (sessionCookieValue && !headers['Cookie'] && !headers['cookie']) {
+    headers['Cookie'] = `session=${sessionCookieValue}`
+    if (DEBUG_API) {
+      console.warn('[backendFetch] attaching session cookie', { url, cookieLen: sessionCookieValue.length })
+    }
   }
 
   if (!headers['Content-Type'] && init.body) {
@@ -20,20 +99,136 @@ export async function backendFetch(path: string, init: FetchInit = {}) {
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
+    headers['X-Firebase-Token'] = token
   }
 
-  return fetch(url, {
-    ...init,
-    headers,
-  })
+  try {
+    let res = await fetch(url, {
+      ...init,
+      headers,
+      credentials: init.credentials ?? 'include',
+    })
+
+    if (res.status === 401) {
+      console.warn('[backendFetch] 401', {
+        url,
+        hasAuthHeader: Boolean(headers['Authorization'] || headers['authorization']),
+        hasAltTokenHeader: Boolean(headers['X-Firebase-Token'] || headers['x-firebase-token']),
+        uid: currentUser?.uid || null,
+      })
+    }
+
+    // Best-effort: if we get a 401, force-refresh the token once and retry.
+    if (res.status === 401 && currentUser) {
+      try {
+        const fresh = await currentUser.getIdToken(true)
+        if (fresh && fresh !== token) {
+          const retryHeaders: Record<string, string> = {
+            ...(headers || {}),
+            Authorization: `Bearer ${fresh}`,
+            'X-Firebase-Token': fresh,
+          }
+
+          res = await fetch(url, {
+            ...init,
+            headers: retryHeaders,
+            credentials: init.credentials ?? 'include',
+          })
+        }
+      } catch {
+        // ignore refresh failures
+      }
+    }
+
+    // If bearer-token auth still fails, mimic the webapp behavior by creating a session cookie
+    // via /api/auth/session and retrying once more.
+    if (res.status === 401 && currentUser) {
+      const idToken = await currentUser.getIdToken().catch(() => null)
+      if (idToken) {
+        const ok = await ensureWebSessionCookie(idToken)
+        if (ok) {
+          const retryHeaders: Record<string, string> = {
+            ...(headers || {}),
+          }
+
+          if (sessionCookieValue && !retryHeaders['Cookie'] && !retryHeaders['cookie']) {
+            retryHeaders['Cookie'] = `session=${sessionCookieValue}`
+          }
+
+          if (DEBUG_API) {
+            console.warn('[backendFetch] retrying with web session cookie', {
+              url,
+              hasSessionCookie: Boolean(sessionCookieValue),
+              cookieLen: sessionCookieValue ? sessionCookieValue.length : 0,
+            })
+          }
+
+          res = await fetch(url, {
+            ...init,
+            headers: retryHeaders,
+            credentials: init.credentials ?? 'include',
+          })
+        }
+      }
+    }
+
+    return res
+  } catch (err: any) {
+    const rawMessage = typeof err?.message === 'string' ? err.message : ''
+    const isNetworkFailure =
+      rawMessage.toLowerCase().includes('network request failed') ||
+      rawMessage.toLowerCase().includes('failed to fetch')
+
+    if (isNetworkFailure) {
+      const base = API_URL
+      const localhostHint = base.includes('localhost') || base.includes('127.0.0.1')
+      const hint = localhostHint
+        ? 'You are likely running on a real device where localhost points to the phone. Set EXPO_PUBLIC_API_URL to a reachable server (e.g., your deployed API URL) and restart Expo.'
+        : 'Verify EXPO_PUBLIC_API_URL is correct/reachable and that the server allows this origin.'
+
+      throw new Error(`Network request failed: unable to reach API (${base}). ${hint}`)
+    }
+
+    throw err
+  }
 }
 
 export async function backendJson<T>(path: string, init: FetchInit = {}): Promise<T> {
   const res = await backendFetch(path, init)
-  const data = await res.json().catch(() => ({} as any))
+
+  // Some proxies/tunnels return non-JSON error pages; capture raw text first.
+  const rawText = await res.text().catch(() => '')
+  const matchedPath = res.headers?.get?.('x-matched-path') || ''
+  const data = (() => {
+    if (!rawText) return {} as any
+    try {
+      return JSON.parse(rawText)
+    } catch {
+      return {} as any
+    }
+  })()
+
   if (!res.ok) {
-    const message = (data as any)?.error || (data as any)?.message || 'Request failed'
-    throw new Error(message)
+    const baseMessage = (data as any)?.error || (data as any)?.message
+    const statusMessage = `Request failed (${res.status})`
+    const message = baseMessage || statusMessage
+
+    // If the server didn't return JSON, include a small snippet for debugging.
+    const snippet = !baseMessage && rawText ? rawText.trim().slice(0, 140) : ''
+    const extra = snippet ? `: ${snippet}` : ''
+
+    const isNextNotFoundPage = res.status === 404 && matchedPath === '/404'
+    if (!isNextNotFoundPage) {
+      console.error('[backendJson] Request failed', {
+        url: res.url,
+        status: res.status,
+        message: baseMessage || null,
+        snippet: snippet || null,
+      })
+    }
+
+    throw new Error(`${message}${extra} [${res.url}]`)
   }
+
   return data as T
 }
