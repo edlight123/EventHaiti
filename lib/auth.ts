@@ -57,11 +57,29 @@ export async function getCurrentUser() {
   const created_at = userData?.created_at?.toDate ? userData.created_at.toDate().toISOString() : (userData?.created_at || new Date().toISOString())
   const updated_at = userData?.updated_at?.toDate ? userData.updated_at.toDate().toISOString() : (userData?.updated_at || new Date().toISOString())
   
+  const normalizedRole = (userData?.role || 'attendee') as UserRole
+  const verified = Boolean(userData?.is_verified) || userData?.verification_status === 'approved'
+
+  // Option A: auto-upgrade verified users to organizer.
+  // This keeps permissions consistent across clients without requiring manual role edits.
+  let effectiveRole: UserRole = normalizedRole
+  if (verified && normalizedRole === 'attendee') {
+    try {
+      await adminDb
+        .collection('users')
+        .doc(user.id)
+        .set({ role: 'organizer', updated_at: new Date().toISOString() }, { merge: true })
+      effectiveRole = 'organizer'
+    } catch (e) {
+      console.warn('[auth] Failed to auto-upgrade role to organizer', e)
+    }
+  }
+
   return {
     id: userDoc.id,
     email: userData?.email || user.email || '',
     full_name: userData?.full_name || '',
-    role: userData?.role || 'attendee',
+    role: effectiveRole,
     phone_number: userData?.phone_number || null,
     is_verified: userData?.is_verified || false,
     verification_status: userData?.verification_status || 'none',

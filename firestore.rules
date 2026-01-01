@@ -60,10 +60,26 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
     
-    // Users collection - users can read/write their own data
+    // Users collection - users can read their own data; writes are restricted to
+    // non-privileged profile fields to prevent role/verification escalation.
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow write: if isOwner(userId);
+
+      // Create: users may create their own profile but cannot self-assign privileged roles
+      // or mark themselves verified.
+      allow create: if isOwner(userId)
+        && request.resource.data.role == 'attendee'
+        && (request.resource.data.is_verified == false || !(request.resource.data.keys().hasAny(['is_verified'])))
+        && (request.resource.data.verification_status == 'none' || !(request.resource.data.keys().hasAny(['verification_status'])));
+
+      // Update: users may update profile fields but cannot change role/verification.
+      allow update: if isOwner(userId)
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.is_verified == resource.data.is_verified
+        && request.resource.data.verification_status == resource.data.verification_status;
+
+      // Delete: disallow client deletes.
+      allow delete: if false;
       
       // Notifications subcollection - users can read their own, organizers can send to attendees
       match /notifications/{notificationId} {
