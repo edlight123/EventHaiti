@@ -3,6 +3,7 @@
  */
 
 import { EventFilters, PriceFilter } from '../types/filters';
+import { isBudgetFriendlyTicketPrice, isOverBudgetTicketPrice } from '../lib/pricing';
 import { 
   isToday, 
   isTomorrow, 
@@ -95,27 +96,9 @@ export function getPriceRange(priceFilter: PriceFilter, customRange?: { min: num
 export function applyFilters(events: any[], filters: EventFilters): any[] {
   let filtered = events;
 
-  const normalizeCountry = (raw: unknown): string => {
-    const value = String(raw || '').trim()
-    if (!value) return ''
-
-    const upper = value.toUpperCase()
-    if (upper.length === 2) return upper
-
-    const compact = value.toLowerCase().replace(/[^a-z]/g, '')
-    if (compact === 'haiti') return 'HT'
-    if (compact === 'unitedstates' || compact === 'usa' || compact === 'us') return 'US'
-    if (compact === 'canada' || compact === 'ca') return 'CA'
-    if (compact === 'france' || compact === 'fr') return 'FR'
-    if (compact === 'dominicanrepublic' || compact === 'dominicanrep' || compact === 'do') return 'DO'
-
-    return upper
-  }
-
   // Country filter
   if (filters.country) {
-    const target = normalizeCountry(filters.country)
-    filtered = filtered.filter((event) => normalizeCountry(event?.country || 'HT') === target)
+    filtered = filtered.filter(event => (event.country || 'HT') === filters.country)
   }
 
   // Date filter
@@ -152,13 +135,23 @@ export function applyFilters(events: any[], filters: EventFilters): any[] {
 
   // Price filter
   if (filters.price !== 'any') {
-    const { min, max } = getPriceRange(filters.price, filters.customPriceRange);
-    filtered = filtered.filter(event => {
-      const price = event.ticket_price || 0;
-      if (min !== undefined && price < min) return false;
-      if (max !== undefined && price > max) return false;
-      return true;
-    });
+    if (filters.price === '<=500') {
+      filtered = filtered.filter((event) =>
+        isBudgetFriendlyTicketPrice(event?.ticket_price, event?.currency)
+      );
+    } else if (filters.price === '>500') {
+      filtered = filtered.filter((event) =>
+        isOverBudgetTicketPrice(event?.ticket_price, event?.currency)
+      );
+    } else {
+      const { min, max } = getPriceRange(filters.price, filters.customPriceRange);
+      filtered = filtered.filter(event => {
+        const price = event.ticket_price || 0;
+        if (min !== undefined && price < min) return false;
+        if (max !== undefined && price > max) return false;
+        return true;
+      });
+    }
   }
 
   // Event type filter

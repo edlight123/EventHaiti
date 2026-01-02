@@ -1,0 +1,93 @@
+import * as Device from 'expo-device'
+import * as Notifications from 'expo-notifications'
+import Constants from 'expo-constants'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { backendJson } from './api/backend'
+
+const STORAGE_KEY = 'eventhaiti:expo_push_token'
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+})
+
+function getExpoProjectId(): string | undefined {
+  return (
+    (Constants as any)?.easConfig?.projectId ||
+    (Constants as any)?.expoConfig?.extra?.eas?.projectId ||
+    (Constants as any)?.expoConfig?.extra?.projectId
+  )
+}
+
+export async function registerForPushNotificationsIfPossible(): Promise<string | null> {
+  if (!Device.isDevice) {
+    return null
+  }
+
+  const existingStatus = await Notifications.getPermissionsAsync()
+  let finalStatus = existingStatus.status
+
+  if (finalStatus !== 'granted') {
+    const requested = await Notifications.requestPermissionsAsync()
+    finalStatus = requested.status
+  }
+
+  if (finalStatus !== 'granted') {
+    return null
+  }
+
+  const projectId = getExpoProjectId()
+  const tokenResponse = projectId
+    ? await Notifications.getExpoPushTokenAsync({ projectId })
+    : await Notifications.getExpoPushTokenAsync()
+  const token = tokenResponse.data
+
+  if (!token) return null
+
+  const last = await AsyncStorage.getItem(STORAGE_KEY)
+  if (last === token) return token
+
+  await backendJson('/api/push/register-expo', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  })
+
+  await AsyncStorage.setItem(STORAGE_KEY, token)
+  return token
+}
+
+export function addPushNotificationListeners(onUrl?: (url: string) => void) {
+  const receivedSub = Notifications.addNotificationReceivedListener(() => {
+    // no-op (UI handled by OS)
+  })
+
+  const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
+    const data: any = response?.notification?.request?.content?.data
+    const raw =
+      (typeof data?.deepLink === 'string' && data.deepLink) ||
+      (typeof data?.url === 'string' && data.url) ||
+      null
+
+    if (!raw || !onUrl) return
+
+    // Prefer in-app routing. Convert relative paths to the app scheme.
+    const url =
+      raw.startsWith('eventhaiti://') || raw.startsWith('http://') || raw.startsWith('https://')
+        ? raw
+        : raw.startsWith('/')
+          ? `eventhaiti://${raw.slice(1)}`
+          : `eventhaiti://${raw}`
+
+    onUrl(url)
+  })
+
+  return () => {
+    receivedSub.remove()
+    responseSub.remove()
+  }
+}

@@ -13,11 +13,13 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { collectionGroup, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { auth, db } from '../../config/firebase';
 import { COLORS } from '../../config/brand';
+import { useI18n } from '../../contexts/I18nContext';
+import { getStaffEventIds } from '../../lib/staffAssignments';
 
 type StaffMemberDoc = {
   uid?: string;
@@ -38,6 +40,7 @@ export default function StaffScanScreen() {
   const navigation = useNavigation();
   const uid = auth.currentUser?.uid || null;
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -46,9 +49,9 @@ export default function StaffScanScreen() {
   const [showEventSelector, setShowEventSelector] = useState(false);
 
   const emptyText = useMemo(() => {
-    if (!uid) return 'Please sign in.';
-    return 'No assigned events yet.';
-  }, [uid]);
+    if (!uid) return t('staffEvents.signIn');
+    return t('staffEvents.noAssigned');
+  }, [uid, t]);
 
   const loadEvents = useCallback(
     async (options?: { silent?: boolean; isCancelled?: () => boolean }) => {
@@ -63,27 +66,50 @@ export default function StaffScanScreen() {
       if (!silent) setLoading(true);
 
       try {
-        const memberQuery = query(collectionGroup(db, 'members'), where('uid', '==', uid));
-        const memberSnap = await getDocs(memberQuery);
-
         const eventIds: string[] = [];
-        memberSnap.forEach((d) => {
-          const data = d.data() as StaffMemberDoc;
-          if (data?.eventId && data?.permissions?.checkin) {
-            eventIds.push(String(data.eventId));
-          }
-        });
 
-        const uniqueEventIds = Array.from(new Set(eventIds));
+        // Primary path: discover assignments from members collectionGroup.
+        try {
+          const memberQuery = query(collectionGroup(db, 'members'), where('__name__', '==', uid));
+          const memberSnap = await getDocs(memberQuery);
+          memberSnap.forEach((d) => {
+            const data = d.data() as StaffMemberDoc;
+            const derivedEventId = String(data?.eventId || d.ref.parent?.parent?.id || '');
+            if (derivedEventId) eventIds.push(derivedEventId);
+          });
+        } catch {
+          // If a collectionGroup query fails (rules/data edge cases), fall back below.
+        }
+
+        // Fallback: include locally persisted eventIds (added on successful invite redeem).
+        const persisted = await getStaffEventIds();
+        for (const id of persisted) eventIds.push(id);
+
+        const uniqueEventIds = Array.from(new Set(eventIds)).filter(Boolean);
+
+        // Verify access per event by reading the direct member doc.
+        const allowedEventIds: string[] = [];
+        for (const eventId of uniqueEventIds) {
+          const memberSnap = await getDoc(doc(db, 'events', eventId, 'members', uid));
+          const member = memberSnap.exists() ? (memberSnap.data() as StaffMemberDoc) : null;
+          if (!memberSnap.exists()) continue;
+
+          const checkinFlag = member?.permissions?.checkin;
+          // Back-compat: missing permissions should not hide assigned events.
+          if (checkinFlag === false) continue;
+
+          allowedEventIds.push(eventId);
+        }
+
         const loaded: EventSummary[] = [];
 
-        for (const eventId of uniqueEventIds) {
+        for (const eventId of allowedEventIds) {
           const eventSnap = await getDoc(doc(db, 'events', eventId));
           if (!eventSnap.exists()) continue;
           const data = eventSnap.data() as any;
           loaded.push({
             id: eventSnap.id,
-            title: data?.title || 'Event',
+            title: data?.title || t('common.event'),
             start_datetime: data?.start_datetime,
             venue_name: data?.venue_name || '',
             city: data?.city || '',
@@ -106,7 +132,7 @@ export default function StaffScanScreen() {
         if (!silent) setLoading(false);
       }
     },
-    [uid]
+    [uid, t]
   );
 
   useEffect(() => {
@@ -119,6 +145,17 @@ export default function StaffScanScreen() {
     };
   }, [loadEvents]);
 
+  // Ensure we refresh after redeeming an invite or returning to this tab.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      loadEvents({ silent: true, isCancelled: () => cancelled });
+      return () => {
+        cancelled = true;
+      };
+    }, [loadEvents])
+  );
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -130,7 +167,7 @@ export default function StaffScanScreen() {
 
   const handleStartScanning = () => {
     if (!selectedEvent) {
-      Alert.alert('No Event Selected', 'Please select an event to scan tickets.', [{ text: 'OK' }]);
+      Alert.alert(t('staffScan.noEventTitle'), t('staffScan.noEventBody'), [{ text: t('common.ok') }]);
       return;
     }
 
@@ -158,15 +195,15 @@ export default function StaffScanScreen() {
           ]}
         >
           <View style={styles.cameraPlaceholder}>
-            <Text style={styles.cameraText}>Ready to Scan</Text>
-            <Text style={styles.cameraSubtext}>Select an assigned event below</Text>
+            <Text style={styles.cameraText}>{t('staffScan.readyTitle')}</Text>
+            <Text style={styles.cameraSubtext}>{t('staffScan.readySubtitle')}</Text>
           </View>
         </View>
 
         {/* Header below camera */}
         <View style={styles.header}>
-          <Text style={styles.title}>Scan Tickets</Text>
-          <Text style={styles.subtitle}>Staff access • assigned events only</Text>
+          <Text style={styles.title}>{t('staffScan.title')}</Text>
+          <Text style={styles.subtitle}>{t('staffScan.subtitle')}</Text>
         </View>
 
         {loading ? (
@@ -179,19 +216,19 @@ export default function StaffScanScreen() {
           </View>
         ) : (
           <View style={styles.content}>
-            <Text style={styles.selectorLabel}>Select Event</Text>
+            <Text style={styles.selectorLabel}>{t('staffScan.selectEvent')}</Text>
             <TouchableOpacity style={styles.selectorButton} onPress={() => setShowEventSelector(true)}>
               <View style={styles.selectorContent}>
                 {selectedEvent ? (
                   <View style={styles.selectorTextCol}>
                     <Text style={styles.selectorTitle}>{selectedEvent.title}</Text>
                     <Text style={styles.selectorSubtitle}>
-                      {selectedEvent.venue_name ? selectedEvent.venue_name : 'Venue'}
+                      {selectedEvent.venue_name ? selectedEvent.venue_name : t('common.venue')}
                       {selectedEvent.city ? ` • ${selectedEvent.city}` : ''}
                     </Text>
                   </View>
                 ) : (
-                  <Text style={styles.selectorPlaceholder}>Select an event...</Text>
+                  <Text style={styles.selectorPlaceholder}>{t('staffScan.selectEventPlaceholder')}</Text>
                 )}
                 <Ionicons name="chevron-down" size={22} color={COLORS.textSecondary} />
               </View>
@@ -203,7 +240,7 @@ export default function StaffScanScreen() {
               disabled={!selectedEvent}
             >
               <Ionicons name="camera-outline" size={22} color={COLORS.white} />
-              <Text style={styles.startButtonText}>Start Scanning</Text>
+              <Text style={styles.startButtonText}>{t('staffScan.startScanning')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -218,7 +255,7 @@ export default function StaffScanScreen() {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Event</Text>
+              <Text style={styles.modalTitle}>{t('staffScan.selectEvent')}</Text>
               <TouchableOpacity onPress={() => setShowEventSelector(false)}>
                 <Ionicons name="close" size={22} color={COLORS.text} />
               </TouchableOpacity>
@@ -238,7 +275,7 @@ export default function StaffScanScreen() {
                   <View style={styles.eventItemContent}>
                     <Text style={styles.eventItemTitle}>{item.title}</Text>
                     <Text style={styles.eventItemSubtitle}>
-                      {item.venue_name ? item.venue_name : 'Venue'}
+                      {item.venue_name ? item.venue_name : t('common.venue')}
                       {item.city ? ` • ${item.city}` : ''}
                     </Text>
                   </View>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -6,16 +6,23 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   RefreshControl,
-  ActivityIndicator 
+  ActivityIndicator,
+  StatusBar
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { useI18n } from '../contexts/I18nContext';
 import { COLORS } from '../config/brand';
 import { format } from 'date-fns';
+import { useFocusEffect } from '@react-navigation/native';
+import { consumeTicketsRefreshHint } from '../lib/ticketsRefreshHint';
 
 export default function TicketsScreen({ navigation }: any) {
   const { user } = useAuth();
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const [upcomingTickets, setUpcomingTickets] = useState<any[]>([]);
   const [pastTickets, setPastTickets] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
@@ -74,6 +81,7 @@ export default function TicketsScreen({ navigation }: any) {
             id: eventDoc.id,
             ...eventData,
             start_datetime: eventData.start_datetime?.toDate ? eventData.start_datetime.toDate() : eventData.start_datetime ? new Date(eventData.start_datetime) : null,
+            end_datetime: eventData.end_datetime?.toDate ? eventData.end_datetime.toDate() : eventData.end_datetime ? new Date(eventData.end_datetime) : null,
             ticketCount: ticketsByEvent.get(eventId).length
           });
         }
@@ -81,13 +89,19 @@ export default function TicketsScreen({ navigation }: any) {
       
       // Separate upcoming and past events
       const now = new Date();
-      const upcoming = eventsData.filter(e => 
-        e.start_datetime && new Date(e.start_datetime) >= now
-      ).sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime());
+      const upcoming = eventsData
+        .filter((e: any) => {
+          const cutoff = e.end_datetime || e.start_datetime;
+          return cutoff && new Date(cutoff) >= now;
+        })
+        .sort((a: any, b: any) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime());
       
-      const past = eventsData.filter(e => 
-        e.start_datetime && new Date(e.start_datetime) < now
-      ).sort((a, b) => new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime());
+      const past = eventsData
+        .filter((e: any) => {
+          const cutoff = e.end_datetime || e.start_datetime;
+          return cutoff && new Date(cutoff) < now;
+        })
+        .sort((a: any, b: any) => new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime());
       
       setUpcomingTickets(upcoming);
       setPastTickets(past);
@@ -103,6 +117,36 @@ export default function TicketsScreen({ navigation }: any) {
     fetchTickets();
   }, [user]);
 
+  useFocusEffect(
+    useCallback(() => {
+      let t1: any = null;
+      let t2: any = null;
+
+      const run = async () => {
+        await fetchTickets();
+
+        // If we just completed a payment, tickets might not be mirrored yet.
+        // Retry a couple times with small delays.
+        const hint = await consumeTicketsRefreshHint(2 * 60 * 1000);
+        if (hint?.reason === 'payment') {
+          t1 = setTimeout(() => {
+            fetchTickets();
+          }, 2000);
+          t2 = setTimeout(() => {
+            fetchTickets();
+          }, 6000);
+        }
+      };
+
+      run();
+
+      return () => {
+        if (t1) clearTimeout(t1);
+        if (t2) clearTimeout(t2);
+      };
+    }, [user])
+  );
+
   const onRefresh = () => {
     setRefreshing(true);
     fetchTickets();
@@ -111,8 +155,8 @@ export default function TicketsScreen({ navigation }: any) {
   if (!user) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyTitle}>Login Required</Text>
-        <Text style={styles.emptyText}>Please login to view your tickets</Text>
+        <Text style={styles.emptyTitle}>{t('auth.loginRequiredTitle')}</Text>
+        <Text style={styles.emptyText}>{t('tickets.loginRequiredBody')}</Text>
       </View>
     );
   }
@@ -129,11 +173,9 @@ export default function TicketsScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Tickets</Text>
-        <Text style={styles.headerSubtitle}>
-          {upcomingTickets.length} upcoming • {pastTickets.length} past
-        </Text>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <Text style={styles.headerTitle}>{t('tickets.title')}</Text>
       </View>
 
       {/* Tabs */}
@@ -143,7 +185,7 @@ export default function TicketsScreen({ navigation }: any) {
           onPress={() => setActiveTab('upcoming')}
         >
           <Text style={[styles.tabText, activeTab === 'upcoming' && styles.tabTextActive]}>
-            Upcoming ({upcomingTickets.length})
+            {t('tickets.upcoming')} ({upcomingTickets.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -151,7 +193,7 @@ export default function TicketsScreen({ navigation }: any) {
           onPress={() => setActiveTab('past')}
         >
           <Text style={[styles.tabText, activeTab === 'past' && styles.tabTextActive]}>
-            Past ({pastTickets.length})
+            {t('tickets.past')} ({pastTickets.length})
           </Text>
         </TouchableOpacity>
       </View>
@@ -166,12 +208,12 @@ export default function TicketsScreen({ navigation }: any) {
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>🎫</Text>
             <Text style={styles.emptyTitle}>
-              {activeTab === 'upcoming' ? 'No Upcoming Tickets' : 'No Past Tickets'}
+              {activeTab === 'upcoming' ? t('tickets.emptyUpcomingTitle') : t('tickets.emptyPastTitle')}
             </Text>
             <Text style={styles.emptyText}>
-              {activeTab === 'upcoming' 
-                ? 'Purchase tickets to events and they\'ll appear here' 
-                : 'Your attended events will show up here'}
+              {activeTab === 'upcoming'
+                ? t('tickets.emptyUpcomingBody')
+                : t('tickets.emptyPastBody')}
             </Text>
           </View>
         ) : (
@@ -187,7 +229,7 @@ export default function TicketsScreen({ navigation }: any) {
                   <Text style={styles.ticketTitle} numberOfLines={2}>{event.title}</Text>
                   <View style={styles.ticketCountBadge}>
                     <Text style={styles.ticketCountText}>
-                      {event.ticketCount} {event.ticketCount === 1 ? 'Ticket' : 'Tickets'}
+                      {event.ticketCount} {event.ticketCount === 1 ? t('tickets.ticketSingular') : t('tickets.ticketPlural')}
                     </Text>
                   </View>
                 </View>
@@ -202,7 +244,7 @@ export default function TicketsScreen({ navigation }: any) {
               </Text>
               
               <View style={styles.ticketFooter}>
-                <Text style={styles.viewTicketsText}>View Tickets →</Text>
+                <Text style={styles.viewTicketsText}>{t('tickets.viewTickets')} →</Text>
               </View>
             </TouchableOpacity>
           ))
@@ -225,7 +267,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 16,
     backgroundColor: COLORS.primary,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -234,10 +276,9 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   headerTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '700',
     color: COLORS.surface,
-    marginBottom: 6,
   },
   headerSubtitle: {
     fontSize: 15,

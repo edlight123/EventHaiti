@@ -1,6 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 
+import { COLORS } from '../config/brand';
+import { useI18n } from '../contexts/I18nContext';
+
 export type DateFilter = 'any' | 'today' | 'tomorrow' | 'this-week' | 'this-weekend';
 
 interface DateChipsProps {
@@ -8,23 +11,17 @@ interface DateChipsProps {
   onDateChange: (date: DateFilter) => void;
 }
 
-const COLORS = {
-  primary: '#000000',
-  secondary: '#666666',
-  background: '#F5F5F5',
-  white: '#FFFFFF',
-  border: '#E0E0E0',
-};
-
-const DATE_OPTIONS: { value: DateFilter; label: string }[] = [
-  { value: 'any', label: 'Any Date' },
-  { value: 'today', label: 'Today' },
-  { value: 'tomorrow', label: 'Tomorrow' },
-  { value: 'this-week', label: 'This Week' },
-  { value: 'this-weekend', label: 'This Weekend' },
+const DATE_OPTIONS: { value: DateFilter; labelKey: string }[] = [
+  { value: 'any', labelKey: 'filters.dateOptions.any' },
+  { value: 'today', labelKey: 'filters.dateOptions.today' },
+  { value: 'tomorrow', labelKey: 'filters.dateOptions.tomorrow' },
+  { value: 'this-week', labelKey: 'filters.dateOptions.thisWeek' },
+  { value: 'this-weekend', labelKey: 'filters.dateOptions.thisWeekend' },
 ];
 
 export function DateChips({ currentDate, onDateChange }: DateChipsProps) {
+  const { t } = useI18n();
+
   return (
     <View style={styles.container}>
       <ScrollView 
@@ -48,7 +45,7 @@ export function DateChips({ currentDate, onDateChange }: DateChipsProps) {
                 styles.chipText,
                 isActive && styles.chipTextActive
               ]}>
-                {option.label}
+                {t(option.labelKey)}
               </Text>
             </TouchableOpacity>
           );
@@ -70,7 +67,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.borderLight,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
@@ -81,7 +78,7 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.secondary,
+    color: COLORS.textSecondary,
   },
   chipTextActive: {
     color: COLORS.white,

@@ -9,17 +9,23 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Share
+  Share,
+  StatusBar
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Calendar, MapPin, Heart, Share2, Ticket } from 'lucide-react-native';
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc, getDocs as getDocsFirestore } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { useI18n } from '../contexts/I18nContext';
+import { getCategoryLabel } from '../lib/categories';
 import { COLORS } from '../config/brand';
 import { format } from 'date-fns';
 
 export default function FavoritesScreen({ navigation }: any) {
   const { user } = useAuth();
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const [favoriteEvents, setFavoriteEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -85,12 +91,12 @@ export default function FavoritesScreen({ navigation }: any) {
 
   const removeFavorite = async (eventId: string) => {
     Alert.alert(
-      'Remove Favorite',
-      'Remove this event from your favorites?',
+      t('favorites.removeTitle'),
+      t('favorites.removeBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('common.remove'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -109,10 +115,10 @@ export default function FavoritesScreen({ navigation }: any) {
               // Update local state
               setFavoriteEvents(prev => prev.filter(event => event.id !== eventId));
               
-              Alert.alert('Success', 'Event removed from favorites');
+              Alert.alert(t('common.success'), t('favorites.removeSuccess'));
             } catch (error) {
               console.error('Error removing favorite:', error);
-              Alert.alert('Error', 'Failed to remove favorite');
+              Alert.alert(t('common.error'), t('favorites.removeError'));
             }
           }
         }
@@ -135,8 +141,8 @@ export default function FavoritesScreen({ navigation }: any) {
     return (
       <View style={styles.emptyContainer}>
         <Heart size={64} color={COLORS.textSecondary} />
-        <Text style={styles.emptyTitle}>Login Required</Text>
-        <Text style={styles.emptyText}>Please login to view your favorite events</Text>
+        <Text style={styles.emptyTitle}>{t('auth.loginRequiredTitle')}</Text>
+        <Text style={styles.emptyText}>{t('favorites.loginRequiredBody')}</Text>
       </View>
     );
   }
@@ -151,11 +157,9 @@ export default function FavoritesScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Favorites</Text>
-        <Text style={styles.headerSubtitle}>
-          {favoriteEvents.length} saved event{favoriteEvents.length !== 1 ? 's' : ''}
-        </Text>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <Text style={styles.headerTitle}>{t('favorites.title')}</Text>
       </View>
 
       <ScrollView
@@ -167,15 +171,15 @@ export default function FavoritesScreen({ navigation }: any) {
         {favoriteEvents.length === 0 ? (
           <View style={styles.emptyState}>
             <Heart size={64} color={COLORS.textSecondary} />
-            <Text style={styles.emptyTitle}>No Favorites Yet</Text>
+            <Text style={styles.emptyTitle}>{t('favorites.emptyTitle')}</Text>
             <Text style={styles.emptyText}>
-              Save events you're interested in and they'll appear here
+              {t('favorites.emptyBody')}
             </Text>
             <TouchableOpacity
               style={styles.exploreButton}
               onPress={() => navigation.navigate('Discover')}
             >
-              <Text style={styles.exploreButtonText}>Explore Events</Text>
+              <Text style={styles.exploreButtonText}>{t('favorites.explore')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -197,7 +201,7 @@ export default function FavoritesScreen({ navigation }: any) {
               {/* Category Badge */}
               {event.category && (
                 <View style={styles.categoryBadgeOverlay}>
-                  <Text style={styles.categoryBadgeText}>{event.category}</Text>
+                  <Text style={styles.categoryBadgeText}>{getCategoryLabel(t, event.category)}</Text>
                 </View>
               )}
 
@@ -230,13 +234,13 @@ export default function FavoritesScreen({ navigation }: any) {
                         </Text>
                         {event.tickets_sold > 0 && (
                           <Text style={styles.ticketsSold}>
-                            {event.tickets_sold} sold
+                            {event.tickets_sold} {t('common.sold')}
                           </Text>
                         )}
                       </>
                     ) : (
                       <View style={styles.freeBadge}>
-                        <Text style={styles.freeBadgeText}>Free</Text>
+                        <Text style={styles.freeBadgeText}>{t('common.free')}</Text>
                       </View>
                     )}
                   </View>
@@ -284,7 +288,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 16,
     backgroundColor: COLORS.primary,
   },
   headerTitle: {

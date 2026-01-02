@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Calendar, MapPin, Search, X, SlidersHorizontal } from 'lucide-react-native';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { COLORS } from '../config/brand';
 import { format } from 'date-fns';
@@ -24,6 +24,9 @@ import EventStatusBadge from '../components/EventStatusBadge';
 import { DateChips, DateFilter } from '../components/DateChips';
 import { CategoryChips } from '../components/CategoryChips';
 import { useFilters } from '../contexts/FiltersContext';
+import { useI18n } from '../contexts/I18nContext';
+import { getCategoryLabel } from '../lib/categories';
+import { isBudgetFriendlyTicketPrice } from '../lib/pricing';
 import { applyFilters } from '../utils/filterUtils';
 import { DEFAULT_FILTERS } from '../types/filters';
 import { getDateRange } from '../utils/filters';
@@ -35,6 +38,7 @@ const HEADER_COLLAPSED_HEIGHT = 70;
 
 export default function DiscoverScreen({ navigation, route }: any) {
   const { appliedFilters, openFiltersModal, hasActiveFilters, countActiveFilters, applyFiltersDirectly, resetFilters } = useFilters();
+  const { t } = useI18n();
   
   const [allEvents, setAllEvents] = useState<any[]>([]);
   const [featuredEvents, setFeaturedEvents] = useState<any[]>([]);
@@ -146,8 +150,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
     try {
       const q = query(
         collection(db, 'events'),
-        where('is_published', '==', true),
-        orderBy('start_datetime', 'asc')
+        where('is_published', '==', true)
       );
       
       const snapshot = await getDocs(q);
@@ -185,15 +188,25 @@ export default function DiscoverScreen({ navigation, route }: any) {
           end_datetime: endDate
         };
       });
+
+      // Sort client-side to avoid requiring a composite Firestore index.
+      eventsData.sort((a, b) => {
+        const aTime = a?.start_datetime ? new Date(a.start_datetime).getTime() : Number.POSITIVE_INFINITY
+        const bTime = b?.start_datetime ? new Date(b.start_datetime).getTime() : Number.POSITIVE_INFINITY
+        return aTime - bTime
+      })
       
       const now = new Date();
-      const futureEvents = eventsData.filter(event => {
-        if (!event.start_datetime) return false;
-        return event.start_datetime >= now;
+      const futureEvents = eventsData.filter((event) => {
+        const start = event.start_datetime ? new Date(event.start_datetime) : null
+        const end = event.end_datetime ? new Date(event.end_datetime) : null
+        const cutoff = end || start
+        if (!cutoff) return false
+        return cutoff >= now
       });
       
       console.log('[DiscoverScreen] Future events:', futureEvents.length, 'out of', eventsData.length, 'total');
-      setAllEvents(futureEvents);
+      setAllEvents(futureEvents.length > 0 ? futureEvents : eventsData);
     } catch (error) {
       console.error('[DiscoverScreen] Error fetching events:', error);
     } finally {
@@ -304,7 +317,9 @@ export default function DiscoverScreen({ navigation, route }: any) {
         .slice(0, 8);
       setHappeningSoonEvents(happeningSoon);
 
-      const budget = events.filter(e => !e.ticket_price || e.ticket_price === 0 || e.ticket_price <= 500).slice(0, 8);
+      const budget = events
+        .filter((e) => isBudgetFriendlyTicketPrice(e?.ticket_price, e?.currency))
+        .slice(0, 8);
       setBudgetEvents(budget);
 
       const online = events.filter(e => e.event_type === 'online' || e.venue_name?.toLowerCase().includes('online')).slice(0, 6);
@@ -362,7 +377,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
           <View style={styles.badgesTopLeft}>
             {event.category && (
               <View style={styles.categoryBadgeOverlay}>
-                <Text style={styles.categoryBadgeText}>{event.category}</Text>
+                <Text style={styles.categoryBadgeText}>{getCategoryLabel(t, event.category)}</Text>
               </View>
             )}
             {isVIP && <EventStatusBadge status="VIP" size="small" />}
@@ -401,7 +416,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
                 </Text>
               ) : (
                 <View style={styles.freeBadge}>
-                  <Text style={styles.freeBadgeText}>FREE</Text>
+                  <Text style={styles.freeBadgeText}>{t('common.free').toUpperCase()}</Text>
                 </View>
               )}
             </View>
@@ -453,7 +468,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
       
       {event.category && (
         <View style={styles.carouselCategoryBadge}>
-          <Text style={styles.categoryBadgeText}>{event.category}</Text>
+          <Text style={styles.categoryBadgeText}>{getCategoryLabel(t, event.category)}</Text>
         </View>
       )}
 
@@ -482,7 +497,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
             </Text>
           ) : (
             <View style={styles.carouselFreeBadge}>
-              <Text style={styles.carouselFreeBadgeText}>FREE</Text>
+              <Text style={styles.carouselFreeBadgeText}>{t('common.free').toUpperCase()}</Text>
             </View>
           )}
         </View>
@@ -492,18 +507,18 @@ export default function DiscoverScreen({ navigation, route }: any) {
 
   const getFilterTitle = () => {
     const { trending, thisWeek } = route?.params || {};
-    if (trending) return 'Trending Events';
-    if (thisWeek) return 'This Week';
-    if (searchQuery.trim()) return 'Search Results';
-    if (hasActiveFilters()) return 'Filtered Results';
+    if (trending) return t('discover.filterTitles.trending');
+    if (thisWeek) return t('discover.filterTitles.thisWeek');
+    if (searchQuery.trim()) return t('discover.filterTitles.search');
+    if (hasActiveFilters()) return t('discover.filterTitles.filtered');
     return null;
   };
 
   const getFilterSubtitle = () => {
     const { trending, thisWeek } = route?.params || {};
-    if (trending) return 'Popular events right now';
-    if (thisWeek) return 'Events happening in the next 7 days';
-    return `${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''} found`;
+    if (trending) return t('discover.filterSubtitles.trending');
+    if (thisWeek) return t('discover.filterSubtitles.thisWeek');
+    return `${filteredEvents.length} ${filteredEvents.length === 1 ? t('discover.eventFound') : t('discover.eventsFound')}`;
   };
 
   if (loading) {
@@ -544,7 +559,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
             <Search size={20} color={COLORS.textSecondary} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search events, venues, categories..."
+              placeholder={t('discover.searchPlaceholder')}
               placeholderTextColor={COLORS.textSecondary}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -577,7 +592,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {searchQuery.trim() !== '' && (
               <View style={styles.activeFilterChip}>
-                <Text style={styles.activeFilterText}>Search: {searchQuery}</Text>
+                <Text style={styles.activeFilterText}>{t('discover.searchActive')}: {searchQuery}</Text>
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
                   <X size={14} color={COLORS.text} />
                 </TouchableOpacity>
@@ -586,7 +601,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
             {hasActiveFilters() && (
               <View style={styles.activeFilterChip}>
                 <Text style={styles.activeFilterText}>
-                  {countActiveFilters()} {countActiveFilters() === 1 ? 'filter' : 'filters'} applied
+                  {countActiveFilters()} {countActiveFilters() === 1 ? t('discover.filter') : t('discover.filters')} {countActiveFilters() === 1 ? t('discover.appliedSingular') : t('discover.appliedPlural')}
                 </Text>
                 <TouchableOpacity onPress={openFiltersModal}>
                   <SlidersHorizontal size={14} color={COLORS.text} />
@@ -617,7 +632,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
       >
         {/* When Chips - Between search and featured */}
         <View style={styles.chipsSection}>
-          <Text style={styles.chipsSectionTitle}>WHEN</Text>
+          <Text style={styles.chipsSectionTitle}>{t('discover.when').toUpperCase()}</Text>
           <DateChips 
             currentDate={selectedDate} 
             onDateChange={setSelectedDate}
@@ -628,8 +643,8 @@ export default function DiscoverScreen({ navigation, route }: any) {
         {!hasAnyFilters && featuredEvents.length > 0 && (
           <View style={styles.featuredSection}>
             <View style={styles.featuredHeader}>
-              <Text style={styles.sectionTitle}>⭐ Featured This Weekend</Text>
-              <Text style={styles.sectionSubtitle}>The most popular events</Text>
+              <Text style={styles.sectionTitle}>⭐ {t('discover.featuredWeekendTitle')}</Text>
+              <Text style={styles.sectionSubtitle}>{t('discover.featuredWeekendSubtitle')}</Text>
             </View>
             <FeaturedCarousel 
               events={featuredEvents} 
@@ -640,7 +655,7 @@ export default function DiscoverScreen({ navigation, route }: any) {
 
         {/* Category Chips - Between featured and happening soon */}
         <View style={styles.chipsSection}>
-          <Text style={styles.chipsSectionTitle}>CATEGORIES</Text>
+          <Text style={styles.chipsSectionTitle}>{t('discover.categories').toUpperCase()}</Text>
           <CategoryChips 
             selectedCategories={selectedCategories} 
             onCategoryToggle={(category) => {
@@ -663,9 +678,9 @@ export default function DiscoverScreen({ navigation, route }: any) {
             {filteredEvents.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyIcon}>🔍</Text>
-                <Text style={styles.emptyTitle}>No events found</Text>
+                <Text style={styles.emptyTitle}>{t('discover.noEventsFound')}</Text>
                 <Text style={styles.emptyText}>
-                  Try adjusting your filters to see more events
+                  {t('discover.tryAdjusting')}
                 </Text>
               </View>
             ) : (
@@ -674,15 +689,15 @@ export default function DiscoverScreen({ navigation, route }: any) {
           </View>
         ) : (
           <>
-            {renderSection('Happening Soon', 'Don\'t miss these upcoming events', '🔥', happeningSoonEvents)}
-            {renderSection('Free & Budget Friendly', 'Free events and under 500 HTG', '💰', budgetEvents)}
-            {renderSection('Online Events', 'Join from anywhere', '💻', onlineEvents)}
+            {renderSection(t('discover.sections.happeningSoonTitle'), t('discover.sections.happeningSoonSubtitle'), '🔥', happeningSoonEvents)}
+            {renderSection(t('discover.sections.budgetTitle'), t('discover.sections.budgetSubtitle'), '💰', budgetEvents)}
+            {renderSection(t('discover.sections.onlineTitle'), t('discover.sections.onlineSubtitle'), '💻', onlineEvents)}
             
             {happeningSoonEvents.length === 0 && budgetEvents.length === 0 && onlineEvents.length === 0 && (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyIcon}>📅</Text>
-                <Text style={styles.emptyTitle}>No events available</Text>
-                <Text style={styles.emptyText}>Check back soon for new events!</Text>
+                <Text style={styles.emptyTitle}>{t('discover.noEventsAvailable')}</Text>
+                <Text style={styles.emptyText}>{t('discover.checkBackSoon')}</Text>
               </View>
             )}
           </>

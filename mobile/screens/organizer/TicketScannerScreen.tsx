@@ -15,6 +15,7 @@ import { COLORS } from '../../config/brand';
 import { db } from '../../config/firebase';
 import { doc, updateDoc, getDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { auth } from '../../config/firebase';
+import { useI18n } from '../../contexts/I18nContext';
 
 type RouteParams = {
   TicketScanner: {
@@ -35,6 +36,9 @@ export default function TicketScannerScreen() {
   const route = useRoute<RouteProp<RouteParams, 'TicketScanner'>>();
   const navigation = useNavigation();
   const { eventId } = route.params;
+
+  const { t, language } = useI18n();
+  const locale = language === 'fr' ? 'fr-FR' : language === 'ht' ? 'fr-HT' : 'en-US';
 
   const [permission, requestPermission] = useCameraPermissions();
   const [flashOn, setFlashOn] = useState(false);
@@ -79,7 +83,7 @@ export default function TicketScannerScreen() {
         console.log('Ticket not found in Firestore');
         setScanResult({
           status: 'NOT_FOUND',
-          message: 'This ticket does not exist.',
+          message: t('organizerTicketScanner.results.notFound'),
         });
         return;
       }
@@ -88,11 +92,43 @@ export default function TicketScannerScreen() {
       console.log('Ticket Data:', JSON.stringify(ticketData, null, 2));
       console.log('=== END DEBUG ===');
 
+      const attendeeName =
+        ticketData.attendee_name ||
+        ticketData.user_name ||
+        ticketData.userName ||
+        ticketData.user_email ||
+        t('common.attendee');
+
+      let tierName =
+        ticketData.tier_name ||
+        ticketData.ticket_tier_name ||
+        ticketData.ticket_type ||
+        ticketData.ticketType ||
+        ticketData.tierName ||
+        '';
+
+      const tierId = ticketData.ticket_tier_id || ticketData.tier_id || ticketData.ticketTierId;
+      if (!tierName && typeof tierId === 'string' && tierId.length > 0) {
+        try {
+          const tierSnap = await getDoc(doc(db, 'ticket_tiers', tierId));
+          if (tierSnap.exists()) {
+            const tierData = tierSnap.data() as any;
+            tierName = tierData?.name || tierName;
+          }
+        } catch (e) {
+          console.warn('Failed to resolve tier from ticket_tiers:', e);
+        }
+      }
+
+      if (!tierName) {
+        tierName = t('common.generalAdmission');
+      }
+
       // Verify ticket belongs to this event
       if (ticketData.event_id !== eventId) {
         setScanResult({
           status: 'WRONG_EVENT',
-          message: 'This ticket is for a different event.',
+          message: t('organizerTicketScanner.results.wrongEvent'),
         });
         return;
       }
@@ -103,9 +139,9 @@ export default function TicketScannerScreen() {
       if (now > eventEnd) {
         setScanResult({
           status: 'EXPIRED',
-          attendeeName: ticketData.attendee_name || 'Attendee',
-          tierName: ticketData.tier_name || 'General Admission',
-          message: 'Event has already ended. This ticket cannot be checked in.',
+          attendeeName,
+          tierName,
+          message: t('organizerTicketScanner.results.expired'),
         });
         return;
       }
@@ -118,10 +154,10 @@ export default function TicketScannerScreen() {
         
         setScanResult({
           status: 'ALREADY_CHECKED_IN',
-          attendeeName: ticketData.attendee_name || 'Attendee',
-          tierName: ticketData.tier_name || 'General Admission',
+          attendeeName,
+          tierName,
           checkedInTime,
-          message: `Already checked in at ${checkedInTime.toLocaleString()}`,
+          message: `${t('organizerTicketScanner.results.alreadyCheckedInAtPrefix')}${checkedInTime.toLocaleString(locale)}`,
         });
         return;
       }
@@ -130,9 +166,9 @@ export default function TicketScannerScreen() {
       if (ticketData.status === 'cancelled') {
         setScanResult({
           status: 'CANCELLED',
-          attendeeName: ticketData.attendee_name || 'Attendee',
-          tierName: ticketData.tier_name || 'General Admission',
-          message: 'This ticket has been cancelled.',
+          attendeeName,
+          tierName,
+          message: t('organizerTicketScanner.results.cancelled'),
         });
         return;
       }
@@ -140,8 +176,8 @@ export default function TicketScannerScreen() {
       // Valid ticket - ready to check in
       setScanResult({
         status: 'VALID',
-        attendeeName: ticketData.attendee_name || 'Attendee',
-        tierName: ticketData.tier_name || 'General Admission',
+        attendeeName,
+        tierName,
         ticketId,
       });
 
@@ -149,7 +185,7 @@ export default function TicketScannerScreen() {
       console.error('Error checking in ticket:', error);
       setScanResult({
         status: 'ERROR',
-        message: error.message || 'Failed to scan ticket. Please try again.',
+        message: error.message || t('organizerTicketScanner.results.scanFailed'),
       });
     }
   };
@@ -172,7 +208,7 @@ export default function TicketScannerScreen() {
       setScanResult({
         ...scanResult,
         status: 'ALREADY_CHECKED_IN',
-        message: 'Check-in successful!',
+        message: t('organizerTicketScanner.results.checkInSuccessful'),
       });
 
       // Auto-close after 1.5 seconds
@@ -183,7 +219,7 @@ export default function TicketScannerScreen() {
       console.error('Error checking in ticket:', error);
       setScanResult({
         status: 'ERROR',
-        message: error.message || 'Failed to check in ticket. Please try again.',
+        message: error.message || t('organizerTicketScanner.results.checkInFailed'),
       });
     }
   };
@@ -196,7 +232,7 @@ export default function TicketScannerScreen() {
   if (!permission) {
     return (
       <View style={styles.container}>
-        <Text style={styles.message}>Requesting camera permission...</Text>
+        <Text style={styles.message}>{t('organizerTicketScanner.permissions.requesting')}</Text>
       </View>
     );
   }
@@ -205,9 +241,9 @@ export default function TicketScannerScreen() {
     return (
       <View style={styles.container}>
         <Ionicons name="camera-outline" size={64} color={COLORS.textSecondary} />
-        <Text style={styles.message}>Camera permission is required to scan tickets</Text>
+        <Text style={styles.message}>{t('organizerTicketScanner.permissions.required')}</Text>
         <TouchableOpacity style={styles.button} onPress={requestPermission}>
-          <Text style={styles.buttonText}>Grant Permission</Text>
+          <Text style={styles.buttonText}>{t('organizerTicketScanner.permissions.grant')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -237,7 +273,9 @@ export default function TicketScannerScreen() {
             {/* Instructions */}
             <View style={styles.instructionContainer}>
               <Text style={styles.instruction}>
-                {isProcessing ? 'Processing...' : 'Position the QR code within the frame'}
+                {isProcessing
+                  ? t('organizerTicketScanner.instructions.processing')
+                  : t('organizerTicketScanner.instructions.positionQr')}
               </Text>
             </View>
           </View>
@@ -249,7 +287,7 @@ export default function TicketScannerScreen() {
         <TouchableOpacity style={styles.belowHeaderButton} onPress={() => navigation.goBack()}>
           <Ionicons name="close" size={26} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.belowHeaderTitle}>Scan Ticket</Text>
+        <Text style={styles.belowHeaderTitle}>{t('organizerTicketScanner.headerTitle')}</Text>
         <TouchableOpacity style={styles.belowHeaderButton} onPress={() => setFlashOn(!flashOn)}>
           <Ionicons name={flashOn ? 'flash' : 'flash-off'} size={22} color={COLORS.text} />
         </TouchableOpacity>
@@ -307,19 +345,19 @@ export default function TicketScannerScreen() {
 
             {/* Action Buttons */}
             <View style={styles.sheetActions}>
-              {scanResult?.status === 'VALID' && !scanResult.message?.includes('successful') ? (
+              {scanResult?.status === 'VALID' ? (
                 <>
                   <TouchableOpacity
                     style={[styles.actionButton, styles.primaryButton]}
                     onPress={handleConfirmCheckIn}
                   >
-                    <Text style={styles.primaryButtonText}>Confirm Check-in</Text>
+                    <Text style={styles.primaryButtonText}>{t('organizerTicketScanner.actions.confirm')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.actionButton, styles.secondaryButton]}
                     onPress={handleCloseSheet}
                   >
-                    <Text style={styles.secondaryButtonText}>Cancel</Text>
+                    <Text style={styles.secondaryButtonText}>{t('common.cancel')}</Text>
                   </TouchableOpacity>
                 </>
               ) : (
@@ -327,7 +365,7 @@ export default function TicketScannerScreen() {
                   style={[styles.actionButton, styles.primaryButton]}
                   onPress={handleCloseSheet}
                 >
-                  <Text style={styles.primaryButtonText}>Close</Text>
+                  <Text style={styles.primaryButtonText}>{t('common.close')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -402,7 +440,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 50,
+    paddingTop: 16,
     paddingHorizontal: 16,
     paddingBottom: 16,
   },

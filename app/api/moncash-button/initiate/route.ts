@@ -89,6 +89,7 @@ export async function POST(request: Request) {
       promoCode,
       tiers,
       mobileMoneyProvider,
+      forceFormPost,
     }: {
       eventId: string
       quantity?: number
@@ -96,6 +97,7 @@ export async function POST(request: Request) {
       promoCode?: string | null
       tiers?: TierSelection[]
       mobileMoneyProvider?: string | null
+      forceFormPost?: boolean
     } = await request.json()
 
     const provider = String(mobileMoneyProvider || 'moncash').toLowerCase()
@@ -294,10 +296,15 @@ export async function POST(request: Request) {
     }
 
     const orderHash = crypto.createHash('sha256').update(orderId).digest('hex').slice(0, 10)
-    const restTokenEnabled = String(process.env.MONCASH_BUTTON_REST_TOKEN_ENABLED || '').toLowerCase() === 'true'
+    const restTokenEnabled =
+      !forceFormPost && String(process.env.MONCASH_BUTTON_REST_TOKEN_ENABLED || '').toLowerCase() === 'true'
 
     let redirectUrl: string
-    if (restTokenEnabled) {
+    if (!restTokenEnabled) {
+      console.info('[moncash_button] initiate: using FORM POST (forced or REST token disabled)', { orderHash })
+      const origin = new URL(request.url).origin
+      redirectUrl = `${origin}/api/moncash-button/checkout?orderId=${encodeURIComponent(orderId)}`
+    } else {
       try {
         const { token } = await createMonCashButtonCheckoutToken({
           amount: chargeAmount,
@@ -331,10 +338,6 @@ export async function POST(request: Request) {
         const origin = new URL(request.url).origin
         redirectUrl = `${origin}/api/moncash-button/checkout?orderId=${encodeURIComponent(orderId)}`
       }
-    } else {
-      console.info('[moncash_button] initiate: REST token disabled; using FORM POST fallback', { orderHash })
-      const origin = new URL(request.url).origin
-      redirectUrl = `${origin}/api/moncash-button/checkout?orderId=${encodeURIComponent(orderId)}`
     }
     const response = NextResponse.json({ redirectUrl })
     // Correlate browser redirect back from MonCash to our pending transaction.

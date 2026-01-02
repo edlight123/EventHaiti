@@ -27,8 +27,11 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../config/brand';
 import { useAuth } from '../../contexts/AuthContext';
+import { useI18n } from '../../contexts/I18nContext';
 import { createEvent, updateEvent } from '../../lib/api/events';
 import { getEventById } from '../../lib/api/organizer';
+import { db } from '../../config/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 type RouteParams = {
   CreateEvent: undefined;
@@ -74,18 +77,19 @@ export interface EventDraft {
 }
 
 const STEPS = [
-  { id: 1, title: 'Basics', icon: 'document-text-outline' },
-  { id: 2, title: 'Location', icon: 'location-outline' },
-  { id: 3, title: 'Schedule', icon: 'time-outline' },
-  { id: 4, title: 'Tickets', icon: 'ticket-outline' },
-  { id: 5, title: 'Preview', icon: 'eye-outline' },
+  { id: 1, titleKey: 'organizerCreateEventFlow.steps.basics', icon: 'document-text-outline' },
+  { id: 2, titleKey: 'organizerCreateEventFlow.steps.location', icon: 'location-outline' },
+  { id: 3, titleKey: 'organizerCreateEventFlow.steps.schedule', icon: 'time-outline' },
+  { id: 4, titleKey: 'organizerCreateEventFlow.steps.tickets', icon: 'ticket-outline' },
+  { id: 5, titleKey: 'organizerCreateEventFlow.steps.preview', icon: 'eye-outline' },
 ];
 
 export default function CreateEventFlowRefactored() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RouteParams, 'EditEvent'>>();
   const insets = useSafeAreaInsets();
-  const { userProfile } = useAuth();
+  const { user, userProfile } = useAuth();
+  const { t } = useI18n();
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -163,6 +167,7 @@ export default function CreateEventFlowRefactored() {
           category: event.category || '',
           banner_image_url: event.cover_image_url || '',
           venue_name: event.venue_name || '',
+          country: (event as any).country || 'HT',
           city: event.city || '',
           commune: event.commune || '',
           address: event.address || '',
@@ -177,7 +182,7 @@ export default function CreateEventFlowRefactored() {
       }
     } catch (error) {
       console.error('Error loading event:', error);
-      Alert.alert('Error', 'Failed to load event data');
+      Alert.alert(t('common.error'), t('organizerCreateEventFlow.loadError'));
       navigation.goBack();
     } finally {
       setLoadingEvent(false);
@@ -199,22 +204,22 @@ export default function CreateEventFlowRefactored() {
   // Step validation - only runs on final submit
   const validateAllSteps = (): boolean => {
     if (!eventDraft.title.trim()) {
-      Alert.alert('Required', 'Please enter an event title');
+      Alert.alert(t('organizerCreateEventFlow.requiredTitle'), t('organizerCreateEventFlow.requiredEventTitle'));
       setCurrentStep(1);
       return false;
     }
     if (!eventDraft.venue_name.trim()) {
-      Alert.alert('Required', 'Please enter a venue name');
+      Alert.alert(t('organizerCreateEventFlow.requiredTitle'), t('organizerCreateEventFlow.requiredVenueName'));
       setCurrentStep(2);
       return false;
     }
     if (!eventDraft.start_date || !eventDraft.start_time || !eventDraft.end_date || !eventDraft.end_time) {
-      Alert.alert('Required', 'Please select start and end date/time');
+      Alert.alert(t('organizerCreateEventFlow.requiredTitle'), t('organizerCreateEventFlow.requiredDatesTimes'));
       setCurrentStep(3);
       return false;
     }
     if (eventDraft.ticket_tiers.length === 0) {
-      Alert.alert('Required', 'Please add at least one ticket tier');
+      Alert.alert(t('organizerCreateEventFlow.requiredTitle'), t('organizerCreateEventFlow.requiredTickets'));
       setCurrentStep(4);
       return false;
     }
@@ -240,8 +245,52 @@ export default function CreateEventFlowRefactored() {
 
   const handleSubmit = async () => {
     if (!userProfile?.id) {
-      Alert.alert('Error', 'You must be logged in to create an event');
+      Alert.alert(t('common.error'), t('organizerCreateEventFlow.authRequired'));
       return;
+    }
+
+    // Match web restrictions: paid US/CA events require Stripe Connect.
+    const draftCountry = String((eventDraft as any).country || 'HT').toUpperCase();
+    const isStripeCountry = draftCountry === 'US' || draftCountry === 'CA';
+    const hasPaidTickets = (eventDraft.ticket_tiers || []).some((tier) => {
+      const price = parseFloat(String((tier as any).price ?? '0'));
+      return Number.isFinite(price) && price > 0;
+    });
+
+    if (isStripeCountry && hasPaidTickets) {
+      try {
+        const organizerId = user?.uid || userProfile.id;
+
+        // Prefer new payout profile doc; fall back to legacy payoutConfig/main.
+        const [profileSnap, legacySnap] = await Promise.all([
+          getDoc(doc(db, 'organizers', organizerId, 'payoutProfiles', 'stripe_connect')),
+          getDoc(doc(db, 'organizers', organizerId, 'payoutConfig', 'main')),
+        ]);
+
+        const profileData = profileSnap.exists() ? (profileSnap.data() as any) : null;
+        const legacyData = legacySnap.exists() ? (legacySnap.data() as any) : null;
+        const merged = profileData || legacyData;
+
+        const provider = String(merged?.payoutProvider || '').toLowerCase();
+        const stripeAccountId = merged?.stripeAccountId || merged?.stripe_account_id || null;
+        const ok = provider === 'stripe_connect' && !!stripeAccountId;
+
+        if (!ok) {
+          Alert.alert(
+            t('organizerEarnings.stripeConnectRequired.title'),
+            t('organizerEarnings.stripeConnectRequired.body')
+          );
+          setCurrentStep(2);
+          return;
+        }
+      } catch {
+        Alert.alert(
+          t('organizerEarnings.stripeConnectRequired.title'),
+          t('organizerEarnings.stripeConnectRequired.body')
+        );
+        setCurrentStep(2);
+        return;
+      }
     }
 
     setSaving(true);
@@ -252,9 +301,9 @@ export default function CreateEventFlowRefactored() {
         console.log('Event updated with ID:', eventId);
         
         Alert.alert(
-          'Success',
-          'Your event has been updated successfully!',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
+          t('common.success'),
+          t('organizerCreateEventFlow.updateSuccessBody'),
+          [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
         );
       } else {
         // Create new event
@@ -262,16 +311,16 @@ export default function CreateEventFlowRefactored() {
         console.log('Event created with ID:', newEventId);
         
         Alert.alert(
-          'Success',
-          'Your event has been created successfully!',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
+          t('common.success'),
+          t('organizerCreateEventFlow.createSuccessBody'),
+          [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
         );
       }
     } catch (error: any) {
       console.error('Event save error:', error);
       Alert.alert(
-        'Error',
-        error.message || `Failed to ${isEditMode ? 'update' : 'create'} event. Please try again.`
+        t('common.error'),
+        error.message || (isEditMode ? t('organizerCreateEventFlow.saveFailedUpdate') : t('organizerCreateEventFlow.saveFailedCreate'))
       );
     } finally {
       setSaving(false);
@@ -300,7 +349,7 @@ export default function CreateEventFlowRefactored() {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading event...</Text>
+        <Text style={styles.loadingText}>{t('organizerCreateEventFlow.loadingEvent')}</Text>
       </View>
     );
   }
@@ -317,15 +366,17 @@ export default function CreateEventFlowRefactored() {
           <View style={styles.header}>
             <TouchableOpacity
               onPress={() => {
-                Alert.alert('Discard Changes?', 'Your changes will be lost.', [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Leave', style: 'destructive', onPress: () => navigation.goBack() },
+                Alert.alert(t('organizerCreateEventFlow.discardTitle'), t('organizerCreateEventFlow.discardBody'), [
+                  { text: t('common.cancel'), style: 'cancel' },
+                  { text: t('organizerCreateEventFlow.leave'), style: 'destructive', onPress: () => navigation.goBack() },
                 ]);
               }}
             >
               <Ionicons name="close" size={24} color={COLORS.text} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{isEditMode ? 'Edit Event' : 'Create Event'}</Text>
+            <Text style={styles.headerTitle}>
+              {isEditMode ? t('organizerCreateEventFlow.headerEdit') : t('organizerCreateEventFlow.headerCreate')}
+            </Text>
             <View style={{ width: 24 }} />
           </View>
 
@@ -349,7 +400,7 @@ export default function CreateEventFlowRefactored() {
                       </Text>
                     </View>
                     <Text style={[styles.stepLabel, currentStep >= step.id && styles.stepLabelActive]}>
-                      {step.title}
+                      {t(step.titleKey)}
                     </Text>
                   </TouchableOpacity>
                   {index < STEPS.length - 1 && (
@@ -381,7 +432,7 @@ export default function CreateEventFlowRefactored() {
               {currentStep > 1 && (
                 <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={handleBack}>
                   <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
-                  <Text style={styles.buttonSecondaryText}>Back</Text>
+                  <Text style={styles.buttonSecondaryText}>{t('common.back')}</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -390,7 +441,9 @@ export default function CreateEventFlowRefactored() {
                 disabled={saving}
               >
                 <Text style={styles.buttonPrimaryText}>
-                  {currentStep === 5 ? (isEditMode ? 'Update Event' : 'Create Event') : 'Continue'}
+                  {currentStep === 5
+                    ? (isEditMode ? t('organizerCreateEventFlow.updateEvent') : t('organizerCreateEventFlow.createEvent'))
+                    : t('common.continue')}
                 </Text>
                 {currentStep < 5 && <Ionicons name="arrow-forward" size={20} color={COLORS.white} />}
               </TouchableOpacity>

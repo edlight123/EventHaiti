@@ -8,11 +8,14 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
-  Linking,
   Platform,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { X, CreditCard, Lock, Smartphone, AlertCircle } from 'lucide-react-native';
 import { COLORS } from '../config/brand';
+import { auth } from '../config/firebase';
+import { backendJson } from '../lib/api/backend';
+import { useI18n } from '../contexts/I18nContext';
 
 // Check if we're in Expo Go (Stripe won't work)
 const isExpoGo = !(Platform as any).constants?.expoConfig;
@@ -34,7 +37,6 @@ if (!isExpoGo) {
 }
 
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!;
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
 interface PaymentModalProps {
   visible: boolean;
@@ -64,6 +66,8 @@ function PaymentForm({
   onSuccess,
   onClose,
 }: Omit<PaymentModalProps, 'visible'>) {
+  const navigation = useNavigation<any>();
+  const { t } = useI18n();
   // Only use Stripe hooks if available
   const stripeHooks = useStripe ? useStripe() : { confirmPayment: null, handleCardAction: null };
   const { confirmPayment, handleCardAction } = stripeHooks;
@@ -82,12 +86,12 @@ function PaymentForm({
   // Stripe Payment
   const handleStripePayment = async () => {
     if (isHaitiEvent) {
-      setError('Card payments for Haiti events use Sogepay.');
+      setError(t('paymentModal.errors.haitiUseSogepay'));
       return;
     }
 
     if (!confirmPayment) {
-      setError('Credit card payments require a development build with the Stripe SDK enabled.');
+      setError(t('paymentModal.errors.stripeUnavailable'));
       return;
     }
     setProcessing(true);
@@ -95,9 +99,8 @@ function PaymentForm({
 
     try {
       // Step 1: Create payment intent from your backend
-      const response = await fetch(`${API_URL}/api/create-payment-intent`, {
+      const data = await backendJson<{ clientSecret: string }>(`/api/create-payment-intent`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventId,
           quantity,
@@ -105,12 +108,6 @@ function PaymentForm({
           promoCodeId,
         }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to initialize payment');
-      }
 
       // Step 2: Confirm payment with Stripe
       const { error: confirmError, paymentIntent } = await confirmPayment(data.clientSecret, {
@@ -124,11 +121,11 @@ function PaymentForm({
       if (paymentIntent?.status === 'Succeeded') {
         // Step 3: Create tickets (backend will handle this via webhook, but we can also confirm here)
         onSuccess('stripe', paymentIntent.id);
-        Alert.alert('Success', 'Payment successful! Your tickets have been created.');
+        Alert.alert(t('common.success'), t('screens.payment.successBody'));
         onClose();
       }
     } catch (err: any) {
-      setError(err.message || 'Payment failed. Please try again.');
+      setError(err.message || t('paymentModal.errors.paymentFailed'));
     } finally {
       setProcessing(false);
     }
@@ -140,9 +137,8 @@ function PaymentForm({
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/sogepay/initiate`, {
+      const data = await backendJson<{ redirectUrl: string }>(`/api/sogepay/initiate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventId,
           quantity,
@@ -151,23 +147,18 @@ function PaymentForm({
         }),
       });
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to initiate Sogepay payment');
-      }
-
       if (!data.redirectUrl) {
-        throw new Error('Missing Sogepay redirect URL');
+        throw new Error(t('paymentModal.errors.missingSogepayUrl'));
       }
 
-      await Linking.openURL(data.redirectUrl);
-      Alert.alert(
-        'Continue in Browser',
-        'Complete the Sogepay payment in your browser. After payment, return to the app and check your Tickets.'
-      );
       onClose();
+      navigation.navigate('PaymentWebView', {
+        url: data.redirectUrl,
+        title: t('screens.payment.complete'),
+        eventId,
+      });
     } catch (err: any) {
-      setError(err.message || 'Sogepay payment failed');
+      setError(err.message || t('paymentModal.errors.sogepayFailed'));
       setProcessing(false);
     }
   };
@@ -178,32 +169,32 @@ function PaymentForm({
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/moncash-button/initiate`, {
+      const data = await backendJson<{ redirectUrl: string }>(`/api/moncash-button/initiate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventId,
           quantity,
           tierId,
           promoCode: promoCodeId,
+          mobileMoneyProvider: 'moncash',
+          forceFormPost: true,
         }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to initiate MonCash payment');
-      }
-
       if (!data.redirectUrl) {
-        throw new Error('Missing MonCash redirect URL');
+        throw new Error(t('paymentModal.errors.missingMoncashUrl'));
       }
 
-      await Linking.openURL(data.redirectUrl);
-      Alert.alert('Continue in Browser', 'Complete the MonCash payment in your browser. After payment, return to the app and check your Tickets.');
+      const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
       onClose();
+      navigation.navigate('PaymentWebView', {
+        url: data.redirectUrl,
+        title: t('screens.payment.complete'),
+        authToken: token,
+        eventId,
+      });
     } catch (err: any) {
-      setError(err.message || 'MonCash payment failed');
+      setError(err.message || t('paymentModal.errors.moncashFailed'));
       setProcessing(false);
     }
   };
@@ -214,32 +205,32 @@ function PaymentForm({
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/moncash-button/initiate`, {
+      const data = await backendJson<{ redirectUrl: string }>(`/api/moncash-button/initiate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventId,
           quantity,
           tierId,
           promoCode: promoCodeId,
+          mobileMoneyProvider: 'natcash',
+          forceFormPost: true,
         }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to initiate NatCash payment');
-      }
-
       if (!data.redirectUrl) {
-        throw new Error('Missing MonCash redirect URL');
+        throw new Error(t('paymentModal.errors.missingMoncashUrl'));
       }
 
-      await Linking.openURL(data.redirectUrl);
-      Alert.alert('Continue in Browser', 'Complete the NatCash/MonCash payment in your browser. After payment, return to the app and check your Tickets.');
+      const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
       onClose();
+      navigation.navigate('PaymentWebView', {
+        url: data.redirectUrl,
+        title: t('screens.payment.complete'),
+        authToken: token,
+        eventId,
+      });
     } catch (err: any) {
-      setError(err.message || 'NatCash payment failed');
+      setError(err.message || t('paymentModal.errors.natcashFailed'));
       setProcessing(false);
     }
   };
@@ -261,7 +252,7 @@ function PaymentForm({
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Complete Payment</Text>
+          <Text style={styles.headerTitle}>{t('screens.payment.complete')}</Text>
           <Text style={styles.headerSubtitle}>
             {quantity}x {eventTitle}
           </Text>
@@ -274,7 +265,7 @@ function PaymentForm({
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Payment Method Selection */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Payment Method</Text>
+          <Text style={styles.sectionTitle}>{t('paymentModal.selectMethod')}</Text>
 
           {/* Stripe Card Payment - Only show if Stripe is available and not Haiti */}
           {!isHaitiEvent && !isExpoGo && StripeProvider && (
@@ -289,8 +280,8 @@ function PaymentForm({
                 <CreditCard size={24} color={paymentMethod === 'stripe' ? COLORS.primary : COLORS.textSecondary} />
               </View>
               <View style={styles.methodContent}>
-                <Text style={styles.methodTitle}>Credit/Debit Card</Text>
-                <Text style={styles.methodSubtitle}>Visa, Mastercard, Amex</Text>
+                <Text style={styles.methodTitle}>{t('paymentModal.methods.card')}</Text>
+                <Text style={styles.methodSubtitle}>{t('paymentModal.methods.cardBrands')}</Text>
               </View>
             </TouchableOpacity>
           )}
@@ -308,8 +299,8 @@ function PaymentForm({
                 <CreditCard size={24} color={paymentMethod === 'sogepay' ? COLORS.primary : COLORS.textSecondary} />
               </View>
               <View style={styles.methodContent}>
-                <Text style={styles.methodTitle}>Credit/Debit Card</Text>
-                <Text style={styles.methodSubtitle}>Sogepay</Text>
+                <Text style={styles.methodTitle}>{t('paymentModal.methods.card')}</Text>
+                <Text style={styles.methodSubtitle}>{t('paymentModal.methods.sogepay')}</Text>
               </View>
             </TouchableOpacity>
           )}
@@ -319,8 +310,8 @@ function PaymentForm({
             <View style={styles.expoGoWarning}>
               <AlertCircle size={18} color={COLORS.warning} />
               <Text style={styles.expoGoWarningText}>
-                Credit card payments require a development build.
-                {isHaitiEvent ? ' Use MonCash or NatCash to test in Expo Go.' : ''}
+                {t('paymentModal.expoGo.base')}
+                {isHaitiEvent ? ` ${t('paymentModal.expoGo.haitiSuffix')}` : ''}
               </Text>
             </View>
           )}
@@ -338,8 +329,8 @@ function PaymentForm({
                 <Smartphone size={24} color={paymentMethod === 'moncash' ? COLORS.primary : COLORS.textSecondary} />
               </View>
               <View style={styles.methodContent}>
-                <Text style={styles.methodTitle}>MonCash</Text>
-                <Text style={styles.methodSubtitle}>Haiti Mobile Money 🇭🇹</Text>
+                <Text style={styles.methodTitle}>{t('paymentModal.methods.moncash')}</Text>
+                <Text style={styles.methodSubtitle}>{t('paymentModal.methods.haitiMobileMoney')}</Text>
               </View>
             </TouchableOpacity>
           )}
@@ -357,8 +348,8 @@ function PaymentForm({
                 <Smartphone size={24} color={paymentMethod === 'natcash' ? COLORS.primary : COLORS.textSecondary} />
               </View>
               <View style={styles.methodContent}>
-                <Text style={styles.methodTitle}>NatCash</Text>
-                <Text style={styles.methodSubtitle}>Haiti Mobile Money 🇭🇹</Text>
+                <Text style={styles.methodTitle}>{t('paymentModal.methods.natcash')}</Text>
+                <Text style={styles.methodSubtitle}>{t('paymentModal.methods.haitiMobileMoney')}</Text>
               </View>
             </TouchableOpacity>
           )}
@@ -367,7 +358,7 @@ function PaymentForm({
         {/* Stripe Card Input */}
         {paymentMethod === 'stripe' && CardField && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Card Details</Text>
+            <Text style={styles.sectionTitle}>{t('paymentModal.cardDetails')}</Text>
             <CardField
               postalCodeEnabled={false}
               placeholder={{
@@ -382,7 +373,7 @@ function PaymentForm({
             <View style={styles.testCardHint}>
               <AlertCircle size={14} color={COLORS.textSecondary} />
               <Text style={styles.testCardHintText}>
-                Test card: 4242 4242 4242 4242
+                {t('paymentModal.testCardHint')}
               </Text>
             </View>
           </View>
@@ -394,8 +385,13 @@ function PaymentForm({
             <View style={styles.infoBox}>
               <AlertCircle size={18} color={COLORS.primary} />
               <Text style={styles.infoText}>
-                You’ll be redirected to {paymentMethod === 'moncash' ? 'MonCash' : 'NatCash'} to complete payment.
-                After payment, return to the app and check your Tickets.
+                {t('paymentModal.info.redirectPrefix')}
+                {paymentMethod === 'moncash'
+                  ? t('paymentModal.methods.moncash')
+                  : t('paymentModal.methods.natcash')}
+                {t('paymentModal.info.redirectSuffix')}
+                {'\n'}
+                {t('paymentModal.info.afterPayment')}
               </Text>
             </View>
           </View>
@@ -410,7 +406,7 @@ function PaymentForm({
 
         {/* Total Amount */}
         <View style={styles.totalContainer}>
-          <Text style={styles.totalLabel}>Total Amount</Text>
+          <Text style={styles.totalLabel}>{t('paymentModal.totalAmount')}</Text>
           <Text style={styles.totalAmount}>
             {currency} {totalAmount.toLocaleString()}
           </Text>
@@ -419,7 +415,7 @@ function PaymentForm({
         {/* Security Badge */}
         <View style={styles.securityBadge}>
           <Lock size={14} color={COLORS.textSecondary} />
-          <Text style={styles.securityText}>Secured by Stripe & MonCash</Text>
+          <Text style={styles.securityText}>{t('paymentModal.securedBy')}</Text>
         </View>
       </ScrollView>
 
@@ -430,7 +426,7 @@ function PaymentForm({
           onPress={onClose}
           disabled={processing}
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -445,7 +441,7 @@ function PaymentForm({
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
             <Text style={styles.payButtonText}>
-              Pay {currency} {totalAmount.toLocaleString()}
+              {t('paymentModal.pay')} {currency} {totalAmount.toLocaleString()}
             </Text>
           )}
         </TouchableOpacity>
@@ -455,6 +451,7 @@ function PaymentForm({
 }
 
 export default function PaymentModal(props: PaymentModalProps) {
+  const { t } = useI18n();
   // If in Expo Go or Stripe not available, render without StripeProvider
   if (isExpoGo || !StripeProvider) {
     return (
@@ -481,10 +478,10 @@ export default function PaymentModal(props: PaymentModalProps) {
           <View style={styles.errorContainer}>
             <AlertCircle size={48} color={COLORS.error} />
             <Text style={styles.errorText}>
-              Stripe is not configured. Please add EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY to your .env file.
+              {t('paymentModal.stripeMissingKey')}
             </Text>
             <TouchableOpacity style={styles.payButton} onPress={props.onClose}>
-              <Text style={styles.payButtonText}>Close</Text>
+              <Text style={styles.payButtonText}>{t('common.close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

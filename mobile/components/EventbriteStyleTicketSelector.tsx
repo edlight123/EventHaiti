@@ -11,6 +11,7 @@ import {
 import { X, Minus, Plus } from 'lucide-react-native';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { useI18n } from '../contexts/I18nContext';
 
 interface TicketTier {
   id: string;
@@ -32,6 +33,7 @@ interface EventbriteStyleTicketSelectorProps {
   visible: boolean;
   onClose: () => void;
   onPurchase: (selections: { tierId: string; quantity: number; price: number }[]) => void;
+  currency?: string;
 }
 
 const COLORS = {
@@ -51,7 +53,10 @@ export default function EventbriteStyleTicketSelector({
   visible,
   onClose,
   onPurchase,
+  currency,
 }: EventbriteStyleTicketSelectorProps) {
+  const { t } = useI18n();
+  const displayCurrency = String(currency || 'HTG').toUpperCase();
   const [tiers, setTiers] = useState<TicketTier[]>([]);
   const [quantities, setQuantities] = useState<TierQuantity>({});
   const [loading, setLoading] = useState(true);
@@ -164,7 +169,7 @@ export default function EventbriteStyleTicketSelector({
         <View style={styles.modalContent}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Select Tickets</Text>
+            <Text style={styles.headerTitle}>{t('ticketSelector.title')}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <X size={24} color={COLORS.textSecondary} />
             </TouchableOpacity>
@@ -176,7 +181,7 @@ export default function EventbriteStyleTicketSelector({
             </View>
           ) : tiers.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No ticket tiers available</Text>
+              <Text style={styles.emptyText}>{t('ticketSelector.noTiers')}</Text>
             </View>
           ) : (
             <>
@@ -203,12 +208,14 @@ export default function EventbriteStyleTicketSelector({
                             <Text style={styles.tierDescription}>{tier.description}</Text>
                           )}
                           <View style={styles.tierMeta}>
-                            <Text style={styles.tierPrice}>{tier.price.toFixed(2)} HTG</Text>
+                            <Text style={styles.tierPrice}>{tier.price.toFixed(2)} {displayCurrency}</Text>
                             <Text style={[
                               styles.tierAvailability,
                               available === 0 && styles.tierSoldOut
                             ]}>
-                              {available > 0 ? `${available} available` : 'Sold out'}
+                              {available > 0
+                                ? `${available} ${t('ticketSelector.available')}`
+                                : t('ticketSelector.soldOut')}
                             </Text>
                           </View>
                         </View>
@@ -247,7 +254,7 @@ export default function EventbriteStyleTicketSelector({
                 {/* Total Summary */}
                 {totalTickets > 0 && (
                   <View style={styles.summary}>
-                    <Text style={styles.summaryTitle}>Order Summary</Text>
+                    <Text style={styles.summaryTitle}>{t('ticketSelector.orderSummary')}</Text>
                     {tiers
                       .filter(tier => quantities[tier.id] > 0)
                       .map(tier => (
@@ -256,15 +263,19 @@ export default function EventbriteStyleTicketSelector({
                             {quantities[tier.id]}× {tier.name}
                           </Text>
                           <Text style={styles.summaryItemPrice}>
-                            {(tier.price * quantities[tier.id]).toFixed(2)} HTG
+                            {(tier.price * quantities[tier.id]).toFixed(2)} {displayCurrency}
                           </Text>
                         </View>
                       ))}
                     <View style={styles.summaryTotal}>
                       <Text style={styles.summaryTotalLabel}>
-                        Total ({totalTickets} ticket{totalTickets !== 1 ? 's' : ''})
+                        {t('ticketSelector.total')} ({totalTickets}{' '}
+                        {totalTickets === 1
+                          ? t('ticketSelector.ticketSingular')
+                          : t('ticketSelector.ticketPlural')}
+                        )
                       </Text>
-                      <Text style={styles.summaryTotalPrice}>{totalPrice.toFixed(2)} HTG</Text>
+                      <Text style={styles.summaryTotalPrice}>{totalPrice.toFixed(2)} {displayCurrency}</Text>
                     </View>
                   </View>
                 )}
@@ -282,8 +293,8 @@ export default function EventbriteStyleTicketSelector({
                 >
                   <Text style={styles.checkoutButtonText}>
                     {totalTickets === 0
-                      ? 'Select Tickets'
-                      : `Checkout - ${totalPrice.toFixed(2)} HTG`}
+                      ? t('ticketSelector.selectTickets')
+                      : `${t('ticketSelector.checkout')} - ${totalPrice.toFixed(2)} ${displayCurrency}`}
                   </Text>
                 </TouchableOpacity>
               </View>

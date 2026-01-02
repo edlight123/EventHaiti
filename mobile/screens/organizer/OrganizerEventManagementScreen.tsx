@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Linking,
   Image,
   RefreshControl,
+  StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, RouteProp, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../../config/brand';
@@ -23,6 +24,7 @@ import {
   toggleEventPublication,
   cancelEvent,
 } from '../../lib/api/events';
+import { useI18n } from '../../contexts/I18nContext';
 
 type RouteParams = {
   OrganizerEventManagement: {
@@ -34,6 +36,10 @@ export default function OrganizerEventManagementScreen() {
   const route = useRoute<RouteProp<RouteParams, 'OrganizerEventManagement'>>();
   const navigation = useNavigation<any>();
   const { eventId } = route.params;
+  const insets = useSafeAreaInsets();
+
+  const { t, language } = useI18n();
+  const locale = language === 'fr' ? 'fr-FR' : language === 'ht' ? 'fr-HT' : 'en-US';
 
   const [event, setEvent] = useState<OrganizerEvent | null>(null);
   const [isPaused, setIsPaused] = useState(false);
@@ -103,24 +109,26 @@ export default function OrganizerEventManagementScreen() {
   };
 
   const handleManageStaff = async () => {
-    const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL || 'https://eventhaiti.vercel.app';
-    const url = `${String(webBaseUrl).replace(/\/$/, '')}/organizer/events/${eventId}/staff`;
     try {
-      await Linking.openURL(url);
+      navigation.navigate('OrganizerEventStaff', { eventId });
     } catch {
-      Alert.alert('Error', 'Unable to open staff management.');
+      Alert.alert(t('common.error'), t('organizerEventManagement.errors.openStaffFailed'));
     }
   };
 
   const handleToggleSales = async () => {
     const action = isPaused ? 'resume' : 'pause';
     Alert.alert(
-      `${action === 'pause' ? 'Pause' : 'Resume'} Ticket Sales`,
-      `Are you sure you want to ${action} ticket sales for this event?`,
+      action === 'pause'
+        ? t('organizerEventManagement.toggleSales.pauseTitle')
+        : t('organizerEventManagement.toggleSales.resumeTitle'),
+      action === 'pause'
+        ? t('organizerEventManagement.toggleSales.pauseBody')
+        : t('organizerEventManagement.toggleSales.resumeBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: action === 'pause' ? 'Pause' : 'Resume',
+          text: action === 'pause' ? t('organizerEventManagement.toggleSales.pauseCta') : t('organizerEventManagement.toggleSales.resumeCta'),
           style: action === 'pause' ? 'destructive' : 'default',
           onPress: async () => {
             try {
@@ -132,11 +140,18 @@ export default function OrganizerEventManagementScreen() {
               // Reload event data to get the updated status from database
               await loadEventData();
               Alert.alert(
-                'Success',
-                `Ticket sales ${action === 'pause' ? 'paused' : 'resumed'} successfully`
+                t('common.success'),
+                action === 'pause'
+                  ? t('organizerEventManagement.toggleSales.pausedSuccess')
+                  : t('organizerEventManagement.toggleSales.resumedSuccess')
               );
             } catch (error: any) {
-              Alert.alert('Error', error.message || `Failed to ${action} ticket sales`);
+              Alert.alert(
+                t('common.error'),
+                error.message || (action === 'pause'
+                  ? t('organizerEventManagement.toggleSales.pauseFailed')
+                  : t('organizerEventManagement.toggleSales.resumeFailed'))
+              );
             }
           },
         },
@@ -150,23 +165,23 @@ export default function OrganizerEventManagementScreen() {
 
   const handleCancelEvent = async () => {
     Alert.alert(
-      'Cancel Event',
-      'Are you sure you want to cancel this event? This action cannot be undone. All ticket holders will be notified.',
+      t('organizerEventManagement.cancelEvent.title'),
+      t('organizerEventManagement.cancelEvent.body'),
       [
-        { text: 'No', style: 'cancel' },
+        { text: t('common.no'), style: 'cancel' },
         {
-          text: 'Yes, Cancel Event',
+          text: t('organizerEventManagement.cancelEvent.confirmCta'),
           style: 'destructive',
           onPress: async () => {
             try {
               await cancelEvent(eventId);
               Alert.alert(
-                'Event Cancelled',
-                'The event has been cancelled successfully.',
-                [{ text: 'OK', onPress: () => navigation.goBack() }]
+                t('organizerEventManagement.cancelEvent.successTitle'),
+                t('organizerEventManagement.cancelEvent.successBody'),
+                [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
               );
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to cancel event');
+              Alert.alert(t('common.error'), error.message || t('organizerEventManagement.cancelEvent.failed'));
             }
           },
         },
@@ -178,7 +193,7 @@ export default function OrganizerEventManagementScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading event...</Text>
+        <Text style={styles.loadingText}>{t('organizerEventManagement.loading')}</Text>
       </View>
     );
   }
@@ -187,18 +202,18 @@ export default function OrganizerEventManagementScreen() {
     return (
       <View style={styles.loadingContainer}>
         <Ionicons name="alert-circle-outline" size={64} color={COLORS.error} />
-        <Text style={styles.errorText}>Event not found</Text>
+        <Text style={styles.errorText}>{t('organizerEventManagement.notFound')}</Text>
       </View>
     );
   }
 
   const eventDate = new Date(event.start_datetime);
-  const formattedDate = eventDate.toLocaleDateString('en-US', {
+  const formattedDate = eventDate.toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
-  const formattedTime = eventDate.toLocaleTimeString('en-US', {
+  const formattedTime = eventDate.toLocaleTimeString(locale, {
     hour: 'numeric',
     minute: '2-digit',
   });
@@ -214,6 +229,8 @@ export default function OrganizerEventManagementScreen() {
         />
       }
     >
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+
       {/* Header with background image */}
       <View style={styles.header}>
         {event.cover_image_url && (
@@ -224,7 +241,7 @@ export default function OrganizerEventManagementScreen() {
           />
         )}
         <View style={styles.overlay} />
-        <View style={styles.headerContent}>
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
           <Text style={styles.headerTitle}>{event.title}</Text>
           <View style={styles.headerInfo}>
             <Ionicons name="calendar-outline" size={16} color={COLORS.white} />
@@ -241,41 +258,41 @@ export default function OrganizerEventManagementScreen() {
 
       {/* Quick Actions */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Text style={styles.sectionTitle}>{t('organizerEventManagement.sections.quickActions')}</Text>
         <View style={styles.actionGrid}>
           <TouchableOpacity style={styles.actionCard} onPress={handleScanTickets}>
             <Ionicons name="qr-code-outline" size={32} color={COLORS.primary} />
-            <Text style={styles.actionText}>Scan Tickets</Text>
+            <Text style={styles.actionText}>{t('organizerEventManagement.actions.scanTickets')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionCard} onPress={handleManageStaff}>
             <Ionicons name="people-outline" size={32} color={COLORS.primary} />
-            <Text style={styles.actionText}>Staff</Text>
+            <Text style={styles.actionText}>{t('organizerEventManagement.actions.staff')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionCard} onPress={handleViewAttendees}>
             <Ionicons name="people-outline" size={32} color={COLORS.primary} />
-            <Text style={styles.actionText}>View Attendees</Text>
+            <Text style={styles.actionText}>{t('organizerEventManagement.actions.viewAttendees')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionCard} onPress={handleViewEarnings}>
             <Ionicons name="cash-outline" size={32} color={COLORS.primary} />
-            <Text style={styles.actionText}>Earnings</Text>
+            <Text style={styles.actionText}>{t('organizerEventManagement.actions.earnings')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionCard} onPress={handleEditEvent}>
             <Ionicons name="create-outline" size={32} color={COLORS.primary} />
-            <Text style={styles.actionText}>Edit Event</Text>
+            <Text style={styles.actionText}>{t('organizerEventManagement.actions.editEvent')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionCard} onPress={handleViewPublicPage}>
             <Ionicons name="eye-outline" size={32} color={COLORS.primary} />
-            <Text style={styles.actionText}>View Public Page</Text>
+            <Text style={styles.actionText}>{t('organizerEventManagement.actions.viewPublicPage')}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Performance */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Performance</Text>
+        <Text style={styles.sectionTitle}>{t('organizerEventManagement.sections.performance')}</Text>
         <View style={styles.performanceCard}>
           <View style={styles.performanceHeader}>
-            <Text style={styles.performanceTitle}>Ticket Sales</Text>
+            <Text style={styles.performanceTitle}>{t('organizerEventManagement.performance.ticketSales')}</Text>
             <Text style={styles.performanceValue}>
               {ticketData.ticketsSold} / {ticketData.capacity}
             </Text>
@@ -298,14 +315,14 @@ export default function OrganizerEventManagementScreen() {
             {ticketData.capacity > 0
               ? ((ticketData.ticketsSold / ticketData.capacity) * 100).toFixed(1)
               : 0}
-            % sold
+            % {t('common.sold')}
           </Text>
         </View>
 
         {/* Ticket Type Breakdown */}
         {ticketData.ticketTypes.length > 0 && (
           <View style={styles.ticketBreakdown}>
-            <Text style={styles.breakdownTitle}>By Ticket Type</Text>
+            <Text style={styles.breakdownTitle}>{t('organizerEventManagement.performance.byTicketType')}</Text>
             {ticketData.ticketTypes.map((ticketType, index) => (
               <View key={index} style={styles.ticketTypeRow}>
                 <View style={styles.ticketTypeInfo}>
@@ -336,7 +353,7 @@ export default function OrganizerEventManagementScreen() {
 
       {/* Event Controls */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Event Controls</Text>
+        <Text style={styles.sectionTitle}>{t('organizerEventManagement.sections.eventControls')}</Text>
         <TouchableOpacity style={styles.controlButton} onPress={handleToggleSales}>
           <Ionicons 
             name={isPaused ? "play-circle-outline" : "pause-circle-outline"} 
@@ -344,19 +361,21 @@ export default function OrganizerEventManagementScreen() {
             color={isPaused ? COLORS.success : COLORS.warning} 
           />
           <Text style={styles.controlButtonText}>
-            {isPaused ? 'Resume Ticket Sales' : 'Pause Ticket Sales'}
+            {isPaused
+              ? t('organizerEventManagement.controls.resumeTicketSales')
+              : t('organizerEventManagement.controls.pauseTicketSales')}
           </Text>
           <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.controlButton} onPress={handleSendUpdate}>
           <Ionicons name="notifications-outline" size={24} color={COLORS.primary} />
-          <Text style={styles.controlButtonText}>Send Update to Attendees</Text>
+          <Text style={styles.controlButtonText}>{t('organizerEventManagement.controls.sendUpdate')}</Text>
           <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
         </TouchableOpacity>
         {event?.status !== 'cancelled' && (
           <TouchableOpacity style={[styles.controlButton, styles.dangerButton]} onPress={handleCancelEvent}>
             <Ionicons name="close-circle-outline" size={24} color={COLORS.error} />
-            <Text style={[styles.controlButtonText, styles.dangerText]}>Cancel Event</Text>
+            <Text style={[styles.controlButtonText, styles.dangerText]}>{t('organizerEventManagement.controls.cancelEvent')}</Text>
             <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
           </TouchableOpacity>
         )}
@@ -413,7 +432,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 16,
     position: 'relative',
     zIndex: 1,
   },

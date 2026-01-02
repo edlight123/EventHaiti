@@ -14,6 +14,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import Slider from '@react-native-community/slider';
 import { X } from 'lucide-react-native';
 import { useFilters } from '../contexts/FiltersContext';
+import { useI18n } from '../contexts/I18nContext';
+import { getCategoryLabel } from '../lib/categories';
 import { 
   CATEGORIES, 
   COUNTRIES,
@@ -28,6 +30,7 @@ import {
 import { COLORS } from '../config/brand';
 
 export default function EventFiltersSheet() {
+  const { t } = useI18n();
   const {
     draftFilters,
     isModalOpen,
@@ -122,7 +125,7 @@ export default function EventFiltersSheet() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle}>Filters</Text>
+            <Text style={styles.headerTitle}>{t('filters.title')}</Text>
             {activeCount > 0 && (
               <View style={styles.activeBadge}>
                 <Text style={styles.activeBadgeText}>{activeCount}</Text>
@@ -144,7 +147,7 @@ export default function EventFiltersSheet() {
         >
           {/* Date Filter */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>DATE</Text>
+            <Text style={styles.sectionLabel}>{t('filters.date').toUpperCase()}</Text>
             <View style={styles.chipsRow}>
               {DATE_OPTIONS.map(option => (
                 <TouchableOpacity
@@ -161,7 +164,7 @@ export default function EventFiltersSheet() {
                       draftFilters.date === option.value && styles.chipTextActive
                     ]}
                   >
-                    {option.label}
+                    {t(option.labelKey)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -185,9 +188,9 @@ export default function EventFiltersSheet() {
                     onPress={() => setShowDatePicker(true)}
                   >
                     <Text style={styles.selectedDateText}>
-                      Selected: {new Date(draftFilters.pickedDate).toLocaleDateString()}
+                      {t('filters.selected')}: {new Date(draftFilters.pickedDate).toLocaleDateString()}
                     </Text>
-                    <Text style={styles.selectedDateHint}>Tap to change</Text>
+                    <Text style={styles.selectedDateHint}>{t('filters.tapToChange')}</Text>
                   </TouchableOpacity>
                 )}
               </>
@@ -196,7 +199,7 @@ export default function EventFiltersSheet() {
 
           {/* Event Type Filter */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>EVENT TYPE</Text>
+            <Text style={styles.sectionLabel}>{t('filters.eventType').toUpperCase()}</Text>
             <View style={styles.segmentedControl}>
               {EVENT_TYPE_OPTIONS.map((option, index) => (
                 <TouchableOpacity
@@ -215,7 +218,7 @@ export default function EventFiltersSheet() {
                       draftFilters.eventType === option.value && styles.segmentTextActive
                     ]}
                   >
-                    {option.label}
+                    {t(option.labelKey)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -224,7 +227,7 @@ export default function EventFiltersSheet() {
 
           {/* Price Filter */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>PRICE</Text>
+            <Text style={styles.sectionLabel}>{t('filters.price').toUpperCase()}</Text>
             <View style={styles.chipsRow}>
               {PRICE_FILTERS.map(option => (
                 <TouchableOpacity
@@ -241,7 +244,7 @@ export default function EventFiltersSheet() {
                       draftFilters.price === option.value && styles.chipTextActive
                     ]}
                   >
-                    {option.label}
+                    {t(option.labelKey)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -252,14 +255,14 @@ export default function EventFiltersSheet() {
               <View style={styles.priceSliderContainer}>
                 <View style={styles.priceRangeHeader}>
                   <Text style={styles.priceRangeLabel}>
-                    Min: {draftFilters.customPriceRange?.min || 0} HTG
+                    {t('filters.min')}: {draftFilters.customPriceRange?.min || 0} HTG
                   </Text>
                   <Text style={styles.priceRangeLabel}>
-                    Max: {draftFilters.customPriceRange?.max || 2000} HTG
+                    {t('filters.max')}: {draftFilters.customPriceRange?.max || 2000} HTG
                   </Text>
                 </View>
                 
-                <Text style={styles.sliderLabel}>Minimum Price</Text>
+                <Text style={styles.sliderLabel}>{t('filters.minimumPrice')}</Text>
                 <Slider
                   style={styles.slider}
                   minimumValue={0}
@@ -272,7 +275,7 @@ export default function EventFiltersSheet() {
                   thumbTintColor={COLORS.primary}
                 />
                 
-                <Text style={styles.sliderLabel}>Maximum Price</Text>
+                <Text style={styles.sliderLabel}>{t('filters.maximumPrice')}</Text>
                 <Slider
                   style={styles.slider}
                   minimumValue={0}
@@ -290,7 +293,7 @@ export default function EventFiltersSheet() {
 
           {/* Categories Filter */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>CATEGORIES</Text>
+            <Text style={styles.sectionLabel}>{t('filters.categories').toUpperCase()}</Text>
             <View style={styles.chipsRow}>
               {CATEGORIES.map(category => (
                 <TouchableOpacity
@@ -307,7 +310,7 @@ export default function EventFiltersSheet() {
                       draftFilters.categories.includes(category) && styles.chipTextActive
                     ]}
                   >
-                    {category}
+                    {getCategoryLabel(t, category)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -316,7 +319,7 @@ export default function EventFiltersSheet() {
 
           {/* Location Filter */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>COUNTRY</Text>
+            <Text style={styles.sectionLabel}>{t('filters.country').toUpperCase()}</Text>
             <View style={styles.chipsRow}>
               {COUNTRIES.map(country => (
                 <TouchableOpacity
@@ -339,7 +342,7 @@ export default function EventFiltersSheet() {
               ))}
             </View>
 
-            <Text style={[styles.sectionLabel, { marginTop: 12 }]}>CITY</Text>
+            <Text style={[styles.sectionLabel, { marginTop: 12 }]}>{t('filters.city').toUpperCase()}</Text>
             <View style={styles.chipsRow}>
               {(CITIES_BY_COUNTRY[draftFilters.country || 'HT'] || []).map(city => (
                 <TouchableOpacity
@@ -373,14 +376,14 @@ export default function EventFiltersSheet() {
             style={styles.resetButton}
             onPress={resetFilters}
           >
-            <Text style={styles.resetButtonText}>Reset</Text>
+            <Text style={styles.resetButtonText}>{t('filters.reset')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.applyButton}
             onPress={applyFilters}
           >
             <Text style={styles.applyButtonText}>
-              Apply {activeCount > 0 ? `(${activeCount})` : ''}
+              {t('filters.apply')} {activeCount > 0 ? `(${activeCount})` : ''}
             </Text>
           </TouchableOpacity>
         </View>

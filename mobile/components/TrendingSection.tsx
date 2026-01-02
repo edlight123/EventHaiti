@@ -11,8 +11,11 @@ import {
 } from 'react-native';
 import { Calendar, MapPin } from 'lucide-react-native';
 import { COLORS } from '../config/brand';
-import { format } from 'date-fns';
 import EventStatusBadge from './EventStatusBadge';
+import { useI18n } from '../contexts/I18nContext';
+import { getCategoryLabel } from '../lib/categories';
+
+import { formatDateForLanguage } from '../lib/dates';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.75;
@@ -25,6 +28,7 @@ interface TrendingSectionProps {
 }
 
 const TrendingEventCard = ({ event, onPress }: { event: any; onPress: () => void }) => {
+  const { t, language } = useI18n();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -69,7 +73,7 @@ const TrendingEventCard = ({ event, onPress }: { event: any; onPress: () => void
         </View>
 
         <View style={styles.cardContent}>
-          <Text style={styles.cardCategory}>{event.category}</Text>
+          <Text style={styles.cardCategory}>{getCategoryLabel(t, event.category)}</Text>
           <Text style={styles.cardTitle} numberOfLines={2}>
             {event.title}
           </Text>
@@ -78,7 +82,8 @@ const TrendingEventCard = ({ event, onPress }: { event: any; onPress: () => void
             <View style={styles.cardDetailRow}>
               <Calendar size={14} color={COLORS.textSecondary} />
               <Text style={styles.cardDetailText}>
-                {event.start_datetime && format(new Date(event.start_datetime), 'MMM dd, h:mm a')}
+                {event.start_datetime &&
+                  formatDateForLanguage(new Date(event.start_datetime), 'MMM dd, h:mm a', language)}
               </Text>
             </View>
             <View style={styles.cardDetailRow}>
@@ -95,7 +100,7 @@ const TrendingEventCard = ({ event, onPress }: { event: any; onPress: () => void
                 {event.currency || 'HTG'} {event.ticket_price.toLocaleString()}
               </Text>
             ) : (
-              <Text style={styles.cardFree}>FREE</Text>
+              <Text style={styles.cardFree}>{t('common.free').toUpperCase()}</Text>
             )}
           </View>
         </View>
@@ -109,17 +114,18 @@ export default function TrendingSection({
   onEventPress,
   onViewAll,
 }: TrendingSectionProps) {
+  const { t } = useI18n();
   if (events.length === 0) return null;
 
   return (
     <View style={styles.section}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>🔥 Trending Now</Text>
-          <Text style={styles.subtitle}>Hot events everyone is talking about</Text>
+          <Text style={styles.title}>🔥 {t('home.trendingTitle')}</Text>
+          <Text style={styles.subtitle}>{t('home.trendingSubtitle')}</Text>
         </View>
         <TouchableOpacity onPress={onViewAll}>
-          <Text style={styles.viewAll}>View All →</Text>
+          <Text style={styles.viewAll}>{t('common.viewAll')} →</Text>
         </TouchableOpacity>
       </View>
 

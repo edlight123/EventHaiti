@@ -8,12 +8,15 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../config/brand';
 import { db } from '../../config/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useI18n } from '../../contexts/I18nContext';
 
 type RouteParams = {
   EventAttendees: {
@@ -36,6 +39,11 @@ export default function EventAttendeesScreen() {
   const route = useRoute<RouteProp<RouteParams, 'EventAttendees'>>();
   const navigation = useNavigation();
   const { eventId } = route.params;
+
+  const insets = useSafeAreaInsets();
+
+  const { t, language } = useI18n();
+  const locale = language === 'fr' ? 'fr-FR' : language === 'ht' ? 'fr-HT' : 'en-US';
 
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [filteredAttendees, setFilteredAttendees] = useState<Attendee[]>([]);
@@ -113,8 +121,8 @@ export default function EventAttendeesScreen() {
       <View style={styles.attendeeCard}>
         <View style={styles.attendeeHeader}>
           <View style={styles.attendeeInfo}>
-            <Text style={styles.attendeeName}>{item.attendee_name || 'N/A'}</Text>
-            <Text style={styles.attendeeEmail}>{item.attendee_email || 'N/A'}</Text>
+            <Text style={styles.attendeeName}>{item.attendee_name || t('common.na')}</Text>
+            <Text style={styles.attendeeEmail}>{item.attendee_email || t('common.na')}</Text>
           </View>
           <View style={[styles.statusBadge, checkedIn && styles.statusBadgeCheckedIn]}>
             <Ionicons
@@ -125,7 +133,7 @@ export default function EventAttendeesScreen() {
             <Text
               style={[styles.statusText, checkedIn && styles.statusTextCheckedIn]}
             >
-              {checkedIn ? 'Checked In' : 'Not Checked In'}
+              {checkedIn ? t('organizerAttendees.status.checkedIn') : t('organizerAttendees.status.notCheckedIn')}
             </Text>
           </View>
         </View>
@@ -133,7 +141,7 @@ export default function EventAttendeesScreen() {
         <View style={styles.attendeeDetails}>
           <View style={styles.detailRow}>
             <Ionicons name="ticket-outline" size={16} color={COLORS.textSecondary} />
-            <Text style={styles.detailText}>{item.tier_name || 'General'}</Text>
+            <Text style={styles.detailText}>{item.tier_name || t('common.general')}</Text>
           </View>
           <View style={styles.detailRow}>
             <Ionicons name="cash-outline" size={16} color={COLORS.textSecondary} />
@@ -144,7 +152,7 @@ export default function EventAttendeesScreen() {
           <View style={styles.detailRow}>
             <Ionicons name="calendar-outline" size={16} color={COLORS.textSecondary} />
             <Text style={styles.detailText}>
-              {purchaseDate.toLocaleDateString()}
+              {purchaseDate.toLocaleDateString(locale)}
             </Text>
           </View>
         </View>
@@ -153,9 +161,11 @@ export default function EventAttendeesScreen() {
           <View style={styles.checkedInInfo}>
             <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
             <Text style={styles.checkedInText}>
-              Checked in {item.checked_in_at.toDate
-                ? item.checked_in_at.toDate().toLocaleString()
-                : new Date(item.checked_in_at).toLocaleString()}
+              {t('organizerAttendees.checkedInPrefix')}{
+                item.checked_in_at.toDate
+                  ? item.checked_in_at.toDate().toLocaleString(locale)
+                  : new Date(item.checked_in_at).toLocaleString(locale)
+              }
             </Text>
           </View>
         )}
@@ -167,7 +177,7 @@ export default function EventAttendeesScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading attendees...</Text>
+        <Text style={styles.loadingText}>{t('organizerAttendees.loading')}</Text>
       </View>
     );
   }
@@ -176,15 +186,17 @@ export default function EventAttendeesScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
+
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Attendees</Text>
+        <Text style={styles.headerTitle}>{t('organizerAttendees.headerTitle')}</Text>
         <View style={styles.headerStats}>
           <Text style={styles.headerStatsText}>
-            {checkedInCount}/{attendees.length} checked in
+            {checkedInCount}/{attendees.length} {t('organizerAttendees.headerCheckedInSuffix')}
           </Text>
         </View>
       </View>
@@ -194,7 +206,7 @@ export default function EventAttendeesScreen() {
         <Ionicons name="search" size={20} color={COLORS.textSecondary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by name or email"
+          placeholder={t('organizerAttendees.searchPlaceholder')}
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholderTextColor={COLORS.textSecondary}
@@ -218,7 +230,7 @@ export default function EventAttendeesScreen() {
               filterStatus === 'all' && styles.filterTabTextActive,
             ]}
           >
-            All ({attendees.length})
+            {t('organizerAttendees.filters.all')} ({attendees.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -234,7 +246,7 @@ export default function EventAttendeesScreen() {
               filterStatus === 'checked_in' && styles.filterTabTextActive,
             ]}
           >
-            Checked In ({checkedInCount})
+            {t('organizerAttendees.filters.checkedIn')} ({checkedInCount})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -250,7 +262,7 @@ export default function EventAttendeesScreen() {
               filterStatus === 'not_checked_in' && styles.filterTabTextActive,
             ]}
           >
-            Not Checked In ({attendees.length - checkedInCount})
+            {t('organizerAttendees.filters.notCheckedIn')} ({attendees.length - checkedInCount})
           </Text>
         </TouchableOpacity>
       </View>
@@ -272,7 +284,7 @@ export default function EventAttendeesScreen() {
           <View style={styles.emptyState}>
             <Ionicons name="people-outline" size={64} color={COLORS.textSecondary} />
             <Text style={styles.emptyStateText}>
-              {searchQuery ? 'No attendees found' : 'No attendees yet'}
+              {searchQuery ? t('organizerAttendees.empty.filtered') : t('organizerAttendees.empty.default')}
             </Text>
           </View>
         }
@@ -300,7 +312,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 60,
+    paddingTop: 16,
     paddingBottom: 16,
     paddingHorizontal: 16,
     backgroundColor: COLORS.white,

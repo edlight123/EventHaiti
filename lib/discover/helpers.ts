@@ -4,6 +4,7 @@
 
 import { format, isToday, isTomorrow, isThisWeek, parseISO } from 'date-fns'
 import type { Database } from '@/types/database'
+import { isBudgetFriendlyTicketPrice } from '@/lib/pricing'
 
 type Event = Database['public']['Tables']['events']['Row']
 
@@ -126,6 +127,13 @@ export function toggleBookmark(eventId: string): boolean {
  * Filter events by criteria
  */
 export function filterEventsByPrice(events: Event[], maxPrice: number): Event[] {
+  // Legacy API: used for the "Free & Budget Friendly" section.
+  // Keep the callsite signature but interpret 500 as the "cheap" threshold:
+  // HTG <= 500 OR USD <= 5 (and always include free).
+  if (maxPrice === 500) {
+    return events.filter((e: any) => isBudgetFriendlyTicketPrice(e?.ticket_price, e?.currency))
+  }
+
   return events.filter(e => e.ticket_price <= maxPrice)
 }
 

@@ -126,7 +126,7 @@
     "nearYou": "Near You",
     "happening_soon": "Happening Soon",
     "budget_friendly": "Free & Budget Friendly",
-    "budget_friendly_desc": "Great events at ≤ 500 HTG",
+    "budget_friendly_desc": "Great events at ≤ 500 HTG or ≤ $5",
     "online_desc": "Join from anywhere",
     "near_you_desc": "Events in {{city}}{{commune}}",
     "featured_weekend": "Featured This Weekend",

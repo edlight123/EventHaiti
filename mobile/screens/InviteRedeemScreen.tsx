@@ -6,6 +6,8 @@ import { RootStackParamList } from '../navigation/AppNavigator'
 import { useAuth } from '../contexts/AuthContext'
 import { useAppMode } from '../contexts/AppModeContext'
 import { clearPendingInvite, setPendingInvite } from '../lib/pendingInvite'
+import { deleteStaffInviteNotificationsByEvent, deleteStaffInviteNotificationsByToken } from '../lib/notifications'
+import { addStaffEventId } from '../lib/staffAssignments'
 import { backendJson } from '../lib/api/backend'
 import { COLORS } from '../config/brand'
 
@@ -64,6 +66,16 @@ export default function InviteRedeemScreen({ route, navigation }: Props) {
           body: JSON.stringify({ eventId, token }),
         })
 
+        // Persist so Staff tabs can show it immediately.
+        addStaffEventId(eventId).catch(() => {})
+
+        // Auto-clear any matching notification that led to this invite.
+        if (user?.uid) {
+          deleteStaffInviteNotificationsByToken(user.uid, { eventId, token }).catch(() => {})
+          // Some notifications don't store the token; clear by eventId too.
+          deleteStaffInviteNotificationsByEvent(user.uid, { eventId }).catch(() => {})
+        }
+
         await clearPendingInvite()
         await setMode('staff')
 
@@ -75,6 +87,13 @@ export default function InviteRedeemScreen({ route, navigation }: Props) {
         navigation.navigate('TicketScanner' as any, { eventId })
       } catch (e: any) {
         const raw = e?.message ? String(e.message) : 'Failed to accept invite.'
+
+        // If the invite is already claimed, the notification is stale — clear it.
+        if (user?.uid && raw.toLowerCase().includes('already claimed')) {
+          deleteStaffInviteNotificationsByToken(user.uid, { eventId, token }).catch(() => {})
+          deleteStaffInviteNotificationsByEvent(user.uid, { eventId }).catch(() => {})
+        }
+
         setStatus('error')
         setMessage(getFriendlyError(raw))
       }

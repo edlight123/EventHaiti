@@ -180,9 +180,11 @@ export async function getOrganizerStats(
 
     // Calculate stats
     const totalEvents = events.length;
-    const upcomingEvents = events.filter(
-      (e) => new Date(e.start_datetime) > now
-    ).length;
+    const upcomingEvents = events.filter((e: any) => {
+      const cutoff = e.end_datetime || e.start_datetime;
+      if (!cutoff) return false;
+      return new Date(cutoff) > now;
+    }).length;
     const draftEvents = events.filter((e) => !e.is_published).length;
     const ticketsSold = filteredTickets.length;
     const revenue = filteredTickets.reduce(
@@ -197,13 +199,15 @@ export async function getOrganizerStats(
       now.getTime() + 7 * 24 * 60 * 60 * 1000
     );
     const eventsWithTickets = new Set(tickets.map((t: any) => t.event_id));
-    const upcomingSoonWithNoSales = events.filter(
-      (e) =>
-        e.is_published &&
-        new Date(e.start_datetime) > now &&
-        new Date(e.start_datetime) <= sevenDaysFromNow &&
-        !eventsWithTickets.has(e.id)
-    ).length;
+    const upcomingSoonWithNoSales = events.filter((e: any) => {
+      if (!e.is_published) return false;
+      const start = e.start_datetime ? new Date(e.start_datetime) : null;
+      const cutoff = e.end_datetime || e.start_datetime;
+      const end = cutoff ? new Date(cutoff) : null;
+      if (!start || !end) return false;
+
+      return start <= sevenDaysFromNow && end > now && !eventsWithTickets.has(e.id);
+    }).length;
 
     return {
       totalEvents,
@@ -255,11 +259,13 @@ export async function getTodayEvents(
         try {
           console.log(`[getTodayEvents] Event ${event.title} tickets_sold field:`, event.tickets_sold);
           
-          // Get checked in count from tickets collection
+          // Get checked-in count from tickets collection.
+          // NOTE: Avoid `checked_in_at != null` which can require additional ordering/indexing
+          // and may fail silently here (caught and returns 0). The scanner sets `checked_in: true`.
           const ticketsQuery = query(
             collection(db, 'tickets'),
             where('event_id', '==', event.id),
-            where('checked_in_at', '!=', null)
+            where('checked_in', '==', true)
           );
           const checkedInSnapshot = await getDocs(ticketsQuery);
 

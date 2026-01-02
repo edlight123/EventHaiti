@@ -10,11 +10,14 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { COLORS } from '../../config/brand';
 import { useAuth } from '../../contexts/AuthContext';
+import { useI18n } from '../../contexts/I18nContext';
 import {
   updateVerificationStep,
   getVerificationRequest,
@@ -30,6 +33,8 @@ export default function OrganizerInfoFormScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RouteParams, 'OrganizerInfoForm'>>();
   const { userProfile } = useAuth();
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -69,15 +74,15 @@ export default function OrganizerInfoFormScreen() {
 
   const validate = () => {
     if (!fullName.trim()) {
-      Alert.alert('Missing Information', 'Please enter your full name');
+      Alert.alert(t('verification.organizerInfo.validation.missingTitle'), t('verification.organizerInfo.validation.fullName'));
       return false;
     }
     if (!phone.trim()) {
-      Alert.alert('Missing Information', 'Please enter your phone number');
+      Alert.alert(t('verification.organizerInfo.validation.missingTitle'), t('verification.organizerInfo.validation.phone'));
       return false;
     }
     if (!organizationName.trim()) {
-      Alert.alert('Missing Information', 'Please enter your organization name');
+      Alert.alert(t('verification.organizerInfo.validation.missingTitle'), t('verification.organizerInfo.validation.organizationName'));
       return false;
     }
     return true;
@@ -104,7 +109,7 @@ export default function OrganizerInfoFormScreen() {
 
       Alert.alert('Success', 'Organizer information saved successfully', [
         {
-          text: 'OK',
+          text: t('common.ok'),
           onPress: () => {
             if (route.params?.onComplete) {
               route.params.onComplete();
@@ -115,7 +120,7 @@ export default function OrganizerInfoFormScreen() {
       ]);
     } catch (error) {
       console.error('Error saving:', error);
-      Alert.alert('Error', 'Failed to save information');
+      Alert.alert(t('common.error'), t('verification.organizerInfo.errors.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -135,29 +140,30 @@ export default function OrganizerInfoFormScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Header */}
-      <View style={styles.header}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Organizer Information</Text>
+        <Text style={styles.headerTitle}>{t('verification.organizerInfo.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={styles.content}>
         <Text style={styles.sectionDescription}>
-          Tell us about yourself and your organization
+          {t('verification.organizerInfo.subtitle')}
         </Text>
 
         {/* Full Name */}
         <View style={styles.fieldGroup}>
           <Text style={styles.label}>
-            Full Name <Text style={styles.required}>*</Text>
+            {t('verification.organizerInfo.fields.fullName')} <Text style={styles.required}>*</Text>
           </Text>
           <TextInput
             style={styles.input}
             value={fullName}
             onChangeText={setFullName}
-            placeholder="Enter your full name"
+            placeholder={t('verification.organizerInfo.placeholders.fullName')}
             placeholderTextColor={COLORS.textSecondary}
           />
         </View>
@@ -165,13 +171,13 @@ export default function OrganizerInfoFormScreen() {
         {/* Phone */}
         <View style={styles.fieldGroup}>
           <Text style={styles.label}>
-            Phone Number <Text style={styles.required}>*</Text>
+            {t('verification.organizerInfo.fields.phone')} <Text style={styles.required}>*</Text>
           </Text>
           <TextInput
             style={styles.input}
             value={phone}
             onChangeText={setPhone}
-            placeholder="+509 XX XX XXXX"
+            placeholder={t('verification.organizerInfo.placeholders.phone')}
             placeholderTextColor={COLORS.textSecondary}
             keyboardType="phone-pad"
           />
@@ -180,20 +186,20 @@ export default function OrganizerInfoFormScreen() {
         {/* Organization Name */}
         <View style={styles.fieldGroup}>
           <Text style={styles.label}>
-            Organization Name <Text style={styles.required}>*</Text>
+            {t('verification.organizerInfo.fields.organizationName')} <Text style={styles.required}>*</Text>
           </Text>
           <TextInput
             style={styles.input}
             value={organizationName}
             onChangeText={setOrganizationName}
-            placeholder="Name of your organization or business"
+            placeholder={t('verification.organizerInfo.placeholders.organizationName')}
             placeholderTextColor={COLORS.textSecondary}
           />
         </View>
 
         {/* Organization Type */}
         <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Organization Type</Text>
+          <Text style={styles.label}>{t('verification.organizerInfo.fields.organizationType')}</Text>
           <View style={styles.radioGroup}>
             <TouchableOpacity
               style={[
@@ -205,7 +211,7 @@ export default function OrganizerInfoFormScreen() {
               <View style={styles.radio}>
                 {organizationType === 'individual' && <View style={styles.radioInner} />}
               </View>
-              <Text style={styles.radioLabel}>Individual</Text>
+              <Text style={styles.radioLabel}>{t('verification.organizerInfo.organizationTypes.individual')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -217,19 +223,19 @@ export default function OrganizerInfoFormScreen() {
               <View style={styles.radio}>
                 {organizationType === 'business' && <View style={styles.radioInner} />}
               </View>
-              <Text style={styles.radioLabel}>Business</Text>
+              <Text style={styles.radioLabel}>{t('verification.organizerInfo.organizationTypes.business')}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Description */}
         <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Description (Optional)</Text>
+          <Text style={styles.label}>{t('verification.organizerInfo.fields.descriptionOptional')}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             value={description}
             onChangeText={setDescription}
-            placeholder="Briefly describe your organization and the type of events you plan to host"
+            placeholder={t('verification.organizerInfo.placeholders.description')}
             placeholderTextColor={COLORS.textSecondary}
             multiline
             numberOfLines={4}
@@ -248,7 +254,7 @@ export default function OrganizerInfoFormScreen() {
           {saving ? (
             <ActivityIndicator size="small" color={COLORS.white} />
           ) : (
-            <Text style={styles.saveButtonText}>Save & Continue</Text>
+            <Text style={styles.saveButtonText}>{t('verification.common.saveAndContinue')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -272,7 +278,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    paddingTop: 60,
+    paddingTop: 16,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,

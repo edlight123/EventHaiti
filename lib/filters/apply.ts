@@ -4,6 +4,7 @@
 
 import { EventFilters } from './types'
 import { getDateRange, getPriceRange } from './utils'
+import { isBudgetFriendlyTicketPrice, isOverBudgetTicketPrice } from '@/lib/pricing'
 
 // Use the actual database event type structure
 type Event = any // Will match Database['public']['Tables']['events']['Row']
@@ -83,13 +84,19 @@ export function filterEvents(events: Event[], filters: EventFilters): Event[] {
   
   // Price filter
   if (filters.price !== 'any') {
-    const { min, max } = getPriceRange(filters.price)
-    filtered = filtered.filter(event => {
-      const price = event.ticket_price || 0
-      if (min !== undefined && price < min) return false
-      if (max !== undefined && price > max) return false
-      return true
-    })
+    if (filters.price === '<=500') {
+      filtered = filtered.filter((event) => isBudgetFriendlyTicketPrice(event?.ticket_price, event?.currency))
+    } else if (filters.price === '>500') {
+      filtered = filtered.filter((event) => isOverBudgetTicketPrice(event?.ticket_price, event?.currency))
+    } else {
+      const { min, max } = getPriceRange(filters.price)
+      filtered = filtered.filter(event => {
+        const price = event.ticket_price || 0
+        if (min !== undefined && price < min) return false
+        if (max !== undefined && price > max) return false
+        return true
+      })
+    }
   }
   
   // Event type filter

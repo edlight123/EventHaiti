@@ -9,8 +9,11 @@ import {
 } from 'react-native';
 import { Calendar, MapPin, ChevronRight } from 'lucide-react-native';
 import { COLORS } from '../config/brand';
-import { format } from 'date-fns';
 import EventStatusBadge from './EventStatusBadge';
+import { useI18n } from '../contexts/I18nContext';
+import { getCategoryLabel } from '../lib/categories';
+
+import { formatDateForLanguage } from '../lib/dates';
 
 interface AllEventsPreviewProps {
   events: any[];
@@ -19,6 +22,7 @@ interface AllEventsPreviewProps {
 }
 
 const CompactEventCard = ({ event, onPress }: { event: any; onPress: () => void }) => {
+  const { t, language } = useI18n();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -73,7 +77,7 @@ const CompactEventCard = ({ event, onPress }: { event: any; onPress: () => void 
         </View>
 
         <View style={styles.cardContent}>
-          <Text style={styles.category}>{event.category}</Text>
+          <Text style={styles.category}>{getCategoryLabel(t, event.category)}</Text>
           <Text style={styles.title} numberOfLines={2}>
             {event.title}
           </Text>
@@ -82,7 +86,8 @@ const CompactEventCard = ({ event, onPress }: { event: any; onPress: () => void 
             <View style={styles.detailRow}>
               <Calendar size={12} color={COLORS.textSecondary} />
               <Text style={styles.detailText}>
-                {event.start_datetime && format(new Date(event.start_datetime), 'MMM dd')}
+                {event.start_datetime &&
+                  formatDateForLanguage(new Date(event.start_datetime), 'MMM dd', language)}
               </Text>
             </View>
             <View style={styles.detailRow}>
@@ -99,7 +104,7 @@ const CompactEventCard = ({ event, onPress }: { event: any; onPress: () => void 
                 {event.currency || 'HTG'} {event.ticket_price.toLocaleString()}
               </Text>
             ) : (
-              <Text style={styles.free}>FREE</Text>
+              <Text style={styles.free}>{t('common.free').toUpperCase()}</Text>
             )}
           </View>
         </View>
@@ -115,13 +120,14 @@ export default function AllEventsPreview({
   onEventPress,
   onViewAll,
 }: AllEventsPreviewProps) {
+  const { t } = useI18n();
   const displayEvents = events.slice(0, 6);
 
   return (
     <View style={styles.section}>
       <View style={styles.header}>
-        <Text style={styles.sectionTitle}>All Events</Text>
-        <Text style={styles.subtitle}>Discover what's happening</Text>
+        <Text style={styles.sectionTitle}>{t('home.allEventsTitle')}</Text>
+        <Text style={styles.subtitle}>{t('home.allEventsSubtitle')}</Text>
       </View>
 
       <View style={styles.list}>
@@ -135,7 +141,7 @@ export default function AllEventsPreview({
       </View>
 
       <TouchableOpacity style={styles.viewAllButton} onPress={onViewAll}>
-        <Text style={styles.viewAllText}>View all events</Text>
+        <Text style={styles.viewAllText}>{t('home.viewAllEvents')}</Text>
         <ChevronRight size={20} color={COLORS.primary} />
       </TouchableOpacity>
     </View>

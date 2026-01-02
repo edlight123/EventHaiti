@@ -1,377 +1,623 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert, Switch, RefreshControl } from 'react-native';
-import { User, Mail, Phone, MapPin, Bell, Globe, LogOut, Edit2, Check, X, Briefcase } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Alert,
+  Image,
+  Linking,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Briefcase, ExternalLink, LogOut, MapPin, Settings, User } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
+
 import { useAuth } from '../contexts/AuthContext';
 import { useAppMode } from '../contexts/AppModeContext';
-import { useNavigation } from '@react-navigation/native';
+import { useI18n } from '../contexts/I18nContext';
 import { COLORS } from '../config/brand';
+import { db, isDemoMode, storage } from '../config/firebase';
+import { getStaffEventIds } from '../lib/staffAssignments';
 import { getVerificationRequest, type VerificationRequest } from '../lib/verification';
+import { useNavigation } from '@react-navigation/native';
+import { CITIES_BY_COUNTRY } from '../types/filters';
+
+const WEBSITE_BASE_URL = 'https://eventhaiti.vercel.app';
 
 export default function ProfileScreen() {
-  const navigation = useNavigation();
-  const { user, userProfile, signOut } = useAuth();
+  const navigation: any = useNavigation();
+  const { user, userProfile, signOut, updateUserProfile, refreshUserProfile } = useAuth();
   const { mode, setMode } = useAppMode();
-  const [isEditing, setIsEditing] = useState(false);
+  const { language, setLanguage, t } = useI18n();
+  const insets = useSafeAreaInsets();
+
   const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
   const [editedName, setEditedName] = useState(userProfile?.full_name || '');
-  const [editedPhone, setEditedPhone] = useState(userProfile?.phone_number || '');
-  const [editedCity, setEditedCity] = useState(userProfile?.default_city || 'Port-au-Prince');
+  const [editedCity, setEditedCity] = useState(userProfile?.default_city || '');
+
+  const [phonePrefix, setPhonePrefix] = useState<'+509' | '+1'>('+509');
+  const [phoneDigits, setPhoneDigits] = useState('');
+  const [showCitySuggestions, setShowCitySuggestions] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(0);
+
   const [verificationStatus, setVerificationStatus] = useState<VerificationRequest | null>(null);
+  const [accountStats, setAccountStats] = useState({ eventsAttended: 0, following: 0, followers: 0 });
+  const [staffEventIds, setStaffEventIdsState] = useState<string[]>([]);
 
-  // Load verification status
-  useEffect(() => {
-    loadVerificationStatus();
-  }, [userProfile?.id]);
-
-  const loadVerificationStatus = async () => {
-    if (!userProfile?.id) return;
-    
-    try {
-      const verification = await getVerificationRequest(userProfile.id);
-      setVerificationStatus(verification);
-    } catch (error) {
-      console.log('No verification request found');
-      setVerificationStatus(null);
+  const parsePhone = useCallback((raw: string) => {
+    const normalized = String(raw || '').trim();
+    if (normalized.startsWith('+1')) {
+      setPhonePrefix('+1');
+      setPhoneDigits(normalized.replace(/^\+1\s*/, '').replace(/\D/g, ''));
+      return;
     }
-  };
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadVerificationStatus();
-    // Simulate refresh - in real app, refetch user profile
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  };
-
-  const handleSave = () => {
-    // In a real app, save to Firestore here
-    Alert.alert('Success', 'Profile updated successfully');
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    setEditedName(userProfile?.full_name || '');
-    setEditedPhone(userProfile?.phone_number || '');
-    setEditedCity(userProfile?.default_city || 'Port-au-Prince');
-    setIsEditing(false);
-  };
-
-  const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: signOut }
-      ]
-    );
-  };
-
-  const handleModeSwitch = async () => {
-    const newMode = mode === 'attendee' ? 'organizer' : 'attendee';
-    await setMode(newMode);
-
-    // Reset navigation to the appropriate tab navigator and initial screen
-    if (newMode === 'organizer') {
-      navigation.reset({
-        index: 0,
-        routes: [
-          {
-            name: 'Main' as never,
-            state: {
-              index: 0,
-              routes: [{ name: 'Dashboard' as never }],
-            },
-          },
-        ],
-      });
+    if (normalized.startsWith('+509')) {
+      setPhonePrefix('+509');
+      setPhoneDigits(normalized.replace(/^\+509\s*/, '').replace(/\D/g, ''));
       return;
     }
 
-    navigation.reset({
-      index: 0,
-      routes: [
-        {
-          name: 'Main' as never,
-          state: {
-            index: 0,
-            routes: [{ name: 'Home' as never }],
-          },
-        },
-      ],
-    });
-  };
+    // Default to Haiti prefix
+    setPhonePrefix('+509');
+    setPhoneDigits(normalized.replace(/\D/g, ''));
+  }, []);
 
-  const handleStaffModeSwitch = async () => {
-    const newMode = mode === 'staff' ? 'attendee' : 'staff';
-    await setMode(newMode as any);
+  const canUseOrganizerMode =
+    userProfile?.role === 'organizer' ||
+    userProfile?.role === 'admin' ||
+    verificationStatus?.status === 'approved';
+  const canUseStaffTools = staffEventIds.length > 0;
 
-    navigation.reset({
-      index: 0,
-      routes: [
-        {
-          name: 'Main' as never,
-          state: {
-            index: 0,
-            routes: [{ name: (newMode === 'staff' ? 'Scan' : 'Home') as never }],
-          },
-        },
-      ],
-    });
-  };
+  const displayName = useMemo(() => {
+    const name = (userProfile?.full_name || '').trim();
+    return name.length ? name : user?.email || '';
+  }, [userProfile?.full_name, user?.email]);
 
-  const memberSince = 'Recently';
+  const locationLabel = useMemo(() => {
+    const city = (userProfile?.default_city || '').trim();
+    return city.length ? city : t('profile.notSet');
+  }, [userProfile?.default_city, t]);
+
+  const openWebUrl = useCallback(
+    async (url: string) => {
+      try {
+        const canOpen = await Linking.canOpenURL(url);
+        if (!canOpen) {
+          Alert.alert(t('common.error'), t('organizerEarnings.errors.unableToOpenLinkTitle'));
+          return;
+        }
+        await Linking.openURL(url);
+      } catch {
+        Alert.alert(t('common.error'), t('organizerEarnings.errors.unableToOpenLinkTitle'));
+      }
+    },
+    [t]
+  );
+
+  const loadVerificationStatus = useCallback(async () => {
+    if (!user?.uid) {
+      setVerificationStatus(null);
+      return;
+    }
+
+    try {
+      const req = await getVerificationRequest(user.uid);
+      setVerificationStatus(req);
+    } catch {
+      setVerificationStatus(null);
+    }
+  }, [user?.uid]);
+
+  const loadStaffIds = useCallback(async () => {
+    try {
+      const ids = await getStaffEventIds();
+      setStaffEventIdsState(ids);
+    } catch {
+      setStaffEventIdsState([]);
+    }
+  }, []);
+
+  const loadAccountStats = useCallback(async () => {
+    if (!user?.uid) {
+      setAccountStats({ eventsAttended: 0, following: 0, followers: 0 });
+      return;
+    }
+
+    try {
+      const followsRef = collection(db, 'organizer_follows');
+
+      const [followingSnap, followersSnap] = await Promise.all([
+        getDocs(query(followsRef, where('follower_id', '==', user.uid))),
+        getDocs(query(followsRef, where('organizer_id', '==', user.uid))),
+      ]);
+
+      const ticketsSnap = await getDocs(query(collection(db, 'tickets'), where('user_id', '==', user.uid)));
+      const ticketDocs = ticketsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
+      const eventIds = Array.from(new Set(ticketDocs.map((t) => String(t.event_id || '')).filter(Boolean)));
+
+      let attended = 0;
+      if (eventIds.length) {
+        const now = new Date();
+        const eventSnaps = await Promise.all(
+          eventIds.map((eventId) => getDocs(query(collection(db, 'events'), where('__name__', '==', eventId))))
+        );
+
+        const events = eventSnaps
+          .map((s) => (s.empty ? null : ({ id: s.docs[0].id, ...s.docs[0].data() } as any)))
+          .filter(Boolean) as any[];
+
+        attended = events.filter((e) => {
+          const end = e.end_datetime?.toDate ? e.end_datetime.toDate() : e.end_datetime ? new Date(e.end_datetime) : null;
+          const start = e.start_datetime?.toDate
+            ? e.start_datetime.toDate()
+            : e.start_datetime
+              ? new Date(e.start_datetime)
+              : null;
+          const cutoff = end || start;
+          return cutoff && new Date(cutoff) < now;
+        }).length;
+      }
+
+      setAccountStats({
+        eventsAttended: attended,
+        following: followingSnap.size,
+        followers: followersSnap.size,
+      });
+    } catch {
+      setAccountStats({ eventsAttended: 0, following: 0, followers: 0 });
+    }
+  }, [user?.uid]);
+
+  const refreshAll = useCallback(async () => {
+    if (!user?.uid) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refreshUserProfile(),
+        loadVerificationStatus(),
+        loadAccountStats(),
+        loadStaffIds(),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadAccountStats, loadStaffIds, loadVerificationStatus, refreshUserProfile, user?.uid]);
+
+  useEffect(() => {
+    loadVerificationStatus();
+    loadAccountStats();
+    loadStaffIds();
+  }, [loadAccountStats, loadStaffIds, loadVerificationStatus]);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setEditedName(userProfile?.full_name || '');
+      setEditedCity(userProfile?.default_city || '');
+      parsePhone(userProfile?.phone_number || '');
+    }
+  }, [isEditing, parsePhone, userProfile?.default_city, userProfile?.full_name, userProfile?.phone_number]);
+
+  const allCities = useMemo(() => {
+    const values = Object.values(CITIES_BY_COUNTRY).flat();
+    return Array.from(new Set(values));
+  }, []);
+
+  const filteredCities = useMemo(() => {
+    const q = editedCity.trim().toLowerCase();
+    if (!q) return [];
+    return allCities
+      .filter((c) => c.toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [allCities, editedCity]);
+
+  const pickAndUploadAvatar = useCallback(async () => {
+    if (!user?.uid) return;
+
+    if (isDemoMode) {
+      Alert.alert(t('common.error'), 'Avatar upload is disabled in demo mode.');
+      return;
+    }
+
+    try {
+      setUploadingPhoto(true);
+
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(t('common.error'), 'Photo permission is required.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+
+      const uri = result.assets[0].uri;
+      const res = await fetch(uri);
+      const blob = await res.blob();
+
+      const path = `profile-images/${user.uid}/avatar_${Date.now()}.jpg`;
+      const fileRef = storageRef(storage, path);
+
+      await uploadBytes(fileRef, blob);
+      const url = await getDownloadURL(fileRef);
+      await updateUserProfile({ photo_url: url });
+
+      await loadAccountStats();
+    } catch (e: any) {
+      Alert.alert(t('common.error'), e?.message || 'Failed to upload photo.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }, [loadAccountStats, t, updateUserProfile, user?.uid]);
+
+  const saveProfile = useCallback(async () => {
+    if (!user?.uid) return;
+
+    const name = editedName.trim();
+    if (!name) {
+      Alert.alert(t('profile.missingNameTitle'), t('profile.missingNameBody'));
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const digits = phoneDigits.replace(/\D/g, '');
+      const combinedPhone = digits.length ? `${phonePrefix}${digits}` : '';
+
+      await updateUserProfile({
+        full_name: name,
+        phone_number: combinedPhone,
+        default_city: editedCity,
+      });
+      setIsEditing(false);
+      Alert.alert(t('profile.saveSuccessTitle'), t('profile.saveSuccessBody'));
+    } catch {
+      Alert.alert(t('profile.saveErrorTitle'), t('profile.saveErrorBody'));
+    } finally {
+      setSaving(false);
+    }
+  }, [editedCity, editedName, phoneDigits, phonePrefix, t, updateUserProfile, user?.uid]);
+
+  const confirmSignOut = useCallback(() => {
+    Alert.alert(t('profile.signOutTitle'), t('profile.signOutBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('profile.signOut'), style: 'destructive', onPress: () => signOut() },
+    ]);
+  }, [signOut, t]);
+
+  const verificationBadge = useMemo(() => {
+    if (!verificationStatus?.status) return null;
+    if (verificationStatus.status === 'approved') return t('organizerProfile.verified');
+    if (
+      verificationStatus.status === 'pending' ||
+      verificationStatus.status === 'pending_review' ||
+      verificationStatus.status === 'in_review'
+    ) {
+      return t('profile.verificationPending');
+    }
+    return null;
+  }, [t, verificationStatus?.status]);
+
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+        <View style={styles.centerEmpty}>
+          <Text style={styles.emptyTitle}>{t('auth.loginRequiredTitle')}</Text>
+          <Text style={styles.emptyBody}>{t('tickets.loginRequiredBody')}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      {/* Fixed Header with Avatar */}
-      <View style={styles.header}>
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <User size={40} color={COLORS.textSecondary} />
-          </View>
-        </View>
-        <Text style={styles.name}>{userProfile?.full_name || 'User'}</Text>
-        <Text style={styles.memberSince}>Member since {memberSince}</Text>
+    <SafeAreaView style={styles.container} edges={[]}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+
+      <View
+        style={[styles.header, { top: insets.top, paddingTop: 8 }]}
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          if (h && h !== headerHeight) setHeaderHeight(h);
+        }}
+      >
+        <Text style={styles.headerTitle}>{t('profile.account')}</Text>
+        <TouchableOpacity
+          style={styles.headerIconButton}
+          onPress={() => setIsEditing((v) => !v)}
+          accessibilityLabel={t('profile.edit')}
+        >
+          <Settings size={22} color={COLORS.text} />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView 
-        style={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            // Header is positioned below the safe-area; include that offset.
+            paddingTop: insets.top + headerHeight + 4,
+          },
+        ]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshAll} />}
+        keyboardShouldPersistTaps="handled"
       >
-        {/* Profile Information Card */}
         <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Profile Information</Text>
-          {!isEditing ? (
-            <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.editButton}>
-              <Edit2 size={18} color={COLORS.primary} />
-              <Text style={styles.editButtonText}>Edit</Text>
+          <View style={styles.profileRow}>
+            <TouchableOpacity
+              style={styles.avatar}
+              onPress={isEditing ? pickAndUploadAvatar : undefined}
+              disabled={!isEditing || uploadingPhoto}
+              accessibilityLabel={t('profile.changePhoto')}
+            >
+              {userProfile?.photo_url ? (
+                <Image source={{ uri: userProfile.photo_url }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <User size={30} color={COLORS.textSecondary} />
+                </View>
+              )}
             </TouchableOpacity>
-          ) : (
-            <View style={styles.actionButtons}>
-              <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
-                <X size={16} color={COLORS.textSecondary} />
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-                <Check size={16} color={COLORS.surface} />
-                <Text style={styles.saveButtonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
 
-        {isEditing ? (
-          <View style={styles.formSection}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Full Name</Text>
+            <View style={styles.profileMeta}>
+              <View style={styles.nameRow}>
+                <Text style={styles.nameText} numberOfLines={1}>
+                  {displayName}
+                </Text>
+                {verificationBadge ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{verificationBadge}</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={styles.locationRow}>
+                <MapPin size={14} color={COLORS.textSecondary} />
+                <Text style={styles.locationText} numberOfLines={1}>
+                  {locationLabel}
+                </Text>
+              </View>
+
+              {isEditing ? <Text style={styles.editHint}>{t('profile.editProfileHint')}</Text> : null}
+            </View>
+          </View>
+
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{accountStats.eventsAttended}</Text>
+              <Text style={styles.statLabel}>{t('profile.eventsAttended')}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{accountStats.following}</Text>
+              <Text style={styles.statLabel}>{t('profile.following')}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{accountStats.followers}</Text>
+              <Text style={styles.statLabel}>{t('profile.followers')}</Text>
+            </View>
+          </View>
+
+          {isEditing ? (
+            <View style={styles.editForm}>
+              <Text style={styles.fieldLabel}>{t('profile.fullName')}</Text>
               <TextInput
                 style={styles.input}
                 value={editedName}
                 onChangeText={setEditedName}
-                placeholder="Enter your name"
-                placeholderTextColor={COLORS.textSecondary}
+                placeholder={t('profile.placeholders.name')}
+                placeholderTextColor={COLORS.textTertiary}
               />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Phone Number</Text>
-              <TextInput
-                style={styles.input}
-                value={editedPhone}
-                onChangeText={setEditedPhone}
-                placeholder="Enter phone number"
-                placeholderTextColor={COLORS.textSecondary}
-                keyboardType="phone-pad"
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Default City</Text>
+
+              <Text style={styles.fieldLabel}>{t('profile.phone')}</Text>
+              <View style={styles.phoneRow}>
+                <View style={styles.prefixRow}>
+                  {(['+509', '+1'] as const).map((p) => {
+                    const active = phonePrefix === p;
+                    return (
+                      <TouchableOpacity
+                        key={p}
+                        style={[styles.prefixPill, active && styles.prefixPillActive]}
+                        onPress={() => setPhonePrefix(p)}
+                      >
+                        <Text style={[styles.prefixPillText, active && styles.prefixPillTextActive]}>{p}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <TextInput
+                  style={[styles.input, styles.phoneInput]}
+                  value={phoneDigits}
+                  onChangeText={(value) => setPhoneDigits(value.replace(/\D/g, ''))}
+                  placeholder={t('profile.placeholders.phone')}
+                  placeholderTextColor={COLORS.textTertiary}
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              <Text style={styles.fieldLabel}>{t('profile.defaultCity')}</Text>
               <TextInput
                 style={styles.input}
                 value={editedCity}
-                onChangeText={setEditedCity}
-                placeholder="Enter your city"
-                placeholderTextColor={COLORS.textSecondary}
+                onChangeText={(value) => {
+                  setEditedCity(value);
+                  setShowCitySuggestions(true);
+                }}
+                onFocus={() => setShowCitySuggestions(true)}
+                onBlur={() => {
+                  // Let suggestion taps register before hiding.
+                  setTimeout(() => setShowCitySuggestions(false), 120);
+                }}
+                placeholder={t('profile.placeholders.city')}
+                placeholderTextColor={COLORS.textTertiary}
               />
-            </View>
-          </View>
-        ) : (
-          <View style={styles.infoSection}>
-            <View style={styles.infoRow}>
-              <User size={20} color={COLORS.primary} />
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Full Name</Text>
-                <Text style={styles.infoValue}>{userProfile?.full_name || 'Not set'}</Text>
-              </View>
-            </View>
-            <View style={styles.infoRow}>
-              <Mail size={20} color={COLORS.primary} />
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Email</Text>
-                <Text style={styles.infoValue}>{userProfile?.email || user?.email}</Text>
-              </View>
-            </View>
-            <View style={styles.infoRow}>
-              <Phone size={20} color={COLORS.primary} />
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Phone</Text>
-                <Text style={styles.infoValue}>{userProfile?.phone_number || 'Not set'}</Text>
-              </View>
-            </View>
-            <View style={styles.infoRow}>
-              <MapPin size={20} color={COLORS.primary} />
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Default City</Text>
-                <Text style={styles.infoValue}>{userProfile?.default_city || 'Port-au-Prince'}</Text>
-              </View>
-            </View>
-          </View>
-        )}
-      </View>
 
-      {/* Organizer Mode Card */}
-      {userProfile?.role === 'organizer' || userProfile?.role === 'admin' || verificationStatus?.status === 'approved' ? (
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Briefcase size={20} color={COLORS.secondary} />
-            <Text style={styles.cardTitle}>Organizer Mode</Text>
-          </View>
-          <View style={styles.organizerSection}>
-            <Text style={styles.organizerDesc}>
-              {mode === 'attendee'
-                ? 'Create and manage your own events with EventHaiti.'
-                : 'Switch back to attendee mode to browse and attend events.'}
-            </Text>
-            <TouchableOpacity
-              style={styles.switchModeButton}
-              onPress={handleModeSwitch}
-            >
-              <Text style={styles.switchModeButtonText}>
-                {mode === 'attendee' ? 'Switch to Organizer Mode' : 'Switch to Attendee Mode'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ) : verificationStatus?.status === 'pending' || verificationStatus?.status === 'in_review' ? (
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Briefcase size={20} color={COLORS.warning} />
-            <Text style={styles.cardTitle}>Verification Pending</Text>
-          </View>
-          <View style={styles.organizerSection}>
-            <Text style={styles.organizerDesc}>
-              Your organizer application is under review. We'll notify you once it's been processed.
-            </Text>
-            <TouchableOpacity
-              style={[styles.switchModeButton, styles.viewApplicationButton]}
-              onPress={() => (navigation as any).navigate('OrganizerVerification')}
-            >
-              <Text style={styles.switchModeButtonText}>View Application</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ) : (
-        // Show "Become Organizer" card for new applicants or rejected
-        <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Briefcase size={20} color={COLORS.secondary} />
-              <Text style={styles.cardTitle}>Become an Organizer</Text>
-            </View>
-            <View style={styles.organizerSection}>
-              <Text style={styles.organizerDesc}>
-                Host your own events and reach thousands of attendees in Haiti.
-              </Text>
-              {verificationStatus?.status === 'rejected' && (
-                <View style={styles.rejectedBanner}>
-                  <Text style={styles.rejectedText}>
-                    Your previous application was not approved. 
-                    {verificationStatus.reviewNotes ? ` Reason: ${verificationStatus.reviewNotes}` : ''}
-                  </Text>
+              {showCitySuggestions && filteredCities.length ? (
+                <View style={styles.suggestions}>
+                  {filteredCities.map((city) => (
+                    <TouchableOpacity
+                      key={city}
+                      style={styles.suggestionRow}
+                      onPress={() => {
+                        setEditedCity(city);
+                        setShowCitySuggestions(false);
+                      }}
+                    >
+                      <Text style={styles.suggestionText}>{city}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-              )}
-              {verificationStatus?.status === 'changes_requested' && (
-                <View style={styles.changesBanner}>
-                  <Text style={styles.changesText}>
-                    Changes requested. Please update your application.
-                  </Text>
-                </View>
-              )}
-              <TouchableOpacity
-                style={styles.switchModeButton}
-                onPress={() => (navigation as any).navigate('OrganizerVerification')}
-              >
-                <Text style={styles.switchModeButtonText}>
-                  {verificationStatus?.status === 'rejected' || verificationStatus?.status === 'changes_requested' 
-                    ? 'Reapply to Become an Organizer' 
-                    : 'Apply to Become an Organizer'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-      )}
+              ) : null}
 
-      {/* Staff Mode Card */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Briefcase size={20} color={COLORS.primary} />
-          <Text style={styles.cardTitle}>Staff Mode</Text>
+              <View style={styles.editActionsRow}>
+                <TouchableOpacity
+                  style={[styles.secondaryButton, styles.actionButtonHalf]}
+                  onPress={() => setIsEditing(false)}
+                  disabled={saving || uploadingPhoto}
+                >
+                  <Text style={styles.secondaryButtonText}>{t('profile.cancel')}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.primaryButton, styles.actionButtonHalf]}
+                  onPress={saveProfile}
+                  disabled={saving || uploadingPhoto}
+                >
+                  <Text style={styles.primaryButtonText}>{saving ? t('profile.saving') : t('profile.save')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null}
         </View>
-        <View style={styles.organizerSection}>
-          <Text style={styles.organizerDesc}>
-            {mode === 'staff'
-              ? 'You are in staff mode. Scan tickets for events you were assigned to.'
-              : 'Use staff mode to scan tickets for events you are assigned to.'}
-          </Text>
-          <TouchableOpacity style={styles.switchModeButton} onPress={handleStaffModeSwitch}>
-            <Text style={styles.switchModeButtonText}>
-              {mode === 'staff' ? 'Switch to Attendee Mode' : 'Switch to Staff Mode'}
-            </Text>
+
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>{t('profile.preferences')}</Text>
+
+          <View style={styles.languageRow}>
+            {(['en', 'fr', 'ht'] as const).map((lang) => {
+              const active = language === lang;
+              return (
+                <TouchableOpacity
+                  key={lang}
+                  style={[styles.pill, active && styles.pillActive]}
+                  onPress={() => setLanguage(lang)}
+                >
+                  <Text style={[styles.pillText, active && styles.pillTextActive]}>{lang.toUpperCase()}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>{t('profile.actions')}</Text>
+
+          {canUseOrganizerMode ? (
+            <TouchableOpacity style={styles.rowButton} onPress={() => navigation.navigate('CreateEvent')}>
+              <View style={styles.rowLeft}>
+                <Briefcase size={18} color={COLORS.primary} />
+                <Text style={styles.rowText}>{t('profile.createEvent')}</Text>
+              </View>
+              <ExternalLink size={18} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.rowButton} onPress={() => navigation.navigate('OrganizerVerification')}>
+              <View style={styles.rowLeft}>
+                <Briefcase size={18} color={COLORS.primary} />
+                <Text style={styles.rowText}>{t('profile.becomeOrganizer')}</Text>
+              </View>
+              <ExternalLink size={18} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+          )}
+
+          {canUseOrganizerMode && mode !== 'organizer' ? (
+            <TouchableOpacity style={styles.rowButton} onPress={() => setMode('organizer')}>
+              <View style={styles.rowLeft}>
+                <Text style={styles.rowText}>{t('profile.switchToOrganizer')}</Text>
+              </View>
+            </TouchableOpacity>
+          ) : null}
+
+          {canUseStaffTools && mode !== 'staff' ? (
+            <TouchableOpacity style={styles.rowButton} onPress={() => setMode('staff')}>
+              <View style={styles.rowLeft}>
+                <Text style={styles.rowText}>{t('profile.switchToStaff')}</Text>
+              </View>
+            </TouchableOpacity>
+          ) : null}
+
+          {mode !== 'attendee' ? (
+            <TouchableOpacity style={styles.rowButton} onPress={() => setMode('attendee')}>
+              <View style={styles.rowLeft}>
+                <Text style={styles.rowText}>{t('profile.switchToAttendee')}</Text>
+              </View>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>{t('profile.help')}</Text>
+
+          <TouchableOpacity style={styles.rowButton} onPress={() => openWebUrl(`${WEBSITE_BASE_URL}/support`)}>
+            <View style={styles.rowLeft}>
+              <ExternalLink size={18} color={COLORS.primary} />
+              <Text style={styles.rowText}>{t('profile.helpCenter')}</Text>
+            </View>
+            <ExternalLink size={18} color={COLORS.textSecondary} />
           </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Preferences Card */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Globe size={20} color={COLORS.secondary} />
-          <Text style={styles.cardTitle}>Preferences</Text>
-        </View>
-        <View style={styles.preferenceSection}>
-          <View style={styles.preferenceRow}>
-            <Text style={styles.preferenceLabel}>Language</Text>
-            <View style={styles.languageButtons}>
-              <TouchableOpacity style={[styles.languageButton, styles.languageButtonActive]}>
-                <Text style={styles.languageButtonTextActive}>EN</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.languageButton}>
-                <Text style={styles.languageButtonText}>FR</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.languageButton}>
-                <Text style={styles.languageButtonText}>HT</Text>
-              </TouchableOpacity>
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>{t('profile.legal')}</Text>
+
+          <TouchableOpacity style={styles.rowButton} onPress={() => openWebUrl(`${WEBSITE_BASE_URL}/legal/terms`)}>
+            <View style={styles.rowLeft}>
+              <ExternalLink size={18} color={COLORS.primary} />
+              <Text style={styles.rowText}>{t('profile.terms')}</Text>
             </View>
-          </View>
-        </View>
-      </View>
+            <ExternalLink size={18} color={COLORS.textSecondary} />
+          </TouchableOpacity>
 
-      {/* Account Actions Card */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Account</Text>
+          <TouchableOpacity style={styles.rowButton} onPress={() => openWebUrl(`${WEBSITE_BASE_URL}/legal/privacy`)}>
+            <View style={styles.rowLeft}>
+              <ExternalLink size={18} color={COLORS.primary} />
+              <Text style={styles.rowText}>{t('profile.privacy')}</Text>
+            </View>
+            <ExternalLink size={18} color={COLORS.textSecondary} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <LogOut size={20} color={COLORS.error} />
-          <Text style={styles.signOutButtonText}>Sign Out</Text>
-        </TouchableOpacity>
-      </View>
 
-      <View style={styles.footer} />
-    </ScrollView>
-    </View>
+        <View style={styles.sectionCard}>
+          <TouchableOpacity style={styles.rowButton} onPress={confirmSignOut}>
+            <View style={styles.rowLeft}>
+              <LogOut size={18} color={COLORS.error} />
+              <Text style={[styles.rowText, { color: COLORS.error }]}>{t('profile.signOut')}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ height: 24 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -380,286 +626,316 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  scrollContent: {
+  header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    backgroundColor: COLORS.background,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  headerIconButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'transparent',
+  },
+  scroll: {
     flex: 1,
   },
-  header: {
+  scrollContent: {
+    paddingTop: 0,
+    paddingHorizontal: 16,
+  },
+
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  prefixRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  prefixPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    backgroundColor: COLORS.surface,
+  },
+  prefixPillActive: {
+    borderColor: COLORS.primary,
     backgroundColor: COLORS.primary,
-    padding: 24,
-    paddingTop: 60,
-    paddingBottom: 40,
-    alignItems: 'center',
   },
-  avatarContainer: {
-    marginBottom: 16,
-  },
-  avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: COLORS.surface,
-  },
-  name: {
-    fontSize: 24,
+  prefixPillText: {
+    fontSize: 13,
     fontWeight: '700',
-    color: COLORS.surface,
-    marginBottom: 4,
+    color: COLORS.text,
   },
-  memberSince: {
-    fontSize: 14,
+  prefixPillTextActive: {
     color: COLORS.surface,
-    opacity: 0.9,
+  },
+  phoneInput: {
+    flex: 1,
+  },
+  suggestions: {
+    marginTop: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    backgroundColor: COLORS.surface,
+  },
+  suggestionRow: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: COLORS.text,
   },
   card: {
     backgroundColor: COLORS.surface,
-    marginHorizontal: 16,
-    marginTop: 16,
     borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
   },
-  cardHeader: {
+  profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+  },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    backgroundColor: COLORS.borderLight,
+    marginRight: 12,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.borderLight,
+  },
+  profileMeta: {
+    flex: 1,
+    minWidth: 0,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  cardTitle: {
+  nameText: {
+    flex: 1,
     fontSize: 18,
     fontWeight: '700',
     color: COLORS.text,
-    flex: 1,
   },
-  editButton: {
+  badge: {
+    backgroundColor: COLORS.successLight,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: COLORS.success,
+  },
+  badgeText: {
+    color: COLORS.success,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  locationRow: {
+    marginTop: 4,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: COLORS.primaryLight + '20',
-    borderRadius: 8,
   },
-  editButtonText: {
-    color: COLORS.primary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  cancelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: COLORS.borderLight,
-    borderRadius: 8,
-  },
-  cancelButtonText: {
+  locationText: {
+    flex: 1,
+    fontSize: 13,
     color: COLORS.textSecondary,
-    fontSize: 14,
-    fontWeight: '600',
   },
-  saveButton: {
+  editHint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  statsRow: {
+    marginTop: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: COLORS.primary,
-    borderRadius: 8,
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+    paddingTop: 14,
   },
-  saveButtonText: {
-    color: COLORS.surface,
-    fontSize: 14,
-    fontWeight: '600',
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
   },
-  formSection: {
-    gap: 16,
+  statValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.text,
   },
-  inputGroup: {
-    gap: 8,
+  statLabel: {
+    marginTop: 2,
+    fontSize: 12,
+    color: COLORS.textSecondary,
   },
-  inputLabel: {
-    fontSize: 14,
+  statDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: COLORS.borderLight,
+  },
+  editForm: {
+    marginTop: 16,
+  },
+  fieldLabel: {
+    marginTop: 10,
+    marginBottom: 6,
+    fontSize: 13,
     fontWeight: '600',
     color: COLORS.text,
   },
   input: {
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     color: COLORS.text,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.white,
   },
-  infoSection: {
-    gap: 16,
-  },
-  infoRow: {
+  editActionsRow: {
+    marginTop: 14,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
+    gap: 10,
   },
-  infoContent: {
+  actionButtonHalf: {
     flex: 1,
-    gap: 4,
   },
-  infoLabel: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    fontWeight: '500',
-  },
-  infoValue: {
-    fontSize: 16,
-    color: COLORS.text,
-    fontWeight: '400',
-  },
-  organizerSection: {
-    gap: 16,
-  },
-  organizerDesc: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    lineHeight: 20,
-  },
-  switchModeButton: {
-    backgroundColor: COLORS.primary,
+  primaryButton: {
+    borderRadius: 12,
     paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
     alignItems: 'center',
+    backgroundColor: COLORS.primary,
   },
-  switchModeButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.surface,
+  primaryButtonText: {
+    color: COLORS.white,
+    fontWeight: '700',
   },
-  viewApplicationButton: {
-    backgroundColor: COLORS.warning,
-  },
-  rejectedBanner: {
-    backgroundColor: COLORS.error + '15',
-    padding: 12,
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: COLORS.error,
-  },
-  rejectedText: {
-    fontSize: 13,
-    color: COLORS.error,
-    lineHeight: 18,
-  },
-  changesBanner: {
-    backgroundColor: COLORS.warning + '15',
-    padding: 12,
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: COLORS.warning,
-  },
-  changesText: {
-    fontSize: 13,
-    color: COLORS.warning,
-    lineHeight: 18,
-  },
-  preferenceSection: {
-    gap: 16,
-  },
-  preferenceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  secondaryButton: {
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
-    paddingVertical: 8,
+    backgroundColor: COLORS.borderLight,
   },
-  preferenceLabel: {
-    fontSize: 15,
-    fontWeight: '500',
+  secondaryButtonText: {
     color: COLORS.text,
+    fontWeight: '700',
   },
-  preferenceValue: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
+  sectionCard: {
+    marginTop: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    overflow: 'hidden',
   },
-  languageButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  languageButton: {
+  sectionTitle: {
     paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-  },
-  languageButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  languageButtonText: {
+    paddingTop: 14,
+    paddingBottom: 10,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  languageRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+  },
+  pill: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.white,
+  },
+  pillActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
+  },
+  pillText: {
+    fontWeight: '800',
     color: COLORS.textSecondary,
   },
-  languageButtonTextActive: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.surface,
+  pillTextActive: {
+    color: COLORS.white,
   },
-  notificationSection: {
-    gap: 4,
-  },
-  notificationRow: {
+  rowButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
+    justifyContent: 'space-between',
   },
-  notificationInfo: {
-    flex: 1,
-    marginRight: 16,
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-  notificationTitle: {
-    fontSize: 15,
+  rowText: {
+    fontSize: 14,
     fontWeight: '600',
     color: COLORS.text,
-    marginBottom: 2,
   },
-  notificationDesc: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-  },
-  signOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  centerEmpty: {
+    flex: 1,
+    padding: 24,
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: COLORS.error + '10',
+    alignItems: 'center',
   },
-  signOutButtonText: {
-    color: COLORS.error,
-    fontSize: 16,
-    fontWeight: '600',
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginBottom: 8,
+    textAlign: 'center',
   },
-  footer: {
-    height: 40,
+  emptyBody: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
   },
 });

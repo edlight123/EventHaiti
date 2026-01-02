@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { COLORS } from '../../../config/brand';
+import { useI18n } from '../../../contexts/I18nContext';
 import type { EventDraft } from '../CreateEventFlowRefactored';
 
 const CATEGORIES = [
@@ -11,12 +12,32 @@ const CATEGORIES = [
   'Community', 'Education', 'Tech', 'Health', 'Other'
 ];
 
+const CATEGORY_LABEL_KEYS: Record<string, string> = {
+  Music: 'organizerCreateEvent.categories.music',
+  Sports: 'organizerCreateEvent.categories.sports',
+  Arts: 'organizerCreateEvent.categories.arts',
+  Business: 'organizerCreateEvent.categories.business',
+  'Food & Drink': 'organizerCreateEvent.categories.foodDrink',
+  Community: 'organizerCreateEvent.categories.community',
+  Education: 'organizerCreateEvent.categories.education',
+  Tech: 'organizerCreateEvent.categories.tech',
+  Health: 'organizerCreateEvent.categories.health',
+  Other: 'organizerCreateEvent.categories.other',
+};
+
 interface Props {
   draft: EventDraft;
   updateDraft: (updates: Partial<EventDraft>) => void;
 }
 
 export default function Step1Basics({ draft, updateDraft }: Props) {
+  const { t } = useI18n();
+
+  const getCategoryLabel = (categoryId: string) => {
+    const key = CATEGORY_LABEL_KEYS[categoryId] || CATEGORY_LABEL_KEYS.Other;
+    return t(key);
+  };
+
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -32,26 +53,26 @@ export default function Step1Basics({ draft, updateDraft }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Let's start with the basics</Text>
-      <Text style={styles.subtitle}>Tell us about your event</Text>
+      <Text style={styles.title}>{t('organizerCreateEvent.basics.title')}</Text>
+      <Text style={styles.subtitle}>{t('organizerCreateEvent.basics.subtitle')}</Text>
 
       {/* Image Upload */}
       <View style={styles.formGroup}>
-        <Text style={styles.label}>Event Image</Text>
+        <Text style={styles.label}>{t('organizerCreateEvent.basics.eventImage')}</Text>
         <TouchableOpacity style={styles.imageUploadButton} onPress={pickImage}>
           {draft.banner_image_url ? (
             <View style={styles.imagePreviewContainer}>
               <Image source={{ uri: draft.banner_image_url }} style={styles.imagePreview} />
               <View style={styles.imageOverlay}>
                 <Ionicons name="camera" size={32} color={COLORS.white} />
-                <Text style={styles.imageOverlayText}>Change Image</Text>
+                <Text style={styles.imageOverlayText}>{t('organizerCreateEvent.basics.changeImage')}</Text>
               </View>
             </View>
           ) : (
             <>
               <Ionicons name="image-outline" size={48} color={COLORS.primary} />
-              <Text style={styles.imageUploadText}>Upload Event Image</Text>
-              <Text style={styles.imageUploadSubtext}>16:9 aspect ratio recommended</Text>
+              <Text style={styles.imageUploadText}>{t('organizerCreateEvent.basics.uploadImage')}</Text>
+              <Text style={styles.imageUploadSubtext}>{t('organizerCreateEvent.basics.aspectRatio')}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -60,11 +81,11 @@ export default function Step1Basics({ draft, updateDraft }: Props) {
       {/* Title */}
       <View style={styles.formGroup}>
         <Text style={styles.label}>
-          Event Title <Text style={styles.required}>*</Text>
+          {t('organizerCreateEvent.basics.eventTitle')} <Text style={styles.required}>*</Text>
         </Text>
         <TextInput
           style={styles.input}
-          placeholder="Give your event a catchy name"
+          placeholder={t('organizerCreateEvent.basics.eventTitlePlaceholder')}
           value={draft.title}
           onChangeText={(text) => updateDraft({ title: text })}
           maxLength={100}
@@ -75,7 +96,7 @@ export default function Step1Basics({ draft, updateDraft }: Props) {
       {/* Category */}
       <View style={styles.formGroup}>
         <Text style={styles.label}>
-          Category <Text style={styles.required}>*</Text>
+          {t('organizerCreateEvent.basics.category')} <Text style={styles.required}>*</Text>
         </Text>
         <ScrollView
           horizontal
@@ -97,7 +118,7 @@ export default function Step1Basics({ draft, updateDraft }: Props) {
                   draft.category === cat && styles.categoryChipTextActive,
                 ]}
               >
-                {cat}
+                {getCategoryLabel(cat)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -107,11 +128,11 @@ export default function Step1Basics({ draft, updateDraft }: Props) {
       {/* Description */}
       <View style={styles.formGroup}>
         <Text style={styles.label}>
-          Description <Text style={styles.required}>*</Text>
+          {t('organizerCreateEvent.basics.description')} <Text style={styles.required}>*</Text>
         </Text>
         <TextInput
           style={[styles.input, styles.textArea]}
-          placeholder="Describe your event in detail..."
+          placeholder={t('organizerCreateEvent.basics.descriptionPlaceholder')}
           value={draft.description}
           onChangeText={(text) => updateDraft({ description: text })}
           multiline

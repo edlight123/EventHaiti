@@ -4,6 +4,7 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
 import { createNotification } from '@/lib/notifications/helpers'
+import { sendPushNotification } from '@/lib/notification-triggers'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
@@ -137,6 +138,14 @@ export async function POST(request: NextRequest) {
             `${user.name || user.email || 'The sender'} cancelled the ticket transfer for "${eventTitle}".`,
             '/tickets',
             { ticketId: transfer?.ticket_id, eventTitle }
+          )
+
+          await sendPushNotification(
+            recipientDoc.id,
+            'Ticket transfer cancelled',
+            `${user.name || user.email || 'The sender'} cancelled the ticket transfer for "${eventTitle}".`,
+            '/notifications',
+            { type: 'ticket_transfer', deepLink: 'eventhaiti://notifications' }
           )
         }
       } catch (notifyError) {

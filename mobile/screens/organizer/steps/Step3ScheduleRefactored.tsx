@@ -27,6 +27,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../config/brand';
+import { useI18n } from '../../../contexts/I18nContext';
 import type { EventDraft } from '../CreateEventFlowRefactored';
 
 interface Props {
@@ -35,6 +36,8 @@ interface Props {
 }
 
 export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
+  const { t } = useI18n();
+
   // Picker visibility state
   const [showStartDate, setShowStartDate] = useState(false);
   const [showStartTime, setShowStartTime] = useState(false);
@@ -42,7 +45,7 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
   const [showEndTime, setShowEndTime] = useState(false);
 
   // Validation state
-  const [error, setError] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
 
   // Close all pickers - prevents conflicts
   const closeAllPickers = () => {
@@ -76,7 +79,7 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
   // Validation logic
   const validateSchedule = (): boolean => {
     if (!draft.start_date || !draft.start_time || !draft.end_date || !draft.end_time) {
-      setError(null); // Don't show error until all fields filled
+      setErrorKey(null); // Don't show error until all fields filled
       return false;
     }
 
@@ -86,16 +89,16 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
 
     // Check if start date is in the past
     if (start < now) {
-      setError('Event cannot start in the past');
+      setErrorKey('organizerCreateEvent.schedule.errors.startInPast');
       return false;
     }
 
     if (end <= start) {
-      setError('End time must be after start time');
+      setErrorKey('organizerCreateEvent.schedule.errors.endAfterStart');
       return false;
     }
 
-    setError(null);
+    setErrorKey(null);
     return true;
   };
 
@@ -208,11 +211,11 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <TouchableOpacity onPress={onClose}>
-                  <Text style={styles.modalButton}>Cancel</Text>
+                  <Text style={styles.modalButton}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <Text style={styles.modalTitle}>{title}</Text>
                 <TouchableOpacity onPress={onClose}>
-                  <Text style={[styles.modalButton, styles.modalButtonDone]}>Done</Text>
+                  <Text style={[styles.modalButton, styles.modalButtonDone]}>{t('common.done')}</Text>
                 </TouchableOpacity>
               </View>
               {/* CRITICAL: Fixed height container for picker */}
@@ -286,11 +289,11 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <TouchableOpacity onPress={onClose}>
-                  <Text style={styles.modalButton}>Cancel</Text>
+                  <Text style={styles.modalButton}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <Text style={styles.modalTitle}>{title}</Text>
                 <TouchableOpacity onPress={onClose}>
-                  <Text style={[styles.modalButton, styles.modalButtonDone]}>Done</Text>
+                  <Text style={[styles.modalButton, styles.modalButtonDone]}>{t('common.done')}</Text>
                 </TouchableOpacity>
               </View>
               {/* CRITICAL: Fixed height container for picker - without this, picker has 0 height and is invisible */}
@@ -313,13 +316,13 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>When does it happen?</Text>
-      <Text style={styles.subtitle}>Set the date and time for your event</Text>
+      <Text style={styles.title}>{t('organizerCreateEvent.schedule.title')}</Text>
+      <Text style={styles.subtitle}>{t('organizerCreateEvent.schedule.subtitle')}</Text>
 
       {/* Start Date & Time */}
       <View style={styles.row}>
         <View style={styles.half}>
-          <Text style={styles.label}>Start Date *</Text>
+          <Text style={styles.label}>{t('organizerCreateEvent.schedule.startDate')} *</Text>
           <TouchableOpacity
             style={styles.inputButton}
             onPress={() => {
@@ -329,7 +332,7 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
           >
             <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
             <Text style={styles.inputText}>
-              {draft.start_date || 'Select date'}
+              {draft.start_date || t('organizerCreateEvent.schedule.selectDate')}
             </Text>
           </TouchableOpacity>
           {Platform.OS === 'android' && showStartDate && (
@@ -343,7 +346,7 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
         </View>
 
         <View style={styles.half}>
-          <Text style={styles.label}>Start Time *</Text>
+          <Text style={styles.label}>{t('organizerCreateEvent.schedule.startTime')} *</Text>
           <TouchableOpacity
             style={styles.inputButton}
             onPress={() => {
@@ -353,7 +356,7 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
           >
             <Ionicons name="time-outline" size={20} color={COLORS.primary} />
             <Text style={styles.inputText}>
-              {draft.start_time || 'Select time'}
+              {draft.start_time || t('organizerCreateEvent.schedule.selectTime')}
             </Text>
           </TouchableOpacity>
           {Platform.OS === 'android' && showStartTime && (
@@ -371,7 +374,7 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
       {/* End Date & Time */}
       <View style={styles.row}>
         <View style={styles.half}>
-          <Text style={styles.label}>End Date *</Text>
+          <Text style={styles.label}>{t('organizerCreateEvent.schedule.endDate')} *</Text>
           <TouchableOpacity
             style={styles.inputButton}
             onPress={() => {
@@ -381,7 +384,7 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
           >
             <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
             <Text style={styles.inputText}>
-              {draft.end_date || 'Select date'}
+              {draft.end_date || t('organizerCreateEvent.schedule.selectDate')}
             </Text>
           </TouchableOpacity>
           {Platform.OS === 'android' && showEndDate && (
@@ -396,7 +399,7 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
         </View>
 
         <View style={styles.half}>
-          <Text style={styles.label}>End Time *</Text>
+          <Text style={styles.label}>{t('organizerCreateEvent.schedule.endTime')} *</Text>
           <TouchableOpacity
             style={styles.inputButton}
             onPress={() => {
@@ -406,7 +409,7 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
           >
             <Ionicons name="time-outline" size={20} color={COLORS.primary} />
             <Text style={styles.inputText}>
-              {draft.end_time || 'Select time'}
+              {draft.end_time || t('organizerCreateEvent.schedule.selectTime')}
             </Text>
           </TouchableOpacity>
           {Platform.OS === 'android' && showEndTime && (
@@ -422,10 +425,10 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
       </View>
 
       {/* Error message */}
-      {error && (
+      {errorKey && (
         <View style={styles.errorCard}>
           <Ionicons name="alert-circle" size={20} color={COLORS.error} />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>{t(errorKey)}</Text>
         </View>
       )}
 
@@ -433,14 +436,14 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
       <View style={styles.infoCard}>
         <Ionicons name="information-circle-outline" size={20} color={COLORS.primary} />
         <Text style={styles.infoText}>
-          Timezone: {draft.timezone}
+          {t('organizerCreateEvent.schedule.timezone')}: {draft.timezone}
         </Text>
       </View>
 
       {/* iOS Date Picker Modals */}
       {renderDatePickerModal(
         showStartDate,
-        'Start Date',
+        t('organizerCreateEvent.schedule.modalStartDate'),
         getDateValue(draft.start_date),
         handleStartDateChange,
         () => setShowStartDate(false),
@@ -448,7 +451,7 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
       )}
       {renderDatePickerModal(
         showEndDate,
-        'End Date',
+        t('organizerCreateEvent.schedule.modalEndDate'),
         getDateValue(draft.end_date),
         handleEndDateChange,
         () => setShowEndDate(false),
@@ -458,14 +461,14 @@ export default function Step3ScheduleRefactored({ draft, updateDraft }: Props) {
       {/* iOS Time Picker Modals */}
       {renderTimePickerModal(
         showStartTime,
-        'Start Time',
+        t('organizerCreateEvent.schedule.modalStartTime'),
         getTimeValue(draft.start_time),
         handleStartTimeChange,
         () => setShowStartTime(false)
       )}
       {renderTimePickerModal(
         showEndTime,
-        'End Time',
+        t('organizerCreateEvent.schedule.modalEndTime'),
         getTimeValue(draft.end_time),
         handleEndTimeChange,
         () => setShowEndTime(false)

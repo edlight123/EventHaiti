@@ -7,11 +7,14 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../../config/brand';
 import { useAuth } from '../../contexts/AuthContext';
+import { useI18n } from '../../contexts/I18nContext';
 import {
   getOrganizerStats,
   getTodayEvents,
@@ -22,6 +25,8 @@ import {
 export default function OrganizerDashboardScreen() {
   const navigation = useNavigation<any>();
   const { userProfile } = useAuth();
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const [todayEvents, setTodayEvents] = useState<TodayEvent[]>([]);
   const [stats, setStats] = useState<OrganizerStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,17 +71,20 @@ export default function OrganizerDashboardScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading dashboard...</Text>
+        <Text style={styles.loadingText}>{t('organizerDashboard.loading')}</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
       {/* Fixed Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Organizer Dashboard</Text>
-        <Text style={styles.headerSubtitle}>Welcome back, {userProfile?.full_name || 'Organizer'}</Text>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <Text style={styles.headerTitle}>{t('organizerDashboard.title')}</Text>
+        <Text style={styles.headerSubtitle}>
+          {t('organizerDashboard.welcomeBack')}, {userProfile?.full_name || t('organizerDashboard.organizerFallback')}
+        </Text>
       </View>
 
       <ScrollView
@@ -91,11 +99,11 @@ export default function OrganizerDashboardScreen() {
       >
         {/* Today's Events */}
         <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Today's Events</Text>
+        <Text style={styles.sectionTitle}>{t('organizerDashboard.todaysEvents')}</Text>
         {todayEvents.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="calendar-outline" size={48} color={COLORS.textSecondary} />
-            <Text style={styles.emptyText}>No events scheduled for today</Text>
+            <Text style={styles.emptyText}>{t('organizerDashboard.noEventsToday')}</Text>
           </View>
         ) : (
           todayEvents.map((event) => {
@@ -121,7 +129,7 @@ export default function OrganizerDashboardScreen() {
                     }}
                   >
                     <Ionicons name="qr-code-outline" size={20} color={COLORS.primary} />
-                    <Text style={styles.scanButtonText}>Scan</Text>
+                    <Text style={styles.scanButtonText}>{t('tabs.scan')}</Text>
                   </TouchableOpacity>
                 </View>
                 
@@ -139,11 +147,11 @@ export default function OrganizerDashboardScreen() {
                 <View style={styles.eventStats}>
                   <View style={styles.statItem}>
                     <Text style={styles.statValue}>{event.ticketsSold}/{event.capacity}</Text>
-                    <Text style={styles.statLabel}>Tickets Sold</Text>
+                    <Text style={styles.statLabel}>{t('organizerDashboard.ticketsSold')}</Text>
                   </View>
                   <View style={styles.statItem}>
                     <Text style={styles.statValue}>{event.ticketsCheckedIn}</Text>
-                    <Text style={styles.statLabel}>Checked In</Text>
+                    <Text style={styles.statLabel}>{t('organizerDashboard.checkedIn')}</Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -154,27 +162,27 @@ export default function OrganizerDashboardScreen() {
 
       {/* This Week Stats */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>This Week</Text>
+        <Text style={styles.sectionTitle}>{t('organizerDashboard.thisWeek')}</Text>
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <Ionicons name="ticket-outline" size={32} color={COLORS.primary} />
             <Text style={styles.statCardValue}>{stats?.ticketsSold || 0}</Text>
-            <Text style={styles.statCardLabel}>Tickets Sold</Text>
+            <Text style={styles.statCardLabel}>{t('organizerDashboard.ticketsSold')}</Text>
           </View>
           <View style={styles.statCard}>
             <Ionicons name="checkmark-circle-outline" size={32} color={COLORS.success} />
             <Text style={styles.statCardValue}>{stats?.upcomingEvents || 0}</Text>
-            <Text style={styles.statCardLabel}>Upcoming Events</Text>
+            <Text style={styles.statCardLabel}>{t('organizerDashboard.upcomingEvents')}</Text>
           </View>
           <View style={styles.statCard}>
             <Ionicons name="cash-outline" size={32} color={COLORS.primary} />
             <Text style={styles.statCardValue}>${(stats?.revenue || 0).toFixed(2)}</Text>
-            <Text style={styles.statCardLabel}>Revenue</Text>
+            <Text style={styles.statCardLabel}>{t('organizerDashboard.revenue')}</Text>
           </View>
           <View style={styles.statCard}>
             <Ionicons name="document-text-outline" size={32} color={COLORS.textSecondary} />
             <Text style={styles.statCardValue}>{stats?.draftEvents || 0}</Text>
-            <Text style={styles.statCardLabel}>Drafts</Text>
+            <Text style={styles.statCardLabel}>{t('organizerDashboard.drafts')}</Text>
           </View>
         </View>
       </View>
@@ -204,7 +212,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 16,
     backgroundColor: COLORS.primary,
   },
   headerTitle: {

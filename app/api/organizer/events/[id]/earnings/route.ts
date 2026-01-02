@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { getEventEarnings } from '@/lib/earnings'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -25,26 +26,21 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: 'Not authorized for this event' }, { status: 403 })
     }
 
-    const earningsSnapshot = await adminDb
-      .collection('event_earnings')
-      .where('eventId', '==', id)
-      .limit(1)
-      .get()
-
-    if (earningsSnapshot.empty) {
+    // Prefer stored earnings, but fall back to a derived view from tickets.
+    // This prevents mobile from showing 0 forever when `event_earnings` isn't populated yet.
+    const earnings = await getEventEarnings(id)
+    if (!earnings) {
       return NextResponse.json({ earnings: null }, { status: 200 })
     }
-
-    const data = earningsSnapshot.docs[0].data() as any
 
     return NextResponse.json(
       {
         earnings: {
-          availableToWithdraw: Number(data?.availableToWithdraw || 0),
-          currency: String(data?.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG',
-          settlementStatus: data?.settlementStatus || 'pending',
-          totalEarned: Number(data?.totalEarned || 0),
-          withdrawnAmount: Number(data?.withdrawnAmount || 0),
+          availableToWithdraw: Number((earnings as any)?.availableToWithdraw || 0),
+          currency: String((earnings as any)?.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG',
+          settlementStatus: (earnings as any)?.settlementStatus || 'pending',
+          totalEarned: Number((earnings as any)?.grossSales ?? (earnings as any)?.totalEarned ?? 0),
+          withdrawnAmount: Number((earnings as any)?.withdrawnAmount || 0),
         },
       },
       { status: 200 }

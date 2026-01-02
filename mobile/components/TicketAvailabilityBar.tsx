@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { COLORS } from '../config/brand';
+import { useI18n } from '../contexts/I18nContext';
 
 export interface TicketAvailabilityBarProps {
   totalTickets: number;
@@ -13,6 +14,7 @@ export default function TicketAvailabilityBar({
   ticketsSold,
   style,
 }: TicketAvailabilityBarProps) {
+  const { t } = useI18n();
   const remainingTickets = Math.max(0, totalTickets - ticketsSold);
   const percentageSold = totalTickets > 0 ? (ticketsSold / totalTickets) * 100 : 0;
   const isSoldOut = remainingTickets === 0;
@@ -29,10 +31,10 @@ export default function TicketAvailabilityBar({
   };
 
   const getStatusText = () => {
-    if (isSoldOut) return 'Sold Out';
-    if (isAlmostSoldOut) return `Only ${remainingTickets} left!`;
-    if (percentageSold > 70) return `${remainingTickets} tickets remaining`;
-    return `${remainingTickets} available`;
+    if (isSoldOut) return t('badges.soldout');
+    if (isAlmostSoldOut) return `${t('ticketAvailabilityBar.only')} ${remainingTickets} ${t('ticketAvailabilityBar.left')}`;
+    if (percentageSold > 70) return `${remainingTickets} ${t('ticketAvailabilityBar.ticketsRemaining')}`;
+    return `${remainingTickets} ${t('ticketAvailabilityBar.available')}`;
   };
 
   return (
@@ -66,7 +68,7 @@ export default function TicketAvailabilityBar({
           {getStatusText()}
         </Text>
         <Text style={styles.soldText}>
-          {ticketsSold.toLocaleString()} / {totalTickets.toLocaleString()} sold
+          {ticketsSold.toLocaleString()} / {totalTickets.toLocaleString()} {t('common.sold')}
         </Text>
       </View>
     </View>

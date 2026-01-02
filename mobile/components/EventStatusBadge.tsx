@@ -9,6 +9,7 @@ import {
 import { Star, TrendingUp, Sparkles, Ticket, AlertCircle } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BADGE_COLORS, BadgeStatus } from '../theme/badges';
+import { useI18n } from '../contexts/I18nContext';
 
 export interface EventStatusBadgeProps {
   status: BadgeStatus;
@@ -17,6 +18,7 @@ export interface EventStatusBadgeProps {
 }
 
 export default function EventStatusBadge({ status, size = 'small', style }: EventStatusBadgeProps) {
+  const { t } = useI18n();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
 
@@ -82,7 +84,8 @@ export default function EventStatusBadge({ status, size = 'small', style }: Even
     const fontSize = size === 'small' ? 10 : 12;
     const paddingHorizontal = size === 'small' ? 8 : 12;
     const paddingVertical = size === 'small' ? 4 : 6;
-    const accessibilityLabel = `${status} event`;
+    const label = t(`badges.${String(status).toLowerCase().replace(/\s+/g, '')}`);
+    const accessibilityLabel = `${label} ${t('badges.event')}`;
 
     if (isGradient) {
       return (
@@ -115,7 +118,7 @@ export default function EventStatusBadge({ status, size = 'small', style }: Even
             <View style={styles.badgeContent}>
               {getIcon()}
               <Text style={[styles.badgeText, { fontSize, color: colors.text }]}>
-                {status}
+                {label}
               </Text>
             </View>
           </LinearGradient>
@@ -143,7 +146,7 @@ export default function EventStatusBadge({ status, size = 'small', style }: Even
         <View style={styles.badgeContent}>
           {getIcon()}
           <Text style={[styles.badgeText, { fontSize, color: colors.text }]}>
-            {status}
+            {label}
           </Text>
         </View>
       </View>

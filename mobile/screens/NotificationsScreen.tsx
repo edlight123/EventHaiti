@@ -15,13 +15,16 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../config/brand';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppMode } from '../contexts/AppModeContext';
+import { useI18n } from '../contexts/I18nContext';
 import {
   getUserNotifications,
   markAsRead,
   markAllAsRead,
   getUnreadCount,
   clearAllNotifications,
+  deleteNotification,
 } from '../lib/notifications';
+import { addStaffEventId } from '../lib/staffAssignments';
 import { backendJson } from '../lib/api/backend';
 import type { Notification } from '../types/notifications';
 
@@ -29,17 +32,53 @@ export default function NotificationsScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
   const { setMode } = useAppMode();
+  const { t } = useI18n();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
+  const getTransferToken = (notification: Notification): string | null => {
+    const metadata: any = (notification as any)?.metadata || {};
+    const direct = typeof metadata?.transferToken === 'string' ? metadata.transferToken : '';
+    if (direct) return direct;
+
+    const actionUrl = String((notification as any)?.actionUrl || '');
+    if (!actionUrl) return null;
+
+    try {
+      const full = actionUrl.startsWith('http')
+        ? actionUrl
+        : `https://eventhaiti.vercel.app${actionUrl.startsWith('/') ? '' : '/'}${actionUrl}`;
+      const url = new URL(full);
+      const parts = url.pathname.split('/').filter(Boolean);
+      const idx = parts.findIndex((p) => p === 'transfer');
+      if (idx !== -1 && parts[idx + 1]) return parts[idx + 1];
+    } catch {
+      // ignore
+    }
+
+    return null;
+  };
+
   const getInviteDetails = (notification: Notification): { eventId: string; token: string } | null => {
     const metadata: any = (notification as any)?.metadata || {};
     const eventId = String(metadata?.eventId || notification.eventId || '');
-    const token = String(metadata?.token || '');
+    const token = String(metadata?.token || metadata?.inviteToken || '');
     if (eventId && token) return { eventId, token };
+
+    const metadataUrl = String(metadata?.url || '');
+    if (metadataUrl) {
+      try {
+        const url = new URL(metadataUrl);
+        const parsedEventId = url.searchParams.get('eventId') || '';
+        const parsedToken = url.searchParams.get('token') || '';
+        if (parsedEventId && parsedToken) return { eventId: parsedEventId, token: parsedToken };
+      } catch {
+        // ignore
+      }
+    }
 
     const actionUrl = String((notification as any)?.actionUrl || '');
     if (actionUrl) {
@@ -64,7 +103,7 @@ export default function NotificationsScreen() {
   const acceptStaffInvite = async (notification: Notification) => {
     const details = getInviteDetails(notification);
     if (!details) {
-      Alert.alert('Missing invite details', 'Please open the invite link again.');
+      Alert.alert(t('notifications.missingInviteTitle'), t('notifications.missingInviteBody'));
       return;
     }
 
@@ -74,8 +113,24 @@ export default function NotificationsScreen() {
         body: JSON.stringify(details),
       });
 
-      if (user?.uid && !notification.isRead) {
-        await handleMarkAsRead(notification.id);
+      // Persist so Staff tabs can show it immediately.
+      addStaffEventId(details.eventId).catch(() => {});
+
+      // Auto-clear the invite notification once redeemed.
+      if (user?.uid) {
+        try {
+          await deleteNotification(user.uid, notification.id);
+        } catch {
+          // Fallback: at least mark it read if delete fails.
+          if (!notification.isRead) {
+            await handleMarkAsRead(notification.id);
+          }
+        }
+
+        setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+        if (!notification.isRead) {
+          setUnreadCount((prev) => Math.max(0, prev - 1));
+        }
       }
 
       await setMode('staff');
@@ -84,15 +139,15 @@ export default function NotificationsScreen() {
       // @ts-ignore
       navigation.navigate('TicketScanner', { eventId: details.eventId });
     } catch (error: any) {
-      const msg = error?.message ? String(error.message) : 'Failed to accept invite.';
-      Alert.alert('Could not accept invite', msg);
+      const msg = error?.message ? String(error.message) : t('notifications.acceptInviteFailedBody');
+      Alert.alert(t('notifications.acceptInviteFailedTitle'), msg);
     }
   };
 
   const declineStaffInvite = async (notification: Notification) => {
     const details = getInviteDetails(notification);
     if (!details) {
-      Alert.alert('Missing invite details', 'Please open the invite link again.');
+      Alert.alert(t('notifications.missingInviteTitle'), t('notifications.missingInviteBody'));
       return;
     }
 
@@ -108,8 +163,62 @@ export default function NotificationsScreen() {
 
       setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
     } catch (error: any) {
-      const msg = error?.message ? String(error.message) : 'Failed to decline invite.';
-      Alert.alert('Could not decline invite', msg);
+      const msg = error?.message ? String(error.message) : t('notifications.declineInviteFailedBody');
+      Alert.alert(t('notifications.declineInviteFailedTitle'), msg);
+    }
+  };
+
+  const acceptTicketTransfer = async (notification: Notification) => {
+    const transferToken = getTransferToken(notification);
+    if (!transferToken) {
+      Alert.alert(t('notifications.missingTransferTitle'), t('notifications.missingTransferBody'));
+      return;
+    }
+
+    try {
+      const res = await backendJson<{ ticketId?: string }>('/api/tickets/transfer/respond', {
+        method: 'POST',
+        body: JSON.stringify({ transferToken, action: 'accept' }),
+      });
+
+      if (user?.uid && !notification.isRead) {
+        await handleMarkAsRead(notification.id);
+      }
+
+      // Refresh list so the user sees updated notifications.
+      loadNotifications(false);
+
+      if (res?.ticketId) {
+        // @ts-ignore
+        navigation.navigate('TicketDetail', { ticketId: res.ticketId });
+      }
+    } catch (error: any) {
+      const msg = error?.message ? String(error.message) : t('notifications.acceptTransferFailedBody');
+      Alert.alert(t('notifications.acceptTransferFailedTitle'), msg);
+    }
+  };
+
+  const declineTicketTransfer = async (notification: Notification) => {
+    const transferToken = getTransferToken(notification);
+    if (!transferToken) {
+      Alert.alert(t('notifications.missingTransferTitle'), t('notifications.missingTransferBody'));
+      return;
+    }
+
+    try {
+      await backendJson('/api/tickets/transfer/respond', {
+        method: 'POST',
+        body: JSON.stringify({ transferToken, action: 'reject' }),
+      });
+
+      if (user?.uid && !notification.isRead) {
+        await handleMarkAsRead(notification.id);
+      }
+
+      setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+    } catch (error: any) {
+      const msg = error?.message ? String(error.message) : t('notifications.declineTransferFailedBody');
+      Alert.alert(t('notifications.declineTransferFailedTitle'), msg);
     }
   };
 
@@ -182,12 +291,12 @@ export default function NotificationsScreen() {
     if (!uid) return;
 
     Alert.alert(
-      'Clear All Notifications',
-      'Are you sure you want to delete all notifications? This action cannot be undone.',
+      t('notifications.clearAllTitle'),
+      t('notifications.clearAllBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Clear All',
+          text: t('notifications.clearAllConfirm'),
           style: 'destructive',
           onPress: async () => {
             setIsClearing(true);
@@ -198,7 +307,7 @@ export default function NotificationsScreen() {
               setUnreadCount(0);
             } catch (error) {
               console.error('Error clearing notifications:', error);
-              Alert.alert('Error', 'Failed to clear notifications. Please try again.');
+              Alert.alert(t('common.error'), t('notifications.clearAllErrorBody'));
             } finally {
               setIsClearing(false);
             }
@@ -279,7 +388,7 @@ export default function NotificationsScreen() {
             {isClearing ? (
               <ActivityIndicator size="small" color={COLORS.error} />
             ) : (
-              <Text style={styles.clearAllText}>Clear all</Text>
+              <Text style={styles.clearAllText}>{t('notifications.clearAllButton')}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -296,9 +405,9 @@ export default function NotificationsScreen() {
         {notifications.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Bell size={64} color={COLORS.textSecondary} strokeWidth={1.5} />
-            <Text style={styles.emptyTitle}>All caught up!</Text>
+            <Text style={styles.emptyTitle}>{t('notifications.emptyTitle')}</Text>
             <Text style={styles.emptySubtitle}>
-              When you get notifications, they will appear here
+              {t('notifications.emptyBody')}
             </Text>
           </View>
         ) : (
@@ -349,7 +458,7 @@ export default function NotificationsScreen() {
                         style={styles.staffInviteAcceptButton}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.staffInviteAcceptText}>Accept</Text>
+                        <Text style={styles.staffInviteAcceptText}>{t('common.accept')}</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -360,7 +469,33 @@ export default function NotificationsScreen() {
                         style={styles.staffInviteDeclineButton}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.staffInviteDeclineText}>Decline</Text>
+                        <Text style={styles.staffInviteDeclineText}>{t('common.decline')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {notification.type === 'ticket_transfer' && getTransferToken(notification) && (
+                    <View style={styles.staffInviteActions}>
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          acceptTicketTransfer(notification);
+                        }}
+                        style={styles.staffInviteAcceptButton}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.staffInviteAcceptText}>{t('common.accept')}</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          declineTicketTransfer(notification);
+                        }}
+                        style={styles.staffInviteDeclineButton}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.staffInviteDeclineText}>{t('common.decline')}</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -376,7 +511,7 @@ export default function NotificationsScreen() {
                     </Text>
                     {getNotificationLink(notification) && (
                       <View style={styles.viewDetailsContainer}>
-                        <Text style={styles.viewDetailsText}>View details</Text>
+                        <Text style={styles.viewDetailsText}>{t('notifications.viewDetails')}</Text>
                         <ExternalLink size={12} color={COLORS.primary} />
                       </View>
                     )}

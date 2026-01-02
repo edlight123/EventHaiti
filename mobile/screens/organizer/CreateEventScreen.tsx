@@ -11,7 +11,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
+  StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,21 +21,40 @@ import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../config/brand';
 import { useAuth } from '../../contexts/AuthContext';
+import { useI18n } from '../../contexts/I18nContext';
 
 const STEPS = [
-  { id: 1, title: 'Basics', icon: 'document-text-outline' },
-  { id: 2, title: 'Location', icon: 'location-outline' },
-  { id: 3, title: 'Schedule', icon: 'time-outline' },
-  { id: 4, title: 'Tickets', icon: 'ticket-outline' },
-  { id: 5, title: 'Details', icon: 'image-outline' },
+  { id: 1, titleKey: 'organizerCreateEventFlow.steps.basics', icon: 'document-text-outline' },
+  { id: 2, titleKey: 'organizerCreateEventFlow.steps.location', icon: 'location-outline' },
+  { id: 3, titleKey: 'organizerCreateEventFlow.steps.schedule', icon: 'time-outline' },
+  { id: 4, titleKey: 'organizerCreateEventFlow.steps.tickets', icon: 'ticket-outline' },
+  { id: 5, titleKey: 'common.details', icon: 'image-outline' },
 ];
 
 const CATEGORIES = ['Concert', 'Party', 'Conference', 'Festival', 'Workshop', 'Sports', 'Theater', 'Other'];
 const CITIES = ['Port-au-Prince', 'Cap-Haïtien', 'Gonaïves', 'Les Cayes', 'Jacmel', 'Port-de-Paix', 'Jérémie', 'Saint-Marc'];
 
+const CATEGORY_LABEL_KEYS: Record<string, string> = {
+  Concert: 'organizerCreateEventLegacy.categories.concert',
+  Party: 'organizerCreateEventLegacy.categories.party',
+  Conference: 'organizerCreateEventLegacy.categories.conference',
+  Festival: 'organizerCreateEventLegacy.categories.festival',
+  Workshop: 'organizerCreateEventLegacy.categories.workshop',
+  Sports: 'organizerCreateEventLegacy.categories.sports',
+  Theater: 'organizerCreateEventLegacy.categories.theater',
+  Other: 'organizerCreateEventLegacy.categories.other',
+};
+
+function getLegacyCategoryLabel(t: (key: string) => string, category: string) {
+  const key = CATEGORY_LABEL_KEYS[category];
+  return key ? t(key) : category;
+}
+
 export default function CreateEventScreen() {
   const navigation = useNavigation();
   const { userProfile } = useAuth();
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
 
@@ -67,31 +88,31 @@ export default function CreateEventScreen() {
     switch (step) {
       case 1:
         if (!formData.title.trim()) {
-          Alert.alert('Required', 'Please enter an event title');
+          Alert.alert(t('organizerCreateEventFlow.requiredTitle'), t('organizerCreateEventFlow.requiredEventTitle'));
           return false;
         }
         if (!formData.description.trim()) {
-          Alert.alert('Required', 'Please enter an event description');
+          Alert.alert(t('organizerCreateEventFlow.requiredTitle'), t('organizerCreateEventLegacy.validation.requiredEventDescription'));
           return false;
         }
         return true;
       case 2:
         if (!formData.venue_name.trim()) {
-          Alert.alert('Required', 'Please enter a venue name');
+          Alert.alert(t('organizerCreateEventFlow.requiredTitle'), t('organizerCreateEventFlow.requiredVenueName'));
           return false;
         }
         if (!formData.address.trim()) {
-          Alert.alert('Required', 'Please enter an address');
+          Alert.alert(t('organizerCreateEventFlow.requiredTitle'), t('organizerCreateEventLegacy.validation.requiredAddress'));
           return false;
         }
         return true;
       case 3:
         if (!formData.start_date || !formData.start_time) {
-          Alert.alert('Required', 'Please select start date and time');
+          Alert.alert(t('organizerCreateEventFlow.requiredTitle'), t('organizerCreateEventLegacy.validation.requiredStartDateTime'));
           return false;
         }
         if (!formData.end_date || !formData.end_time) {
-          Alert.alert('Required', 'Please select end date and time');
+          Alert.alert(t('organizerCreateEventFlow.requiredTitle'), t('organizerCreateEventLegacy.validation.requiredEndDateTime'));
           return false;
         }
         // Check if event starts in the past
@@ -110,26 +131,26 @@ export default function CreateEventScreen() {
         startDate.setHours(startTime.hours, startTime.minutes);
         const now = new Date();
         if (startDate < now) {
-          Alert.alert('Invalid Date', 'Event cannot start in the past');
+          Alert.alert(t('organizerCreateEventLegacy.validation.invalidDateTitle'), t('organizerCreateEvent.schedule.errors.startInPast'));
           return false;
         }
         return true;
       case 4:
         if (formData.ticket_tiers.length === 0) {
-          Alert.alert('Required', 'Please add at least one ticket tier');
+          Alert.alert(t('organizerCreateEventFlow.requiredTitle'), t('organizerCreateEventFlow.requiredTickets'));
           return false;
         }
         for (let tier of formData.ticket_tiers) {
           if (!tier.name.trim()) {
-            Alert.alert('Required', 'Please enter a name for all ticket tiers');
+            Alert.alert(t('organizerCreateEventFlow.requiredTitle'), t('organizerCreateEventLegacy.validation.requiredTierNameAll'));
             return false;
           }
           if (!tier.price || parseFloat(tier.price) < 0) {
-            Alert.alert('Required', 'Please enter a valid price for all ticket tiers');
+            Alert.alert(t('organizerCreateEventFlow.requiredTitle'), t('organizerCreateEventLegacy.validation.requiredTierPriceAll'));
             return false;
           }
           if (!tier.quantity || parseInt(tier.quantity) <= 0) {
-            Alert.alert('Required', 'Please enter quantity for all ticket tiers');
+            Alert.alert(t('organizerCreateEventFlow.requiredTitle'), t('organizerCreateEventLegacy.validation.requiredTierQuantityAll'));
             return false;
           }
         }
@@ -170,11 +191,11 @@ export default function CreateEventScreen() {
     if (diffHours > 8) {
       return new Promise<boolean>((resolve) => {
         Alert.alert(
-          'Long Event Duration',
-          `Your event is ${Math.round(diffHours)} hours long. Most events are under 8 hours. Do you want to continue?`,
+          t('organizerCreateEventLegacy.duration.title'),
+          `${t('organizerCreateEventLegacy.duration.bodyPrefix')}${Math.round(diffHours)}${t('organizerCreateEventLegacy.duration.bodySuffix')}`,
           [
-            { text: 'Review Dates', style: 'cancel', onPress: () => resolve(false) },
-            { text: 'Continue Anyway', onPress: () => resolve(true) },
+            { text: t('organizerCreateEventLegacy.duration.reviewDates'), style: 'cancel', onPress: () => resolve(false) },
+            { text: t('organizerCreateEventLegacy.duration.continueAnyway'), onPress: () => resolve(true) },
           ]
         );
       });
@@ -215,14 +236,14 @@ export default function CreateEventScreen() {
     setSaving(true);
     try {
       // TODO: Implement Firebase event creation
-      Alert.alert('Success', 'Event created successfully!', [
+      Alert.alert(t('common.success'), t('organizerCreateEventFlow.createSuccessBody'), [
         {
-          text: 'OK',
+          text: t('common.ok'),
           onPress: () => navigation.goBack(),
         },
       ]);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create event');
+      Alert.alert(t('common.error'), error.message || t('organizerCreateEventFlow.saveFailedCreate'));
     } finally {
       setSaving(false);
     }
@@ -262,7 +283,7 @@ export default function CreateEventScreen() {
                 currentStep >= step.id && styles.stepLabelActive,
               ]}
             >
-              {step.title}
+              {t(step.titleKey)}
             </Text>
           </TouchableOpacity>
           {index < STEPS.length - 1 && (
@@ -302,19 +323,20 @@ export default function CreateEventScreen() {
       keyboardVerticalOffset={0}
     >
       {/* Header */}
-      <View style={styles.header}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() =>
-            Alert.alert('Discard Changes?', 'Are you sure you want to leave? Your changes will be lost.', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Leave', style: 'destructive', onPress: () => navigation.goBack() },
+            Alert.alert(t('organizerCreateEventFlow.discardTitle'), t('organizerCreateEventFlow.discardBody'), [
+              { text: t('common.cancel'), style: 'cancel' },
+              { text: t('organizerCreateEventFlow.leave'), style: 'destructive', onPress: () => navigation.goBack() },
             ])
           }
         >
           <Ionicons name="close" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create Event</Text>
+        <Text style={styles.headerTitle}>{t('organizerCreateEventFlow.headerCreate')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -347,7 +369,7 @@ export default function CreateEventScreen() {
             onPress={previousStep}
           >
             <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
-            <Text style={styles.buttonSecondaryText}>Back</Text>
+            <Text style={styles.buttonSecondaryText}>{t('common.back')}</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
@@ -360,7 +382,7 @@ export default function CreateEventScreen() {
           ) : (
             <>
               <Text style={styles.buttonPrimaryText}>
-                {currentStep === 5 ? 'Create Event' : 'Continue'}
+                {currentStep === 5 ? t('organizerCreateEventFlow.createEvent') : t('common.continue')}
               </Text>
               {currentStep < 5 && <Ionicons name="arrow-forward" size={20} color={COLORS.white} />}
             </>
@@ -373,11 +395,12 @@ export default function CreateEventScreen() {
 
 // Step 1: Basics
 function Step1Basics({ formData, updateField }: any) {
+  const { t } = useI18n();
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (!permissionResult.granted) {
-      Alert.alert('Permission Required', 'Please allow access to your photo library');
+      Alert.alert(t('organizerCreateEventLegacy.media.permissionTitle'), t('organizerCreateEventLegacy.media.permissionBody'));
       return;
     }
 
@@ -395,25 +418,25 @@ function Step1Basics({ formData, updateField }: any) {
 
   return (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Let's start with the basics</Text>
-      <Text style={styles.stepSubtitle}>Tell attendees what your event is about</Text>
+      <Text style={styles.stepTitle}>{t('organizerCreateEvent.basics.title')}</Text>
+      <Text style={styles.stepSubtitle}>{t('organizerCreateEvent.basics.subtitle')}</Text>
 
       <View style={styles.formGroup}>
-        <Text style={styles.label}>Event Banner Image</Text>
+        <Text style={styles.label}>{t('organizerCreateEvent.basics.eventImage')}</Text>
         <TouchableOpacity style={styles.imageUploadButton} onPress={pickImage}>
           {formData.banner_image_url ? (
             <View style={styles.imagePreviewContainer}>
               <Image source={{ uri: formData.banner_image_url }} style={styles.imagePreview} />
               <View style={styles.imageOverlay}>
                 <Ionicons name="camera-outline" size={32} color={COLORS.white} />
-                <Text style={styles.imageOverlayText}>Change Image</Text>
+                <Text style={styles.imageOverlayText}>{t('organizerCreateEvent.basics.changeImage')}</Text>
               </View>
             </View>
           ) : (
             <>
               <Ionicons name="image-outline" size={40} color={COLORS.primary} />
-              <Text style={styles.imageUploadText}>Upload Event Banner</Text>
-              <Text style={styles.imageUploadSubtext}>Recommended: 1200x628px</Text>
+              <Text style={styles.imageUploadText}>{t('organizerCreateEvent.basics.uploadImage')}</Text>
+              <Text style={styles.imageUploadSubtext}>{t('organizerCreateEvent.basics.aspectRatio')}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -421,26 +444,26 @@ function Step1Basics({ formData, updateField }: any) {
 
       <View style={styles.formGroup}>
         <Text style={styles.label}>
-          Event Title <Text style={styles.required}>*</Text>
+          {t('organizerCreateEvent.basics.eventTitle')} <Text style={styles.required}>*</Text>
         </Text>
         <TextInput
           style={styles.input}
           value={formData.title}
           onChangeText={(text) => updateField('title', text)}
-          placeholder="e.g. Summer Music Festival 2025"
+          placeholder={t('organizerCreateEvent.basics.eventTitlePlaceholder')}
           placeholderTextColor={COLORS.textSecondary}
         />
       </View>
 
       <View style={styles.formGroup}>
         <Text style={styles.label}>
-          Description <Text style={styles.required}>*</Text>
+          {t('organizerCreateEvent.basics.description')} <Text style={styles.required}>*</Text>
         </Text>
         <TextInput
           style={[styles.input, styles.textarea]}
           value={formData.description}
           onChangeText={(text) => updateField('description', text)}
-          placeholder="Describe what makes your event special..."
+          placeholder={t('organizerCreateEvent.basics.descriptionPlaceholder')}
           placeholderTextColor={COLORS.textSecondary}
           multiline
           numberOfLines={6}
@@ -449,7 +472,7 @@ function Step1Basics({ formData, updateField }: any) {
       </View>
 
       <View style={styles.formGroup}>
-        <Text style={styles.label}>Category</Text>
+        <Text style={styles.label}>{t('organizerCreateEvent.basics.category')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
           {CATEGORIES.map((category) => (
             <TouchableOpacity
@@ -466,7 +489,7 @@ function Step1Basics({ formData, updateField }: any) {
                   formData.category === category && styles.categoryChipTextActive,
                 ]}
               >
-                {category}
+                {getLegacyCategoryLabel(t, category)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -478,26 +501,27 @@ function Step1Basics({ formData, updateField }: any) {
 
 // Step 2: Location
 function Step2Location({ formData, updateField }: any) {
+  const { t } = useI18n();
   return (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Where is it happening?</Text>
-      <Text style={styles.stepSubtitle}>Help attendees find your event</Text>
+      <Text style={styles.stepTitle}>{t('organizerCreateEvent.location.title')}</Text>
+      <Text style={styles.stepSubtitle}>{t('organizerCreateEvent.location.subtitle')}</Text>
 
       <View style={styles.formGroup}>
         <Text style={styles.label}>
-          Venue Name <Text style={styles.required}>*</Text>
+          {t('organizerCreateEvent.location.venueName')} <Text style={styles.required}>*</Text>
         </Text>
         <TextInput
           style={styles.input}
           value={formData.venue_name}
           onChangeText={(text) => updateField('venue_name', text)}
-          placeholder="e.g. National Stadium"
+          placeholder={t('organizerCreateEvent.location.venuePlaceholder')}
           placeholderTextColor={COLORS.textSecondary}
         />
       </View>
 
       <View style={styles.formGroup}>
-        <Text style={styles.label}>City</Text>
+        <Text style={styles.label}>{t('organizerCreateEvent.location.city')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
           {CITIES.map((city) => (
             <TouchableOpacity
@@ -522,25 +546,25 @@ function Step2Location({ formData, updateField }: any) {
       </View>
 
       <View style={styles.formGroup}>
-        <Text style={styles.label}>Commune / Neighborhood</Text>
+        <Text style={styles.label}>{t('organizerCreateEvent.location.communeOptional')}</Text>
         <TextInput
           style={styles.input}
           value={formData.commune}
           onChangeText={(text) => updateField('commune', text)}
-          placeholder="e.g. Pétion-Ville"
+          placeholder={t('organizerCreateEvent.location.communePlaceholder')}
           placeholderTextColor={COLORS.textSecondary}
         />
       </View>
 
       <View style={styles.formGroup}>
         <Text style={styles.label}>
-          Street Address <Text style={styles.required}>*</Text>
+          {t('organizerCreateEvent.location.streetAddress')} <Text style={styles.required}>*</Text>
         </Text>
         <TextInput
           style={styles.input}
           value={formData.address}
           onChangeText={(text) => updateField('address', text)}
-          placeholder="e.g. 123 Rue Example"
+          placeholder={t('organizerCreateEvent.location.addressPlaceholder')}
           placeholderTextColor={COLORS.textSecondary}
         />
       </View>
@@ -550,6 +574,7 @@ function Step2Location({ formData, updateField }: any) {
 
 // Step 3: Schedule
 function Step3Schedule({ formData, updateField }: any) {
+  const { t } = useI18n();
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
@@ -624,13 +649,13 @@ function Step3Schedule({ formData, updateField }: any) {
 
   return (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>When does it happen?</Text>
-      <Text style={styles.stepSubtitle}>Set the date and time for your event</Text>
+      <Text style={styles.stepTitle}>{t('organizerCreateEvent.schedule.title')}</Text>
+      <Text style={styles.stepSubtitle}>{t('organizerCreateEvent.schedule.subtitle')}</Text>
 
       <View style={styles.formRow}>
         <View style={[styles.formGroup, styles.formGroupHalf]}>
           <Text style={styles.label}>
-            Start Date <Text style={styles.required}>*</Text>
+            {t('organizerCreateEvent.schedule.startDate')} <Text style={styles.required}>*</Text>
           </Text>
           <TouchableOpacity 
             style={styles.dateButton}
@@ -641,7 +666,7 @@ function Step3Schedule({ formData, updateField }: any) {
           >
             <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
             <Text style={styles.dateButtonText}>
-              {formData.start_date || 'Select date'}
+              {formData.start_date || t('organizerCreateEvent.schedule.selectDate')}
             </Text>
           </TouchableOpacity>
           {showStartDatePicker && (
@@ -656,7 +681,7 @@ function Step3Schedule({ formData, updateField }: any) {
 
         <View style={[styles.formGroup, styles.formGroupHalf]}>
           <Text style={styles.label}>
-            Start Time <Text style={styles.required}>*</Text>
+            {t('organizerCreateEvent.schedule.startTime')} <Text style={styles.required}>*</Text>
           </Text>
           <TouchableOpacity 
             style={styles.dateButton}
@@ -667,7 +692,7 @@ function Step3Schedule({ formData, updateField }: any) {
           >
             <Ionicons name="time-outline" size={20} color={COLORS.primary} />
             <Text style={styles.dateButtonText}>
-              {formData.start_time || 'Select time'}
+              {formData.start_time || t('organizerCreateEvent.schedule.selectTime')}
             </Text>
           </TouchableOpacity>
           {showStartTimePicker && Platform.OS === 'ios' && (
@@ -681,11 +706,11 @@ function Step3Schedule({ formData, updateField }: any) {
                 <View style={styles.modalContent}>
                   <View style={styles.modalHeader}>
                     <TouchableOpacity onPress={() => setShowStartTimePicker(false)}>
-                      <Text style={styles.modalButton}>Cancel</Text>
+                      <Text style={styles.modalButton}>{t('common.cancel')}</Text>
                     </TouchableOpacity>
-                    <Text style={styles.modalTitle}>Start Time</Text>
+                    <Text style={styles.modalTitle}>{t('organizerCreateEvent.schedule.modalStartTime')}</Text>
                     <TouchableOpacity onPress={() => setShowStartTimePicker(false)}>
-                      <Text style={[styles.modalButton, styles.modalButtonDone]}>Done</Text>
+                      <Text style={[styles.modalButton, styles.modalButtonDone]}>{t('common.done')}</Text>
                     </TouchableOpacity>
                   </View>
                   <DateTimePicker
@@ -715,7 +740,7 @@ function Step3Schedule({ formData, updateField }: any) {
       <View style={styles.formRow}>
         <View style={[styles.formGroup, styles.formGroupHalf]}>
           <Text style={styles.label}>
-            End Date <Text style={styles.required}>*</Text>
+            {t('organizerCreateEvent.schedule.endDate')} <Text style={styles.required}>*</Text>
           </Text>
           <TouchableOpacity 
             style={styles.dateButton}
@@ -726,7 +751,7 @@ function Step3Schedule({ formData, updateField }: any) {
           >
             <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
             <Text style={styles.dateButtonText}>
-              {formData.end_date || 'Select date'}
+              {formData.end_date || t('organizerCreateEvent.schedule.selectDate')}
             </Text>
           </TouchableOpacity>
           {showEndDatePicker && (
@@ -742,7 +767,7 @@ function Step3Schedule({ formData, updateField }: any) {
 
         <View style={[styles.formGroup, styles.formGroupHalf]}>
           <Text style={styles.label}>
-            End Time <Text style={styles.required}>*</Text>
+            {t('organizerCreateEvent.schedule.endTime')} <Text style={styles.required}>*</Text>
           </Text>
           <TouchableOpacity 
             style={styles.dateButton}
@@ -753,7 +778,7 @@ function Step3Schedule({ formData, updateField }: any) {
           >
             <Ionicons name="time-outline" size={20} color={COLORS.primary} />
             <Text style={styles.dateButtonText}>
-              {formData.end_time || 'Select time'}
+              {formData.end_time || t('organizerCreateEvent.schedule.selectTime')}
             </Text>
           </TouchableOpacity>
           {showEndTimePicker && Platform.OS === 'ios' && (
@@ -767,11 +792,11 @@ function Step3Schedule({ formData, updateField }: any) {
                 <View style={styles.modalContent}>
                   <View style={styles.modalHeader}>
                     <TouchableOpacity onPress={() => setShowEndTimePicker(false)}>
-                      <Text style={styles.modalButton}>Cancel</Text>
+                      <Text style={styles.modalButton}>{t('common.cancel')}</Text>
                     </TouchableOpacity>
-                    <Text style={styles.modalTitle}>End Time</Text>
+                    <Text style={styles.modalTitle}>{t('organizerCreateEvent.schedule.modalEndTime')}</Text>
                     <TouchableOpacity onPress={() => setShowEndTimePicker(false)}>
-                      <Text style={[styles.modalButton, styles.modalButtonDone]}>Done</Text>
+                      <Text style={[styles.modalButton, styles.modalButtonDone]}>{t('common.done')}</Text>
                     </TouchableOpacity>
                   </View>
                   <DateTimePicker
@@ -801,7 +826,7 @@ function Step3Schedule({ formData, updateField }: any) {
       <View style={styles.helpCard}>
         <Ionicons name="information-circle-outline" size={20} color={COLORS.primary} />
         <Text style={styles.helpText}>
-          Make sure to set your local Haiti timezone
+          {t('organizerCreateEventLegacy.schedule.timezoneHelp')}
         </Text>
       </View>
     </View>
@@ -810,6 +835,7 @@ function Step3Schedule({ formData, updateField }: any) {
 
 // Step 4: Tickets
 function Step4Tickets({ formData, updateField }: any) {
+  const { t } = useI18n();
   const getCurrencySymbol = () => {
     return formData.currency === 'HTG' ? 'HTG' : '$';
   };
@@ -834,13 +860,13 @@ function Step4Tickets({ formData, updateField }: any) {
 
   return (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Set your ticket pricing</Text>
-      <Text style={styles.stepSubtitle}>Create ticket tiers for your event</Text>
+      <Text style={styles.stepTitle}>{t('organizerCreateEvent.tickets.title')}</Text>
+      <Text style={styles.stepSubtitle}>{t('organizerCreateEvent.tickets.subtitle')}</Text>
 
       {formData.ticket_tiers.map((tier: any, index: number) => (
         <View key={index} style={styles.tierCard}>
           <View style={styles.tierHeader}>
-            <Text style={styles.tierTitle}>Tier {index + 1}</Text>
+            <Text style={styles.tierTitle}>{t('organizerCreateEvent.tickets.tier')} {index + 1}</Text>
             {formData.ticket_tiers.length > 1 && (
               <TouchableOpacity onPress={() => removeTier(index)}>
                 <Ionicons name="trash-outline" size={20} color={COLORS.error} />
@@ -850,13 +876,13 @@ function Step4Tickets({ formData, updateField }: any) {
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>
-              Tier Name <Text style={styles.required}>*</Text>
+              {t('organizerCreateEvent.tickets.tierName')} <Text style={styles.required}>*</Text>
             </Text>
             <TextInput
               style={styles.input}
               value={tier.name}
               onChangeText={(text) => updateTier(index, 'name', text)}
-              placeholder="e.g. VIP, Early Bird, General"
+              placeholder={t('organizerCreateEvent.tickets.tierNamePlaceholder')}
               placeholderTextColor={COLORS.textSecondary}
             />
           </View>
@@ -864,7 +890,7 @@ function Step4Tickets({ formData, updateField }: any) {
           <View style={styles.formRow}>
             <View style={[styles.formGroup, styles.formGroupHalf]}>
               <Text style={styles.label}>
-                Price <Text style={styles.required}>*</Text>
+                {t('organizerCreateEvent.tickets.price')} <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.priceInput}>
                 <Text style={styles.currencySymbol}>{getCurrencySymbol()}</Text>
@@ -881,13 +907,13 @@ function Step4Tickets({ formData, updateField }: any) {
 
             <View style={[styles.formGroup, styles.formGroupHalf]}>
               <Text style={styles.label}>
-                Quantity <Text style={styles.required}>*</Text>
+                {t('organizerCreateEvent.tickets.quantity')} <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
                 style={styles.input}
                 value={tier.quantity}
                 onChangeText={(text) => updateTier(index, 'quantity', text)}
-                placeholder="100"
+                placeholder={t('organizerCreateEvent.tickets.quantityPlaceholder')}
                 keyboardType="number-pad"
                 placeholderTextColor={COLORS.textSecondary}
               />
@@ -898,11 +924,11 @@ function Step4Tickets({ formData, updateField }: any) {
 
       <TouchableOpacity style={styles.addTierButton} onPress={addTier}>
         <Ionicons name="add-circle-outline" size={24} color={COLORS.primary} />
-        <Text style={styles.addTierText}>Add Another Tier</Text>
+        <Text style={styles.addTierText}>{t('organizerCreateEvent.tickets.addTier')}</Text>
       </TouchableOpacity>
 
       <View style={styles.formGroup}>
-        <Text style={styles.label}>Currency</Text>
+        <Text style={styles.label}>{t('organizerCreateEvent.tickets.currency')}</Text>
         <View style={styles.currencyButtons}>
           {['USD', 'HTG'].map((currency) => (
             <TouchableOpacity
@@ -919,7 +945,7 @@ function Step4Tickets({ formData, updateField }: any) {
                   formData.currency === currency && styles.currencyButtonTextActive,
                 ]}
               >
-                {currency}
+                {currency === 'USD' ? t('organizerCreateEvent.tickets.currencyUsd') : t('organizerCreateEvent.tickets.currencyHtg')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -929,7 +955,7 @@ function Step4Tickets({ formData, updateField }: any) {
       <View style={styles.helpCard}>
         <Ionicons name="bulb-outline" size={20} color={COLORS.warning} />
         <Text style={styles.helpText}>
-          Set price to $0 for free events. Add multiple tiers for VIP, Early Bird, etc.
+          {t('organizerCreateEvent.tickets.infoText')}
         </Text>
       </View>
     </View>
@@ -938,6 +964,7 @@ function Step4Tickets({ formData, updateField }: any) {
 
 // Step 5: Preview & Publish
 function Step5Details({ formData, updateField }: any) {
+  const { t } = useI18n();
   const [viewMode, setViewMode] = useState<'card' | 'page'>('page');
   
   const totalTickets = formData.ticket_tiers.reduce((sum: number, tier: any) => 
@@ -952,7 +979,7 @@ function Step5Details({ formData, updateField }: any) {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (!permissionResult.granted) {
-      Alert.alert('Permission Required', 'Please allow access to your photo library');
+      Alert.alert(t('organizerCreateEventLegacy.media.permissionTitle'), t('organizerCreateEventLegacy.media.permissionBody'));
       return;
     }
 
@@ -977,14 +1004,14 @@ function Step5Details({ formData, updateField }: any) {
             onPress={() => setViewMode('card')}
           >
             <Ionicons name="card-outline" size={20} color={COLORS.white} />
-            <Text style={styles.toggleButtonTextActive}>Card View</Text>
+            <Text style={styles.toggleButtonTextActive}>{t('organizerCreateEvent.preview.cardView')}</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.toggleButton}
             onPress={() => setViewMode('page')}
           >
             <Ionicons name="document-text-outline" size={20} color={COLORS.text} />
-            <Text style={styles.toggleButtonText}>Page View</Text>
+            <Text style={styles.toggleButtonText}>{t('organizerCreateEvent.preview.pageView')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -998,7 +1025,7 @@ function Step5Details({ formData, updateField }: any) {
           )}
           <View style={styles.cardContent}>
             <View style={styles.cardCategory}>
-              <Text style={styles.cardCategoryText}>{formData.category}</Text>
+              <Text style={styles.cardCategoryText}>{getLegacyCategoryLabel(t, formData.category)}</Text>
             </View>
             <Text style={styles.cardTitle} numberOfLines={2}>{formData.title}</Text>
             <View style={styles.cardInfo}>
@@ -1011,14 +1038,14 @@ function Step5Details({ formData, updateField }: any) {
             </View>
             <View style={styles.cardFooter}>
               <Text style={styles.cardPrice}>{getCurrencySymbol()} {formData.ticket_tiers[0]?.price || '0'}</Text>
-              <Text style={styles.cardTickets}>{totalTickets} tickets</Text>
+              <Text style={styles.cardTickets}>{totalTickets} {t('organizerCreateEvent.preview.tickets')}</Text>
             </View>
           </View>
         </View>
 
         <TouchableOpacity style={styles.changeImageButton} onPress={pickImage}>
           <Ionicons name="camera-outline" size={20} color={COLORS.primary} />
-          <Text style={styles.changeImageText}>Change Event Image</Text>
+          <Text style={styles.changeImageText}>{t('organizerCreateEvent.preview.changeEventImage')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -1032,14 +1059,14 @@ function Step5Details({ formData, updateField }: any) {
           onPress={() => setViewMode('card')}
         >
           <Ionicons name="card-outline" size={20} color={COLORS.text} />
-          <Text style={styles.toggleButtonText}>Card View</Text>
+          <Text style={styles.toggleButtonText}>{t('organizerCreateEvent.preview.cardView')}</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.toggleButton, styles.toggleButtonActive]}
           onPress={() => setViewMode('page')}
         >
           <Ionicons name="document-text-outline" size={20} color={COLORS.white} />
-          <Text style={styles.toggleButtonTextActive}>Page View</Text>
+          <Text style={styles.toggleButtonTextActive}>{t('organizerCreateEvent.preview.pageView')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -1050,7 +1077,7 @@ function Step5Details({ formData, updateField }: any) {
         ) : (
           <View style={styles.pageHeroPlaceholder}>
             <Ionicons name="image-outline" size={60} color={COLORS.textSecondary} />
-            <Text style={styles.placeholderText}>No image selected</Text>
+            <Text style={styles.placeholderText}>{t('organizerCreateEvent.preview.noImageSelected')}</Text>
           </View>
         )}
         <TouchableOpacity style={styles.editImageButton} onPress={pickImage}>
@@ -1061,7 +1088,7 @@ function Step5Details({ formData, updateField }: any) {
       {/* Event Details */}
       <View style={styles.eventPageContent}>
         <View style={styles.pageCategory}>
-          <Text style={styles.pageCategoryText}>{formData.category}</Text>
+          <Text style={styles.pageCategoryText}>{getLegacyCategoryLabel(t, formData.category)}</Text>
         </View>
         
         <Text style={styles.pageTitle}>{formData.title}</Text>
@@ -1070,14 +1097,14 @@ function Step5Details({ formData, updateField }: any) {
           <View style={styles.pageInfoItem}>
             <Ionicons name="calendar" size={20} color={COLORS.primary} />
             <View style={styles.pageInfoTextContainer}>
-              <Text style={styles.pageInfoLabel}>Date</Text>
+                <Text style={styles.pageInfoLabel}>{t('organizerCreateEvent.preview.date')}</Text>
               <Text style={styles.pageInfoValue}>{formData.start_date}</Text>
             </View>
           </View>
           <View style={styles.pageInfoItem}>
             <Ionicons name="time" size={20} color={COLORS.primary} />
             <View style={styles.pageInfoTextContainer}>
-              <Text style={styles.pageInfoLabel}>Time</Text>
+              <Text style={styles.pageInfoLabel}>{t('organizerCreateEvent.preview.time')}</Text>
               <Text style={styles.pageInfoValue}>{formData.start_time}</Text>
             </View>
           </View>
@@ -1087,7 +1114,7 @@ function Step5Details({ formData, updateField }: any) {
           <View style={styles.pageInfoItem}>
             <Ionicons name="location" size={20} color={COLORS.primary} />
             <View style={styles.pageInfoTextContainer}>
-              <Text style={styles.pageInfoLabel}>Location</Text>
+              <Text style={styles.pageInfoLabel}>{t('organizerCreateEvent.preview.location')}</Text>
               <Text style={styles.pageInfoValue}>{formData.venue_name}</Text>
               <Text style={styles.pageInfoSubtext}>{formData.city}</Text>
             </View>
@@ -1096,17 +1123,17 @@ function Step5Details({ formData, updateField }: any) {
 
         <View style={styles.pageDivider} />
 
-        <Text style={styles.pageSectionTitle}>About This Event</Text>
+        <Text style={styles.pageSectionTitle}>{t('organizerCreateEvent.preview.about')}</Text>
         <Text style={styles.pageDescription}>{formData.description}</Text>
 
         <View style={styles.pageDivider} />
 
-        <Text style={styles.pageSectionTitle}>Ticket Options</Text>
+        <Text style={styles.pageSectionTitle}>{t('organizerCreateEvent.preview.ticketOptions')}</Text>
         {formData.ticket_tiers.map((tier: any, index: number) => (
           <View key={index} style={styles.pageTicketTier}>
             <View style={styles.pageTicketInfo}>
               <Text style={styles.pageTicketName}>{tier.name}</Text>
-              <Text style={styles.pageTicketAvailable}>{tier.quantity} available</Text>
+              <Text style={styles.pageTicketAvailable}>{tier.quantity} {t('organizerCreateEvent.preview.available')}</Text>
             </View>
             <Text style={styles.pageTicketPrice}>{getCurrencySymbol()} {tier.price}</Text>
           </View>
@@ -1115,7 +1142,7 @@ function Step5Details({ formData, updateField }: any) {
         <View style={styles.helpCard}>
           <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
           <Text style={styles.helpText}>
-            This is how your event will appear to attendees. Ready to publish?
+            {t('organizerCreateEvent.preview.helpText')}
           </Text>
         </View>
       </View>
@@ -1133,7 +1160,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 50,
+    paddingTop: 16,
     paddingBottom: 8,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,

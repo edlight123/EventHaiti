@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, ScrollView, Image } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { COLORS, BRAND } from '../../config/brand';
+import { useI18n } from '../../contexts/I18nContext';
 
 export default function SignupScreen({ navigation }: any) {
+  const { t } = useI18n();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,17 +15,17 @@ export default function SignupScreen({ navigation }: any) {
 
   const handleSignup = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t('common.error'), t('auth.signup.errors.fillAllFields'));
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert(t('common.error'), t('auth.signup.errors.passwordsDoNotMatch'));
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert(t('common.error'), t('auth.signup.errors.passwordTooShort'));
       return;
     }
 
@@ -31,7 +33,7 @@ export default function SignupScreen({ navigation }: any) {
     try {
       await signUp(email, password, fullName);
     } catch (error: any) {
-      Alert.alert('Signup Failed', error.message || 'Could not create account');
+      Alert.alert(t('auth.signup.errors.signupFailedTitle'), error.message || t('auth.signup.errors.couldNotCreateAccount'));
     } finally {
       setLoading(false);
     }
@@ -52,18 +54,18 @@ export default function SignupScreen({ navigation }: any) {
             />
             <Text style={styles.logoText}>EventHaiti</Text>
           </View>
-          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.title}>{t('auth.signup.title')}</Text>
 
           <View style={styles.form}>
             <TextInput
               style={styles.input}
-              placeholder="Full Name"
+              placeholder={t('auth.signup.placeholders.fullName')}
               value={fullName}
               onChangeText={setFullName}
             />
             <TextInput
               style={styles.input}
-              placeholder="Email"
+              placeholder={t('auth.signup.placeholders.email')}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -71,14 +73,14 @@ export default function SignupScreen({ navigation }: any) {
             />
             <TextInput
               style={styles.input}
-              placeholder="Password"
+              placeholder={t('auth.signup.placeholders.password')}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
             />
             <TextInput
               style={styles.input}
-              placeholder="Confirm Password"
+              placeholder={t('auth.signup.placeholders.confirmPassword')}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
@@ -90,7 +92,7 @@ export default function SignupScreen({ navigation }: any) {
               disabled={loading}
             >
               <Text style={styles.buttonText}>
-                {loading ? 'Creating account...' : 'Sign Up'}
+                {loading ? t('auth.signup.creatingAccount') : t('auth.signup.signUp')}
               </Text>
             </TouchableOpacity>
 
@@ -99,7 +101,7 @@ export default function SignupScreen({ navigation }: any) {
               onPress={() => navigation.navigate('Login')}
             >
               <Text style={styles.linkText}>
-                Already have an account? <Text style={styles.linkTextBold}>Sign In</Text>
+                {t('auth.signup.haveAccount')}{' '}<Text style={styles.linkTextBold}>{t('auth.signup.signIn')}</Text>
               </Text>
             </TouchableOpacity>
           </View>

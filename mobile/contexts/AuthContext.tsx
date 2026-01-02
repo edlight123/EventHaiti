@@ -17,7 +17,10 @@ interface UserProfile {
   phone_number?: string;
   default_city?: string;
   is_verified?: boolean;
+  photo_url?: string;
 }
+
+type UserProfilePatch = Partial<Pick<UserProfile, 'full_name' | 'phone_number' | 'default_city' | 'photo_url'>>;
 
 interface AuthContextType {
   user: User | null;
@@ -27,6 +30,8 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshUserProfile: () => Promise<void>;
+  updateUserProfile: (patch: UserProfilePatch) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -37,6 +42,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const refreshUserProfile = async (uid?: string) => {
+    const userId = uid || user?.uid;
+    if (!userId) return;
+
+    // Demo mode: keep the mock profile in sync.
+    if (isDemoMode) {
+      setUserProfile((prev) => (prev ? { ...prev } : prev));
+      return;
+    }
+
+    try {
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (userDoc.exists()) {
+        setUserProfile({ id: userId, ...(userDoc.data() as Omit<UserProfile, 'id'>) });
+      }
+    } catch (error) {
+      console.error('[Auth] Error refreshing user profile:', error);
+    }
+  };
+
+  const updateUserProfile = async (patch: UserProfilePatch) => {
+    if (!user?.uid) throw new Error('Not signed in');
+
+    const trimmed: any = {
+      ...patch,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (typeof trimmed.full_name === 'string') trimmed.full_name = trimmed.full_name.trim();
+    if (typeof trimmed.default_city === 'string') trimmed.default_city = trimmed.default_city.trim();
+    if (typeof trimmed.phone_number === 'string') {
+      const p = trimmed.phone_number.trim();
+      trimmed.phone_number = p.length ? p : null;
+    }
+
+    if (isDemoMode) {
+      setUserProfile((prev) => (prev ? ({ ...prev, ...(trimmed as any) } as any) : prev));
+      return;
+    }
+
+    await setDoc(doc(db, 'users', user.uid), trimmed, { merge: true });
+    await refreshUserProfile(user.uid);
+  };
 
   // Configure Google Sign-In with proper redirect URI
   // Use reverse client ID format that Google accepts
@@ -80,18 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(firebaseUser);
       
       if (firebaseUser) {
-        // Fetch user profile from Firestore
-        try {
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          if (userDoc.exists()) {
-            setUserProfile({
-              id: firebaseUser.uid,
-              ...userDoc.data() as Omit<UserProfile, 'id'>
-            });
-          }
-        } catch (error) {
-          console.error('[Auth] Error fetching user profile:', error);
-        }
+        await refreshUserProfile(firebaseUser.uid);
       } else {
         setUserProfile(null);
       }
@@ -162,7 +200,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, signIn, signInWithGoogle, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, userProfile, loading, signIn, signInWithGoogle, signUp, signOut, refreshUserProfile: async () => refreshUserProfile(), updateUserProfile }}>
       {children}
     </AuthContext.Provider>
   );

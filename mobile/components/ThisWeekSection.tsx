@@ -11,8 +11,11 @@ import {
 } from 'react-native';
 import { Calendar, MapPin } from 'lucide-react-native';
 import { COLORS } from '../config/brand';
-import { format } from 'date-fns';
 import EventStatusBadge from './EventStatusBadge';
+import { useI18n } from '../contexts/I18nContext';
+import { getCategoryLabel } from '../lib/categories';
+
+import { formatDateForLanguage } from '../lib/dates';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.7;
@@ -25,6 +28,7 @@ interface ThisWeekSectionProps {
 }
 
 const ThisWeekEventCard = ({ event, onPress }: { event: any; onPress: () => void }) => {
+  const { t, language } = useI18n();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -73,7 +77,7 @@ const ThisWeekEventCard = ({ event, onPress }: { event: any; onPress: () => void
         </View>
 
         <View style={styles.cardContent}>
-          <Text style={styles.cardCategory}>{event.category}</Text>
+          <Text style={styles.cardCategory}>{getCategoryLabel(t, event.category)}</Text>
           <Text style={styles.cardTitle} numberOfLines={2}>
             {event.title}
           </Text>
@@ -82,7 +86,8 @@ const ThisWeekEventCard = ({ event, onPress }: { event: any; onPress: () => void
             <View style={styles.cardDetailRow}>
               <Calendar size={14} color={COLORS.textSecondary} />
               <Text style={styles.cardDetailText}>
-                {event.start_datetime && format(new Date(event.start_datetime), 'EEE, MMM dd • h:mm a')}
+                {event.start_datetime &&
+                  formatDateForLanguage(new Date(event.start_datetime), 'EEE, MMM dd • h:mm a', language)}
               </Text>
             </View>
             <View style={styles.cardDetailRow}>
@@ -99,11 +104,11 @@ const ThisWeekEventCard = ({ event, onPress }: { event: any; onPress: () => void
                 {event.currency || 'HTG'} {event.ticket_price.toLocaleString()}
               </Text>
             ) : (
-              <Text style={styles.cardFree}>FREE</Text>
+              <Text style={styles.cardFree}>{t('common.free').toUpperCase()}</Text>
             )}
             {event.tickets_sold !== undefined && (
               <Text style={styles.ticketsSold}>
-                {event.tickets_sold || 0} sold
+                {event.tickets_sold || 0} {t('common.sold')}
               </Text>
             )}
           </View>
@@ -118,17 +123,18 @@ export default function ThisWeekSection({
   onEventPress,
   onViewAll,
 }: ThisWeekSectionProps) {
+  const { t } = useI18n();
   if (events.length === 0) return null;
 
   return (
     <View style={styles.section}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>📅 This Week</Text>
-          <Text style={styles.subtitle}>Don't miss these upcoming events</Text>
+          <Text style={styles.title}>📅 {t('home.thisWeekTitle')}</Text>
+          <Text style={styles.subtitle}>{t('home.thisWeekSubtitle')}</Text>
         </View>
         <TouchableOpacity onPress={onViewAll}>
-          <Text style={styles.viewAll}>View All →</Text>
+          <Text style={styles.viewAll}>{t('common.viewAll')} →</Text>
         </TouchableOpacity>
       </View>
 

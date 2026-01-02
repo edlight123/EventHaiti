@@ -4,6 +4,7 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { getCurrentUser } from '@/lib/auth'
 import { createNotification } from '@/lib/notifications/helpers'
+import { sendPushNotification } from '@/lib/notification-triggers'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import type { DocumentReference, Transaction } from 'firebase-admin/firestore'
@@ -207,6 +208,14 @@ export async function POST(request: NextRequest) {
         { eventId: ticketEventId, ticketId, transferStatus: status }
       )
 
+      await sendPushNotification(
+        fromUserId,
+        status === 'accepted' ? 'Ticket transfer accepted' : 'Ticket transfer declined',
+        `${recipientLabel} has ${status === 'accepted' ? 'accepted' : 'declined'} your ticket transfer for "${eventTitle}".`,
+        '/notifications',
+        { type: 'ticket_transfer', deepLink: 'eventhaiti://notifications', eventId: ticketEventId, ticketId, transferStatus: status }
+      )
+
       if (status === 'accepted') {
         await createNotification(
           user.id,
@@ -215,6 +224,14 @@ export async function POST(request: NextRequest) {
           `You accepted a ticket transfer for "${eventTitle}" from ${senderLabel}.`,
           `/tickets/${ticketId}`,
           { eventId: ticketEventId, ticketId, transferStatus: status }
+        )
+
+        await sendPushNotification(
+          user.id,
+          'Ticket received',
+          `You accepted a ticket transfer for "${eventTitle}" from ${senderLabel}.`,
+          `/tickets/${ticketId}`,
+          { type: 'ticket_transfer', deepLink: `eventhaiti://tickets/${ticketId}`, eventId: ticketEventId, ticketId, transferStatus: status }
         )
       }
     } catch (notifyError) {

@@ -12,6 +12,7 @@ import {
 import { X, Check, Minus, Plus, Tag } from 'lucide-react-native';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { useI18n } from '../contexts/I18nContext';
 
 interface TicketTier {
   id: string;
@@ -43,6 +44,7 @@ interface TieredTicketSelectorProps {
   visible: boolean;
   onClose: () => void;
   onPurchase: (tierId: string, finalPrice: number, quantity: number, promoCode?: string) => void;
+  currency?: string;
 }
 
 interface TierQuantity {
@@ -65,7 +67,10 @@ export default function TieredTicketSelector({
   visible,
   onClose,
   onPurchase,
+  currency,
 }: TieredTicketSelectorProps) {
+  const { t } = useI18n();
+  const displayCurrency = String(currency || 'HTG').toUpperCase();
   const [tiers, setTiers] = useState<TicketTier[]>([]);
   const [groupDiscounts, setGroupDiscounts] = useState<GroupDiscount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -268,7 +273,7 @@ export default function TieredTicketSelector({
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Select Tickets</Text>
+          <Text style={styles.headerTitle}>{t('ticketSelector.title')}</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <X size={24} color={COLORS.primary} />
           </TouchableOpacity>
@@ -282,7 +287,7 @@ export default function TieredTicketSelector({
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             {/* Tier Selection with Quantities */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Choose Tickets</Text>
+              <Text style={styles.sectionTitle}>{t('ticketSelector.chooseTickets')}</Text>
               {tiers.map(tier => {
                 const available = getAvailableQuantity(tier);
                 const isAvailable = isTierAvailable(tier);
@@ -305,7 +310,7 @@ export default function TieredTicketSelector({
                           {tier.name}
                         </Text>
                         <Text style={styles.tierPrice}>
-                          {tier.price.toLocaleString()} HTG
+                          {tier.price.toLocaleString()} {displayCurrency}
                         </Text>
                       </View>
                       
@@ -318,8 +323,8 @@ export default function TieredTicketSelector({
                         !isAvailable && styles.tierSoldOut
                       ]}>
                         {isAvailable 
-                          ? `${available} tickets available` 
-                          : 'Sold Out'
+                          ? `${available} ${t('ticketSelector.ticketsAvailable')}`
+                          : t('ticketSelector.soldOut')
                         }
                       </Text>
                     </View>
@@ -360,13 +365,13 @@ export default function TieredTicketSelector({
             {/* Promo Code */}
             {getTotalQuantity() > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Promo Code (Optional)</Text>
+                <Text style={styles.sectionTitle}>{t('ticketSelector.promoTitle')}</Text>
                 <View style={styles.promoContainer}>
                   <View style={styles.promoInputContainer}>
                     <Tag size={20} color={COLORS.secondary} />
                     <TextInput
                       style={styles.promoInput}
-                      placeholder="Enter code"
+                      placeholder={t('ticketSelector.promoPlaceholder')}
                       value={promoCode}
                       onChangeText={setPromoCode}
                       autoCapitalize="characters"
@@ -381,7 +386,7 @@ export default function TieredTicketSelector({
                     {validatingPromo ? (
                       <ActivityIndicator size="small" color={COLORS.white} />
                     ) : (
-                      <Text style={styles.promoApplyButtonText}>Apply</Text>
+                      <Text style={styles.promoApplyButtonText}>{t('ticketSelector.apply')}</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -396,7 +401,7 @@ export default function TieredTicketSelector({
                       { color: promoValidation.valid ? COLORS.success : COLORS.error }
                     ]}>
                       {promoValidation.valid 
-                        ? `✓ ${promoValidation.discount_percentage}% discount applied`
+                        ? `✓ ${promoValidation.discount_percentage}% ${t('ticketSelector.discountApplied')}`
                         : `✗ ${promoValidation.error}`
                       }
                     </Text>
@@ -413,17 +418,17 @@ export default function TieredTicketSelector({
             <View style={styles.totalContainer}>
               <View>
                 <Text style={styles.totalLabel}>
-                  {getTotalQuantity()} ticket{getTotalQuantity() !== 1 ? 's' : ''}
+                  {getTotalQuantity()} {getTotalQuantity() === 1 ? t('ticketSelector.ticketSingular') : t('ticketSelector.ticketPlural')}
                 </Text>
                 {(promoValidation?.valid) && (
                   <Text style={styles.discountLabel}>
-                    Promo code applied
+                    {t('ticketSelector.promoApplied')}
                   </Text>
                 )}
               </View>
               <View style={styles.priceContainer}>
                 <Text style={styles.totalPrice}>
-                  {getTotalPrice().toLocaleString()} HTG
+                  {getTotalPrice().toLocaleString()} {displayCurrency}
                 </Text>
               </View>
             </View>
@@ -432,7 +437,7 @@ export default function TieredTicketSelector({
               onPress={handlePurchase}
             >
               <Text style={styles.purchaseButtonText}>
-                Continue to Payment
+                {t('ticketSelector.continueToPayment')}
               </Text>
             </TouchableOpacity>
           </View>

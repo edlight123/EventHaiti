@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, Image } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { COLORS, BRAND } from '../../config/brand';
+import { useI18n } from '../../contexts/I18nContext';
 
 export default function LoginScreen({ navigation }: any) {
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -11,7 +13,7 @@ export default function LoginScreen({ navigation }: any) {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t('common.error'), t('auth.login.errors.fillAllFields'));
       return;
     }
 
@@ -19,7 +21,7 @@ export default function LoginScreen({ navigation }: any) {
     try {
       await signIn(email, password);
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message || 'Invalid credentials');
+      Alert.alert(t('auth.login.errors.loginFailedTitle'), error.message || t('auth.login.errors.invalidCredentials'));
     } finally {
       setLoading(false);
     }
@@ -30,7 +32,7 @@ export default function LoginScreen({ navigation }: any) {
     try {
       await signInWithGoogle();
     } catch (error: any) {
-      Alert.alert('Google Sign-In', error.message || 'Google Sign-In requires additional configuration. Please use email/password login.');
+      Alert.alert(t('auth.login.google.title'), error.message || t('auth.login.google.configRequired'));
     } finally {
       setLoading(false);
     }
@@ -55,7 +57,7 @@ export default function LoginScreen({ navigation }: any) {
         <View style={styles.form}>
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder={t('auth.login.placeholders.email')}
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -63,7 +65,7 @@ export default function LoginScreen({ navigation }: any) {
           />
           <TextInput
             style={styles.input}
-            placeholder="Password"
+            placeholder={t('auth.login.placeholders.password')}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -75,13 +77,13 @@ export default function LoginScreen({ navigation }: any) {
             disabled={loading}
           >
             <Text style={styles.buttonText}>
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? t('auth.login.signingIn') : t('auth.login.signIn')}
             </Text>
           </TouchableOpacity>
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
+            <Text style={styles.dividerText}>{t('auth.login.or')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
@@ -91,7 +93,7 @@ export default function LoginScreen({ navigation }: any) {
             disabled={loading}
           >
             <Text style={styles.googleButtonText}>
-              Continue with Google
+              {t('auth.login.continueWithGoogle')}
             </Text>
           </TouchableOpacity>
 
@@ -100,7 +102,7 @@ export default function LoginScreen({ navigation }: any) {
             onPress={() => navigation.navigate('Signup')}
           >
             <Text style={styles.linkText}>
-              Don't have an account? <Text style={styles.linkTextBold}>Sign Up</Text>
+              {t('auth.login.noAccount')}{' '}<Text style={styles.linkTextBold}>{t('auth.login.signUp')}</Text>
             </Text>
           </TouchableOpacity>
         </View>
@@ -120,7 +122,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   logoContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -133,7 +135,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     color: COLORS.primary,
-    marginLeft: 12,
+    marginTop: 10,
   },
   tagline: {
     fontSize: 16,

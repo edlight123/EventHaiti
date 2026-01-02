@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../config/brand';
+import { useI18n } from '../../../contexts/I18nContext';
 import { COUNTRIES, CITIES_BY_COUNTRY } from '../../../types/filters';
 import type { EventDraft } from '../CreateEventFlowRefactored';
 
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default function Step2Location({ draft, updateDraft }: Props) {
+  const { t } = useI18n();
   const selectedCountry = (draft as any).country || 'HT';
   const cities = CITIES_BY_COUNTRY[selectedCountry] || [];
 
@@ -25,13 +27,13 @@ export default function Step2Location({ draft, updateDraft }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Where will it happen?</Text>
-      <Text style={styles.subtitle}>Help people find your event</Text>
+      <Text style={styles.title}>{t('organizerCreateEvent.location.title')}</Text>
+      <Text style={styles.subtitle}>{t('organizerCreateEvent.location.subtitle')}</Text>
 
       {/* Country */}
       <View style={styles.formGroup}>
         <Text style={styles.label}>
-          Country <Text style={styles.required}>*</Text>
+          {t('organizerCreateEvent.location.country')} <Text style={styles.required}>*</Text>
         </Text>
         <ScrollView
           horizontal
@@ -63,13 +65,13 @@ export default function Step2Location({ draft, updateDraft }: Props) {
       {/* Venue Name */}
       <View style={styles.formGroup}>
         <Text style={styles.label}>
-          Venue Name <Text style={styles.required}>*</Text>
+          {t('organizerCreateEvent.location.venueName')} <Text style={styles.required}>*</Text>
         </Text>
         <View style={styles.inputContainer}>
           <Ionicons name="business-outline" size={20} color={COLORS.textSecondary} />
           <TextInput
             style={styles.input}
-            placeholder="e.g., Hotel Montana, Parc Historique"
+            placeholder={t('organizerCreateEvent.location.venuePlaceholder')}
             value={draft.venue_name}
             onChangeText={(text) => updateDraft({ venue_name: text })}
           />
@@ -79,7 +81,7 @@ export default function Step2Location({ draft, updateDraft }: Props) {
       {/* City */}
       <View style={styles.formGroup}>
         <Text style={styles.label}>
-          City <Text style={styles.required}>*</Text>
+          {t('organizerCreateEvent.location.city')} <Text style={styles.required}>*</Text>
         </Text>
         <ScrollView
           horizontal
@@ -110,12 +112,12 @@ export default function Step2Location({ draft, updateDraft }: Props) {
 
       {/* Commune */}
       <View style={styles.formGroup}>
-        <Text style={styles.label}>Commune (Optional)</Text>
+        <Text style={styles.label}>{t('organizerCreateEvent.location.communeOptional')}</Text>
         <View style={styles.inputContainer}>
           <Ionicons name="map-outline" size={20} color={COLORS.textSecondary} />
           <TextInput
             style={styles.input}
-            placeholder="e.g., Pétion-Ville, Delmas 33"
+            placeholder={t('organizerCreateEvent.location.communePlaceholder')}
             value={draft.commune}
             onChangeText={(text) => updateDraft({ commune: text })}
           />
@@ -125,13 +127,13 @@ export default function Step2Location({ draft, updateDraft }: Props) {
       {/* Address */}
       <View style={styles.formGroup}>
         <Text style={styles.label}>
-          Street Address <Text style={styles.required}>*</Text>
+          {t('organizerCreateEvent.location.streetAddress')} <Text style={styles.required}>*</Text>
         </Text>
         <View style={styles.inputContainer}>
           <Ionicons name="location-outline" size={20} color={COLORS.textSecondary} />
           <TextInput
             style={styles.input}
-            placeholder="Street address and number"
+            placeholder={t('organizerCreateEvent.location.addressPlaceholder')}
             value={draft.address}
             onChangeText={(text) => updateDraft({ address: text })}
           />
@@ -142,7 +144,7 @@ export default function Step2Location({ draft, updateDraft }: Props) {
       <View style={styles.infoCard}>
         <Ionicons name="information-circle-outline" size={20} color={COLORS.primary} />
         <Text style={styles.infoText}>
-          Provide accurate location details to help attendees find your event easily.
+          {t('organizerCreateEvent.location.infoText')}
         </Text>
       </View>
     </View>

@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getCurrentUser } from '@/lib/auth'
 import { createNotification } from '@/lib/notifications/helpers'
+import { sendPushNotification } from '@/lib/notification-triggers'
 
 const transferRequestSchema = z.object({
   ticketId: z.string().min(1),
@@ -189,6 +190,15 @@ export async function POST(request: NextRequest) {
             `${sender?.full_name || sender?.name || 'Someone'} wants to transfer you a ticket for "${event?.title || 'an event'}".`,
             `/tickets/transfer/${transfer.transfer_token}`,
             { eventId: ticket.event_id, ticketId }
+          )
+
+          // Best-effort push (mobile + web)
+          await sendPushNotification(
+            recipientDoc.id,
+            'Ticket transfer request',
+            `${sender?.full_name || sender?.name || 'Someone'} wants to transfer you a ticket for "${event?.title || 'an event'}".`,
+            '/notifications',
+            { type: 'ticket_transfer', deepLink: 'eventhaiti://notifications', eventId: ticket.event_id, ticketId }
           )
         } catch (notifyError) {
           console.error('Failed to create transfer notification:', notifyError)

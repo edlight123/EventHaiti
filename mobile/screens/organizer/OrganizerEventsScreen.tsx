@@ -8,7 +8,9 @@ import {
   Image,
   RefreshControl,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -17,6 +19,7 @@ import type { RootStackParamList } from '../../navigation/AppNavigator';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 import { COLORS } from '../../config/brand';
 import { useAuth } from '../../contexts/AuthContext';
+import { useI18n } from '../../contexts/I18nContext';
 import { getOrganizerEvents, OrganizerEvent } from '../../lib/api/organizer';
 
 type EventStatus = 'draft' | 'published' | 'sold_out' | 'completed' | 'cancelled';
@@ -24,6 +27,8 @@ type EventStatus = 'draft' | 'published' | 'sold_out' | 'completed' | 'cancelled
 export default function OrganizerEventsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { userProfile } = useAuth();
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const [eventTab, setEventTab] = useState<'upcoming' | 'past'>('upcoming');
   const [allEvents, setAllEvents] = useState<OrganizerEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,25 +65,17 @@ export default function OrganizerEventsScreen() {
   }, [loadEvents]);
 
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
-  // Events are only "past" if they happened before today (yesterday or earlier)
-  // Events happening today or later are "upcoming"
+
   const upcomingEvents = allEvents.filter((e) => {
-    const eventDate = new Date(e.start_datetime);
-    const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-    const isUpcoming = eventDay >= today;
-    // Debug: Log filtering logic
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`Event "${e.title}": eventDay=${eventDay.toDateString()}, today=${today.toDateString()}, isUpcoming=${isUpcoming}`);
-    }
-    return isUpcoming;
+    const cutoff = (e as any).end_datetime || e.start_datetime;
+    if (!cutoff) return false;
+    return new Date(cutoff) > now;
   });
-  
+
   const pastEvents = allEvents.filter((e) => {
-    const eventDate = new Date(e.start_datetime);
-    const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-    return eventDay < today;
+    const cutoff = (e as any).end_datetime || e.start_datetime;
+    if (!cutoff) return false;
+    return new Date(cutoff) <= now;
   });
 
   const events = eventTab === 'upcoming' ? upcomingEvents : pastEvents;
@@ -103,15 +100,15 @@ export default function OrganizerEventsScreen() {
   const getStatusLabel = (status: EventStatus) => {
     switch (status) {
       case 'draft':
-        return 'Draft';
+        return t('organizerEvents.status.draft');
       case 'published':
-        return 'Published';
+        return t('organizerEvents.status.published');
       case 'sold_out':
-        return 'Sold Out';
+        return t('organizerEvents.status.soldOut');
       case 'completed':
-        return 'Completed';
+        return t('organizerEvents.status.completed');
       case 'cancelled':
-        return 'Cancelled';
+        return t('organizerEvents.status.cancelled');
       default:
         return status;
     }
@@ -121,22 +118,27 @@ export default function OrganizerEventsScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading events...</Text>
+        <Text style={styles.loadingText}>{t('organizerEvents.loading')}</Text>
       </View>
     );
   }
 
+  // Match the rest of the app: light background -> dark status bar text
+  // Header padding is safe-area aware.
+
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
+
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Events</Text>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <Text style={styles.headerTitle}>{t('organizerEvents.title')}</Text>
         <TouchableOpacity 
           style={styles.createButton}
           onPress={() => (navigation as any).navigate('CreateEvent')}
         >
-          <Ionicons name="add-circle" size={24} color={COLORS.primary} />
-          <Text style={styles.createButtonText}>Create Event</Text>
+          <Ionicons name="add-circle" size={20} color={COLORS.primary} />
+          <Text style={styles.createButtonText}>{t('organizerEvents.create')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -147,7 +149,7 @@ export default function OrganizerEventsScreen() {
           onPress={() => setEventTab('upcoming')}
         >
           <Text style={[styles.segmentText, eventTab === 'upcoming' && styles.segmentTextActive]}>
-            Upcoming ({upcomingEvents.length})
+            {t('organizerEvents.upcoming')} ({upcomingEvents.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -155,7 +157,7 @@ export default function OrganizerEventsScreen() {
           onPress={() => setEventTab('past')}
         >
           <Text style={[styles.segmentText, eventTab === 'past' && styles.segmentTextActive]}>
-            Past ({pastEvents.length})
+            {t('organizerEvents.past')} ({pastEvents.length})
           </Text>
         </TouchableOpacity>
       </View>
@@ -174,11 +176,13 @@ export default function OrganizerEventsScreen() {
         {events.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="calendar-outline" size={64} color={COLORS.textSecondary} />
-            <Text style={styles.emptyTitle}>No {eventTab} events</Text>
+            <Text style={styles.emptyTitle}>
+              {eventTab === 'upcoming' ? t('organizerEvents.emptyUpcomingTitle') : t('organizerEvents.emptyPastTitle')}
+            </Text>
             <Text style={styles.emptyText}>
               {eventTab === 'upcoming'
-                ? 'Create your first event to get started'
-                : 'Your past events will appear here'}
+                ? t('organizerEvents.emptyUpcomingBody')
+                : t('organizerEvents.emptyPastBody')}
             </Text>
           </View>
         ) : (
@@ -247,14 +251,14 @@ export default function OrganizerEventsScreen() {
                     <View style={styles.ticketInfo}>
                       <Ionicons name="ticket-outline" size={16} color={COLORS.primary} />
                       <Text style={styles.ticketText}>
-                        {event.tickets_sold || 0} / {event.total_tickets || 0} sold
+                        {event.tickets_sold || 0} / {event.total_tickets || 0} {t('common.sold')}
                       </Text>
                     </View>
                     <TouchableOpacity 
                       style={styles.manageButton}
                       onPress={() => navigation.navigate('OrganizerEventManagement', { eventId: event.id })}
                     >
-                      <Text style={styles.manageButtonText}>Manage</Text>
+                      <Text style={styles.manageButtonText}>{t('organizerEvents.manage')}</Text>
                       <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
                     </TouchableOpacity>
                   </View>
@@ -289,7 +293,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 16,
     paddingBottom: 16,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
@@ -304,13 +308,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
   },
   createButtonText: {
     color: COLORS.primary,
     fontWeight: '600',
+    fontSize: 14,
     marginLeft: 4,
   },
   segmentedControl: {

@@ -8,16 +8,21 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
+  StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../config/brand';
 import { useAuth } from '../../contexts/AuthContext';
+import { useI18n } from '../../contexts/I18nContext';
 import { getOrganizerEvents, OrganizerEvent, getTodayEvents, TodayEvent } from '../../lib/api/organizer';
 
 export default function OrganizerScanScreen() {
   const navigation = useNavigation<any>();
   const { userProfile } = useAuth();
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const [isScanning, setIsScanning] = useState(false);
   const [todayEvents, setTodayEvents] = useState<TodayEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<TodayEvent | null>(null);
@@ -49,9 +54,9 @@ export default function OrganizerScanScreen() {
   const handleStartScanning = () => {
     if (!selectedEvent) {
       Alert.alert(
-        'No Event Selected',
-        'Please select an event to check in attendees.',
-        [{ text: 'OK' }]
+        t('organizerScan.noEventTitle'),
+        t('organizerScan.noEventBody'),
+        [{ text: t('common.ok') }]
       );
       return;
     }
@@ -63,17 +68,19 @@ export default function OrganizerScanScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading events...</Text>
+        <Text style={styles.loadingText}>{t('organizerScan.loading')}</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Scan Tickets</Text>
-        <Text style={styles.headerSubtitle}>Check in attendees at your event</Text>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <Text style={styles.headerTitle}>{t('organizerScan.title')}</Text>
+        <Text style={styles.headerSubtitle}>{t('organizerScan.subtitle')}</Text>
       </View>
 
       {!isScanning ? (
@@ -81,22 +88,22 @@ export default function OrganizerScanScreen() {
           {/* Instructions */}
           <View style={styles.instructionsCard}>
             <Ionicons name="information-circle-outline" size={48} color={COLORS.primary} />
-            <Text style={styles.instructionsTitle}>How to scan tickets</Text>
+            <Text style={styles.instructionsTitle}>{t('organizerScan.howTitle')}</Text>
             <Text style={styles.instructionsText}>
-              1. Select the event you're checking in for{'\n'}
-              2. Tap "Start Scanning" below{'\n'}
-              3. Point your camera at the attendee's QR code{'\n'}
-              4. The ticket will be validated automatically
+              1. {t('organizerScan.howStep1')}{'\n'}
+              2. {t('organizerScan.howStep2')}{'\n'}
+              3. {t('organizerScan.howStep3')}{'\n'}
+              4. {t('organizerScan.howStep4')}
             </Text>
           </View>
 
           {/* Event Selector */}
           <View style={styles.eventSelector}>
-            <Text style={styles.selectorLabel}>Select Event</Text>
+            <Text style={styles.selectorLabel}>{t('organizerScan.selectEvent')}</Text>
             {todayEvents.length === 0 ? (
               <View style={styles.noEventsCard}>
                 <Ionicons name="calendar-outline" size={32} color={COLORS.textSecondary} />
-                <Text style={styles.noEventsText}>No events happening today</Text>
+                <Text style={styles.noEventsText}>{t('organizerScan.noEventsToday')}</Text>
               </View>
             ) : (
               <TouchableOpacity
@@ -115,7 +122,7 @@ export default function OrganizerScanScreen() {
                       </Text>
                     </View>
                   ) : (
-                    <Text style={styles.selectorPlaceholder}>Select an event...</Text>
+                    <Text style={styles.selectorPlaceholder}>{t('organizerScan.selectEventPlaceholder')}</Text>
                   )}
                   <Ionicons name="chevron-down" size={24} color={COLORS.textSecondary} />
                 </View>
@@ -128,11 +135,11 @@ export default function OrganizerScanScreen() {
             <View style={styles.statsRow}>
               <View style={styles.statCard}>
                 <Text style={styles.statValue}>{selectedEvent.ticketsSold}</Text>
-                <Text style={styles.statLabel}>Total Tickets</Text>
+                <Text style={styles.statLabel}>{t('organizerScan.totalTickets')}</Text>
               </View>
               <View style={styles.statCard}>
                 <Text style={styles.statValue}>{selectedEvent.ticketsCheckedIn}</Text>
-                <Text style={styles.statLabel}>Checked In</Text>
+                <Text style={styles.statLabel}>{t('organizerScan.checkedIn')}</Text>
               </View>
             </View>
           )}
@@ -144,7 +151,7 @@ export default function OrganizerScanScreen() {
             disabled={!selectedEvent}
           >
             <Ionicons name="qr-code-outline" size={32} color={COLORS.white} />
-            <Text style={styles.startButtonText}>Start Scanning</Text>
+            <Text style={styles.startButtonText}>{t('organizerScan.startScanning')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -203,7 +210,7 @@ export default function OrganizerScanScreen() {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Event</Text>
+              <Text style={styles.modalTitle}>{t('organizerScan.selectEvent')}</Text>
               <TouchableOpacity onPress={() => setShowEventSelector(false)}>
                 <Ionicons name="close" size={24} color={COLORS.text} />
               </TouchableOpacity>
@@ -265,7 +272,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 16,
     backgroundColor: COLORS.primary,
   },
   headerTitle: {

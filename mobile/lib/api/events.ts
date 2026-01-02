@@ -19,6 +19,7 @@ export interface CreateEventData {
   category: string;
   banner_image_url: string;
   venue_name: string;
+  country?: string;
   city: string;
   commune: string;
   address: string;
@@ -80,6 +81,7 @@ export async function createEvent(
       cover_image_url: coverImageUrl,
       image_url: coverImageUrl,
       venue_name: eventData.venue_name,
+      country: eventData.country || 'HT',
       city: eventData.city,
       commune: eventData.commune || '',
       address: eventData.address,
@@ -188,6 +190,7 @@ export async function updateEvent(
       cover_image_url: coverImageUrl,
       image_url: coverImageUrl,
       venue_name: eventData.venue_name,
+      country: eventData.country || 'HT',
       city: eventData.city,
       commune: eventData.commune || '',
       address: eventData.address,

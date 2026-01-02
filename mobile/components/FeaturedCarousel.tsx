@@ -2,9 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Image, TouchableOpacity, Dimensions, StyleSheet, ScrollView, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Calendar, MapPin, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react-native';
-import { format } from 'date-fns';
 import { COLORS } from '../config/brand';
 import PaginationDots from './PaginationDots';
+import { useI18n } from '../contexts/I18nContext';
+import { getCategoryLabel } from '../lib/categories';
+
+import { formatDateForLanguage } from '../lib/dates';
 
 interface Event {
   id: string;
@@ -27,6 +30,7 @@ interface FeaturedCarouselProps {
 const { width } = Dimensions.get('window');
 
 export default function FeaturedCarousel({ events, onEventPress }: FeaturedCarouselProps) {
+  const { t, language } = useI18n();
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
@@ -97,10 +101,10 @@ export default function FeaturedCarousel({ events, onEventPress }: FeaturedCarou
               <View style={styles.badges}>
                 <View style={styles.featuredBadge}>
                   <Sparkles size={12} color="white" />
-                  <Text style={styles.featuredText}>Featured</Text>
+                  <Text style={styles.featuredText}>{t('home.featuredBadge')}</Text>
                 </View>
                 <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryText}>{event.category}</Text>
+                  <Text style={styles.categoryText}>{getCategoryLabel(t, event.category)}</Text>
                 </View>
               </View>
 
@@ -114,7 +118,7 @@ export default function FeaturedCarousel({ events, onEventPress }: FeaturedCarou
                 <View style={styles.detailRow}>
                   <Calendar size={16} color={COLORS.primaryLight} />
                   <Text style={styles.detailText}>
-                    {format(new Date(event.start_datetime), 'MMM d, yyyy')}
+                    {formatDateForLanguage(new Date(event.start_datetime), 'MMM d, yyyy', language)}
                   </Text>
                 </View>
                 <Text style={styles.separator}>•</Text>
@@ -128,10 +132,10 @@ export default function FeaturedCarousel({ events, onEventPress }: FeaturedCarou
 
               <View style={styles.actions}>
                 <TouchableOpacity style={styles.primaryButton} onPress={() => onEventPress(event.id)}>
-                  <Text style={styles.primaryButtonText}>Get Tickets</Text>
+                  <Text style={styles.primaryButtonText}>{t('home.getTickets')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.secondaryButton} onPress={() => onEventPress(event.id)}>
-                  <Text style={styles.secondaryButtonText}>Details</Text>
+                  <Text style={styles.secondaryButtonText}>{t('common.details')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

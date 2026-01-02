@@ -1,20 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   View,
   Text,
   ScrollView,
   StyleSheet,
   RefreshControl,
-  SafeAreaView,
   TouchableOpacity,
   Platform,
   StatusBar,
   Share,
   Image,
 } from 'react-native';
-import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Easing } from 'react-native';
+import { collection, query, where, getDocs, limit, Timestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { useI18n } from '../contexts/I18nContext';
 import { COLORS, BRAND } from '../config/brand';
 import { Bell } from 'lucide-react-native';
 import FeaturedCarousel from '../components/FeaturedCarousel';
@@ -26,6 +29,8 @@ import AllEventsPreview from '../components/AllEventsPreview';
 
 export default function HomeScreen({ navigation }: any) {
   const { user, userProfile } = useAuth();
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const [events, setEvents] = useState<any[]>([]);
   const [featuredEvents, setFeaturedEvents] = useState<any[]>([]);
   const [trendingEvents, setTrendingEvents] = useState<any[]>([]);
@@ -34,13 +39,18 @@ export default function HomeScreen({ navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
   const scrollViewRef = React.useRef<ScrollView>(null);
 
+  const headerTranslateY = useRef(new Animated.Value(0)).current;
+  const headerSpacerHeight = useRef(new Animated.Value(0)).current;
+  const lastScrollY = useRef(0);
+  const headerHidden = useRef(false);
+  const headerHeightRef = useRef(0);
+
   const fetchEvents = async () => {
     try {
       // Get all published events
       const q = query(
         collection(db, 'events'),
         where('is_published', '==', true),
-        orderBy('start_datetime', 'asc'),
         limit(50)
       );
 
@@ -61,27 +71,53 @@ export default function HomeScreen({ navigation }: any) {
           }
         }
 
+        let endDate = null;
+        if (data.end_datetime) {
+          if (typeof data.end_datetime.toDate === 'function') {
+            endDate = data.end_datetime.toDate();
+          } else if (data.end_datetime.seconds) {
+            endDate = new Date(data.end_datetime.seconds * 1000);
+          } else {
+            endDate = new Date(data.end_datetime);
+          }
+        }
+
         return {
           id: doc.id,
           ...data,
           start_datetime: startDate,
+          end_datetime: endDate,
         };
+      });
+
+      // Sort client-side to avoid requiring a composite Firestore index.
+      eventsData.sort((a: any, b: any) => {
+        const aTime = a?.start_datetime ? new Date(a.start_datetime).getTime() : Number.POSITIVE_INFINITY;
+        const bTime = b?.start_datetime ? new Date(b.start_datetime).getTime() : Number.POSITIVE_INFINITY;
+        return aTime - bTime;
       });
 
       // Filter out past events
       const now = new Date();
-      const futureEvents: any[] = eventsData.filter((e) => e.start_datetime >= now);
+      const futureEvents: any[] = eventsData.filter((e) => {
+        const start = e.start_datetime ? new Date(e.start_datetime) : null;
+        const end = e.end_datetime ? new Date(e.end_datetime) : null;
+        const cutoff = end || start;
+        if (!cutoff) return false;
+        return cutoff >= now;
+      });
 
-      setEvents(futureEvents);
+      const effectiveEvents = futureEvents.length > 0 ? futureEvents : eventsData;
+      setEvents(effectiveEvents);
 
       // Featured events (top 5 by tickets sold)
-      const featured = [...futureEvents]
+      const featured = [...effectiveEvents]
         .sort((a: any, b: any) => (b.tickets_sold || 0) - (a.tickets_sold || 0))
         .slice(0, 5);
       setFeaturedEvents(featured);
 
       // Trending events (tickets_sold > 10)
-      const trending = futureEvents
+      const trending = effectiveEvents
         .filter((e) => (e.tickets_sold || 0) > 10)
         .slice(0, 6);
       setTrendingEvents(trending);
@@ -89,7 +125,7 @@ export default function HomeScreen({ navigation }: any) {
       // This week events
       const oneWeekFromNow = new Date(now);
       oneWeekFromNow.setDate(now.getDate() + 7);
-      const thisWeek = futureEvents
+      const thisWeek = effectiveEvents
         .filter((e) => e.start_datetime <= oneWeekFromNow)
         .slice(0, 6);
       setThisWeekEvents(thisWeek);
@@ -136,6 +172,47 @@ export default function HomeScreen({ navigation }: any) {
     fetchEvents();
   };
 
+  const animateHeader = (shouldHide: boolean) => {
+    const headerHeight = headerHeightRef.current;
+    if (!headerHeight) return;
+
+    if (shouldHide && headerHidden.current) return;
+    if (!shouldHide && !headerHidden.current) return;
+
+    headerHidden.current = shouldHide;
+
+    Animated.parallel([
+      Animated.spring(headerTranslateY, {
+        toValue: shouldHide ? -headerHeight : 0,
+        useNativeDriver: true,
+        tension: 140,
+        friction: 22,
+      }),
+      Animated.timing(headerSpacerHeight, {
+        toValue: shouldHide ? 0 : headerHeight,
+        duration: 260,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+    ]).start();
+  };
+
+  const handleScroll = (e: any) => {
+    const rawY = e?.nativeEvent?.contentOffset?.y ?? 0;
+    const currentY = Math.max(0, rawY);
+    const delta = currentY - lastScrollY.current;
+    lastScrollY.current = currentY;
+
+    // Ignore jitter and don't hide immediately at the top.
+    if (Math.abs(delta) < 8) return;
+
+    if (delta > 0 && currentY > 16) {
+      animateHeader(true);
+    } else if (delta < 0) {
+      animateHeader(false);
+    }
+  };
+
   const handleCategoryPress = (category: string) => {
     console.log('[HomeScreen] Category pressed:', category);
     navigation.navigate('Discover', { category, timestamp: Date.now() });
@@ -154,11 +231,26 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
       {/* Compact Header */}
-      <View style={styles.header}>
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            transform: [{ translateY: headerTranslateY }],
+            paddingTop: insets.top + 8,
+          },
+        ]}
+        onLayout={(e) => {
+          const h = e?.nativeEvent?.layout?.height ?? 0;
+          if (!h) return;
+          if (headerHeightRef.current === h) return;
+          headerHeightRef.current = h;
+          headerSpacerHeight.setValue(h);
+        }}
+      >
         <View style={styles.headerLeft}>
           <Image
             source={require('../assets/event_haiti_logo_white.png')}
@@ -176,17 +268,20 @@ export default function HomeScreen({ navigation }: any) {
             <Bell size={24} color="white" />
           </TouchableOpacity>
         </View>
-      </View>
+      </Animated.View>
 
       <ScrollView
         ref={scrollViewRef}
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={handleScroll}
       >
+        <Animated.View style={{ height: headerSpacerHeight }} />
         {loading ? (
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading amazing events...</Text>
+            <Text style={styles.loadingText}>{t('home.loading')}</Text>
           </View>
         ) : (
           <>
@@ -204,17 +299,9 @@ export default function HomeScreen({ navigation }: any) {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <View>
-                  <Text style={styles.sectionTitle}>
-                    <Text style={styles.sectionTitleBase}>Browse by Ca</Text>
-                    <Text style={styles.sectionTitleGradient1}>t</Text>
-                    <Text style={styles.sectionTitleGradient2}>e</Text>
-                    <Text style={styles.sectionTitleGradient3}>g</Text>
-                    <Text style={styles.sectionTitleGradient4}>o</Text>
-                    <Text style={styles.sectionTitleGradient5}>r</Text>
-                    <Text style={styles.sectionTitleGradient6}>y</Text>
-                  </Text>
+                  <Text style={styles.sectionTitleBase}>{t('home.browseTitle')}</Text>
                 </View>
-                <Text style={styles.sectionSubtitle}>Find events that interest you</Text>
+                <Text style={styles.sectionSubtitle}>{t('home.browseSubtitle')}</Text>
               </View>
               <View style={styles.categoryContainer}>
                 <CategoryGrid onCategoryPress={handleCategoryPress} />
@@ -257,8 +344,8 @@ export default function HomeScreen({ navigation }: any) {
             {events.length === 0 && (
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>📭</Text>
-                <Text style={styles.emptyTitle}>No Events Available</Text>
-                <Text style={styles.emptySubtitle}>Check back soon for exciting events!</Text>
+                <Text style={styles.emptyTitle}>{t('home.emptyTitle')}</Text>
+                <Text style={styles.emptySubtitle}>{t('home.emptySubtitle')}</Text>
               </View>
             )}
 
@@ -267,14 +354,14 @@ export default function HomeScreen({ navigation }: any) {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.background,
   },
   header: {
     backgroundColor: COLORS.primary,
@@ -282,9 +369,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    height: 60,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 8 : 8,
     paddingBottom: 8,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

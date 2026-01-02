@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { useI18n } from '../contexts/I18nContext';
+import { getCategoryLabel } from '../lib/categories';
 
 export const CATEGORIES = [
   'Music',
@@ -43,6 +45,7 @@ const COLORS = {
 };
 
 export function CategoryChips({ selectedCategories, onCategoryToggle }: CategoryChipsProps) {
+  const { t } = useI18n();
   return (
     <View style={styles.container}>
       <ScrollView 
@@ -67,7 +70,7 @@ export function CategoryChips({ selectedCategories, onCategoryToggle }: Category
                 styles.chipText,
                 isActive && styles.chipTextActive
               ]}>
-                {category}
+                {getCategoryLabel(t, category)}
               </Text>
             </TouchableOpacity>
           );

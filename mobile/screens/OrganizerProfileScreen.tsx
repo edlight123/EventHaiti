@@ -13,7 +13,7 @@ import {
   Platform,
   ImageBackground,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Shield,
   Calendar,
@@ -31,6 +31,8 @@ import {
 import { doc, getDoc, collection, query, where, getDocs, addDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { useI18n } from '../contexts/I18nContext';
+import { getCategoryLabel } from '../lib/categories';
 import { COLORS } from '../config/brand';
 import { format } from 'date-fns';
 
@@ -45,8 +47,10 @@ interface SocialLink {
 }
 
 export default function OrganizerProfileScreen({ route, navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { organizerId } = route.params;
   const { user } = useAuth();
+  const { t } = useI18n();
   const scrollViewRef = React.useRef<ScrollView>(null);
   
   const [organizer, setOrganizer] = useState<any>(null);
@@ -110,12 +114,14 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
         const eventData = {
           id: doc.id,
           ...data,
-          start_datetime: data.start_datetime?.toDate ? data.start_datetime.toDate() : new Date(data.start_datetime)
+          start_datetime: data.start_datetime?.toDate ? data.start_datetime.toDate() : new Date(data.start_datetime),
+          end_datetime: data.end_datetime?.toDate ? data.end_datetime.toDate() : (data.end_datetime ? new Date(data.end_datetime) : null),
         };
 
         totalSold += data.tickets_sold || 0;
 
-        if (eventData.start_datetime >= now) {
+        const cutoff = eventData.end_datetime || eventData.start_datetime;
+        if (cutoff && cutoff >= now) {
           upcoming.push(eventData);
         } else {
           past.push(eventData);
@@ -299,7 +305,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
 
       {event.category && (
         <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText}>{event.category}</Text>
+          <Text style={styles.categoryText}>{getCategoryLabel(t, event.category)}</Text>
         </View>
       )}
 
@@ -327,7 +333,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               </Text>
             ) : (
               <View style={styles.freeBadge}>
-                <Text style={styles.freeBadgeText}>FREE</Text>
+                <Text style={styles.freeBadgeText}>{t('common.free')}</Text>
               </View>
             )}
           </View>
@@ -352,7 +358,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading organizer profile...</Text>
+          <Text style={styles.loadingText}>{t('organizerProfile.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -362,7 +368,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.errorText}>Organizer not found</Text>
+          <Text style={styles.errorText}>{t('organizerProfile.notFound')}</Text>
           <TouchableOpacity
             style={styles.retryButton}
             onPress={() => {
@@ -370,7 +376,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               fetchOrganizerProfile();
             }}
           >
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -404,7 +410,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
 
           {/* Circular Back Button */}
           <TouchableOpacity
-            style={styles.backButton}
+            style={[styles.backButton, { top: insets.top + 12 }]}
             onPress={() => navigation.goBack()}
           >
             <ChevronLeft size={24} color="#FFF" />
@@ -412,16 +418,16 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
 
           {/* Small Follow Button - Top Right */}
           <TouchableOpacity
-            style={[styles.followButtonSmall, isFollowing && styles.followingButtonSmall]}
+            style={[styles.followButtonSmall, { top: insets.top + 24 }, isFollowing && styles.followingButtonSmall]}
             onPress={handleFollow}
           >
             <Text style={[styles.followButtonSmallText, isFollowing && styles.followingButtonSmallText]}>
-              {isFollowing ? 'Following' : '+ Follow'}
+              {isFollowing ? t('organizerProfile.following') : t('organizerProfile.follow')}
             </Text>
           </TouchableOpacity>
 
           {/* Hero Content - Bottom Aligned */}
-          <View style={styles.heroContent}>
+          <View style={[styles.heroContent, { paddingTop: insets.top + 16 }]}>
             {/* Avatar */}
             <View style={styles.avatar}>
               {organizer.avatarUrl ? (
@@ -441,7 +447,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               {organizer.is_verified && (
                 <View style={styles.verifiedBadge}>
                   <Shield size={10} color="#FFF" fill="#FFF" />
-                  <Text style={styles.verifiedText}>Verified</Text>
+                  <Text style={styles.verifiedText}>{t('organizerProfile.verified')}</Text>
                 </View>
               )}
             </View>
@@ -456,17 +462,17 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               <View style={styles.heroStatItem}>
                 <Calendar size={16} color="rgba(255,255,255,0.9)" />
                 <Text style={styles.heroStatValue}>{stats.totalEvents || 0}</Text>
-                <Text style={styles.heroStatLabel}>Events</Text>
+                <Text style={styles.heroStatLabel}>{t('organizerProfile.stats.events')}</Text>
               </View>
               <View style={styles.heroStatItem}>
                 <Users size={16} color="rgba(255,255,255,0.9)" />
                 <Text style={styles.heroStatValue}>{stats.followerCount || 0}</Text>
-                <Text style={styles.heroStatLabel}>Followers</Text>
+                <Text style={styles.heroStatLabel}>{t('organizerProfile.stats.followers')}</Text>
               </View>
               <View style={styles.heroStatItem}>
                 <Star size={16} color="rgba(255,255,255,0.9)" />
                 <Text style={styles.heroStatValue}>{stats.totalTicketsSold.toLocaleString()}</Text>
-                <Text style={styles.heroStatLabel}>Sold</Text>
+                <Text style={styles.heroStatLabel}>{t('organizerProfile.stats.sold')}</Text>
               </View>
             </View>
 
@@ -477,7 +483,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
                 onPress={scrollToBottom}
               >
                 <MessageCircle size={16} color="#FFF" />
-                <Text style={styles.contactButtonHeroText}>Contact & Social</Text>
+                <Text style={styles.contactButtonHeroText}>{t('organizerProfile.contactSocial')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -487,9 +493,14 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
 
           {/* Upcoming Events */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Upcoming Events</Text>
+            <Text style={styles.sectionTitle}>{t('organizerProfile.upcomingTitle')}</Text>
             <Text style={styles.sectionSubtitle}>
-              {upcomingEvents.length} event{upcomingEvents.length !== 1 ? 's' : ''} coming soon
+              {upcomingEvents.length}{' '}
+              {t(
+                upcomingEvents.length === 1
+                  ? 'organizerProfile.upcomingCountSingular'
+                  : 'organizerProfile.upcomingCountPlural'
+              )}
             </Text>
 
             {upcomingEvents.length > 0 ? (
@@ -499,11 +510,11 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
             ) : (
               <View style={styles.emptyState}>
                 <Calendar size={48} color={COLORS.textSecondary} />
-                <Text style={styles.emptyStateTitle}>No Upcoming Events</Text>
+                <Text style={styles.emptyStateTitle}>{t('organizerProfile.noUpcomingTitle')}</Text>
                 <Text style={styles.emptyStateText}>
                   {isFollowing 
-                    ? "You'll be notified when new events are announced."
-                    : "Follow to be notified when new events are announced."}
+                    ? t('organizerProfile.noUpcomingBodyFollowing')
+                    : t('organizerProfile.noUpcomingBodyNotFollowing')}
                 </Text>
               </View>
             )}
@@ -517,9 +528,14 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
                 onPress={() => setShowPastEvents(!showPastEvents)}
               >
                 <View>
-                  <Text style={styles.sectionTitle}>Past Events</Text>
+                  <Text style={styles.sectionTitle}>{t('organizerProfile.pastTitle')}</Text>
                   <Text style={styles.sectionSubtitle}>
-                    {pastEvents.length} event{pastEvents.length !== 1 ? 's' : ''} organized
+                    {pastEvents.length}{' '}
+                    {t(
+                      pastEvents.length === 1
+                        ? 'organizerProfile.pastCountSingular'
+                        : 'organizerProfile.pastCountPlural'
+                    )}
                   </Text>
                 </View>
                 {showPastEvents ? (
@@ -539,7 +555,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
 
           {/* About Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>About</Text>
+            <Text style={styles.sectionTitle}>{t('organizerProfile.aboutTitle')}</Text>
             
             {organizer.description && (
               <Text style={styles.aboutText}>{organizer.description}</Text>
@@ -549,7 +565,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               {organizer.city && organizer.country && (
                 <View style={styles.aboutRow}>
                   <MapPin size={18} color={COLORS.textSecondary} />
-                  <Text style={styles.aboutLabel}>Location:</Text>
+                  <Text style={styles.aboutLabel}>{t('organizerProfile.locationLabel')}</Text>
                   <Text style={styles.aboutValue}>
                     {organizer.city}, {organizer.country}
                   </Text>
@@ -559,7 +575,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               {organizer.languages && organizer.languages.length > 0 && (
                 <View style={styles.aboutRow}>
                   <Globe size={18} color={COLORS.textSecondary} />
-                  <Text style={styles.aboutLabel}>Languages:</Text>
+                  <Text style={styles.aboutLabel}>{t('organizerProfile.languagesLabel')}</Text>
                   <Text style={styles.aboutValue}>
                     {organizer.languages.join(', ')}
                   </Text>
@@ -569,7 +585,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
               {hostingSince && (
                 <View style={styles.aboutRow}>
                   <Calendar size={18} color={COLORS.textSecondary} />
-                  <Text style={styles.aboutLabel}>Hosting events since:</Text>
+                  <Text style={styles.aboutLabel}>{t('organizerProfile.hostingSinceLabel')}</Text>
                   <Text style={styles.aboutValue}>{hostingSince}</Text>
                 </View>
               )}
@@ -579,7 +595,7 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
           {/* Social & Contact Section */}
           {socialLinks.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Connect</Text>
+              <Text style={styles.sectionTitle}>{t('organizerProfile.connectTitle')}</Text>
               <View style={styles.socialLinks}>
                 {socialLinks.map((link, idx) => (
                   <TouchableOpacity
@@ -596,11 +612,11 @@ export default function OrganizerProfileScreen({ route, navigation }: any) {
 
           {/* Reviews Placeholder */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Reviews</Text>
+            <Text style={styles.sectionTitle}>{t('organizerProfile.reviewsTitle')}</Text>
             <View style={styles.reviewsPlaceholder}>
               <Star size={40} color={COLORS.textSecondary} />
               <Text style={styles.reviewsPlaceholderText}>
-                Reviews are coming soon to Event Haiti.
+                {t('organizerProfile.reviewsComingSoon')}
               </Text>
             </View>
           </View>
@@ -670,7 +686,7 @@ const styles = StyleSheet.create({
   },
   followButtonSmall: {
     position: 'absolute',
-    top: 68,
+    top: 24,
     right: 16,
     height: 40,
     paddingHorizontal: 16,
@@ -694,7 +710,7 @@ const styles = StyleSheet.create({
   },
   heroContent: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 16,
     paddingBottom: 6,
   },
   avatar: {

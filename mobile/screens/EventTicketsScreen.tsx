@@ -17,6 +17,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { LinearGradient } from 'expo-linear-gradient';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { useI18n } from '../contexts/I18nContext';
 import { COLORS } from '../config/brand';
 import { ArrowLeft } from 'lucide-react-native';
 import TicketPassCard from '../components/TicketPassCard';
@@ -28,6 +29,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export default function EventTicketsScreen({ route, navigation }: any) {
   const { eventId } = route.params;
   const { user } = useAuth();
+  const { t } = useI18n();
   const [event, setEvent] = useState<any>(null);
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +128,7 @@ export default function EventTicketsScreen({ route, navigation }: any) {
           </TouchableOpacity>
         </View>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No tickets found for this event</Text>
+          <Text style={styles.emptyText}>{t('eventTickets.noneFound')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -201,7 +203,7 @@ export default function EventTicketsScreen({ route, navigation }: any) {
         <View style={styles.eventInfoSection}>
           <Text style={styles.eventTitle}>{event.title}</Text>
           <Text style={styles.currentTicketIndicator}>
-            Ticket {currentIndex + 1} of {tickets.length}
+            {t('tickets.ticketSingular')} {currentIndex + 1} {t('common.of')} {tickets.length}
           </Text>
         </View>
 
@@ -242,7 +244,7 @@ export default function EventTicketsScreen({ route, navigation }: any) {
           visible={qrModalVisible}
           onClose={() => setQrModalVisible(false)}
           ticketId={selectedTicket.id}
-          ticketNumber={`Ticket #${tickets.indexOf(selectedTicket) + 1}`}
+          ticketNumber={`${t('tickets.ticketSingular')} #${tickets.indexOf(selectedTicket) + 1}`}
         />
       )}
 

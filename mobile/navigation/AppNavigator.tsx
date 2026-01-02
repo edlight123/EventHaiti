@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import { AppState, Alert } from 'react-native';
 import * as ExpoLinking from 'expo-linking';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -9,6 +10,8 @@ import { useAppMode } from '../contexts/AppModeContext';
 import { COLORS } from '../config/brand';
 import { getVerificationRequest } from '../lib/verification';
 import { getPendingInvite } from '../lib/pendingInvite';
+import { clearPendingPayment, getPendingPayment } from '../lib/pendingPayment';
+import { addPushNotificationListeners, registerForPushNotificationsIfPossible } from '../lib/pushNotifications';
 
 // Auth Screens
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -27,6 +30,7 @@ import OrganizerEventsScreen from '../screens/organizer/OrganizerEventsScreen';
 import OrganizerScanScreen from '../screens/organizer/OrganizerScanScreen';
 import OrganizerEventManagementScreen from '../screens/organizer/OrganizerEventManagementScreen';
 import OrganizerEventEarningsScreen from '../screens/organizer/OrganizerEventEarningsScreen';
+import OrganizerEventStaffScreen from '../screens/organizer/OrganizerEventStaffScreen';
 import CreateEventFlowRefactored from '../screens/organizer/CreateEventFlowRefactored';
 import TicketScannerScreen from '../screens/organizer/TicketScannerScreen';
 import EventAttendeesScreen from '../screens/organizer/EventAttendeesScreen';
@@ -45,6 +49,8 @@ import EventTicketsScreen from '../screens/EventTicketsScreen';
 import TicketDetailScreen from '../screens/TicketDetailScreen';
 import OrganizerProfileScreen from '../screens/OrganizerProfileScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
+import PaymentWebViewScreen from '../screens/PaymentWebViewScreen';
+import { useI18n } from '../contexts/I18nContext';
 
 // Verification Screens
 import OrganizerVerificationScreen from '../screens/verification/OrganizerVerificationScreen';
@@ -56,6 +62,7 @@ export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
   InviteRedeem: { eventId?: string; token?: string };
+  PaymentWebView: { url: string; title?: string; authToken?: string | null; eventId?: string };
   EventDetail: { eventId: string };
   EventTickets: { eventId: string };
   TicketDetail: { ticketId: string };
@@ -63,6 +70,7 @@ export type RootStackParamList = {
   Notifications: { userId: string };
   OrganizerEventManagement: { eventId: string };
   OrganizerEventEarnings: { eventId: string };
+  OrganizerEventStaff: { eventId: string };
   OrganizerVerification: undefined;
   OrganizerInfoForm: { onComplete?: () => void };
   GovernmentIDUpload: { onComplete?: () => void };
@@ -116,6 +124,7 @@ function AuthNavigator() {
 }
 
 function AttendeeTabNavigator() {
+  const { t } = useI18n();
   return (
     <AttendeeTab.Navigator
       screenOptions={({ route }) => ({
@@ -141,16 +150,17 @@ function AttendeeTabNavigator() {
         headerShown: false,
       })}
     >
-      <AttendeeTab.Screen name="Home" component={HomeScreen} />
-      <AttendeeTab.Screen name="Discover" component={DiscoverScreen} />
-      <AttendeeTab.Screen name="Favorites" component={FavoritesScreen} />
-      <AttendeeTab.Screen name="Tickets" component={TicketsScreen} />
-      <AttendeeTab.Screen name="Profile" component={ProfileScreen} />
+      <AttendeeTab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: t('tabs.home') }} />
+      <AttendeeTab.Screen name="Discover" component={DiscoverScreen} options={{ tabBarLabel: t('tabs.discover') }} />
+      <AttendeeTab.Screen name="Favorites" component={FavoritesScreen} options={{ tabBarLabel: t('tabs.favorites') }} />
+      <AttendeeTab.Screen name="Tickets" component={TicketsScreen} options={{ tabBarLabel: t('tabs.tickets') }} />
+      <AttendeeTab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: t('tabs.profile') }} />
     </AttendeeTab.Navigator>
   );
 }
 
 function OrganizerTabNavigator() {
+  const { t } = useI18n();
   return (
     <OrganizerTab.Navigator
       screenOptions={({ route }) => ({
@@ -174,19 +184,20 @@ function OrganizerTabNavigator() {
         headerShown: false,
       })}
     >
-      <OrganizerTab.Screen name="Dashboard" component={OrganizerDashboardScreen} />
+      <OrganizerTab.Screen name="Dashboard" component={OrganizerDashboardScreen} options={{ tabBarLabel: t('tabs.dashboard') }} />
       <OrganizerTab.Screen 
         name="MyEvents" 
         component={OrganizerEventsScreen}
-        options={{ title: 'My Events' }}
+        options={{ title: t('tabs.myEvents'), tabBarLabel: t('tabs.myEvents') }}
       />
-      <OrganizerTab.Screen name="Scan" component={OrganizerScanScreen} />
-      <OrganizerTab.Screen name="Profile" component={ProfileScreen} />
+      <OrganizerTab.Screen name="Scan" component={OrganizerScanScreen} options={{ tabBarLabel: t('tabs.scan') }} />
+      <OrganizerTab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: t('tabs.profile') }} />
     </OrganizerTab.Navigator>
   );
 }
 
 function StaffTabNavigator() {
+  const { t } = useI18n();
   return (
     <StaffTab.Navigator
       screenOptions={({ route }) => ({
@@ -208,9 +219,9 @@ function StaffTabNavigator() {
         headerShown: false,
       })}
     >
-      <StaffTab.Screen name="Events" component={StaffEventsScreen} />
-      <StaffTab.Screen name="Scan" component={StaffScanScreen} />
-      <StaffTab.Screen name="Profile" component={ProfileScreen} />
+      <StaffTab.Screen name="Events" component={StaffEventsScreen} options={{ tabBarLabel: t('tabs.events') }} />
+      <StaffTab.Screen name="Scan" component={StaffScanScreen} options={{ tabBarLabel: t('tabs.scan') }} />
+      <StaffTab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: t('tabs.profile') }} />
     </StaffTab.Navigator>
   );
 }
@@ -218,8 +229,22 @@ function StaffTabNavigator() {
 export default function AppNavigator() {
   const { user, loading, userProfile } = useAuth();
   const { mode, isLoading: modeLoading } = useAppMode();
+  const { t } = useI18n();
   const [isVerified, setIsVerified] = useState(false);
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
+  const didApplyModeResetRef = useRef(false);
+
+  // Handle notification taps (deep links / URLs).
+  useEffect(() => {
+    const unsubscribe = addPushNotificationListeners((url) => {
+      try {
+        ExpoLinking.openURL(url);
+      } catch (e) {
+        console.warn('Failed to open notification URL', e);
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     checkVerificationStatus();
@@ -242,6 +267,73 @@ export default function AppNavigator() {
     maybeResumeInvite();
   }, [user, navigationRef]);
 
+  // Register for push notifications once user is signed in.
+  useEffect(() => {
+    if (!user?.uid) return;
+    registerForPushNotificationsIfPossible().catch((e) => console.warn('Push registration failed', e));
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let lastPromptAt = 0;
+    const maybePromptPendingPayment = async () => {
+      const now = Date.now();
+      // Debounce prompts so we don't annoy users.
+      if (now - lastPromptAt < 10_000) return;
+      lastPromptAt = now;
+
+      const pending = await getPendingPayment().catch(() => null);
+      if (!pending?.url) return;
+
+      Alert.alert(t('screens.payment.pendingTitle'), t('screens.payment.pendingBody'), [
+        {
+          text: t('screens.payment.continue'),
+          onPress: () => {
+            navigationRef.navigate('PaymentWebView', {
+              url: pending.url,
+              title: pending.title || t('screens.payment.complete'),
+              eventId: pending.eventId,
+            });
+          },
+        },
+        {
+          text: t('screens.payment.checkTickets'),
+          onPress: async () => {
+            await clearPendingPayment().catch(() => {});
+            navigationRef.reset({
+              index: 0,
+              routes: [{ name: 'Main' as any, params: { screen: 'Tickets' } } as any],
+            });
+          },
+        },
+        {
+          text: t('screens.payment.discard'),
+          style: 'destructive',
+          onPress: async () => {
+            await clearPendingPayment().catch(() => {});
+          },
+        },
+      ]);
+    };
+
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        maybePromptPendingPayment().catch(() => {});
+      }
+    });
+
+    // Also check once shortly after login.
+    const promptTimeout = setTimeout(() => {
+      maybePromptPendingPayment().catch(() => {});
+    }, 800);
+
+    return () => {
+      clearTimeout(promptTimeout);
+      sub.remove();
+    };
+  }, [navigationRef, user]);
+
   const checkVerificationStatus = async () => {
     if (!userProfile?.id) {
       setIsVerified(false);
@@ -256,16 +348,40 @@ export default function AppNavigator() {
     }
   };
 
+  // Determine which tab navigator to show based on mode and user role/verification
+  const canUseOrganizerMode =
+    userProfile?.role === 'organizer' ||
+    userProfile?.role === 'admin' ||
+    isVerified;
+
+  // When the mode changes (via Account actions), always jump to the first tab.
+  useEffect(() => {
+    if (loading || modeLoading) return;
+    if (!user) return;
+
+    // Skip the first run to avoid resetting on initial app load.
+    if (!didApplyModeResetRef.current) {
+      didApplyModeResetRef.current = true;
+      return;
+    }
+
+    const initialTab =
+      mode === 'staff'
+        ? 'Events'
+        : mode === 'organizer' && canUseOrganizerMode
+          ? 'Dashboard'
+          : 'Home';
+
+    navigationRef.reset({
+      index: 0,
+      routes: [{ name: 'Main' as any, params: { screen: initialTab } } as any],
+    });
+  }, [canUseOrganizerMode, loading, mode, modeLoading, navigationRef, user]);
+
   if (loading || modeLoading) {
     return null; // or a loading screen
   }
 
-  // Determine which tab navigator to show based on mode and user role/verification
-  const canUseOrganizerMode = 
-    userProfile?.role === 'organizer' || 
-    userProfile?.role === 'admin' || 
-    isVerified;
-  
   const MainTabNavigator = 
     mode === 'staff'
       ? StaffTabNavigator
@@ -284,6 +400,9 @@ export default function AppNavigator() {
     config: {
       screens: {
         InviteRedeem: 'invite',
+        Notifications: 'notifications',
+        TicketDetail: 'tickets/:ticketId',
+        EventDetail: 'events/:eventId',
       },
     },
   };
@@ -300,11 +419,23 @@ export default function AppNavigator() {
           <>
             <Stack.Screen name="Main" component={MainTabNavigator} />
             <Stack.Screen name="InviteRedeem" component={InviteRedeemScreen} options={{ headerShown: false }} />
+            <Stack.Screen
+              name="PaymentWebView"
+              component={PaymentWebViewScreen}
+              options={({ route }) => ({
+                headerShown: true,
+                headerTitle: (route as any)?.params?.title || t('screens.payment.complete'),
+              })}
+            />
             <Stack.Screen name="EventDetail" component={EventDetailScreen} />
             <Stack.Screen name="EventTickets" component={EventTicketsScreen} />
             <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
             <Stack.Screen name="OrganizerProfile" component={OrganizerProfileScreen} />
-            <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: true, headerTitle: 'Notifications' }} />
+            <Stack.Screen
+              name="Notifications"
+              component={NotificationsScreen}
+              options={{ headerShown: true, headerTitle: t('screens.notifications.title') }}
+            />
             <Stack.Screen 
               name="OrganizerVerification" 
               component={OrganizerVerificationScreen} 
@@ -327,6 +458,7 @@ export default function AppNavigator() {
             />
             <Stack.Screen name="OrganizerEventManagement" component={OrganizerEventManagementScreen} options={{ headerShown: true, headerTitle: 'Manage Event' }} />
             <Stack.Screen name="OrganizerEventEarnings" component={OrganizerEventEarningsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="OrganizerEventStaff" component={OrganizerEventStaffScreen} options={{ headerShown: true }} />
             <Stack.Screen name="CreateEvent" component={CreateEventFlowRefactored} options={{ headerShown: false }} />
             <Stack.Screen name="TicketScanner" component={TicketScannerScreen} options={{ headerShown: false }} />
             <Stack.Screen name="EventAttendees" component={EventAttendeesScreen} options={{ headerShown: false }} />

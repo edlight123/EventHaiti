@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS } from '../../../config/brand';
+import { useI18n } from '../../../contexts/I18nContext';
 import type { EventDraft } from '../CreateEventFlowRefactored';
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function Step5Preview({ draft, updateDraft }: Props) {
+  const { t } = useI18n();
   const [viewMode, setViewMode] = useState<'card' | 'page'>('card');
 
   const pickImage = async () => {
@@ -39,14 +41,14 @@ export default function Step5Preview({ draft, updateDraft }: Props) {
             onPress={() => setViewMode('card')}
           >
             <Ionicons name="card-outline" size={20} color={COLORS.white} />
-            <Text style={styles.toggleButtonTextActive}>Card View</Text>
+            <Text style={styles.toggleButtonTextActive}>{t('organizerCreateEvent.preview.cardView')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.toggleButton}
             onPress={() => setViewMode('page')}
           >
             <Ionicons name="document-text-outline" size={20} color={COLORS.text} />
-            <Text style={styles.toggleButtonText}>Page View</Text>
+            <Text style={styles.toggleButtonText}>{t('organizerCreateEvent.preview.pageView')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -63,28 +65,30 @@ export default function Step5Preview({ draft, updateDraft }: Props) {
               <Text style={styles.cardCategoryText}>{draft.category}</Text>
             </View>
             <Text style={styles.cardTitle} numberOfLines={2}>
-              {draft.title || 'Event Title'}
+              {draft.title || t('organizerCreateEvent.preview.eventTitlePlaceholder')}
             </Text>
             <View style={styles.cardInfo}>
               <Ionicons name="calendar-outline" size={14} color={COLORS.textSecondary} />
-              <Text style={styles.cardInfoText}>{draft.start_date || 'Date TBD'}</Text>
+              <Text style={styles.cardInfoText}>{draft.start_date || t('organizerCreateEvent.preview.dateTbd')}</Text>
             </View>
             <View style={styles.cardInfo}>
               <Ionicons name="location-outline" size={14} color={COLORS.textSecondary} />
-              <Text style={styles.cardInfoText}>{draft.city || 'Location TBD'}</Text>
+              <Text style={styles.cardInfoText}>{draft.city || t('organizerCreateEvent.preview.locationTbd')}</Text>
             </View>
             <View style={styles.cardFooter}>
               <Text style={styles.cardPrice}>
                 {getCurrencySymbol()} {draft.ticket_tiers[0]?.price || '0'}
               </Text>
-              <Text style={styles.cardTickets}>{totalTickets} tickets</Text>
+              <Text style={styles.cardTickets}>
+                {totalTickets} {t('organizerCreateEvent.preview.tickets')}
+              </Text>
             </View>
           </View>
         </View>
 
         <TouchableOpacity style={styles.changeImageButton} onPress={pickImage}>
           <Ionicons name="camera-outline" size={20} color={COLORS.primary} />
-          <Text style={styles.changeImageText}>Change Event Image</Text>
+          <Text style={styles.changeImageText}>{t('organizerCreateEvent.preview.changeEventImage')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -98,14 +102,14 @@ export default function Step5Preview({ draft, updateDraft }: Props) {
           onPress={() => setViewMode('card')}
         >
           <Ionicons name="card-outline" size={20} color={COLORS.text} />
-          <Text style={styles.toggleButtonText}>Card View</Text>
+          <Text style={styles.toggleButtonText}>{t('organizerCreateEvent.preview.cardView')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.toggleButton, styles.toggleButtonActive]}
           onPress={() => setViewMode('page')}
         >
           <Ionicons name="document-text-outline" size={20} color={COLORS.white} />
-          <Text style={styles.toggleButtonTextActive}>Page View</Text>
+          <Text style={styles.toggleButtonTextActive}>{t('organizerCreateEvent.preview.pageView')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -116,7 +120,7 @@ export default function Step5Preview({ draft, updateDraft }: Props) {
         ) : (
           <View style={styles.pageHeroPlaceholder}>
             <Ionicons name="image-outline" size={60} color={COLORS.textSecondary} />
-            <Text style={styles.placeholderText}>No image selected</Text>
+            <Text style={styles.placeholderText}>{t('organizerCreateEvent.preview.noImageSelected')}</Text>
           </View>
         )}
         <TouchableOpacity style={styles.editImageButton} onPress={pickImage}>
@@ -130,21 +134,21 @@ export default function Step5Preview({ draft, updateDraft }: Props) {
           <Text style={styles.pageCategoryText}>{draft.category}</Text>
         </View>
 
-        <Text style={styles.pageTitle}>{draft.title || 'Event Title'}</Text>
+  <Text style={styles.pageTitle}>{draft.title || t('organizerCreateEvent.preview.eventTitlePlaceholder')}</Text>
 
         <View style={styles.pageInfoRow}>
           <View style={styles.pageInfoItem}>
             <Ionicons name="calendar" size={20} color={COLORS.primary} />
             <View style={styles.pageInfoTextContainer}>
-              <Text style={styles.pageInfoLabel}>Date</Text>
-              <Text style={styles.pageInfoValue}>{draft.start_date || 'TBD'}</Text>
+              <Text style={styles.pageInfoLabel}>{t('organizerCreateEvent.preview.date')}</Text>
+              <Text style={styles.pageInfoValue}>{draft.start_date || t('organizerCreateEvent.preview.tbd')}</Text>
             </View>
           </View>
           <View style={styles.pageInfoItem}>
             <Ionicons name="time" size={20} color={COLORS.primary} />
             <View style={styles.pageInfoTextContainer}>
-              <Text style={styles.pageInfoLabel}>Time</Text>
-              <Text style={styles.pageInfoValue}>{draft.start_time || 'TBD'}</Text>
+              <Text style={styles.pageInfoLabel}>{t('organizerCreateEvent.preview.time')}</Text>
+              <Text style={styles.pageInfoValue}>{draft.start_time || t('organizerCreateEvent.preview.tbd')}</Text>
             </View>
           </View>
         </View>
@@ -153,8 +157,8 @@ export default function Step5Preview({ draft, updateDraft }: Props) {
           <View style={styles.pageInfoItem}>
             <Ionicons name="location" size={20} color={COLORS.primary} />
             <View style={styles.pageInfoTextContainer}>
-              <Text style={styles.pageInfoLabel}>Location</Text>
-              <Text style={styles.pageInfoValue}>{draft.venue_name || 'TBD'}</Text>
+              <Text style={styles.pageInfoLabel}>{t('organizerCreateEvent.preview.location')}</Text>
+              <Text style={styles.pageInfoValue}>{draft.venue_name || t('organizerCreateEvent.preview.tbd')}</Text>
               <Text style={styles.pageInfoSubtext}>{draft.city || ''}</Text>
             </View>
           </View>
@@ -162,19 +166,23 @@ export default function Step5Preview({ draft, updateDraft }: Props) {
 
         <View style={styles.pageDivider} />
 
-        <Text style={styles.pageSectionTitle}>About This Event</Text>
+        <Text style={styles.pageSectionTitle}>{t('organizerCreateEvent.preview.about')}</Text>
         <Text style={styles.pageDescription}>
-          {draft.description || 'No description provided'}
+          {draft.description || t('organizerCreateEvent.preview.noDescription')}
         </Text>
 
         <View style={styles.pageDivider} />
 
-        <Text style={styles.pageSectionTitle}>Ticket Options</Text>
+        <Text style={styles.pageSectionTitle}>{t('organizerCreateEvent.preview.ticketOptions')}</Text>
         {draft.ticket_tiers.map((tier, index) => (
           <View key={index} style={styles.pageTicketTier}>
             <View style={styles.pageTicketInfo}>
-              <Text style={styles.pageTicketName}>{tier.name || `Tier ${index + 1}`}</Text>
-              <Text style={styles.pageTicketAvailable}>{tier.quantity || '0'} available</Text>
+              <Text style={styles.pageTicketName}>
+                {tier.name || `${t('organizerCreateEvent.preview.tier')} ${index + 1}`}
+              </Text>
+              <Text style={styles.pageTicketAvailable}>
+                {tier.quantity || '0'} {t('organizerCreateEvent.preview.available')}
+              </Text>
             </View>
             <Text style={styles.pageTicketPrice}>
               {getCurrencySymbol()} {tier.price || '0'}
@@ -185,7 +193,7 @@ export default function Step5Preview({ draft, updateDraft }: Props) {
         <View style={styles.helpCard}>
           <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
           <Text style={styles.helpText}>
-            This is how your event will appear to attendees. Ready to publish?
+            {t('organizerCreateEvent.preview.helpText')}
           </Text>
         </View>
       </View>

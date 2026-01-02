@@ -7,11 +7,14 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { COLORS } from '../../config/brand';
 import { useAuth } from '../../contexts/AuthContext';
+import { useI18n } from '../../contexts/I18nContext';
 import {
   pickAndUploadImage,
   updateVerificationFiles,
@@ -30,6 +33,8 @@ export default function GovernmentIDUploadScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RouteParams, 'GovernmentIDUpload'>>();
   const { userProfile } = useAuth();
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const [frontPath, setFrontPath] = useState<string | null>(null);
   const [backPath, setBackPath] = useState<string | null>(null);
   const [frontPreview, setFrontPreview] = useState<string | null>(null);
@@ -87,7 +92,7 @@ export default function GovernmentIDUploadScreen() {
         },
       });
 
-      Alert.alert('Success', 'ID front uploaded successfully');
+      Alert.alert(t('common.success'), t('verification.governmentId.alerts.frontUploaded'));
     } catch (error: any) {
       console.error('[ID Front Upload] Error details:', {
         message: error.message,
@@ -96,7 +101,7 @@ export default function GovernmentIDUploadScreen() {
       });
       if (error.message !== 'Image selection cancelled') {
         const errorMsg = error.message || 'Failed to upload image';
-        Alert.alert('Upload Error', errorMsg);
+        Alert.alert(t('verification.common.uploadErrorTitle'), errorMsg);
       }
     } finally {
       setUploading(false);
@@ -124,7 +129,7 @@ export default function GovernmentIDUploadScreen() {
         },
       });
 
-      Alert.alert('Success', 'ID back uploaded successfully');
+      Alert.alert(t('common.success'), t('verification.governmentId.alerts.backUploaded'));
     } catch (error: any) {
       console.error('[ID Back Upload] Error details:', {
         message: error.message,
@@ -133,7 +138,7 @@ export default function GovernmentIDUploadScreen() {
       });
       if (error.message !== 'Image selection cancelled') {
         const errorMsg = error.message || 'Failed to upload image';
-        Alert.alert('Upload Error', errorMsg);
+        Alert.alert(t('verification.common.uploadErrorTitle'), errorMsg);
       }
     } finally {
       setUploading(false);
@@ -141,12 +146,13 @@ export default function GovernmentIDUploadScreen() {
   };
 
   const showUploadOptions = (side: 'front' | 'back') => {
+    const sideLabel = side === 'front' ? t('verification.governmentId.sides.front') : t('verification.governmentId.sides.back');
     Alert.alert(
-      `Upload ID ${side === 'front' ? 'Front' : 'Back'}`,
-      'Choose an option',
+      `${t('verification.governmentId.uploadTitlePrefix')} ${sideLabel}`,
+      t('verification.common.chooseOption'),
       [
         {
-          text: 'Take Photo',
+          text: t('verification.common.takePhoto'),
           onPress: () => {
             if (side === 'front') {
               handleUploadFront(true);
@@ -156,7 +162,7 @@ export default function GovernmentIDUploadScreen() {
           },
         },
         {
-          text: 'Choose from Library',
+          text: t('verification.common.chooseFromLibrary'),
           onPress: () => {
             if (side === 'front') {
               handleUploadFront(false);
@@ -165,14 +171,14 @@ export default function GovernmentIDUploadScreen() {
             }
           },
         },
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
       ]
     );
   };
 
   const handleContinue = async () => {
     if (!frontPath || !backPath) {
-      Alert.alert('Missing Images', 'Please upload both front and back of your ID');
+      Alert.alert(t('verification.governmentId.validation.missingTitle'), t('verification.governmentId.validation.missingBody'));
       return;
     }
 
@@ -187,9 +193,9 @@ export default function GovernmentIDUploadScreen() {
         missingFields: [],
       });
 
-      Alert.alert('Success', 'Government ID uploaded successfully', [
+      Alert.alert(t('common.success'), t('verification.governmentId.alerts.uploadedSuccessfully'), [
         {
-          text: 'OK',
+          text: t('common.ok'),
           onPress: () => {
             if (route.params?.onComplete) {
               route.params.onComplete();
@@ -200,7 +206,7 @@ export default function GovernmentIDUploadScreen() {
       ]);
     } catch (error) {
       console.error('Error saving:', error);
-      Alert.alert('Error', 'Failed to save verification step');
+      Alert.alert(t('common.error'), t('verification.common.saveStepFailed'));
     } finally {
       setSaving(false);
     }
@@ -208,12 +214,14 @@ export default function GovernmentIDUploadScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
+
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Government ID</Text>
+        <Text style={styles.headerTitle}>{t('verification.governmentId.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -221,18 +229,18 @@ export default function GovernmentIDUploadScreen() {
         {/* Instructions */}
         <View style={styles.instructionsCard}>
           <Ionicons name="information-circle" size={32} color={COLORS.primary} />
-          <Text style={styles.instructionsTitle}>Photo Tips</Text>
+          <Text style={styles.instructionsTitle}>{t('verification.governmentId.photoTipsTitle')}</Text>
           <View style={styles.tipsList}>
-            <Text style={styles.tipItem}>✓ Ensure all text is clearly readable</Text>
-            <Text style={styles.tipItem}>✓ Use good lighting (avoid glare)</Text>
-            <Text style={styles.tipItem}>✓ Place ID on a contrasting background</Text>
-            <Text style={styles.tipItem}>✓ Photo should not be blurry or cropped</Text>
+            <Text style={styles.tipItem}>✓ {t('verification.governmentId.tips.readable')}</Text>
+            <Text style={styles.tipItem}>✓ {t('verification.governmentId.tips.lighting')}</Text>
+            <Text style={styles.tipItem}>✓ {t('verification.governmentId.tips.background')}</Text>
+            <Text style={styles.tipItem}>✓ {t('verification.governmentId.tips.notBlurry')}</Text>
           </View>
         </View>
 
         {/* Front Upload */}
         <View style={styles.uploadSection}>
-          <Text style={styles.uploadLabel}>ID Front *</Text>
+          <Text style={styles.uploadLabel}>{t('verification.governmentId.labels.front')}</Text>
           {frontPreview ? (
             <View style={styles.previewContainer}>
               <Image source={{ uri: frontPreview }} style={styles.preview} />
@@ -242,7 +250,7 @@ export default function GovernmentIDUploadScreen() {
                 disabled={uploading}
               >
                 <Ionicons name="camera" size={20} color={COLORS.primary} />
-                <Text style={styles.changeButtonText}>Change Photo</Text>
+                <Text style={styles.changeButtonText}>{t('verification.common.changePhoto')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -256,9 +264,9 @@ export default function GovernmentIDUploadScreen() {
               ) : (
                 <>
                   <Ionicons name="cloud-upload-outline" size={48} color={COLORS.primary} />
-                  <Text style={styles.uploadButtonText}>Upload ID Front</Text>
+                  <Text style={styles.uploadButtonText}>{t('verification.governmentId.buttons.uploadFront')}</Text>
                   <Text style={styles.uploadButtonSubtext}>
-                    Take a photo or choose from library
+                    {t('verification.common.uploadHint')}
                   </Text>
                 </>
               )}
@@ -268,7 +276,7 @@ export default function GovernmentIDUploadScreen() {
 
         {/* Back Upload */}
         <View style={styles.uploadSection}>
-          <Text style={styles.uploadLabel}>ID Back *</Text>
+          <Text style={styles.uploadLabel}>{t('verification.governmentId.labels.back')}</Text>
           {backPreview ? (
             <View style={styles.previewContainer}>
               <Image source={{ uri: backPreview }} style={styles.preview} />
@@ -278,7 +286,7 @@ export default function GovernmentIDUploadScreen() {
                 disabled={uploading}
               >
                 <Ionicons name="camera" size={20} color={COLORS.primary} />
-                <Text style={styles.changeButtonText}>Change Photo</Text>
+                <Text style={styles.changeButtonText}>{t('verification.common.changePhoto')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -292,9 +300,9 @@ export default function GovernmentIDUploadScreen() {
               ) : (
                 <>
                   <Ionicons name="cloud-upload-outline" size={48} color={COLORS.primary} />
-                  <Text style={styles.uploadButtonText}>Upload ID Back</Text>
+                  <Text style={styles.uploadButtonText}>{t('verification.governmentId.buttons.uploadBack')}</Text>
                   <Text style={styles.uploadButtonSubtext}>
-                    Take a photo or choose from library
+                    {t('verification.common.uploadHint')}
                   </Text>
                 </>
               )}
@@ -316,7 +324,7 @@ export default function GovernmentIDUploadScreen() {
           {saving ? (
             <ActivityIndicator size="small" color={COLORS.white} />
           ) : (
-            <Text style={styles.continueButtonText}>Save & Continue</Text>
+            <Text style={styles.continueButtonText}>{t('verification.common.saveAndContinue')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -334,7 +342,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    paddingTop: 60,
+    paddingTop: 16,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,

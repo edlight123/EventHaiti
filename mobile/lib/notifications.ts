@@ -8,9 +8,20 @@ import {
   getDocs,
   doc,
   updateDoc,
+  deleteDoc,
   writeBatch,
 } from 'firebase/firestore';
 import type { Notification } from '../types/notifications';
+
+function extractInviteTokenFromUrl(url: unknown): string {
+  if (typeof url !== 'string' || !url) return ''
+  try {
+    const parsed = new URL(url)
+    return parsed.searchParams.get('token') || ''
+  } catch {
+    return ''
+  }
+}
 
 /**
  * Get notifications for a user
@@ -115,6 +126,121 @@ export async function markAllAsRead(userId: string): Promise<void> {
   } catch (error) {
     console.error('Error marking all as read:', error);
     throw error;
+  }
+}
+
+/**
+ * Delete a single notification for a user.
+ */
+export async function deleteNotification(userId: string, notificationId: string): Promise<void> {
+  try {
+    const notificationRef = doc(db, 'users', userId, 'notifications', notificationId)
+    await deleteDoc(notificationRef)
+  } catch (error) {
+    console.error('Error deleting notification:', error)
+    throw error
+  }
+}
+
+/**
+ * Best-effort: delete any staff invite notifications matching the invite token.
+ * This is used for deep-link redeems where we don't have the notificationId.
+ */
+export async function deleteStaffInviteNotificationsByToken(
+  userId: string,
+  details: { eventId: string; token: string }
+): Promise<number> {
+  const notificationsRef = collection(db, 'users', userId, 'notifications')
+  let deleted = 0
+
+  try {
+    // We can't reliably query on every possible metadata shape, so we:
+    // 1) narrow by type and eventId (top-level or metadata)
+    // 2) filter client-side by token
+
+    const queries = [
+      query(notificationsRef, where('type', '==', 'staff_invite'), where('eventId', '==', details.eventId)),
+      query(notificationsRef, where('type', '==', 'staff_invite'), where('metadata.eventId', '==', details.eventId)),
+    ]
+
+    const seen = new Set<string>()
+    const docsToDelete: Array<{ ref: any; id: string }> = []
+
+    for (const q of queries) {
+      const snapshot = await getDocs(q)
+      snapshot.forEach((document) => {
+        if (seen.has(document.id)) return
+        seen.add(document.id)
+
+        const data: any = document.data() || {}
+        const tokenFromMetadata = typeof data?.metadata?.token === 'string' ? String(data.metadata.token) : ''
+        const tokenFromMetadataUrl = extractInviteTokenFromUrl(data?.metadata?.url)
+        const tokenFromActionUrl = extractInviteTokenFromUrl(data?.actionUrl)
+        const tokenFromMetaAlt = typeof data?.metadata?.inviteToken === 'string' ? String(data.metadata.inviteToken) : ''
+
+        const token = tokenFromMetadata || tokenFromMetaAlt || tokenFromMetadataUrl || tokenFromActionUrl
+        if (token && token === details.token) {
+          docsToDelete.push({ ref: document.ref, id: document.id })
+        }
+      })
+    }
+
+    if (docsToDelete.length === 0) return 0
+
+    const batch = writeBatch(db)
+    for (const d of docsToDelete) {
+      batch.delete(d.ref)
+      deleted += 1
+    }
+    await batch.commit()
+    return deleted
+  } catch (error) {
+    console.error('Error deleting staff invite notifications:', error)
+    return deleted
+  }
+}
+
+/**
+ * Best-effort: delete staff invite notifications for a given event.
+ * Useful when the notification payload doesn't store the invite token.
+ */
+export async function deleteStaffInviteNotificationsByEvent(
+  userId: string,
+  details: { eventId: string }
+): Promise<number> {
+  const notificationsRef = collection(db, 'users', userId, 'notifications')
+  let deleted = 0
+
+  try {
+    const queries = [
+      query(notificationsRef, where('type', '==', 'staff_invite'), where('eventId', '==', details.eventId)),
+      query(notificationsRef, where('type', '==', 'staff_invite'), where('metadata.eventId', '==', details.eventId)),
+    ]
+
+    const seen = new Set<string>()
+    const docsToDelete: Array<{ ref: any; id: string }> = []
+
+    for (const q of queries) {
+      const snapshot = await getDocs(q)
+      snapshot.forEach((document) => {
+        if (seen.has(document.id)) return
+        seen.add(document.id)
+        docsToDelete.push({ ref: document.ref, id: document.id })
+      })
+    }
+
+    if (docsToDelete.length === 0) return 0
+
+    const batch = writeBatch(db)
+    for (const d of docsToDelete) {
+      batch.delete(d.ref)
+      deleted += 1
+    }
+    await batch.commit()
+    return deleted
+  } catch (error) {
+    console.error('Error deleting staff invite notifications for event:', error)
+    return deleted
   }
 }
 

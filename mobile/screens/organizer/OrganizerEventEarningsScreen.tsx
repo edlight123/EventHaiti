@@ -5,19 +5,22 @@ import {
   Linking,
   Modal,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native'
-import { collection, doc, getDoc, getDocs, limit, query, where } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore'
 
 import { COLORS } from '../../config/brand'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../contexts/AuthContext'
+import { useI18n } from '../../contexts/I18nContext'
 import { backendJson } from '../../lib/api/backend'
 import { getEventById } from '../../lib/api/organizer'
 
@@ -49,6 +52,8 @@ export default function OrganizerEventEarningsScreen() {
   const { eventId } = route.params
 
   const { user } = useAuth()
+  const { t } = useI18n()
+  const insets = useSafeAreaInsets()
 
   const [loading, setLoading] = useState(true)
   const [eventTitle, setEventTitle] = useState<string>('')
@@ -138,27 +143,60 @@ export default function OrganizerEventEarningsScreen() {
       const event = await getEventById(eventId)
       setEventTitle(event?.title || '')
 
-      const q = query(collection(db, 'event_earnings'), where('eventId', '==', eventId), limit(1))
-      const snapshot = await getDocs(q)
-      if (snapshot.empty) {
-        setEarnings(null)
+      try {
+        const res = await backendJson<{ earnings: EventEarnings | null }>(
+          `/api/organizer/events/${eventId}/earnings`
+        )
+        setEarnings(res?.earnings || null)
         return
+      } catch (e: any) {
+        const message = String(e?.message || '')
+        const isMissingEndpoint = message.includes('(404)') && message.includes(`/api/organizer/events/${eventId}/earnings`)
+
+        if (!isMissingEndpoint) {
+          throw e
+        }
+
+        // Fallback: the deployed API host doesn't have the per-event earnings endpoint.
+        // We can still load the screen by computing total revenue from tickets.
+        // NOTE: availableToWithdraw/withdrawnAmount/settlementStatus remain server-managed.
+        const ticketsSnap = await getDocs(
+          query(
+            collection(db, 'tickets'),
+            where('event_id', '==', eventId),
+            where('status', 'in', ['active', 'checked_in', 'confirmed', 'valid'])
+          )
+        )
+
+        const prices = ticketsSnap.docs
+          .map((d) => (d.data() as any)?.price_paid)
+          .filter((v) => typeof v === 'number' && isFinite(v)) as number[]
+
+        const looksLikeDollars = prices.some((v) => Math.abs(v - Math.round(v)) > 1e-6) || prices.every((v) => v < 500)
+        const totalCents = prices.reduce((sum, v) => sum + (looksLikeDollars ? Math.round(v * 100) : Math.round(v)), 0)
+
+        const curr = String((event as any)?.currency || '').toUpperCase()
+        const currency: 'HTG' | 'USD' = curr === 'HTG' ? 'HTG' : 'USD'
+
+        setEarnings({
+          totalEarned: totalCents,
+          availableToWithdraw: 0,
+          withdrawnAmount: 0,
+          settlementStatus: 'pending',
+          currency,
+        })
+
+        console.warn(
+          '[OrganizerEventEarnings] Per-event earnings endpoint missing on API host; showing estimated total revenue only.'
+        )
       }
-      const data = snapshot.docs[0].data() as any
-      setEarnings({
-        availableToWithdraw: Number(data?.availableToWithdraw || 0),
-        currency: (String(data?.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG') as any,
-        settlementStatus: data?.settlementStatus || 'pending',
-        totalEarned: Number(data?.totalEarned || 0),
-        withdrawnAmount: Number(data?.withdrawnAmount || 0),
-      })
     } catch (e: any) {
       console.error('Error loading earnings:', e)
-      Alert.alert('Error', e?.message || 'Failed to load earnings')
+      Alert.alert(t('common.error'), e?.message || t('organizerEarnings.errors.loadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [eventId])
+  }, [eventId, t])
 
   useEffect(() => {
     loadEarnings()
@@ -173,10 +211,25 @@ export default function OrganizerEventEarningsScreen() {
   )
 
   const openWithdraw = async (nextMethod: 'moncash' | 'bank') => {
+    if (!earnings) {
+      Alert.alert(t('organizerEarnings.validation.unavailableTitle'), t('organizerEarnings.validation.unavailableBody'))
+      return
+    }
+
+    if (earnings?.settlementStatus !== 'ready') {
+      Alert.alert(t('organizerEarnings.validation.notReadyTitle'), t('organizerEarnings.validation.notReadyBody'))
+      return
+    }
+
+    if (availableToWithdraw <= 0) {
+      Alert.alert(t('organizerEarnings.validation.nothingToWithdrawTitle'), t('organizerEarnings.validation.nothingToWithdrawBody'))
+      return
+    }
+
     if (isStripeConnectAccount) {
       Alert.alert(
-        'Stripe Connect required',
-        'US/Canada payouts are handled via Stripe Connect. Manage payout details on the web payouts settings page.'
+        t('organizerEarnings.stripeConnectRequired.title'),
+        t('organizerEarnings.stripeConnectRequired.body')
       )
       return
     }
@@ -190,11 +243,16 @@ export default function OrganizerEventEarningsScreen() {
 
     if (nextMethod === 'moncash') {
       try {
-        const [pref, cfg] = await Promise.all([
-          backendJson<{ enabled: boolean; available: boolean }>('/api/organizer/payout-prefunding-status'),
+        const [prefRaw, cfg] = await Promise.all([
+          backendJson<any>('/api/organizer/payout-prefunding-status'),
           backendJson<{ allowInstantMoncash?: boolean }>('/api/organizer/payout-config-summary'),
         ])
-        setPrefunding(pref)
+
+        const prefundingPayload = (prefRaw as any)?.prefunding ?? prefRaw
+        setPrefunding({
+          enabled: Boolean(prefundingPayload?.enabled),
+          available: Boolean(prefundingPayload?.available),
+        })
         setAllowInstantMoncash(!!cfg?.allowInstantMoncash)
       } catch {
         setPrefunding(null)
@@ -234,9 +292,9 @@ export default function OrganizerEventEarningsScreen() {
         method: 'POST',
         body: JSON.stringify({}),
       })
-      Alert.alert('Code sent', 'Check your email for the verification code.')
+      Alert.alert(t('organizerEarnings.otp.codeSentTitle'), t('organizerEarnings.otp.codeSentBody'))
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to send code')
+      Alert.alert(t('common.error'), e?.message || t('organizerEarnings.errors.sendCodeFailed'))
     } finally {
       setIsSendingCode(false)
     }
@@ -244,7 +302,7 @@ export default function OrganizerEventEarningsScreen() {
 
   const verifyOtpThenRetry = async () => {
     if (!verificationCode.trim()) {
-      Alert.alert('Enter code', 'Please enter the verification code from your email.')
+      Alert.alert(t('organizerEarnings.otp.enterCodeTitle'), t('organizerEarnings.otp.enterCodeBody'))
       return
     }
 
@@ -261,7 +319,7 @@ export default function OrganizerEventEarningsScreen() {
         await attemptWithdrawal(pendingEndpoint, pendingPayload)
       }
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Verification failed')
+      Alert.alert(t('common.error'), e?.message || t('organizerEarnings.errors.verificationFailed'))
     } finally {
       setIsVerifyingCode(false)
     }
@@ -278,14 +336,14 @@ export default function OrganizerEventEarningsScreen() {
       // Success
       if (method === 'moncash' && res?.instant) {
         Alert.alert(
-          'Instant MonCash sent',
-          `Fee: ${formatCurrency(res?.feeCents || 0, currency)}\nYou received: ${formatCurrency(
+          t('organizerEarnings.success.instantTitle'),
+          `${t('organizerEarnings.success.feeLabel')}${formatCurrency(res?.feeCents || 0, currency)}\n${t('organizerEarnings.success.youReceivedLabel')}${formatCurrency(
             res?.payoutAmountCents || 0,
             currency
           )}`
         )
       } else {
-        Alert.alert('Request submitted', 'Your withdrawal request was submitted successfully.')
+        Alert.alert(t('organizerEarnings.success.requestSubmittedTitle'), t('organizerEarnings.success.requestSubmittedBody'))
       }
 
       setShowWithdraw(false)
@@ -299,11 +357,11 @@ export default function OrganizerEventEarningsScreen() {
         setVerificationRequired(true)
         setPendingEndpoint(endpoint)
         setPendingPayload(payload)
-        Alert.alert('Verification required', 'For your security, confirm this withdrawal change with a code we email you.')
+        Alert.alert(t('organizerEarnings.otp.verificationRequiredTitle'), t('organizerEarnings.otp.verificationRequiredBody'))
         return
       }
 
-      Alert.alert('Error', message)
+      Alert.alert(t('common.error'), message)
     } finally {
       setSubmitting(false)
     }
@@ -313,23 +371,23 @@ export default function OrganizerEventEarningsScreen() {
     if (!method) return
 
     if (!earnings) {
-      Alert.alert('Unavailable', 'No earnings found for this event yet.')
+      Alert.alert(t('organizerEarnings.validation.unavailableTitle'), t('organizerEarnings.validation.unavailableBody'))
       return
     }
 
     if (earnings?.settlementStatus !== 'ready') {
-      Alert.alert('Not ready', 'Earnings are not yet available for withdrawal.')
+      Alert.alert(t('organizerEarnings.validation.notReadyTitle'), t('organizerEarnings.validation.notReadyBody'))
       return
     }
 
     if (availableToWithdraw <= 0) {
-      Alert.alert('Nothing to withdraw', 'No available balance to withdraw.')
+      Alert.alert(t('organizerEarnings.validation.nothingToWithdrawTitle'), t('organizerEarnings.validation.nothingToWithdrawBody'))
       return
     }
 
     if (method === 'moncash') {
       if (!moncashNumber.trim()) {
-        Alert.alert('Missing phone', 'Enter your MonCash phone number.')
+        Alert.alert(t('organizerEarnings.validation.missingPhoneTitle'), t('organizerEarnings.validation.missingPhoneBody'))
         return
       }
       await attemptWithdrawal('/api/organizer/withdraw-moncash', {
@@ -343,7 +401,7 @@ export default function OrganizerEventEarningsScreen() {
     // bank
     if (bankMode === 'new') {
       if (!bankDetails.accountHolder.trim() || !bankDetails.bankName.trim() || !bankDetails.accountNumber.trim()) {
-        Alert.alert('Missing bank details', 'Account holder, bank name, and account number are required.')
+        Alert.alert(t('organizerEarnings.validation.missingBankDetailsTitle'), t('organizerEarnings.validation.missingBankDetailsBody'))
         return
       }
 
@@ -363,7 +421,7 @@ export default function OrganizerEventEarningsScreen() {
     }
 
     if (!selectedBankDestinationId) {
-      Alert.alert('Select account', 'Please select a bank account.')
+      Alert.alert(t('organizerEarnings.validation.selectAccountTitle'), t('organizerEarnings.validation.selectAccountBody'))
       return
     }
 
@@ -378,19 +436,21 @@ export default function OrganizerEventEarningsScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading earnings...</Text>
+        <Text style={styles.loadingText}>{t('organizerEarnings.loading')}</Text>
       </View>
     )
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color={COLORS.white} />
         </TouchableOpacity>
         <View style={styles.headerTextWrap}>
-          <Text style={styles.headerTitle}>Event Earnings</Text>
+          <Text style={styles.headerTitle}>{t('organizerEarnings.headerTitle')}</Text>
           <Text style={styles.headerSubtitle} numberOfLines={1}>
             {eventTitle || eventId}
           </Text>
@@ -399,10 +459,10 @@ export default function OrganizerEventEarningsScreen() {
 
       <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 16 }}>
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>Available to withdraw</Text>
+          <Text style={styles.cardLabel}>{t('organizerEarnings.availableToWithdraw')}</Text>
           <Text style={styles.amountText}>{formatCurrency(availableToWithdraw, currency)}</Text>
           <View style={styles.rowBetween}>
-            <Text style={styles.metaText}>Settlement</Text>
+            <Text style={styles.metaText}>{t('organizerEarnings.settlement')}</Text>
             <Text style={styles.metaText}>{String(earnings?.settlementStatus || 'pending')}</Text>
           </View>
         </View>
@@ -414,7 +474,7 @@ export default function OrganizerEventEarningsScreen() {
             <Ionicons name="card-outline" size={18} color={COLORS.textSecondary} />
             <View style={{ flex: 1 }}>
               <Text style={styles.noticeText}>
-                US/Canada payouts are handled via Stripe Connect. Manage payout details on the web.
+                {t('organizerEarnings.stripeNotice')}
               </Text>
               <TouchableOpacity
                 onPress={async () => {
@@ -427,13 +487,13 @@ export default function OrganizerEventEarningsScreen() {
                       await Linking.openURL(url)
                     }
                   } catch {
-                    Alert.alert('Unable to open link', url)
+                    Alert.alert(t('organizerEarnings.errors.unableToOpenLinkTitle'), url)
                   }
                 }}
                 style={[styles.actionButton, { backgroundColor: COLORS.primary, marginTop: 10 }]}
               >
                 <Ionicons name="open-outline" size={20} color={COLORS.white} />
-                <Text style={styles.actionButtonText}>Open payout settings</Text>
+                <Text style={styles.actionButtonText}>{t('organizerEarnings.openPayoutSettings')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -442,10 +502,10 @@ export default function OrganizerEventEarningsScreen() {
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: COLORS.primary }]}
               onPress={() => openWithdraw('moncash')}
-              disabled={!earnings || earnings?.settlementStatus !== 'ready' || availableToWithdraw <= 0}
+              activeOpacity={0.85}
             >
               <Ionicons name="phone-portrait-outline" size={20} color={COLORS.white} />
-              <Text style={styles.actionButtonText}>Withdraw via MonCash</Text>
+              <Text style={styles.actionButtonText}>{t('organizerEarnings.withdrawViaMoncash')}</Text>
             </TouchableOpacity>
 
             <View style={{ height: 12 }} />
@@ -453,10 +513,10 @@ export default function OrganizerEventEarningsScreen() {
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: COLORS.text }]}
               onPress={() => openWithdraw('bank')}
-              disabled={!earnings || earnings?.settlementStatus !== 'ready' || availableToWithdraw <= 0}
+              activeOpacity={0.85}
             >
               <Ionicons name="business-outline" size={20} color={COLORS.white} />
-              <Text style={styles.actionButtonText}>Withdraw to Bank</Text>
+              <Text style={styles.actionButtonText}>{t('organizerEarnings.withdrawToBank')}</Text>
             </TouchableOpacity>
           </>
         )}
@@ -464,12 +524,12 @@ export default function OrganizerEventEarningsScreen() {
         {!earnings ? (
           <View style={styles.notice}>
             <Ionicons name="alert-circle-outline" size={18} color={COLORS.textSecondary} />
-            <Text style={styles.noticeText}>No earnings record found for this event yet.</Text>
+            <Text style={styles.noticeText}>{t('organizerEarnings.notices.noEarnings')}</Text>
           </View>
         ) : earnings?.settlementStatus !== 'ready' ? (
           <View style={styles.notice}>
             <Ionicons name="lock-closed-outline" size={18} color={COLORS.textSecondary} />
-            <Text style={styles.noticeText}>Earnings are not ready for withdrawal.</Text>
+            <Text style={styles.noticeText}>{t('organizerEarnings.notices.notReady')}</Text>
           </View>
         ) : null}
       </ScrollView>
@@ -479,7 +539,9 @@ export default function OrganizerEventEarningsScreen() {
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                Request {method === 'moncash' ? 'MonCash' : 'Bank'} Withdrawal
+                {method === 'moncash'
+                  ? t('organizerEarnings.modal.titleMoncash')
+                  : t('organizerEarnings.modal.titleBank')}
               </Text>
               <TouchableOpacity onPress={() => setShowWithdraw(false)}>
                 <Ionicons name="close" size={24} color={COLORS.textSecondary} />
@@ -488,17 +550,17 @@ export default function OrganizerEventEarningsScreen() {
 
             <View style={styles.summaryBox}>
               <View style={styles.rowBetween}>
-                <Text style={styles.metaText}>Amount</Text>
+                <Text style={styles.metaText}>{t('organizerEarnings.modal.amount')}</Text>
                 <Text style={styles.metaText}>{formatCurrency(availableToWithdraw, currency)}</Text>
               </View>
               {method === 'moncash' && instantPreview ? (
                 <>
                   <View style={styles.rowBetween}>
-                    <Text style={styles.metaText}>Instant fee (3%)</Text>
+                    <Text style={styles.metaText}>{t('organizerEarnings.modal.instantFee')}</Text>
                     <Text style={styles.metaText}>{formatCurrency(instantPreview.feeCents, currency)}</Text>
                   </View>
                   <View style={styles.rowBetween}>
-                    <Text style={styles.metaText}>You receive</Text>
+                    <Text style={styles.metaText}>{t('organizerEarnings.modal.youReceive')}</Text>
                     <Text style={styles.metaText}>{formatCurrency(instantPreview.payoutAmountCents, currency)}</Text>
                   </View>
                 </>
@@ -508,19 +570,21 @@ export default function OrganizerEventEarningsScreen() {
             <ScrollView style={{ maxHeight: 420 }}>
               {verificationRequired ? (
                 <View style={{ marginTop: 12 }}>
-                  <Text style={styles.sectionTitle}>Verify</Text>
+                  <Text style={styles.sectionTitle}>{t('organizerEarnings.otp.verifyTitle')}</Text>
                   <Text style={styles.sectionHelp}>
-                    For your security, verify this payout change with a code we email you.
+                    {t('organizerEarnings.otp.verifyHelp')}
                   </Text>
                   <View style={styles.rowBetween}>
                     <TouchableOpacity style={styles.secondaryButton} onPress={sendOtp} disabled={isSendingCode}>
-                      <Text style={styles.secondaryButtonText}>{isSendingCode ? 'Sending...' : 'Send code'}</Text>
+                      <Text style={styles.secondaryButtonText}>
+                        {isSendingCode ? t('organizerEarnings.otp.sending') : t('organizerEarnings.otp.sendCode')}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                   <TextInput
                     value={verificationCode}
                     onChangeText={setVerificationCode}
-                    placeholder="Enter code"
+                    placeholder={t('organizerEarnings.otp.enterCodePlaceholder')}
                     keyboardType="number-pad"
                     style={styles.input}
                   />
@@ -529,28 +593,30 @@ export default function OrganizerEventEarningsScreen() {
                     onPress={verifyOtpThenRetry}
                     disabled={submitting || isVerifyingCode}
                   >
-                    <Text style={styles.primaryButtonText}>{isVerifyingCode ? 'Verifying...' : 'Verify & continue'}</Text>
+                    <Text style={styles.primaryButtonText}>
+                      {isVerifyingCode ? t('organizerEarnings.otp.verifying') : t('organizerEarnings.otp.verifyAndContinue')}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               ) : method === 'moncash' ? (
                 <View style={{ marginTop: 12 }}>
-                  <Text style={styles.sectionTitle}>MonCash</Text>
+                  <Text style={styles.sectionTitle}>{t('organizerEarnings.moncash.title')}</Text>
                   <TextInput
                     value={moncashNumber}
                     onChangeText={setMoncashNumber}
-                    placeholder="+509 1234 5678"
+                    placeholder={t('organizerEarnings.moncash.placeholder')}
                     keyboardType="phone-pad"
                     style={styles.input}
                   />
                   {instantPreview ? (
-                    <Text style={styles.sectionHelp}>Instant MonCash is available for this withdrawal.</Text>
+                    <Text style={styles.sectionHelp}>{t('organizerEarnings.moncash.instantAvailable')}</Text>
                   ) : (
-                    <Text style={styles.sectionHelp}>Your withdrawal will be processed within 24 hours.</Text>
+                    <Text style={styles.sectionHelp}>{t('organizerEarnings.moncash.processedWithin24')}</Text>
                   )}
                 </View>
               ) : (
                 <View style={{ marginTop: 12 }}>
-                  <Text style={styles.sectionTitle}>Bank</Text>
+                  <Text style={styles.sectionTitle}>{t('organizerEarnings.bank.title')}</Text>
 
                   <View style={styles.radioRow}>
                     <TouchableOpacity
@@ -558,20 +624,20 @@ export default function OrganizerEventEarningsScreen() {
                       onPress={() => setBankMode('on_file')}
                       disabled={!bankDestinations?.some((d) => d.isPrimary)}
                     >
-                      <Text style={styles.radioChipText}>Bank on file</Text>
+                      <Text style={styles.radioChipText}>{t('organizerEarnings.bank.modes.onFile')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.radioChip, bankMode === 'saved' ? styles.radioChipActive : null]}
                       onPress={() => setBankMode('saved')}
                       disabled={!bankDestinations || bankDestinations.length === 0}
                     >
-                      <Text style={styles.radioChipText}>Saved</Text>
+                      <Text style={styles.radioChipText}>{t('organizerEarnings.bank.modes.saved')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.radioChip, bankMode === 'new' ? styles.radioChipActive : null]}
                       onPress={() => setBankMode('new')}
                     >
-                      <Text style={styles.radioChipText}>New bank</Text>
+                      <Text style={styles.radioChipText}>{t('organizerEarnings.bank.modes.new')}</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -585,7 +651,7 @@ export default function OrganizerEventEarningsScreen() {
                         >
                           <View style={{ flex: 1 }}>
                             <Text style={styles.destinationTitle}>
-                              {d.bankName} ••••{d.accountNumberLast4}{d.isPrimary ? ' (Primary)' : ''}
+                              {d.bankName} ••••{d.accountNumberLast4}{d.isPrimary ? ` ${t('organizerEarnings.bank.primarySuffix')}` : ''}
                             </Text>
                             <Text style={styles.destinationSubtitle}>{d.accountName}</Text>
                           </View>
@@ -602,31 +668,31 @@ export default function OrganizerEventEarningsScreen() {
                       <TextInput
                         value={bankDetails.accountHolder}
                         onChangeText={(v) => setBankDetails((s) => ({ ...s, accountHolder: v }))}
-                        placeholder="Account holder"
+                        placeholder={t('organizerEarnings.bank.placeholders.accountHolder')}
                         style={styles.input}
                       />
                       <TextInput
                         value={bankDetails.bankName}
                         onChangeText={(v) => setBankDetails((s) => ({ ...s, bankName: v }))}
-                        placeholder="Bank name"
+                        placeholder={t('organizerEarnings.bank.placeholders.bankName')}
                         style={styles.input}
                       />
                       <TextInput
                         value={bankDetails.accountNumber}
                         onChangeText={(v) => setBankDetails((s) => ({ ...s, accountNumber: v }))}
-                        placeholder="Account number"
+                        placeholder={t('organizerEarnings.bank.placeholders.accountNumber')}
                         style={styles.input}
                       />
                       <TextInput
                         value={bankDetails.routingNumber}
                         onChangeText={(v) => setBankDetails((s) => ({ ...s, routingNumber: v }))}
-                        placeholder="Routing number (optional)"
+                        placeholder={t('organizerEarnings.bank.placeholders.routingNumberOptional')}
                         style={styles.input}
                       />
                       <TextInput
                         value={bankDetails.swiftCode}
                         onChangeText={(v) => setBankDetails((s) => ({ ...s, swiftCode: v }))}
-                        placeholder="SWIFT (optional)"
+                        placeholder={t('organizerEarnings.bank.placeholders.swiftOptional')}
                         style={styles.input}
                       />
 
@@ -640,13 +706,13 @@ export default function OrganizerEventEarningsScreen() {
                           size={20}
                           color={saveNewBankDestination ? COLORS.primary : COLORS.textSecondary}
                         />
-                        <Text style={styles.checkboxText}>Save as second bank account</Text>
+                        <Text style={styles.checkboxText}>{t('organizerEarnings.bank.saveSecondAccount')}</Text>
                       </TouchableOpacity>
                     </View>
                   )}
 
                   <Text style={styles.sectionHelp}>
-                    Adding a new bank account may require email verification.
+                    {t('organizerEarnings.bank.verificationHint')}
                   </Text>
                 </View>
               )}
@@ -655,14 +721,16 @@ export default function OrganizerEventEarningsScreen() {
             {!verificationRequired ? (
               <View style={styles.modalFooter}>
                 <TouchableOpacity style={styles.secondaryButton} onPress={() => setShowWithdraw(false)} disabled={submitting}>
-                  <Text style={styles.secondaryButtonText}>Cancel</Text>
+                  <Text style={styles.secondaryButtonText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.primaryButton, submitting ? styles.buttonDisabled : null]}
                   onPress={submit}
                   disabled={submitting}
                 >
-                  <Text style={styles.primaryButtonText}>{submitting ? 'Submitting...' : 'Confirm'}</Text>
+                  <Text style={styles.primaryButtonText}>
+                    {submitting ? t('organizerEarnings.submitting') : t('common.confirm')}
+                  </Text>
                 </TouchableOpacity>
               </View>
             ) : null}
@@ -679,7 +747,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    paddingTop: 56,
+    paddingTop: 16,
     paddingBottom: 16,
     paddingHorizontal: 16,
     backgroundColor: COLORS.primary,

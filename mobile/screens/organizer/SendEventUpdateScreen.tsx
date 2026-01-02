@@ -10,12 +10,15 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../config/brand';
 import { db } from '../../config/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { useI18n } from '../../contexts/I18nContext';
 
 type RouteParams = {
   SendEventUpdate: {
@@ -29,28 +32,31 @@ export default function SendEventUpdateScreen() {
   const navigation = useNavigation();
   const { eventId, eventTitle } = route.params;
 
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
+
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
 
   const handleSend = async () => {
     if (!title.trim()) {
-      Alert.alert('Error', 'Please enter an update title');
+      Alert.alert(t('common.error'), t('organizerSendUpdate.errors.missingTitle'));
       return;
     }
 
     if (!message.trim()) {
-      Alert.alert('Error', 'Please enter a message');
+      Alert.alert(t('common.error'), t('organizerSendUpdate.errors.missingMessage'));
       return;
     }
 
     Alert.alert(
-      'Send Update',
-      'Send this update to all ticket holders?',
+      t('organizerSendUpdate.confirm.title'),
+      t('organizerSendUpdate.confirm.body'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Send',
+          text: t('common.send'),
           onPress: async () => {
             setSending(true);
             try {
@@ -83,7 +89,7 @@ export default function SendEventUpdateScreen() {
               const notificationPromises = Array.from(attendeeIds).map((attendeeId) =>
                 addDoc(collection(db, 'users', attendeeId, 'notifications'), {
                   type: 'event_update',
-                  title: `Update: ${eventTitle}`,
+                  title: `${t('organizerSendUpdate.notificationTitlePrefix')}${eventTitle}`,
                   message: title,
                   eventId: eventId,
                   isRead: false,
@@ -94,18 +100,20 @@ export default function SendEventUpdateScreen() {
               await Promise.all(notificationPromises);
 
               Alert.alert(
-                'Success',
-                `Update sent to ${attendeeIds.size} attendee${attendeeIds.size !== 1 ? 's' : ''}`,
+                t('common.success'),
+                attendeeIds.size === 1
+                  ? t('organizerSendUpdate.success.bodySingular')
+                  : `${t('organizerSendUpdate.success.bodyPluralPrefix')}${attendeeIds.size}${t('organizerSendUpdate.success.bodyPluralSuffix')}`,
                 [
                   {
-                    text: 'OK',
+                    text: t('common.ok'),
                     onPress: () => navigation.goBack(),
                   },
                 ]
               );
             } catch (error: any) {
               console.error('Error sending update:', error);
-              Alert.alert('Error', 'Failed to send update. Please try again.');
+              Alert.alert(t('common.error'), t('organizerSendUpdate.errors.sendFailed'));
             } finally {
               setSending(false);
             }
@@ -120,11 +128,13 @@ export default function SendEventUpdateScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.header}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
+
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="close" size={28} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Send Update</Text>
+        <Text style={styles.headerTitle}>{t('organizerSendUpdate.headerTitle')}</Text>
         <TouchableOpacity
           onPress={handleSend}
           disabled={sending || !title.trim() || !message.trim()}
@@ -136,7 +146,7 @@ export default function SendEventUpdateScreen() {
           {sending ? (
             <ActivityIndicator size="small" color={COLORS.white} />
           ) : (
-            <Text style={styles.sendButtonText}>Send</Text>
+            <Text style={styles.sendButtonText}>{t('common.send')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -150,15 +160,15 @@ export default function SendEventUpdateScreen() {
         <View style={styles.infoBox}>
           <Ionicons name="information-circle" size={20} color={COLORS.primary} />
           <Text style={styles.infoText}>
-            This update will be sent to all ticket holders via in-app notification
+            {t('organizerSendUpdate.infoText')}
           </Text>
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.label}>Update Title *</Text>
+          <Text style={styles.label}>{t('organizerSendUpdate.fields.titleLabel')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g., Venue Change, Time Update"
+            placeholder={t('organizerSendUpdate.fields.titlePlaceholder')}
             value={title}
             onChangeText={setTitle}
             maxLength={100}
@@ -166,10 +176,10 @@ export default function SendEventUpdateScreen() {
           />
           <Text style={styles.charCount}>{title.length}/100</Text>
 
-          <Text style={styles.label}>Message *</Text>
+          <Text style={styles.label}>{t('organizerSendUpdate.fields.messageLabel')}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="Enter your message to attendees..."
+            placeholder={t('organizerSendUpdate.fields.messagePlaceholder')}
             value={message}
             onChangeText={setMessage}
             multiline
@@ -182,47 +192,47 @@ export default function SendEventUpdateScreen() {
         </View>
 
         <View style={styles.examples}>
-          <Text style={styles.examplesTitle}>Example Updates:</Text>
+          <Text style={styles.examplesTitle}>{t('organizerSendUpdate.examplesTitle')}</Text>
           <TouchableOpacity
             style={styles.exampleCard}
             onPress={() => {
-              setTitle('Venue Change');
+              setTitle(t('organizerSendUpdate.examples.venueChange.title'));
               setMessage(
-                'Due to high demand, we are moving to a larger venue! The new location is...'
+                t('organizerSendUpdate.examples.venueChange.message')
               );
             }}
           >
-            <Text style={styles.exampleTitle}>Venue Change</Text>
+            <Text style={styles.exampleTitle}>{t('organizerSendUpdate.examples.venueChange.cardTitle')}</Text>
             <Text style={styles.exampleText} numberOfLines={2}>
-              Due to high demand, we are moving to a larger venue...
+              {t('organizerSendUpdate.examples.venueChange.cardPreview')}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.exampleCard}
             onPress={() => {
-              setTitle('Event Time Update');
-              setMessage('The event start time has been changed to accommodate more attendees...');
+              setTitle(t('organizerSendUpdate.examples.timeUpdate.title'));
+              setMessage(t('organizerSendUpdate.examples.timeUpdate.message'));
             }}
           >
-            <Text style={styles.exampleTitle}>Time Update</Text>
+            <Text style={styles.exampleTitle}>{t('organizerSendUpdate.examples.timeUpdate.cardTitle')}</Text>
             <Text style={styles.exampleText} numberOfLines={2}>
-              The event start time has been changed to accommodate...
+              {t('organizerSendUpdate.examples.timeUpdate.cardPreview')}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.exampleCard}
             onPress={() => {
-              setTitle('Important Reminder');
+              setTitle(t('organizerSendUpdate.examples.reminder.title'));
               setMessage(
-                "Don't forget to bring a valid ID and your ticket confirmation. Doors open 1 hour early!"
+                t('organizerSendUpdate.examples.reminder.message')
               );
             }}
           >
-            <Text style={styles.exampleTitle}>Reminder</Text>
+            <Text style={styles.exampleTitle}>{t('organizerSendUpdate.examples.reminder.cardTitle')}</Text>
             <Text style={styles.exampleText} numberOfLines={2}>
-              Don't forget to bring a valid ID and your ticket...
+              {t('organizerSendUpdate.examples.reminder.cardPreview')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -240,7 +250,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 60,
+    paddingTop: 16,
     paddingBottom: 16,
     paddingHorizontal: 16,
     backgroundColor: COLORS.white,

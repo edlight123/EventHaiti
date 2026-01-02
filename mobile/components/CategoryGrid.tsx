@@ -2,6 +2,8 @@ import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../config/brand';
+import { useI18n } from '../contexts/I18nContext';
+import { getCategoryLabel } from '../lib/categories';
 
 const { width } = Dimensions.get('window');
 const GRID_COLUMNS = 2;
@@ -17,49 +19,41 @@ interface CategoryGridProps {
 const categories = [
   { 
     name: 'Music', 
-    displayName: 'Konpa/Music',
     image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop',
     emoji: '🎵'
   },
   { 
     name: 'Sports', 
-    displayName: 'Sports',
     image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=400&h=300&fit=crop',
     emoji: '⚽'
   },
   { 
     name: 'Food & Drink', 
-    displayName: 'Food & Dining',
     image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=300&fit=crop',
     emoji: '🍽️'
   },
   { 
     name: 'Business', 
-    displayName: 'Business/Conference',
     image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop',
     emoji: '💼'
   },
   { 
     name: 'Arts & Culture', 
-    displayName: 'Arts & Culture',
     image: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400&h=300&fit=crop',
     emoji: '🎨'
   },
   { 
     name: 'Party', 
-    displayName: 'Nightlife/Parties',
     image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=300&fit=crop',
     emoji: '🎉'
   },
   { 
     name: 'Religious', 
-    displayName: 'Religious',
     image: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=400&h=300&fit=crop',
     emoji: '⛪'
   },
   { 
     name: 'Education', 
-    displayName: 'Education',
     image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=300&fit=crop',
     emoji: '📚'
   },
@@ -67,6 +61,7 @@ const categories = [
 
 const CategoryCard = ({ category, onPress }: { category: any; onPress: () => void }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const { t } = useI18n();
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
@@ -111,7 +106,7 @@ const CategoryCard = ({ category, onPress }: { category: any; onPress: () => voi
           style={styles.overlay}
         />
         <View style={styles.textContainer}>
-          <Text style={styles.categoryText}>{category.displayName}</Text>
+          <Text style={styles.categoryText}>{getCategoryLabel(t, category.name)}</Text>
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -126,7 +121,7 @@ export default function CategoryGrid({ onCategoryPress }: CategoryGridProps) {
           key={category.name}
           category={category}
           onPress={() => {
-            console.log('[CategoryGrid] Category pressed:', category.name, '- Display:', category.displayName);
+            console.log('[CategoryGrid] Category pressed:', category.name);
             onCategoryPress(category.name);
           }}
         />

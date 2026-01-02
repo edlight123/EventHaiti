@@ -35,12 +35,14 @@ import {
 import { doc, getDoc, collection, addDoc, Timestamp, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { useI18n } from '../contexts/I18nContext';
 import { COLORS } from '../config/brand';
 import { format } from 'date-fns';
 import EventStatusBadge from '../components/EventStatusBadge';
 import TicketAvailabilityBar from '../components/TicketAvailabilityBar';
 import PaymentModal from '../components/PaymentModal';
 import TieredTicketSelector from '../components/TieredTicketSelector';
+import { getCategoryLabel } from '../lib/categories';
 import FreeTicketModal from '../components/FreeTicketModal';
 
 const { width } = Dimensions.get('window');
@@ -48,6 +50,7 @@ const { width } = Dimensions.get('window');
 export default function EventDetailScreen({ route, navigation }: any) {
   const { eventId } = route.params;
   const { user, userProfile } = useAuth();
+  const { t } = useI18n();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
@@ -105,17 +108,17 @@ export default function EventDetailScreen({ route, navigation }: any) {
           start_datetime: data.start_datetime?.toDate ? data.start_datetime.toDate() : data.start_datetime ? new Date(data.start_datetime) : null,
           end_datetime: data.end_datetime?.toDate ? data.end_datetime.toDate() : data.end_datetime ? new Date(data.end_datetime) : null,
           users: organizerData ? {
-            full_name: organizerData.full_name || 'Event Organizer',
+            full_name: organizerData.full_name || '',
             is_verified: organizerData.is_verified ?? false
           } : {
-            full_name: 'Event Organizer',
+            full_name: '',
             is_verified: false
           }
         });
       }
     } catch (error) {
       console.error('Error fetching event:', error);
-      Alert.alert('Error', 'Failed to load event details');
+      Alert.alert(t('common.error'), t('eventDetail.loadError'));
     } finally {
       setLoading(false);
     }
@@ -139,7 +142,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
   const toggleFavorite = async () => {
     if (!user) {
-      Alert.alert('Login Required', 'Please login to save favorites');
+      Alert.alert(t('auth.loginRequiredTitle'), t('eventDetail.favorites.loginBody'));
       return;
     }
 
@@ -157,7 +160,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
           await deleteDoc(doc(db, 'event_favorites', docSnapshot.id));
         });
         setIsFavorite(false);
-        Alert.alert('Removed', 'Event removed from favorites');
+        Alert.alert(t('common.success'), t('eventDetail.favorites.removed'));
       } else {
         // Add to favorites
         await addDoc(collection(db, 'event_favorites'), {
@@ -166,11 +169,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
           created_at: Timestamp.now()
         });
         setIsFavorite(true);
-        Alert.alert('Saved!', 'Event added to favorites');
+        Alert.alert(t('common.success'), t('eventDetail.favorites.saved'));
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
-      Alert.alert('Error', 'Failed to update favorites');
+      Alert.alert(t('common.error'), t('eventDetail.favorites.updateError'));
     } finally {
       setFavoriteLoading(false);
     }
@@ -179,7 +182,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out ${event.title}!\n\n${event.description?.substring(0, 100)}...\n\nDate: ${event.start_datetime && format(event.start_datetime, 'EEEE, MMMM dd, yyyy')}\nVenue: ${event.venue_name}\nOrganizer: ${event.users?.full_name || event.organizer_name || 'Event Organizer'}\n\nhttps://eventhaiti.vercel.app/events/${eventId}`,
+        message: `${t('eventDetail.share.checkOut')} ${event.title}!\n\n${event.description?.substring(0, 100)}...\n\n${t('eventDetail.share.date')}: ${event.start_datetime && format(event.start_datetime, 'EEEE, MMMM dd, yyyy')}\n${t('eventDetail.share.venue')}: ${event.venue_name}\n${t('eventDetail.share.organizer')}: ${event.users?.full_name || event.organizer_name || t('eventDetail.organizerFallback')}\n\nhttps://eventhaiti.vercel.app/events/${eventId}`,
         title: event.title,
       });
     } catch (error) {
@@ -192,18 +195,18 @@ export default function EventDetailScreen({ route, navigation }: any) {
     const encodedAddress = encodeURIComponent(address);
     
     Alert.alert(
-      'Open in Maps',
-      'Choose your preferred maps app',
+      t('eventDetail.maps.title'),
+      t('eventDetail.maps.body'),
       [
         {
-          text: 'Apple Maps',
+          text: t('eventDetail.maps.apple'),
           onPress: () => Linking.openURL(`http://maps.apple.com/?q=${encodedAddress}`)
         },
         {
-          text: 'Google Maps',
+          text: t('eventDetail.maps.google'),
           onPress: () => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`)
         },
-        { text: 'Cancel', style: 'cancel' }
+        { text: t('common.cancel'), style: 'cancel' }
       ]
     );
   };
@@ -216,13 +219,13 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
   const handlePurchaseTicket = async () => {
     if (!user) {
-      Alert.alert('Login Required', 'Please login to purchase tickets');
+      Alert.alert(t('auth.loginRequiredTitle'), t('eventDetail.purchase.loginBody'));
       return;
     }
 
     // Prevent purchase for past events
     if (isPastEvent) {
-      Alert.alert('Event Ended', 'This event has already ended. Tickets are no longer available.');
+      Alert.alert(t('eventDetail.purchase.pastTitle'), t('eventDetail.purchase.pastBody'));
       return;
     }
 
@@ -254,11 +257,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
     setShowPaymentModal(true);
   };
 
-  const handlePaymentSuccess = async (paymentIntentId: string) => {
+  const handlePaymentSuccess = async (_paymentMethod: string, _transactionId: string) => {
     Alert.alert(
-      'Payment Successful!',
-      'Your ticket has been confirmed. Check your Tickets tab.',
-      [{ text: 'OK', onPress: () => navigation.navigate('Tickets') }]
+      t('screens.payment.successTitle'),
+      t('screens.payment.successBody'),
+      [{ text: t('common.ok'), onPress: () => navigation.navigate('Tickets') }]
     );
   };
 
@@ -267,7 +270,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading event details...</Text>
+          <Text style={styles.loadingText}>{t('eventDetail.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -277,12 +280,12 @@ export default function EventDetailScreen({ route, navigation }: any) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.errorText}>Event not found</Text>
+          <Text style={styles.errorText}>{t('eventDetail.notFound')}</Text>
           <TouchableOpacity 
             style={styles.retryButton}
             onPress={fetchEventDetails}
           >
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -293,8 +296,9 @@ export default function EventDetailScreen({ route, navigation }: any) {
   const isSoldOut = remainingTickets <= 0 && (event.total_tickets || 0) > 0;
   const isFree = !event.ticket_price || event.ticket_price === 0;
   
-  // Check if event is in the past
-  const isPastEvent = event.start_datetime && new Date(event.start_datetime) < new Date();
+  // Prevent purchase only after the event has ended (not after it has started).
+  const purchaseCutoffDate = event.end_datetime || event.start_datetime;
+  const isPastEvent = purchaseCutoffDate && new Date(purchaseCutoffDate) < new Date();
   
   // Premium badge logic (matching PWA)
   const isVIP = (event.ticket_price || 0) > 100;
@@ -358,7 +362,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
             {/* Badges Row */}
             <View style={styles.heroBadges}>
               <View style={styles.categoryBadgeHero}>
-                <Text style={styles.categoryTextHero}>{event.category}</Text>
+                <Text style={styles.categoryTextHero}>{getCategoryLabel(t, event.category)}</Text>
               </View>
               {isVIP && <EventStatusBadge status="VIP" size="small" />}
               {isTrending && <EventStatusBadge status="Trending" size="small" />}
@@ -375,7 +379,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
         <View style={styles.content}>
           {/* Event Details Section */}
-          <Text style={styles.sectionTitleMain}>Event Details</Text>
+          <Text style={styles.sectionTitleMain}>{t('eventDetail.sections.details')}</Text>
           
           <View style={styles.infoCards}>
             {/* Date & Time Card */}
@@ -384,7 +388,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
                 <Calendar size={20} color="#FFF" />
               </View>
               <View style={styles.infoCardContent}>
-                <Text style={styles.infoCardLabel}>DATE & TIME</Text>
+                <Text style={styles.infoCardLabel}>{t('eventDetail.labels.dateTime')}</Text>
                 <Text style={styles.infoCardValue}>
                   {event.start_datetime && format(event.start_datetime, 'MMM d, yyyy')}
                 </Text>
@@ -405,7 +409,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
                 <MapPin size={20} color="#FFF" />
               </View>
               <View style={styles.infoCardContent}>
-                <Text style={styles.infoCardLabel}>LOCATION</Text>
+                <Text style={styles.infoCardLabel}>{t('eventDetail.labels.location')}</Text>
                 <Text style={styles.infoCardValue}>{event.venue_name}</Text>
                 <Text style={styles.infoCardSubvalue}>
                   {event.address || ''}{event.address && ', '}{event.city}
@@ -421,12 +425,14 @@ export default function EventDetailScreen({ route, navigation }: any) {
                   <Users size={20} color="#FFF" />
                 </View>
                 <View style={[styles.infoCardContent, { flex: 1 }]}>
-                  <Text style={styles.infoCardLabel}>TICKET AVAILABILITY</Text>
+                  <Text style={styles.infoCardLabel}>{t('eventDetail.labels.ticketAvailability')}</Text>
                   <Text style={styles.ticketsAvailable}>
-                    <Text style={styles.ticketsAvailableBold}>{remainingTickets} available</Text>
+                    <Text style={styles.ticketsAvailableBold}>
+                      {remainingTickets} {t('eventDetail.tickets.available')}
+                    </Text>
                   </Text>
                   <Text style={styles.ticketsSold}>
-                    {event.tickets_sold || 0} / {event.total_tickets} sold
+                    {event.tickets_sold || 0} / {event.total_tickets} {t('common.sold')}
                   </Text>
                   <TicketAvailabilityBar
                     totalTickets={event.total_tickets}
@@ -440,13 +446,13 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
           {/* About Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>About This Event</Text>
+            <Text style={styles.sectionTitle}>{t('eventDetail.sections.about')}</Text>
             <Text style={styles.description}>{event.description}</Text>
             
             {/* Tags */}
             {event.tags && event.tags.length > 0 && (
               <View style={styles.tagsContainer}>
-                <Text style={styles.tagsTitle}>Event Tags</Text>
+                <Text style={styles.tagsTitle}>{t('eventDetail.sections.tags')}</Text>
                 <View style={styles.tagsRow}>
                   {event.tags.map((tag: string, index: number) => (
                     <View key={index} style={styles.tag}>
@@ -460,7 +466,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
 
           {/* Hosted By Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Hosted by</Text>
+            <Text style={styles.sectionTitle}>{t('eventDetail.sections.hostedBy')}</Text>
             <TouchableOpacity 
               style={styles.hostedByCard}
               onPress={navigateToOrganizerProfile}
@@ -473,17 +479,17 @@ export default function EventDetailScreen({ route, navigation }: any) {
               </View>
               <View style={styles.hostedByInfo}>
                 <Text style={styles.hostedByName}>
-                  {event.users?.full_name || event.organizer_name || 'Event Organizer'}
+                  {event.users?.full_name || event.organizer_name || t('eventDetail.organizerFallback')}
                 </Text>
                 {(event.users?.is_verified || event.is_verified) && (
                   <View style={styles.verifiedBadgeInline}>
                     <Shield size={12} color="#3B82F6" />
-                    <Text style={styles.verifiedTextInline}>Verified</Text>
+                    <Text style={styles.verifiedTextInline}>{t('eventDetail.verified')}</Text>
                   </View>
                 )}
               </View>
               <View style={styles.viewProfileButton}>
-                <Text style={styles.viewProfileText}>View profile</Text>
+                <Text style={styles.viewProfileText}>{t('eventDetail.viewProfile')}</Text>
                 <ChevronRight size={16} color={COLORS.primary} />
               </View>
             </TouchableOpacity>
@@ -493,17 +499,17 @@ export default function EventDetailScreen({ route, navigation }: any) {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <MapPin size={20} color={COLORS.primary} />
-              <Text style={styles.sectionTitle}>Venue Information</Text>
+              <Text style={styles.sectionTitle}>{t('eventDetail.sections.venueInfo')}</Text>
             </View>
             <View style={styles.venueDetails}>
               <View style={styles.venueRow}>
-                <Text style={styles.venueLabel}>Venue Name</Text>
+                <Text style={styles.venueLabel}>{t('eventDetail.venue.venueName')}</Text>
                 <Text style={styles.venueValue}>{event.venue_name}</Text>
               </View>
               <View style={styles.venueRow}>
-                <Text style={styles.venueLabel}>Address</Text>
+                <Text style={styles.venueLabel}>{t('eventDetail.venue.address')}</Text>
                 <Text style={styles.venueValue}>
-                  {event.address || 'Address not specified'}
+                  {event.address || t('eventDetail.venue.addressNotSpecified')}
                 </Text>
                 <Text style={styles.venueValue}>
                   {event.commune && `${event.commune}, `}{event.city}
@@ -515,7 +521,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
                   onPress={() => Linking.openURL(`http://maps.apple.com/?q=${encodeURIComponent(event.address || `${event.venue_name}, ${event.city}`)}`)}
                 >
                   <MapPin size={14} color={COLORS.primary} />
-                  <Text style={styles.mapLinkText}>Apple Maps</Text>
+                  <Text style={styles.mapLinkText}>{t('eventDetail.maps.apple')}</Text>
                 </TouchableOpacity>
                 <Text style={styles.mapSeparator}>|</Text>
                 <TouchableOpacity 
@@ -523,7 +529,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
                   onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address || `${event.venue_name}, ${event.city}`)}`)}
                 >
                   <MapPin size={14} color={COLORS.primary} />
-                  <Text style={styles.mapLinkText}>Google Maps</Text>
+                  <Text style={styles.mapLinkText}>{t('eventDetail.maps.google')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -533,11 +539,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Clock size={20} color={COLORS.primary} />
-              <Text style={styles.sectionTitle}>Date and Time</Text>
+              <Text style={styles.sectionTitle}>{t('eventDetail.sections.dateAndTime')}</Text>
             </View>
             <View style={styles.dateDetails}>
               <View style={styles.dateRow}>
-                <Text style={styles.dateLabel}>Start</Text>
+                <Text style={styles.dateLabel}>{t('eventDetail.date.start')}</Text>
                 <Text style={styles.dateValue}>
                   {event.start_datetime && format(event.start_datetime, 'EEEE, MMMM d, yyyy')}
                 </Text>
@@ -547,7 +553,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
               </View>
               {event.end_datetime && (
                 <View style={styles.dateRow}>
-                  <Text style={styles.dateLabel}>End</Text>
+                  <Text style={styles.dateLabel}>{t('eventDetail.date.end')}</Text>
                   <Text style={styles.dateValue}>
                     {format(event.end_datetime, 'EEEE, MMMM d, yyyy')}
                   </Text>
@@ -585,13 +591,13 @@ export default function EventDetailScreen({ route, navigation }: any) {
           <View style={styles.floatingPriceSection}>
             {isSoldOut ? (
               <>
-                <Text style={styles.soldOutMainText}>Sold Out</Text>
-                <Text style={styles.floatingSecondaryText}>No tickets available</Text>
+                <Text style={styles.soldOutMainText}>{t('badges.soldout')}</Text>
+                <Text style={styles.floatingSecondaryText}>{t('eventDetail.floating.noTicketsAvailable')}</Text>
               </>
             ) : isFree ? (
               <>
-                <Text style={styles.floatingPriceMain}>FREE</Text>
-                <Text style={styles.floatingSecondaryText}>Free entry</Text>
+                <Text style={styles.floatingPriceMain}>{t('common.free').toUpperCase()}</Text>
+                <Text style={styles.floatingSecondaryText}>{t('eventDetail.floating.freeEntry')}</Text>
               </>
             ) : (
               <>
@@ -599,7 +605,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
                   {event.currency || 'HTG'} {(event.ticket_price || 0).toLocaleString()}
                 </Text>
                 <Text style={styles.floatingSecondaryText}>
-                  {selloutSoon ? '⚡ Almost sold out!' : 'Tickets available'}
+                  {selloutSoon ? t('eventDetail.floating.almostSoldOut') : t('eventDetail.floating.ticketsAvailable')}
                 </Text>
               </>
             )}
@@ -608,11 +614,11 @@ export default function EventDetailScreen({ route, navigation }: any) {
           {/* Right Side: CTA Button */}
           {isPastEvent ? (
             <View style={styles.floatingButtonDisabled}>
-              <Text style={styles.floatingButtonDisabledText}>Event Ended</Text>
+              <Text style={styles.floatingButtonDisabledText}>{t('eventDetail.floating.eventEnded')}</Text>
             </View>
           ) : isSoldOut ? (
             <View style={styles.floatingButtonDisabled}>
-              <Text style={styles.floatingButtonDisabledText}>Sold Out</Text>
+              <Text style={styles.floatingButtonDisabledText}>{t('badges.soldout')}</Text>
             </View>
           ) : (
             <TouchableOpacity
@@ -624,7 +630,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
                 <ActivityIndicator color="#FFF" size="small" />
               ) : (
                 <Text style={styles.floatingButtonText}>
-                  {isFree ? 'Claim Ticket' : 'Get Tickets'}
+                  {isFree ? t('eventDetail.floating.claimTicket') : t('eventDetail.floating.getTickets')}
                 </Text>
               )}
             </TouchableOpacity>
@@ -638,6 +644,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
         onClose={() => setShowTierSelector(false)}
         eventId={eventId}
         onPurchase={handleTierSelection}
+        currency={event?.currency || 'HTG'}
       />
 
       {/* Free Ticket Modal */}
@@ -648,7 +655,7 @@ export default function EventDetailScreen({ route, navigation }: any) {
         eventTitle={event?.title || ''}
         userId={user?.uid || ''}
         userEmail={userProfile?.email || user?.email || ''}
-        userName={userProfile?.full_name || 'Guest'}
+        userName={userProfile?.full_name || t('common.guest')}
         event={event}
         onSuccess={handleFreeTicketSuccess}
       />

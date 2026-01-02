@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../config/brand';
+import { useI18n } from '../../../contexts/I18nContext';
 import type { EventDraft } from '../CreateEventFlowRefactored';
 
 interface Props {
@@ -10,6 +11,8 @@ interface Props {
 }
 
 export default function Step4Tickets({ draft, updateDraft }: Props) {
+  const { t } = useI18n();
+
   const addTier = () => {
     const newTiers = [...draft.ticket_tiers, { name: '', price: '', quantity: '' }];
     updateDraft({ ticket_tiers: newTiers });
@@ -32,13 +35,13 @@ export default function Step4Tickets({ draft, updateDraft }: Props) {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Text style={styles.title}>Set your ticket options</Text>
-      <Text style={styles.subtitle}>Create different ticket tiers for your event</Text>
+      <Text style={styles.title}>{t('organizerCreateEvent.tickets.title')}</Text>
+      <Text style={styles.subtitle}>{t('organizerCreateEvent.tickets.subtitle')}</Text>
 
       {/* Currency Selection */}
       <View style={styles.formGroup}>
         <Text style={styles.label}>
-          Currency <Text style={styles.required}>*</Text>
+          {t('organizerCreateEvent.tickets.currency')} <Text style={styles.required}>*</Text>
         </Text>
         <View style={styles.currencyRow}>
           <TouchableOpacity
@@ -54,7 +57,7 @@ export default function Step4Tickets({ draft, updateDraft }: Props) {
                 draft.currency === 'USD' && styles.currencyButtonTextActive,
               ]}
             >
-              $ USD
+              {t('organizerCreateEvent.tickets.currencyUsd')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -70,7 +73,7 @@ export default function Step4Tickets({ draft, updateDraft }: Props) {
                 draft.currency === 'HTG' && styles.currencyButtonTextActive,
               ]}
             >
-              HTG Gourde
+              {t('organizerCreateEvent.tickets.currencyHtg')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -80,7 +83,9 @@ export default function Step4Tickets({ draft, updateDraft }: Props) {
       {draft.ticket_tiers.map((tier, index) => (
         <View key={index} style={styles.tierCard}>
           <View style={styles.tierHeader}>
-            <Text style={styles.tierTitle}>Tier {index + 1}</Text>
+            <Text style={styles.tierTitle}>
+              {t('organizerCreateEvent.tickets.tier')} {index + 1}
+            </Text>
             {draft.ticket_tiers.length > 1 && (
               <TouchableOpacity onPress={() => removeTier(index)}>
                 <Ionicons name="trash-outline" size={20} color={COLORS.error} />
@@ -89,10 +94,10 @@ export default function Step4Tickets({ draft, updateDraft }: Props) {
           </View>
 
           <View style={styles.tierFormGroup}>
-            <Text style={styles.tierLabel}>Tier Name *</Text>
+            <Text style={styles.tierLabel}>{t('organizerCreateEvent.tickets.tierName')} *</Text>
             <TextInput
               style={styles.tierInput}
-              placeholder="e.g., General Admission, VIP"
+              placeholder={t('organizerCreateEvent.tickets.tierNamePlaceholder')}
               value={tier.name}
               onChangeText={(text) => updateTier(index, 'name', text)}
             />
@@ -100,20 +105,22 @@ export default function Step4Tickets({ draft, updateDraft }: Props) {
 
           <View style={styles.tierRow}>
             <View style={[styles.tierFormGroup, styles.tierFormGroupHalf]}>
-              <Text style={styles.tierLabel}>Price ({getCurrencySymbol()}) *</Text>
+              <Text style={styles.tierLabel}>
+                {t('organizerCreateEvent.tickets.price')} ({getCurrencySymbol()}) *
+              </Text>
               <TextInput
                 style={styles.tierInput}
-                placeholder="0"
+                placeholder={t('organizerCreateEvent.tickets.pricePlaceholder')}
                 value={tier.price}
                 onChangeText={(text) => updateTier(index, 'price', text)}
                 keyboardType="numeric"
               />
             </View>
             <View style={[styles.tierFormGroup, styles.tierFormGroupHalf]}>
-              <Text style={styles.tierLabel}>Quantity *</Text>
+              <Text style={styles.tierLabel}>{t('organizerCreateEvent.tickets.quantity')} *</Text>
               <TextInput
                 style={styles.tierInput}
-                placeholder="100"
+                placeholder={t('organizerCreateEvent.tickets.quantityPlaceholder')}
                 value={tier.quantity}
                 onChangeText={(text) => updateTier(index, 'quantity', text)}
                 keyboardType="numeric"
@@ -126,14 +133,14 @@ export default function Step4Tickets({ draft, updateDraft }: Props) {
       {/* Add Tier Button */}
       <TouchableOpacity style={styles.addTierButton} onPress={addTier}>
         <Ionicons name="add-circle-outline" size={24} color={COLORS.primary} />
-        <Text style={styles.addTierText}>Add Another Tier</Text>
+        <Text style={styles.addTierText}>{t('organizerCreateEvent.tickets.addTier')}</Text>
       </TouchableOpacity>
 
       {/* Info Card */}
       <View style={styles.infoCard}>
         <Ionicons name="information-circle-outline" size={20} color={COLORS.primary} />
         <Text style={styles.infoText}>
-          Create multiple ticket tiers to offer different pricing options to your attendees.
+          {t('organizerCreateEvent.tickets.infoText')}
         </Text>
       </View>
     </ScrollView>

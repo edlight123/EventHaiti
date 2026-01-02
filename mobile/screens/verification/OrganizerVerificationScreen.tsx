@@ -7,11 +7,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../config/brand';
 import { useAuth } from '../../contexts/AuthContext';
+import { useI18n } from '../../contexts/I18nContext';
 import {
   getVerificationRequest,
   initializeVerificationRequest,
@@ -24,6 +27,8 @@ type Step = 'overview' | 'organizerInfo' | 'governmentId' | 'selfie' | 'review';
 export default function OrganizerVerificationScreen() {
   const navigation = useNavigation();
   const { userProfile } = useAuth();
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [request, setRequest] = useState<VerificationRequest | null>(null);
   const [currentStep, setCurrentStep] = useState<Step>('overview');
@@ -48,15 +53,15 @@ export default function OrganizerVerificationScreen() {
       // Redirect if already approved
       if (verificationRequest.status === 'approved') {
         Alert.alert(
-          'Already Verified',
-          'Your organizer account is already verified!',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
+          t('verification.organizerVerification.alerts.alreadyVerifiedTitle'),
+          t('verification.organizerVerification.alerts.alreadyVerifiedBody'),
+          [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
         );
         return;
       }
     } catch (error) {
       console.error('Error loading verification:', error);
-      Alert.alert('Error', 'Failed to load verification data');
+      Alert.alert(t('common.error'), t('verification.organizerVerification.alerts.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -98,7 +103,7 @@ export default function OrganizerVerificationScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading verification...</Text>
+        <Text style={styles.loadingText}>{t('verification.organizerVerification.loading')}</Text>
       </View>
     );
   }
@@ -107,9 +112,9 @@ export default function OrganizerVerificationScreen() {
     return (
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={64} color={COLORS.error} />
-        <Text style={styles.errorText}>Failed to load verification data</Text>
+        <Text style={styles.errorText}>{t('verification.organizerVerification.alerts.failedToLoad')}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={loadVerificationRequest}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -118,22 +123,24 @@ export default function OrganizerVerificationScreen() {
   if (currentStep === 'overview') {
     return (
       <ScrollView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
+
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
             <Ionicons name="arrow-back" size={24} color={COLORS.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Become an Organizer</Text>
+          <Text style={styles.headerTitle}>{t('verification.organizerVerification.title')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
         {/* Status Card */}
         <View style={styles.statusCard}>
           <View style={styles.statusHeader}>
-            <Text style={styles.statusTitle}>Verification Progress</Text>
+            <Text style={styles.statusTitle}>{t('verification.organizerVerification.progressTitle')}</Text>
             <Text style={styles.statusPercentage}>{calculateProgress()}%</Text>
           </View>
           <View style={styles.progressBar}>
@@ -144,14 +151,14 @@ export default function OrganizerVerificationScreen() {
           {request.status === 'pending' && (
             <View style={styles.statusBadge}>
               <Ionicons name="time-outline" size={16} color={COLORS.warning} />
-              <Text style={styles.statusBadgeText}>Under Review</Text>
+              <Text style={styles.statusBadgeText}>{t('verification.organizerVerification.status.underReview')}</Text>
             </View>
           )}
           {request.status === 'approved' && (
             <View style={[styles.statusBadge, { backgroundColor: COLORS.success + '20' }]}>
               <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
               <Text style={[styles.statusBadgeText, { color: COLORS.success }]}>
-                Approved
+                {t('verification.organizerVerification.status.approved')}
               </Text>
             </View>
           )}
@@ -159,7 +166,7 @@ export default function OrganizerVerificationScreen() {
 
         {/* Steps */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Verification Steps</Text>
+          <Text style={styles.sectionTitle}>{t('verification.organizerVerification.stepsTitle')}</Text>
 
           <TouchableOpacity
             style={styles.stepCard}
@@ -169,9 +176,9 @@ export default function OrganizerVerificationScreen() {
           >
             <View style={styles.stepIcon}>{renderStepIcon('organizerInfo')}</View>
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Organizer Information</Text>
+              <Text style={styles.stepTitle}>{t('verification.organizerVerification.steps.organizerInfo.title')}</Text>
               <Text style={styles.stepDescription}>
-                Basic information about you and your organization
+                {t('verification.organizerVerification.steps.organizerInfo.description')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
@@ -185,9 +192,9 @@ export default function OrganizerVerificationScreen() {
           >
             <View style={styles.stepIcon}>{renderStepIcon('governmentId')}</View>
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Government ID</Text>
+              <Text style={styles.stepTitle}>{t('verification.organizerVerification.steps.governmentId.title')}</Text>
               <Text style={styles.stepDescription}>
-                Upload front and back of your ID
+                {t('verification.organizerVerification.steps.governmentId.description')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
@@ -201,9 +208,9 @@ export default function OrganizerVerificationScreen() {
           >
             <View style={styles.stepIcon}>{renderStepIcon('selfie')}</View>
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Identity Verification</Text>
+              <Text style={styles.stepTitle}>{t('verification.organizerVerification.steps.selfie.title')}</Text>
               <Text style={styles.stepDescription}>
-                Take a selfie holding your ID
+                {t('verification.organizerVerification.steps.selfie.description')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
@@ -217,24 +224,24 @@ export default function OrganizerVerificationScreen() {
               style={styles.submitButton}
               onPress={async () => {
                 Alert.alert(
-                  'Submit Application',
-                  'Are you ready to submit your organizer application for review?',
+                  t('verification.organizerVerification.submit.confirmTitle'),
+                  t('verification.organizerVerification.submit.confirmBody'),
                   [
-                    { text: 'Cancel', style: 'cancel' },
+                    { text: t('common.cancel'), style: 'cancel' },
                     {
-                      text: 'Submit',
+                      text: t('verification.organizerVerification.submit.confirmButton'),
                       onPress: async () => {
                         try {
                           if (!userProfile?.id) return;
                           await submitVerificationForReview(userProfile.id);
                           Alert.alert(
-                            'Success',
-                            'Your application has been submitted for review. We will notify you once it is processed.',
-                            [{ text: 'OK', onPress: () => navigation.goBack() }]
+                            t('common.success'),
+                            t('verification.organizerVerification.submit.successBody'),
+                            [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
                           );
                         } catch (error) {
                           console.error('Error submitting:', error);
-                          Alert.alert('Error', 'Failed to submit application');
+                          Alert.alert(t('common.error'), t('verification.organizerVerification.submit.failed'));
                         }
                       },
                     },
@@ -242,7 +249,7 @@ export default function OrganizerVerificationScreen() {
                 );
               }}
             >
-              <Text style={styles.submitButtonText}>Submit for Review</Text>
+              <Text style={styles.submitButtonText}>{t('verification.organizerVerification.submit.button')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -251,7 +258,7 @@ export default function OrganizerVerificationScreen() {
           <View style={styles.pendingNotice}>
             <Ionicons name="time-outline" size={24} color={COLORS.warning} />
             <Text style={styles.pendingText}>
-              Your application is under review. We'll notify you once it's processed.
+              {t('verification.organizerVerification.pendingNotice')}
             </Text>
           </View>
         )}
@@ -263,7 +270,7 @@ export default function OrganizerVerificationScreen() {
   if (currentStep === 'organizerInfo') {
     return (
       <View style={styles.container}>
-        <Text>Organizer Info Form - Coming soon</Text>
+        <Text>{t('verification.organizerVerification.comingSoon')}</Text>
       </View>
     );
   }
@@ -318,7 +325,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    paddingTop: 60,
+    paddingTop: 16,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,

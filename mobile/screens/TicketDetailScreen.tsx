@@ -8,9 +8,11 @@ import { format } from 'date-fns';
 import QRCode from 'react-native-qrcode-svg';
 import TransferTicketModal from '../components/TransferTicketModal';
 import AddToWalletButton from '../components/AddToWalletButton';
+import { useI18n } from '../contexts/I18nContext';
 
 export default function TicketDetailScreen({ route }: any) {
   const { ticketId } = route.params;
+  const { t } = useI18n();
   const [ticket, setTicket] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -35,7 +37,7 @@ export default function TicketDetailScreen({ route }: any) {
       }
     } catch (error) {
       console.error('Error fetching ticket:', error);
-      Alert.alert('Error', 'Failed to load ticket details');
+      Alert.alert(t('common.error'), t('ticketDetail.loadError'));
     } finally {
       setLoading(false);
     }
@@ -69,12 +71,12 @@ export default function TicketDetailScreen({ route }: any) {
     if (!pendingTransfer) return;
 
     Alert.alert(
-      'Cancel Transfer',
-      'Are you sure you want to cancel this transfer?',
+      t('ticketDetail.transfer.cancelTitle'),
+      t('ticketDetail.transfer.cancelBody'),
       [
-        { text: 'No', style: 'cancel' },
+        { text: t('common.no'), style: 'cancel' },
         {
-          text: 'Yes, Cancel',
+          text: t('ticketDetail.transfer.yesCancel'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -84,10 +86,10 @@ export default function TicketDetailScreen({ route }: any) {
                 updated_at: new Date().toISOString()
               });
               setPendingTransfer(null);
-              Alert.alert('Success', 'Transfer cancelled successfully');
+              Alert.alert(t('common.success'), t('ticketDetail.transfer.cancelSuccess'));
             } catch (error) {
               console.error('Error cancelling transfer:', error);
-              Alert.alert('Error', 'Failed to cancel transfer');
+              Alert.alert(t('common.error'), t('ticketDetail.transfer.cancelError'));
             }
           }
         }
@@ -108,7 +110,7 @@ export default function TicketDetailScreen({ route }: any) {
   if (!ticket) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.errorText}>Ticket not found</Text>
+          <Text style={styles.errorText}>{t('ticketDetail.notFound')}</Text>
       </View>
     );
   }
@@ -117,6 +119,15 @@ export default function TicketDetailScreen({ route }: any) {
   const now = new Date();
   const eventEnd = new Date(ticket.end_datetime || ticket.event_date || ticket.start_datetime);
   const isExpired = now > eventEnd;
+
+  const statusLabel = (() => {
+    if (isExpired) return t('ticketDetail.status.expired');
+    const raw = String(ticket.status || '').toLowerCase();
+    if (raw === 'confirmed') return t('ticketDetail.status.confirmed');
+    if (raw === 'used') return t('ticketDetail.status.used');
+    if (raw === 'active') return t('ticketDetail.status.active');
+    return String(ticket.status || '').toUpperCase();
+  })();
 
   return (
     <View style={styles.container}>
@@ -135,7 +146,7 @@ export default function TicketDetailScreen({ route }: any) {
             !isExpired && ticket.status === 'used' && styles.statusUsed,
           ]}>
             <Text style={styles.statusText}>
-              {isExpired ? 'EXPIRED' : ticket.status?.toUpperCase()}
+              {statusLabel}
             </Text>
           </View>
 
@@ -155,8 +166,8 @@ export default function TicketDetailScreen({ route }: any) {
             </View>
             <Text style={styles.qrInstruction}>
               {isExpired 
-                ? 'This ticket is for a past event and can no longer be used.'
-                : 'Show this QR code at the event entrance'
+                ? t('ticketDetail.qr.expiredBody')
+                : t('ticketDetail.qr.instruction')
               }
             </Text>
           </View>
@@ -169,22 +180,22 @@ export default function TicketDetailScreen({ route }: any) {
                 <View style={styles.pendingTransferCard}>
                   <View style={styles.pendingTransferHeader}>
                     <View style={styles.pendingTransferBadge}>
-                      <Text style={styles.pendingTransferBadgeText}>⏳ Transfer Pending</Text>
+                      <Text style={styles.pendingTransferBadgeText}>⏳ {t('ticketDetail.transfer.pending')}</Text>
                     </View>
                   </View>
                   <Text style={styles.pendingTransferEmail}>
-                    Sent to: <Text style={styles.pendingTransferEmailBold}>{pendingTransfer.to_email}</Text>
+                    {t('ticketDetail.transfer.sentTo')} <Text style={styles.pendingTransferEmailBold}>{pendingTransfer.to_email}</Text>
                   </Text>
                   {pendingTransfer.expires_at && (
                     <Text style={styles.pendingTransferExpiry}>
-                      Expires: {format(pendingTransfer.expires_at, 'MMM dd, yyyy h:mm a')}
+                      {t('ticketDetail.transfer.expires')} {format(pendingTransfer.expires_at, 'MMM dd, yyyy h:mm a')}
                     </Text>
                   )}
                   <TouchableOpacity
                     style={styles.cancelTransferButton}
                     onPress={handleCancelTransfer}
                   >
-                    <Text style={styles.cancelTransferButtonText}>Cancel Transfer</Text>
+                    <Text style={styles.cancelTransferButtonText}>{t('ticketDetail.transfer.cancelButton')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -200,8 +211,8 @@ export default function TicketDetailScreen({ route }: any) {
                       <Send size={22} color="#FFF" />
                     </View>
                     <View style={styles.transferButtonTextContainer}>
-                      <Text style={styles.transferButtonTitle}>Transfer Ticket</Text>
-                      <Text style={styles.transferButtonSubtitle}>Send this ticket to someone else</Text>
+                      <Text style={styles.transferButtonTitle}>{t('ticketDetail.transfer.buttonTitle')}</Text>
+                      <Text style={styles.transferButtonSubtitle}>{t('ticketDetail.transfer.buttonSubtitle')}</Text>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -216,7 +227,7 @@ export default function TicketDetailScreen({ route }: any) {
                 <Calendar size={20} color={COLORS.primary} />
               </View>
               <View style={styles.infoCardContent}>
-                <Text style={styles.infoCardLabel}>Date & Time</Text>
+                <Text style={styles.infoCardLabel}>{t('ticketDetail.labels.dateTime')}</Text>
                 <Text style={styles.infoCardValue}>
                   {ticket.event_date && format(ticket.event_date, 'MMM dd, yyyy')}
                 </Text>
@@ -231,7 +242,7 @@ export default function TicketDetailScreen({ route }: any) {
                 <MapPin size={20} color={COLORS.primary} />
               </View>
               <View style={styles.infoCardContent}>
-                <Text style={styles.infoCardLabel}>Venue</Text>
+                <Text style={styles.infoCardLabel}>{t('ticketDetail.labels.venue')}</Text>
                 <Text style={styles.infoCardValue}>{ticket.venue_name}</Text>
                 <Text style={styles.infoCardSubvalue}>{ticket.city}</Text>
               </View>
@@ -242,7 +253,7 @@ export default function TicketDetailScreen({ route }: any) {
                 <UserIcon size={20} color={COLORS.primary} />
               </View>
               <View style={styles.infoCardContent}>
-                <Text style={styles.infoCardLabel}>Attendee</Text>
+                <Text style={styles.infoCardLabel}>{t('ticketDetail.labels.attendee')}</Text>
                 <Text style={styles.infoCardValue}>{ticket.user_name}</Text>
                 <Text style={styles.infoCardSubvalue}>{ticket.user_email}</Text>
               </View>
@@ -253,28 +264,28 @@ export default function TicketDetailScreen({ route }: any) {
           <View style={styles.detailsCard}>
             <View style={styles.detailsHeader}>
               <TicketIcon size={20} color={COLORS.primary} />
-              <Text style={styles.detailsTitle}>Ticket Information</Text>
+              <Text style={styles.detailsTitle}>{t('ticketDetail.details.title')}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Type</Text>
+              <Text style={styles.detailLabel}>{t('ticketDetail.details.type')}</Text>
               <Text style={styles.detailValue}>{ticket.ticket_type}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Quantity</Text>
+              <Text style={styles.detailLabel}>{t('ticketDetail.details.quantity')}</Text>
               <Text style={styles.detailValue}>{ticket.quantity}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Price</Text>
+              <Text style={styles.detailLabel}>{t('ticketDetail.details.price')}</Text>
               <Text style={styles.detailValue}>{ticket.currency} {ticket.price}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Ticket ID</Text>
+              <Text style={styles.detailLabel}>{t('ticketDetail.details.ticketId')}</Text>
               <Text style={[styles.detailValue, styles.ticketId]} numberOfLines={1}>
                 {ticket.id}
               </Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Purchase Date</Text>
+              <Text style={styles.detailLabel}>{t('ticketDetail.details.purchaseDate')}</Text>
               <Text style={styles.detailValue}>
                 {ticket.purchase_date && format(ticket.purchase_date, 'MMM dd, yyyy')}
               </Text>
@@ -300,9 +311,9 @@ export default function TicketDetailScreen({ route }: any) {
 
           {/* Footer Note */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Keep this ticket safe</Text>
+            <Text style={styles.footerText}>{t('ticketDetail.footer.keepSafe')}</Text>
             <Text style={styles.footerSubtext}>
-              This QR code is your entry pass to the event
+              {t('ticketDetail.footer.qrEntryPass')}
             </Text>
           </View>
         </View>

@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { collectionGroup, getDoc, doc, getDocs, query, where } from 'firebase/firestore';
 import { db, auth } from '../../config/firebase';
 import { COLORS } from '../../config/brand';
+import { useI18n } from '../../contexts/I18nContext';
+import { getStaffEventIds } from '../../lib/staffAssignments';
 
 type StaffMemberDoc = {
   uid?: string;
@@ -24,6 +26,7 @@ type EventSummary = {
 export default function StaffEventsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [events, setEvents] = useState<EventSummary[]>([]);
@@ -36,9 +39,9 @@ export default function StaffEventsScreen() {
   const bannerHeight = bannerBaseHeight + bannerExtraHeight;
 
   const emptyText = useMemo(() => {
-    if (!uid) return 'Please sign in.';
-    return 'No assigned events yet.';
-  }, [uid]);
+    if (!uid) return t('staffEvents.signIn');
+    return t('staffEvents.noAssigned');
+  }, [uid, t]);
 
   const loadEvents = useCallback(
     async (options?: { silent?: boolean; isCancelled?: () => boolean }) => {
@@ -52,27 +55,50 @@ export default function StaffEventsScreen() {
       if (!silent) setLoading(true);
 
       try {
-        const memberQuery = query(collectionGroup(db, 'members'), where('uid', '==', uid));
-        const memberSnap = await getDocs(memberQuery);
-
         const eventIds: string[] = [];
-        memberSnap.forEach((d) => {
-          const data = d.data() as StaffMemberDoc;
-          if (data?.eventId && data?.permissions?.checkin) {
-            eventIds.push(String(data.eventId));
-          }
-        });
 
-        const uniqueEventIds = Array.from(new Set(eventIds));
+        // Primary path: discover assignments from members collectionGroup.
+        try {
+          const memberQuery = query(collectionGroup(db, 'members'), where('__name__', '==', uid));
+          const memberSnap = await getDocs(memberQuery);
+          memberSnap.forEach((d) => {
+            const data = d.data() as StaffMemberDoc;
+            const derivedEventId = String(data?.eventId || d.ref.parent?.parent?.id || '');
+            if (derivedEventId) eventIds.push(derivedEventId);
+          });
+        } catch {
+          // If a collectionGroup query fails (rules/data edge cases), fall back below.
+        }
+
+        // Fallback: include locally persisted eventIds (added on successful invite redeem).
+        const persisted = await getStaffEventIds();
+        for (const id of persisted) eventIds.push(id);
+
+        const uniqueEventIds = Array.from(new Set(eventIds)).filter(Boolean);
+
+        // Verify access per event by reading the direct member doc.
+        const allowedEventIds: string[] = [];
+        for (const eventId of uniqueEventIds) {
+          const memberSnap = await getDoc(doc(db, 'events', eventId, 'members', uid));
+          const member = memberSnap.exists() ? (memberSnap.data() as StaffMemberDoc) : null;
+          if (!memberSnap.exists()) continue;
+
+          const checkinFlag = member?.permissions?.checkin;
+          // Back-compat: missing permissions should not hide assigned events.
+          if (checkinFlag === false) continue;
+
+          allowedEventIds.push(eventId);
+        }
+
         const loaded: EventSummary[] = [];
 
-        for (const eventId of uniqueEventIds) {
+        for (const eventId of allowedEventIds) {
           const eventSnap = await getDoc(doc(db, 'events', eventId));
           if (!eventSnap.exists()) continue;
           const data = eventSnap.data() as any;
           loaded.push({
             id: eventSnap.id,
-            title: data?.title || 'Event',
+            title: data?.title || t('common.event'),
             start_datetime: data?.start_datetime,
             venue_name: data?.venue_name || '',
             city: data?.city || '',
@@ -88,8 +114,10 @@ export default function StaffEventsScreen() {
         if (options?.isCancelled?.()) return;
         if (!silent) setLoading(false);
       }
+
+      return;
     },
-    [uid]
+    [uid, t]
   );
 
   useEffect(() => {
@@ -101,6 +129,17 @@ export default function StaffEventsScreen() {
       cancelled = true;
     };
   }, [loadEvents]);
+
+  // Ensure we refresh after redeeming an invite or returning to this tab.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      loadEvents({ silent: true, isCancelled: () => cancelled });
+      return () => {
+        cancelled = true;
+      };
+    }, [loadEvents])
+  );
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -116,15 +155,15 @@ export default function StaffEventsScreen() {
       {/* Camera section (visual) */}
       <View style={[styles.cameraSection, { height: bannerHeight, paddingTop: bannerPaddingTop }]}>
         <View style={styles.cameraPlaceholder}>
-          <Text style={styles.cameraText}>Staff Mode</Text>
-          <Text style={styles.cameraSubtext}>Events you can scan for</Text>
+          <Text style={styles.cameraText}>{t('staffEvents.staffModeTitle')}</Text>
+          <Text style={styles.cameraSubtext}>{t('staffEvents.staffModeSubtitle')}</Text>
         </View>
       </View>
 
       {/* Header below camera section */}
       <View style={styles.header}>
-        <Text style={styles.title}>Assigned Events</Text>
-        <Text style={styles.subtitle}>Select an event to open the scanner</Text>
+        <Text style={styles.title}>{t('staffEvents.assignedTitle')}</Text>
+        <Text style={styles.subtitle}>{t('staffEvents.assignedSubtitle')}</Text>
       </View>
 
       <FlatList
@@ -149,10 +188,10 @@ export default function StaffEventsScreen() {
           >
             <Text style={styles.cardTitle}>{item.title}</Text>
             <Text style={styles.cardMeta}>
-              {item.venue_name ? item.venue_name : 'Venue'}
+              {item.venue_name ? item.venue_name : t('common.venue')}
               {item.city ? ` • ${item.city}` : ''}
             </Text>
-            <Text style={styles.cardAction}>Open Scanner</Text>
+            <Text style={styles.cardAction}>{t('staffEvents.openScanner')}</Text>
           </TouchableOpacity>
         )}
       />

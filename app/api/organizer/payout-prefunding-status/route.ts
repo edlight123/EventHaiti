@@ -1,27 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase/admin'
-import { cookies } from 'next/headers'
+import { requireAuth } from '@/lib/auth'
+import { adminDb } from '@/lib/firebase/admin'
 
 export async function GET(_request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('session')?.value
-
-    if (!sessionCookie) {
+    const { user, error } = await requireAuth()
+    if (error || !user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
-
-    await adminAuth.verifySessionCookie(sessionCookie, true)
 
     const snap = await adminDb.collection('config').doc('payouts').get()
     const data = snap.exists ? snap.data() : null
 
     const prefunding = data?.prefunding || null
 
+    const enabled = Boolean(prefunding?.enabled)
+    const available = Boolean(prefunding?.available)
+
     return NextResponse.json({
+      // Back-compat: some clients expect enabled/available at the top level.
+      enabled,
+      available,
       prefunding: {
-        enabled: Boolean(prefunding?.enabled),
-        available: Boolean(prefunding?.available),
+        enabled,
+        available,
         updatedAt: prefunding?.updatedAt?.toDate?.()?.toISOString?.() || prefunding?.updatedAt || null,
       },
     })
