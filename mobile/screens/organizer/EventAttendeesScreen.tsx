@@ -32,6 +32,7 @@ interface Attendee {
   price_paid: number;
   purchased_at: any;
   checked_in_at: any;
+  checked_in?: boolean;
   status: string;
 }
 
@@ -70,8 +71,7 @@ export default function EventAttendeesScreen() {
     try {
       const q = query(
         collection(db, 'tickets'),
-        where('event_id', '==', eventId),
-        where('status', 'in', ['active', 'checked_in', 'confirmed'])
+        where('event_id', '==', eventId)
       );
 
       const snapshot = await getDocs(q);
@@ -91,6 +91,10 @@ export default function EventAttendeesScreen() {
   const filterAttendees = () => {
     let filtered = [...attendees];
 
+    const isCheckedIn = (a: Attendee) => {
+      return !!a.checked_in_at || a.checked_in === true || String(a.status || '').toLowerCase() === 'checked_in';
+    };
+
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -103,16 +107,16 @@ export default function EventAttendeesScreen() {
 
     // Filter by check-in status
     if (filterStatus === 'checked_in') {
-      filtered = filtered.filter((a) => a.checked_in_at);
+      filtered = filtered.filter((a) => isCheckedIn(a));
     } else if (filterStatus === 'not_checked_in') {
-      filtered = filtered.filter((a) => !a.checked_in_at);
+      filtered = filtered.filter((a) => !isCheckedIn(a));
     }
 
     setFilteredAttendees(filtered);
   };
 
   const renderAttendee = ({ item }: { item: Attendee }) => {
-    const checkedIn = !!item.checked_in_at;
+    const checkedIn = !!item.checked_in_at || item.checked_in === true || String(item.status || '').toLowerCase() === 'checked_in';
     const purchaseDate = item.purchased_at?.toDate
       ? item.purchased_at.toDate()
       : new Date(item.purchased_at);
@@ -182,7 +186,7 @@ export default function EventAttendeesScreen() {
     );
   }
 
-  const checkedInCount = attendees.filter((a) => a.checked_in_at).length;
+  const checkedInCount = attendees.filter((a) => a.checked_in_at || a.checked_in === true || String(a.status || '').toLowerCase() === 'checked_in').length;
 
   return (
     <View style={styles.container}>

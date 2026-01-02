@@ -10,6 +10,13 @@ import type { EventEarnings, SettlementStatus, EarningsSummary } from '@/types/e
 
 type PaymentMethod = 'stripe' | 'stripe_connect' | 'moncash' | 'moncash_button' | 'natcash' | 'sogepay' | 'unknown'
 
+function toDateOrNull(value: any): Date | null {
+  if (!value) return null
+  const raw = value?.toDate ? value.toDate() : value
+  const date = raw instanceof Date ? raw : new Date(raw)
+  return isNaN(date.getTime()) ? null : date
+}
+
 function normalizeCurrency(raw: unknown): 'HTG' | 'USD' {
   const upper = String(raw || '').toUpperCase()
   return upper === 'USD' ? 'USD' : 'HTG'
@@ -95,9 +102,12 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
   if (!eventDoc.exists) return null
 
   const event = eventDoc.data() || {}
-  const eventDateRaw = event.start_datetime || event.date_time || event.date || event.created_at
-  const eventDate = eventDateRaw?.toDate ? eventDateRaw.toDate() : eventDateRaw ? new Date(eventDateRaw) : null
-  if (!eventDate || isNaN(eventDate.getTime())) return null
+  // Settlement hold is applied after the event ends.
+  const eventEndDate =
+    toDateOrNull(event.end_datetime || event.endDateTime) ||
+    toDateOrNull(event.start_datetime || event.startDateTime || event.date_time || event.date) ||
+    toDateOrNull(event.created_at)
+  if (!eventEndDate) return null
 
   const ticketsSnapshot = await adminDb.collection('tickets').where('event_id', '==', eventId).get()
 
@@ -194,7 +204,7 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
     netAmount += fees.netAmount
   }
 
-  const settlementReadyDate = calculateSettlementDate(eventDate).toISOString()
+  const settlementReadyDate = calculateSettlementDate(eventEndDate).toISOString()
   const settlementStatus: SettlementStatus = isSettlementReady(settlementReadyDate) ? 'ready' : 'pending'
   const availableToWithdraw = settlementStatus === 'ready' ? Math.max(0, netAmount) : 0
 
@@ -231,6 +241,34 @@ export async function getEventEarnings(eventId: string): Promise<EventEarnings |
   const doc = await findEventEarningsDoc(eventId)
   if (doc) {
     const stored = { id: doc.id, ...(doc.data() as any) } as EventEarnings
+
+    // Normalize settlement readiness on read so mobile doesn't get stuck with stale values.
+    // Respect locked state (used when balance has been fully withdrawn).
+    if (stored.settlementStatus !== 'locked') {
+      const eventDoc = await adminDb.collection('events').doc(eventId).get()
+      const eventData = eventDoc.exists ? (eventDoc.data() as any) : null
+      const eventEndDate =
+        toDateOrNull(eventData?.end_datetime || eventData?.endDateTime) ||
+        toDateOrNull(eventData?.start_datetime || eventData?.startDateTime || eventData?.date_time || eventData?.date) ||
+        toDateOrNull(eventData?.created_at)
+
+      const computedSettlementReadyDate =
+        stored.settlementReadyDate || (eventEndDate ? calculateSettlementDate(eventEndDate).toISOString() : null)
+
+      if (computedSettlementReadyDate) {
+        const computedStatus: SettlementStatus = isSettlementReady(computedSettlementReadyDate) ? 'ready' : 'pending'
+        const withdrawnAmount = Math.max(0, Number((stored as any).withdrawnAmount || 0) || 0)
+        const netAmount = Math.max(0, Number((stored as any).netAmount || 0) || 0)
+        const computedAvailable =
+          computedStatus === 'ready' ? Math.max(0, netAmount - withdrawnAmount) : 0
+
+        ;(stored as any).settlementReadyDate = computedSettlementReadyDate
+        ;(stored as any).settlementStatus = computedStatus
+        ;(stored as any).availableToWithdraw = computedAvailable
+        ;(stored as any).withdrawnAmount = withdrawnAmount
+        ;(stored as any).netAmount = netAmount
+      }
+    }
 
     // If stored currency disagrees with the event currency, prefer a derived view from tickets.
     // This avoids showing Stripe charged currency (USD) for HTG events.
@@ -387,7 +425,11 @@ export async function getOrCreateEventEarnings(eventId: string): Promise<{
   }
 
   const event = eventDoc.data()!
-  const settlementDate = calculateSettlementDate(new Date(event.start_datetime))
+  const eventEndDate =
+    toDateOrNull((event as any).end_datetime || (event as any).endDateTime) ||
+    toDateOrNull((event as any).start_datetime || (event as any).startDateTime || (event as any).date_time || (event as any).date) ||
+    new Date()
+  const settlementDate = calculateSettlementDate(eventEndDate)
 
   const newEarningsRef = adminDb.collection('event_earnings').doc()
   const newEarnings: Omit<EventEarnings, 'id'> = {
