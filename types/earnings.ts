@@ -10,6 +10,10 @@ export interface EventEarnings {
   id: string
   eventId: string
   organizerId: string
+
+  // Metadata
+  // Indicates where the earnings values were sourced from (stored record vs derived from tickets).
+  dataSource?: 'event_earnings' | 'tickets_derived' | 'unknown'
   
   // Revenue tracking (all in cents)
   grossSales: number             // Total ticket revenue

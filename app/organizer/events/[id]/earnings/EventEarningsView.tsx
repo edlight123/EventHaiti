@@ -179,7 +179,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
   const platformFee = Number(earnings.platformFee || 0) || derivedFees.platformFee
   const processingFee = Number(earnings.processingFees || 0) || derivedFees.processingFee
 
-  const eventDateRaw = event.start_datetime || event.date_time || event.date || event.created_at
+  const eventDateRaw = event.end_datetime || event.endDateTime || event.start_datetime || event.startDateTime || event.date_time || event.date || event.created_at
   const eventDate = eventDateRaw ? new Date(eventDateRaw) : null
 
   const settlementDate = earnings.settlementReadyDate
@@ -356,6 +356,10 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
           }) : 'Date TBD'}</span>
           <span className="mx-2">•</span>
           {getStatusBadge(earnings.settlementStatus)}
+        </div>
+        <div className="mt-1 text-xs text-gray-500">
+          Revenue source: {earnings.dataSource === 'tickets_derived' ? 'Derived from tickets' : earnings.dataSource === 'event_earnings' ? 'event_earnings record' : 'Unknown'}
+          {earnings.lastCalculatedAt ? ` • Last calculated: ${new Date(earnings.lastCalculatedAt).toLocaleString('en-US')}` : ''}
         </div>
       </div>
 

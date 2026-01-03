@@ -36,11 +36,21 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json(
       {
         earnings: {
+          // Keep legacy fields for backwards compatibility.
           availableToWithdraw: Number((earnings as any)?.availableToWithdraw || 0),
+          totalEarned: Number((earnings as any)?.grossSales ?? (earnings as any)?.totalEarned ?? 0),
+
+          // Canonical earnings fields (cents)
+          grossSales: Number((earnings as any)?.grossSales || 0),
+          netAmount: Number((earnings as any)?.netAmount || 0),
+          ticketsSold: Number((earnings as any)?.ticketsSold || 0),
+          withdrawnAmount: Number((earnings as any)?.withdrawnAmount || 0),
+
           currency: String((earnings as any)?.currency || 'HTG').toUpperCase() === 'USD' ? 'USD' : 'HTG',
           settlementStatus: (earnings as any)?.settlementStatus || 'pending',
-          totalEarned: Number((earnings as any)?.grossSales ?? (earnings as any)?.totalEarned ?? 0),
-          withdrawnAmount: Number((earnings as any)?.withdrawnAmount || 0),
+          settlementReadyDate: (earnings as any)?.settlementReadyDate || null,
+          lastCalculatedAt: (earnings as any)?.lastCalculatedAt || null,
+          dataSource: (earnings as any)?.dataSource || 'unknown',
         },
       },
       { status: 200 }

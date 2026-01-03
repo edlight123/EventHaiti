@@ -42,6 +42,12 @@ type EventEarnings = {
   availableToWithdraw: number
   currency?: 'HTG' | 'USD'
   settlementStatus?: 'pending' | 'ready' | 'locked' | string
+  settlementReadyDate?: string | null
+  lastCalculatedAt?: string | null
+  dataSource?: string
+  grossSales?: number
+  netAmount?: number
+  ticketsSold?: number
   totalEarned?: number
   withdrawnAmount?: number
 }
@@ -93,7 +99,20 @@ export default function OrganizerEventEarningsScreen() {
   const [pendingPayload, setPendingPayload] = useState<any | null>(null)
 
   const currency = (earnings?.currency || 'HTG') as 'HTG' | 'USD'
-  const availableToWithdraw = earnings?.availableToWithdraw || 0
+  const availableToWithdraw = useMemo(() => {
+    if (!earnings) return 0
+    if (earnings?.settlementStatus !== 'ready') return 0
+
+    const net = typeof earnings.netAmount === 'number' && Number.isFinite(earnings.netAmount) ? earnings.netAmount : null
+    const withdrawn = typeof earnings.withdrawnAmount === 'number' && Number.isFinite(earnings.withdrawnAmount) ? earnings.withdrawnAmount : 0
+
+    if (net != null) {
+      return Math.max(0, net - withdrawn)
+    }
+
+    // Backwards-compatible fallback if API doesn't provide netAmount.
+    return Math.max(0, Number(earnings.availableToWithdraw || 0))
+  }, [earnings])
 
   const instantPreview = useMemo(() => {
     if (!prefunding?.enabled || !prefunding?.available) return null

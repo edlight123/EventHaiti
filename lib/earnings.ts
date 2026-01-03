@@ -215,6 +215,7 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
     id: `derived_${eventId}`,
     eventId,
     organizerId: String(event.organizer_id || event.organizerId || ''),
+    dataSource: 'tickets_derived',
     grossSales,
     ticketsSold,
     platformFee,
@@ -241,6 +242,7 @@ export async function getEventEarnings(eventId: string): Promise<EventEarnings |
   const doc = await findEventEarningsDoc(eventId)
   if (doc) {
     const stored = { id: doc.id, ...(doc.data() as any) } as EventEarnings
+    ;(stored as any).dataSource = (stored as any).dataSource || 'event_earnings'
 
     // Normalize settlement readiness on read so mobile doesn't get stuck with stale values.
     // Respect locked state (used when balance has been fully withdrawn).
@@ -288,11 +290,12 @@ export async function getEventEarnings(eventId: string): Promise<EventEarnings |
         derived.availableToWithdraw =
           derived.settlementStatus === 'ready' ? Math.max(0, Number(derived.netAmount || 0) - withdrawnAmount) : 0
         derived.currency = eventCurrency
+        ;(derived as any).dataSource = 'tickets_derived'
         return derived
       }
 
       // No tickets to derive from; at least align display currency to event currency.
-      return { ...stored, currency: eventCurrency } as EventEarnings
+      return { ...stored, currency: eventCurrency, dataSource: (stored as any).dataSource || 'event_earnings' } as EventEarnings
     }
 
     return stored
