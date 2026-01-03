@@ -252,8 +252,12 @@ export async function getEventEarnings(eventId: string): Promise<EventEarnings |
         toDateOrNull(eventData?.start_datetime || eventData?.startDateTime || eventData?.date_time || eventData?.date) ||
         toDateOrNull(eventData?.created_at)
 
+      // Some deployments may store settlementReadyDate as a Firestore Timestamp/Date.
+      // Normalize to ISO to avoid Invalid Date comparisons that keep status stuck at pending.
+      const storedReadyDate = toDateOrNull((stored as any).settlementReadyDate)
       const computedSettlementReadyDate =
-        stored.settlementReadyDate || (eventEndDate ? calculateSettlementDate(eventEndDate).toISOString() : null)
+        (storedReadyDate ? storedReadyDate.toISOString() : null) ||
+        (eventEndDate ? calculateSettlementDate(eventEndDate).toISOString() : null)
 
       if (computedSettlementReadyDate) {
         const computedStatus: SettlementStatus = isSettlementReady(computedSettlementReadyDate) ? 'ready' : 'pending'
