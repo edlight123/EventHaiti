@@ -166,7 +166,7 @@ export const FEE_CONFIG = {
   MINIMUM_PAYOUT_AMOUNT: 5000,         // $50.00 in cents
   
   // Settlement timing
-  SETTLEMENT_HOLD_DAYS: 7,             // Days after event before funds are available
+  SETTLEMENT_HOLD_DAYS: 0,             // Days after event before funds are available
 } as const
 
 /**
