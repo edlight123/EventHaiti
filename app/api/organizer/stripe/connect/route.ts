@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase/admin'
-import { cookies } from 'next/headers'
+import { adminDb } from '@/lib/firebase/admin'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { updatePayoutProfileConfig } from '@/lib/firestore/payout'
+import { requireAuth } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
@@ -47,15 +47,12 @@ function toStripeCountry(accountLocation: string): 'US' | 'CA' {
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('session')?.value
-
-    if (!sessionCookie) {
+    const { user, error } = await requireAuth('organizer')
+    if (error || !user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
-    const organizerId = decodedClaims.uid
+    const organizerId = user.id
 
     const body = await request.json().catch(() => ({}))
     const requestedLocation = String(body?.accountLocation || '').toLowerCase()

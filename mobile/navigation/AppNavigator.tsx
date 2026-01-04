@@ -52,6 +52,8 @@ import TicketDetailScreen from '../screens/TicketDetailScreen';
 import OrganizerProfileScreen from '../screens/OrganizerProfileScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import PaymentWebViewScreen from '../screens/PaymentWebViewScreen';
+import StripeConnectWebViewScreen from '../screens/StripeConnectWebViewScreen';
+import InAppWebViewScreen from '../screens/InAppWebViewScreen';
 import { useI18n } from '../contexts/I18nContext';
 
 // Verification Screens
@@ -65,6 +67,8 @@ export type RootStackParamList = {
   Main: undefined;
   InviteRedeem: { eventId?: string; token?: string };
   PaymentWebView: { url: string; title?: string; authToken?: string | null; eventId?: string };
+  StripeConnectWebView: { url: string };
+  InAppWebView: { url: string; title?: string };
   EventDetail: { eventId: string };
   EventTickets: { eventId: string };
   TicketDetail: { ticketId: string };
@@ -429,6 +433,15 @@ export default function AppNavigator() {
               options={({ route }) => ({
                 headerShown: true,
                 headerTitle: (route as any)?.params?.title || t('screens.payment.complete'),
+              })}
+            />
+            <Stack.Screen name="StripeConnectWebView" component={StripeConnectWebViewScreen} options={{ headerShown: false }} />
+            <Stack.Screen
+              name="InAppWebView"
+              component={InAppWebViewScreen}
+              options={({ route }) => ({
+                headerShown: true,
+                headerTitle: (route as any)?.params?.title || '',
               })}
             />
             <Stack.Screen name="EventDetail" component={EventDetailScreen} />

@@ -881,6 +881,29 @@ export default {
     },
   },
 
+  organizerPayoutSettings: {
+    headerTitle: 'Paramètres de paiement',
+    profileTitle: 'Profil de paiement',
+    profiles: {
+      haiti: 'Haïti',
+      stripe: 'US/Canada (Stripe)',
+    },
+    stripe: {
+      title: 'Stripe Connect',
+      description: "Terminez l'inscription pour recevoir les paiements des événements US/Canada.",
+      accountLocation: 'Pays du compte',
+      locations: {
+        united_states: 'États-Unis',
+        canada: 'Canada',
+      },
+      statusLabel: 'Statut',
+      connect: 'Connecter / continuer',
+      refresh: 'Actualiser le statut',
+      openDashboard: 'Ouvrir le tableau de bord Stripe',
+      dashboardTitle: 'Tableau de bord Stripe',
+    },
+  },
+
   organizerEarnings: {
     loading: 'Chargement des revenus…',
     headerTitle: 'Revenus de l’événement',

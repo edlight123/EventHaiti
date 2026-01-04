@@ -23,6 +23,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useI18n } from '../../contexts/I18nContext'
 import { backendFetch, backendJson } from '../../lib/api/backend'
 import { getEventById } from '../../lib/api/organizer'
+import { getRequiredPayoutProfileIdForEventCountry, normalizeCountryCode } from '../../lib/payment-provider'
 
 type RouteParams = {
   OrganizerEventEarnings: {
@@ -63,10 +64,20 @@ export default function OrganizerEventEarningsScreen() {
 
   const [loading, setLoading] = useState(true)
   const [eventTitle, setEventTitle] = useState<string>('')
+  const [eventCountry, setEventCountry] = useState<string>('')
   const [earnings, setEarnings] = useState<EventEarnings | null>(null)
 
   const [isStripeConnectAccount, setIsStripeConnectAccount] = useState(false)
   const [accountLocation, setAccountLocation] = useState<string>('')
+
+  const requiresStripeConnect = useMemo(() => {
+    const normalized = normalizeCountryCode(eventCountry)
+    if (normalized) {
+      return getRequiredPayoutProfileIdForEventCountry(normalized) === 'stripe_connect'
+    }
+    // Fallback for legacy events missing a country: infer from organizer payout config.
+    return isStripeConnectAccount
+  }, [eventCountry, isStripeConnectAccount])
 
   const [showWithdraw, setShowWithdraw] = useState(false)
   const [method, setMethod] = useState<'moncash' | 'bank' | null>(null)
@@ -139,6 +150,24 @@ export default function OrganizerEventEarningsScreen() {
     }
 
     try {
+      // Prefer backend payout profile (supports legacy fallback server-side).
+      try {
+        const res = await backendJson<{ profile: any | null }>('/api/organizer/payout-profiles/stripe-connect')
+        const profile = res?.profile
+
+        const loc = String(profile?.accountLocation || '').toLowerCase()
+        const provider = String(profile?.payoutProvider || '').toLowerCase()
+        const stripeAccountId = String(profile?.stripeAccountId || '')
+
+        const stripe = Boolean(stripeAccountId) || provider === 'stripe_connect' || loc === 'united_states' || loc === 'canada'
+
+        setIsStripeConnectAccount(stripe)
+        setAccountLocation(loc)
+        return
+      } catch {
+        // Fall back to Firestore read if API host is missing the endpoint.
+      }
+
       const payoutRef = doc(db, 'organizers', user.uid, 'payoutConfig', 'main')
       const snap = await getDoc(payoutRef)
       const data = snap.exists() ? (snap.data() as any) : null
@@ -161,6 +190,8 @@ export default function OrganizerEventEarningsScreen() {
     try {
       const event = await getEventById(eventId)
       setEventTitle(event?.title || '')
+      const rawCountry = (event as any)?.country
+      setEventCountry(normalizeCountryCode(rawCountry) || '')
 
       try {
         const res = await backendJson<{ earnings: EventEarnings | null }>(
@@ -245,7 +276,7 @@ export default function OrganizerEventEarningsScreen() {
       return
     }
 
-    if (isStripeConnectAccount) {
+    if (requiresStripeConnect) {
       Alert.alert(
         t('organizerEarnings.stripeConnectRequired.title'),
         t('organizerEarnings.stripeConnectRequired.body')
@@ -531,7 +562,7 @@ export default function OrganizerEventEarningsScreen() {
 
         <View style={{ height: 12 }} />
 
-        {isStripeConnectAccount ? (
+        {requiresStripeConnect ? (
           <View style={styles.notice}>
             <Ionicons name="card-outline" size={18} color={COLORS.textSecondary} />
             <View style={{ flex: 1 }}>

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase/admin'
-import { cookies } from 'next/headers'
+import { requireAuth } from '@/lib/auth'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 
 export const runtime = 'nodejs'
@@ -14,15 +13,12 @@ function getStripe() {
 
 export async function GET(_request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('session')?.value
-
-    if (!sessionCookie) {
+    const { user, error } = await requireAuth('organizer')
+    if (error || !user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
-    const organizerId = decodedClaims.uid
+    const organizerId = user.id
 
     const profile = await getPayoutProfile(organizerId, 'stripe_connect')
     const stripeAccountId = profile?.stripeAccountId

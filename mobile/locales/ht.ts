@@ -879,6 +879,29 @@ export default {
     },
   },
 
+  organizerPayoutSettings: {
+    headerTitle: 'Paramèt Peman',
+    profileTitle: 'Pwofil peman',
+    profiles: {
+      haiti: 'Ayiti',
+      stripe: 'US/Canada (Stripe)',
+    },
+    stripe: {
+      title: 'Stripe Connect',
+      description: 'Fini enskripsyon an pou resevwa peman pou evènman US/Canada.',
+      accountLocation: 'Kote kont lan',
+      locations: {
+        united_states: 'Etazini',
+        canada: 'Kanada',
+      },
+      statusLabel: 'Estati',
+      connect: 'Konekte / kontinye',
+      refresh: 'Mete estati a ajou',
+      openDashboard: 'Louvri tablodbò Stripe',
+      dashboardTitle: 'Tablodbò Stripe',
+    },
+  },
+
   organizerEarnings: {
     loading: 'Nap chaje revni yo...',
     headerTitle: 'Revni evènman',

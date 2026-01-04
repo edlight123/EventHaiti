@@ -12,7 +12,7 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { useNavigation } from '@react-navigation/native'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import * as ImagePicker from 'expo-image-picker'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 
@@ -49,6 +49,34 @@ type HaitiPayoutProfile = {
   }
 }
 
+type StripeConnectStatus =
+  | {
+      connected: false
+      status: 'not_connected' | string
+    }
+  | {
+      connected: true
+      stripeAccountId: string
+      status: 'verified' | 'in_review' | 'incomplete' | 'requires_more_info' | string
+      account?: {
+        country?: string
+        detailsSubmitted?: boolean
+        chargesEnabled?: boolean
+        payoutsEnabled?: boolean
+        disabledReason?: string | null
+        requirements?: {
+          currentlyDue?: string[]
+          eventuallyDue?: string[]
+        }
+      }
+    }
+
+type StripeConnectProfile = {
+  payoutProvider?: string
+  accountLocation?: 'united_states' | 'canada' | string
+  stripeAccountId?: string
+}
+
 export default function OrganizerPayoutSettingsScreen() {
   const navigation = useNavigation<any>()
   const insets = useSafeAreaInsets()
@@ -58,6 +86,12 @@ export default function OrganizerPayoutSettingsScreen() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [profile, setProfile] = useState<HaitiPayoutProfile | null>(null)
+
+  const [activeProfile, setActiveProfile] = useState<'haiti' | 'stripe_connect'>('haiti')
+  const [stripeProfile, setStripeProfile] = useState<StripeConnectProfile | null>(null)
+  const [stripeStatus, setStripeStatus] = useState<StripeConnectStatus | null>(null)
+  const [stripeAccountLocation, setStripeAccountLocation] = useState<'united_states' | 'canada'>('united_states')
+  const [stripeBusy, setStripeBusy] = useState(false)
 
   const [method, setMethod] = useState<'bank_transfer' | 'mobile_money'>('bank_transfer')
 
@@ -88,6 +122,51 @@ export default function OrganizerPayoutSettingsScreen() {
   const identityStatus = profile?.verificationStatus?.identity || 'pending'
   const bankStatus = profile?.verificationStatus?.bank || 'pending'
   const phoneStatus = profile?.verificationStatus?.phone || 'pending'
+
+  const refreshStripeStatus = useCallback(async () => {
+    try {
+      const status = await backendJson<StripeConnectStatus>('/api/organizer/stripe/status')
+      setStripeStatus(status || null)
+    } catch (e: any) {
+      Alert.alert(t('common.error'), e?.message || 'Failed to refresh Stripe status')
+    }
+  }, [t])
+
+  const startStripeOnboarding = useCallback(async () => {
+    setStripeBusy(true)
+    try {
+      const res = await backendJson<{ url?: string; stripeAccountId?: string }>(
+        '/api/organizer/stripe/connect',
+        {
+          method: 'POST',
+          body: JSON.stringify({ accountLocation: stripeAccountLocation }),
+        }
+      )
+
+      if (!res?.url) {
+        throw new Error('Stripe onboarding URL missing')
+      }
+
+      navigation.navigate('StripeConnectWebView', { url: res.url })
+    } catch (e: any) {
+      Alert.alert(t('common.error'), e?.message || 'Failed to start Stripe onboarding')
+    } finally {
+      setStripeBusy(false)
+    }
+  }, [navigation, stripeAccountLocation, t])
+
+  const openStripeDashboard = useCallback(async () => {
+    setStripeBusy(true)
+    try {
+      const res = await backendJson<{ url?: string }>('/api/organizer/stripe/login-link', { method: 'POST' })
+      if (!res?.url) throw new Error('Stripe dashboard URL missing')
+      navigation.navigate('InAppWebView', { url: res.url, title: t('organizerPayoutSettings.stripe.dashboardTitle') })
+    } catch (e: any) {
+      Alert.alert(t('common.error'), e?.message || 'Failed to open Stripe dashboard')
+    } finally {
+      setStripeBusy(false)
+    }
+  }, [navigation, t])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -149,6 +228,36 @@ export default function OrganizerPayoutSettingsScreen() {
         accountName: next?.mobileMoneyDetails?.accountName || prev.accountName,
         phoneNumber: next?.mobileMoneyDetails?.phoneNumber || prev.phoneNumber,
       }))
+
+      if (user?.uid) {
+        try {
+          // Prefer backend (handles legacy fallback and avoids Firestore rule issues).
+          try {
+            const res = await backendJson<{ profile: StripeConnectProfile | null }>(
+              '/api/organizer/payout-profiles/stripe-connect'
+            )
+            const stripe = (res?.profile || null) as StripeConnectProfile | null
+            setStripeProfile(stripe)
+
+            const location = String(stripe?.accountLocation || '').toLowerCase()
+            if (location === 'canada') setStripeAccountLocation('canada')
+            if (location === 'united_states') setStripeAccountLocation('united_states')
+            return
+          } catch {
+            // Fall back to Firestore.
+          }
+
+          const snap = await getDoc(doc(db, 'organizers', user.uid, 'payoutProfiles', 'stripe_connect'))
+          const stripe = snap.exists() ? ((snap.data() as any) as StripeConnectProfile) : null
+          setStripeProfile(stripe)
+
+          const location = String(stripe?.accountLocation || '').toLowerCase()
+          if (location === 'canada') setStripeAccountLocation('canada')
+          if (location === 'united_states') setStripeAccountLocation('united_states')
+        } catch {
+          // ignore stripe profile load errors
+        }
+      }
     } catch (e: any) {
       Alert.alert(t('common.error'), e?.message || 'Failed to load payout settings')
     } finally {
@@ -159,6 +268,18 @@ export default function OrganizerPayoutSettingsScreen() {
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    if (activeProfile !== 'stripe_connect') return
+    void refreshStripeStatus()
+  }, [activeProfile, refreshStripeStatus])
+
+  useFocusEffect(
+    useCallback(() => {
+      if (activeProfile !== 'stripe_connect') return
+      void refreshStripeStatus()
+    }, [activeProfile, refreshStripeStatus])
+  )
 
   const save = useCallback(async () => {
     setSaving(true)
@@ -417,255 +538,354 @@ export default function OrganizerPayoutSettingsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Payout Settings</Text>
+        <Text style={styles.headerTitle}>{t('organizerPayoutSettings.headerTitle')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Status</Text>
-          <Text style={styles.metaText}>{statusLabel}</Text>
-
-          <View style={{ height: 10 }} />
-          <Text style={styles.cardTitle}>Verification</Text>
-          <Text style={styles.metaText}>Identity: {identityStatus}</Text>
-          <Text style={styles.metaText}>Bank: {bankStatus}</Text>
-          <Text style={styles.metaText}>Phone: {phoneStatus}</Text>
-
-          <View style={{ height: 12 }} />
-          <TouchableOpacity
-            style={[styles.secondaryButton]}
-            onPress={() => navigation.navigate('OrganizerVerification')}
-          >
-            <Text style={styles.secondaryButtonText}>Complete identity verification</Text>
-          </TouchableOpacity>
+          <Text style={styles.cardTitle}>{t('organizerPayoutSettings.profileTitle')}</Text>
+          <View style={styles.row}>
+            <TouchableOpacity
+              style={[styles.chip, activeProfile === 'haiti' ? styles.chipActive : null]}
+              onPress={() => setActiveProfile('haiti')}
+            >
+              <Text style={[styles.chipText, activeProfile === 'haiti' ? styles.chipTextActive : null]}>
+                {t('organizerPayoutSettings.profiles.haiti')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.chip, activeProfile === 'stripe_connect' ? styles.chipActive : null]}
+              onPress={() => setActiveProfile('stripe_connect')}
+            >
+              <Text style={[styles.chipText, activeProfile === 'stripe_connect' ? styles.chipTextActive : null]}>
+                {t('organizerPayoutSettings.profiles.stripe')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={{ height: 12 }} />
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Payout method</Text>
-          <View style={styles.row}>
+        {activeProfile === 'stripe_connect' ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t('organizerPayoutSettings.stripe.title')}</Text>
+            <Text style={styles.metaHint}>{t('organizerPayoutSettings.stripe.description')}</Text>
+
+            <View style={{ height: 12 }} />
+            <Text style={styles.label}>{t('organizerPayoutSettings.stripe.accountLocation')}</Text>
+            <View style={styles.row}>
+              <TouchableOpacity
+                style={[styles.chip, stripeAccountLocation === 'united_states' ? styles.chipActive : null]}
+                onPress={() => setStripeAccountLocation('united_states')}
+              >
+                <Text style={[styles.chipText, stripeAccountLocation === 'united_states' ? styles.chipTextActive : null]}>
+                  {t('organizerPayoutSettings.stripe.locations.united_states')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.chip, stripeAccountLocation === 'canada' ? styles.chipActive : null]}
+                onPress={() => setStripeAccountLocation('canada')}
+              >
+                <Text style={[styles.chipText, stripeAccountLocation === 'canada' ? styles.chipTextActive : null]}>
+                  {t('organizerPayoutSettings.stripe.locations.canada')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ height: 12 }} />
+            <Text style={styles.metaText}>
+              {t('organizerPayoutSettings.stripe.statusLabel')}: {String(stripeStatus?.status || 'not_connected')}
+            </Text>
+            {stripeStatus && 'connected' in stripeStatus && stripeStatus.connected && stripeStatus.stripeAccountId ? (
+              <Text style={styles.metaText}>Stripe account: {stripeStatus.stripeAccountId}</Text>
+            ) : null}
+            {stripeProfile?.stripeAccountId && (!stripeStatus || !('connected' in stripeStatus) || !stripeStatus.connected) ? (
+              <Text style={styles.metaText}>Stripe account: {stripeProfile.stripeAccountId}</Text>
+            ) : null}
+
+            <View style={{ height: 14 }} />
+
             <TouchableOpacity
-              style={[styles.chip, method === 'bank_transfer' ? styles.chipActive : null]}
-              onPress={() => setMethod('bank_transfer')}
+              style={[styles.primaryButton, stripeBusy ? styles.primaryButtonDisabled : null]}
+              onPress={startStripeOnboarding}
+              disabled={stripeBusy}
             >
-              <Text style={[styles.chipText, method === 'bank_transfer' ? styles.chipTextActive : null]}>Bank</Text>
+              {stripeBusy ? (
+                <ActivityIndicator color={COLORS.white} />
+              ) : (
+                <Text style={styles.primaryButtonText}>{t('organizerPayoutSettings.stripe.connect')}</Text>
+              )}
             </TouchableOpacity>
+
+            <View style={{ height: 10 }} />
+
             <TouchableOpacity
-              style={[styles.chip, method === 'mobile_money' ? styles.chipActive : null]}
-              onPress={() => setMethod('mobile_money')}
+              style={[styles.secondaryButton, stripeBusy ? styles.primaryButtonDisabled : null]}
+              onPress={refreshStripeStatus}
+              disabled={stripeBusy}
             >
-              <Text style={[styles.chipText, method === 'mobile_money' ? styles.chipTextActive : null]}>Mobile money</Text>
+              <Text style={styles.secondaryButtonText}>{t('organizerPayoutSettings.stripe.refresh')}</Text>
+            </TouchableOpacity>
+
+            <View style={{ height: 10 }} />
+
+            <TouchableOpacity
+              style={[styles.secondaryButton, stripeBusy ? styles.primaryButtonDisabled : null]}
+              onPress={openStripeDashboard}
+              disabled={stripeBusy}
+            >
+              <Text style={styles.secondaryButtonText}>{t('organizerPayoutSettings.stripe.openDashboard')}</Text>
             </TouchableOpacity>
           </View>
+        ) : (
+          <>
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Status</Text>
+              <Text style={styles.metaText}>{statusLabel}</Text>
 
-          <View style={{ height: 12 }} />
+              <View style={{ height: 10 }} />
+              <Text style={styles.cardTitle}>Verification</Text>
+              <Text style={styles.metaText}>Identity: {identityStatus}</Text>
+              <Text style={styles.metaText}>Bank: {bankStatus}</Text>
+              <Text style={styles.metaText}>Phone: {phoneStatus}</Text>
 
-          {method === 'bank_transfer' ? (
-            <>
-              <Text style={styles.label}>Account holder name</Text>
-              <TextInput
-                style={styles.input}
-                value={bankForm.accountName}
-                onChangeText={(v) => setBankForm((s) => ({ ...s, accountName: v }))}
-                placeholder="Full legal name"
-                placeholderTextColor={COLORS.textSecondary}
-              />
+              <View style={{ height: 12 }} />
+              <TouchableOpacity
+                style={[styles.secondaryButton]}
+                onPress={() => navigation.navigate('OrganizerVerification')}
+              >
+                <Text style={styles.secondaryButtonText}>Complete identity verification</Text>
+              </TouchableOpacity>
+            </View>
 
-              <Text style={styles.label}>Bank name</Text>
-              <TextInput
-                style={styles.input}
-                value={bankForm.bankName}
-                onChangeText={(v) => setBankForm((s) => ({ ...s, bankName: v }))}
-                placeholder="Your bank"
-                placeholderTextColor={COLORS.textSecondary}
-              />
+            <View style={{ height: 12 }} />
 
-              <Text style={styles.label}>Account number</Text>
-              <TextInput
-                style={styles.input}
-                value={bankForm.accountNumber}
-                onChangeText={(v) => setBankForm((s) => ({ ...s, accountNumber: v }))}
-                placeholder="Account number"
-                placeholderTextColor={COLORS.textSecondary}
-                keyboardType="number-pad"
-              />
-
-              <Text style={styles.label}>Routing number (optional)</Text>
-              <TextInput
-                style={styles.input}
-                value={bankForm.routingNumber}
-                onChangeText={(v) => setBankForm((s) => ({ ...s, routingNumber: v }))}
-                placeholder="Routing number"
-                placeholderTextColor={COLORS.textSecondary}
-              />
-
-              <Text style={styles.label}>SWIFT (optional)</Text>
-              <TextInput
-                style={styles.input}
-                value={bankForm.swift}
-                onChangeText={(v) => setBankForm((s) => ({ ...s, swift: v }))}
-                placeholder="SWIFT"
-                placeholderTextColor={COLORS.textSecondary}
-                autoCapitalize="characters"
-              />
-            </>
-          ) : (
-            <>
-              <Text style={styles.label}>Provider</Text>
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Payout method</Text>
               <View style={styles.row}>
                 <TouchableOpacity
-                  style={[styles.chip, mobileMoneyForm.provider === 'moncash' ? styles.chipActive : null]}
-                  onPress={() => setMobileMoneyForm((s) => ({ ...s, provider: 'moncash' }))}
+                  style={[styles.chip, method === 'bank_transfer' ? styles.chipActive : null]}
+                  onPress={() => setMethod('bank_transfer')}
                 >
-                  <Text style={[styles.chipText, mobileMoneyForm.provider === 'moncash' ? styles.chipTextActive : null]}>MonCash</Text>
+                  <Text style={[styles.chipText, method === 'bank_transfer' ? styles.chipTextActive : null]}>Bank</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.chip, mobileMoneyForm.provider === 'natcash' ? styles.chipActive : null]}
-                  onPress={() => setMobileMoneyForm((s) => ({ ...s, provider: 'natcash' }))}
+                  style={[styles.chip, method === 'mobile_money' ? styles.chipActive : null]}
+                  onPress={() => setMethod('mobile_money')}
                 >
-                  <Text style={[styles.chipText, mobileMoneyForm.provider === 'natcash' ? styles.chipTextActive : null]}>NatCash</Text>
+                  <Text style={[styles.chipText, method === 'mobile_money' ? styles.chipTextActive : null]}>Mobile money</Text>
                 </TouchableOpacity>
               </View>
 
               <View style={{ height: 12 }} />
 
-              <Text style={styles.label}>Account name</Text>
-              <TextInput
-                style={styles.input}
-                value={mobileMoneyForm.accountName}
-                onChangeText={(v) => setMobileMoneyForm((s) => ({ ...s, accountName: v }))}
-                placeholder="Full legal name"
-                placeholderTextColor={COLORS.textSecondary}
-              />
+              {method === 'bank_transfer' ? (
+                <>
+                  <Text style={styles.label}>Account holder name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={bankForm.accountName}
+                    onChangeText={(v) => setBankForm((s) => ({ ...s, accountName: v }))}
+                    placeholder="Full legal name"
+                    placeholderTextColor={COLORS.textSecondary}
+                  />
 
-              <Text style={styles.label}>Phone number</Text>
-              <TextInput
-                style={styles.input}
-                value={mobileMoneyForm.phoneNumber}
-                onChangeText={(v) => setMobileMoneyForm((s) => ({ ...s, phoneNumber: v }))}
-                placeholder="+509..."
-                placeholderTextColor={COLORS.textSecondary}
-                keyboardType="phone-pad"
-              />
-            </>
-          )}
+                  <Text style={styles.label}>Bank name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={bankForm.bankName}
+                    onChangeText={(v) => setBankForm((s) => ({ ...s, bankName: v }))}
+                    placeholder="Your bank"
+                    placeholderTextColor={COLORS.textSecondary}
+                  />
 
-          <View style={{ height: 14 }} />
+                  <Text style={styles.label}>Account number</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={bankForm.accountNumber}
+                    onChangeText={(v) => setBankForm((s) => ({ ...s, accountNumber: v }))}
+                    placeholder="Account number"
+                    placeholderTextColor={COLORS.textSecondary}
+                    keyboardType="number-pad"
+                  />
 
-          <TouchableOpacity
-            style={[styles.primaryButton, saving ? styles.primaryButtonDisabled : null]}
-            onPress={save}
-            disabled={saving}
-          >
-            {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.primaryButtonText}>Save</Text>}
-          </TouchableOpacity>
-        </View>
+                  <Text style={styles.label}>Routing number (optional)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={bankForm.routingNumber}
+                    onChangeText={(v) => setBankForm((s) => ({ ...s, routingNumber: v }))}
+                    placeholder="Routing number"
+                    placeholderTextColor={COLORS.textSecondary}
+                  />
 
-        {method === 'mobile_money' ? (
-          <>
-            <View style={{ height: 12 }} />
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Phone verification</Text>
-              <Text style={styles.metaText}>Status: {phoneStatus}</Text>
+                  <Text style={styles.label}>SWIFT (optional)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={bankForm.swift}
+                    onChangeText={(v) => setBankForm((s) => ({ ...s, swift: v }))}
+                    placeholder="SWIFT"
+                    placeholderTextColor={COLORS.textSecondary}
+                    autoCapitalize="characters"
+                  />
+                </>
+              ) : (
+                <>
+                  <Text style={styles.label}>Provider</Text>
+                  <View style={styles.row}>
+                    <TouchableOpacity
+                      style={[styles.chip, mobileMoneyForm.provider === 'moncash' ? styles.chipActive : null]}
+                      onPress={() => setMobileMoneyForm((s) => ({ ...s, provider: 'moncash' }))}
+                    >
+                      <Text style={[styles.chipText, mobileMoneyForm.provider === 'moncash' ? styles.chipTextActive : null]}>MonCash</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.chip, mobileMoneyForm.provider === 'natcash' ? styles.chipActive : null]}
+                      onPress={() => setMobileMoneyForm((s) => ({ ...s, provider: 'natcash' }))}
+                    >
+                      <Text style={[styles.chipText, mobileMoneyForm.provider === 'natcash' ? styles.chipTextActive : null]}>NatCash</Text>
+                    </TouchableOpacity>
+                  </View>
 
-              <View style={{ height: 10 }} />
+                  <View style={{ height: 12 }} />
+
+                  <Text style={styles.label}>Account name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={mobileMoneyForm.accountName}
+                    onChangeText={(v) => setMobileMoneyForm((s) => ({ ...s, accountName: v }))}
+                    placeholder="Full legal name"
+                    placeholderTextColor={COLORS.textSecondary}
+                  />
+
+                  <Text style={styles.label}>Phone number</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={mobileMoneyForm.phoneNumber}
+                    onChangeText={(v) => setMobileMoneyForm((s) => ({ ...s, phoneNumber: v }))}
+                    placeholder="+509..."
+                    placeholderTextColor={COLORS.textSecondary}
+                    keyboardType="phone-pad"
+                  />
+                </>
+              )}
+
+              <View style={{ height: 14 }} />
+
               <TouchableOpacity
-                style={[styles.secondaryButton, sendingPhoneCode ? styles.primaryButtonDisabled : null]}
-                onPress={sendPhoneVerificationCode}
-                disabled={sendingPhoneCode}
+                style={[styles.primaryButton, saving ? styles.primaryButtonDisabled : null]}
+                onPress={save}
+                disabled={saving}
               >
-                {sendingPhoneCode ? (
-                  <ActivityIndicator color={COLORS.primary} />
-                ) : (
-                  <Text style={styles.secondaryButtonText}>Send code</Text>
-                )}
-              </TouchableOpacity>
-
-              <View style={{ height: 10 }} />
-              <TextInput
-                style={styles.input}
-                value={phoneCode}
-                onChangeText={setPhoneCode}
-                placeholder="6-digit code"
-                placeholderTextColor={COLORS.textSecondary}
-                keyboardType="number-pad"
-              />
-              <TouchableOpacity
-                style={[styles.primaryButton, verifyingPhoneCode ? styles.primaryButtonDisabled : null]}
-                onPress={verifyPhoneCode}
-                disabled={verifyingPhoneCode}
-              >
-                {verifyingPhoneCode ? (
-                  <ActivityIndicator color={COLORS.white} />
-                ) : (
-                  <Text style={styles.primaryButtonText}>Verify</Text>
-                )}
+                {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.primaryButtonText}>Save</Text>}
               </TouchableOpacity>
             </View>
+
+            {method === 'mobile_money' ? (
+              <>
+                <View style={{ height: 12 }} />
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>Phone verification</Text>
+                  <Text style={styles.metaText}>Status: {phoneStatus}</Text>
+
+                  <View style={{ height: 10 }} />
+                  <TouchableOpacity
+                    style={[styles.secondaryButton, sendingPhoneCode ? styles.primaryButtonDisabled : null]}
+                    onPress={sendPhoneVerificationCode}
+                    disabled={sendingPhoneCode}
+                  >
+                    {sendingPhoneCode ? (
+                      <ActivityIndicator color={COLORS.primary} />
+                    ) : (
+                      <Text style={styles.secondaryButtonText}>Send code</Text>
+                    )}
+                  </TouchableOpacity>
+
+                  <View style={{ height: 10 }} />
+                  <TextInput
+                    style={styles.input}
+                    value={phoneCode}
+                    onChangeText={setPhoneCode}
+                    placeholder="6-digit code"
+                    placeholderTextColor={COLORS.textSecondary}
+                    keyboardType="number-pad"
+                  />
+                  <TouchableOpacity
+                    style={[styles.primaryButton, verifyingPhoneCode ? styles.primaryButtonDisabled : null]}
+                    onPress={verifyPhoneCode}
+                    disabled={verifyingPhoneCode}
+                  >
+                    {verifyingPhoneCode ? (
+                      <ActivityIndicator color={COLORS.white} />
+                    ) : (
+                      <Text style={styles.primaryButtonText}>Verify</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : null}
+
+            {method === 'bank_transfer' ? (
+              <>
+                <View style={{ height: 12 }} />
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>Bank verification</Text>
+                  <Text style={styles.metaText}>Status: {bankStatus}</Text>
+                  <Text style={styles.metaHint}>
+                    Upload a bank statement or void check. This will be reviewed by an admin.
+                  </Text>
+
+                  <View style={{ height: 10 }} />
+                  <View style={styles.row}>
+                    <TouchableOpacity
+                      style={[styles.chip, bankVerificationType === 'bank_statement' ? styles.chipActive : null]}
+                      onPress={() => setBankVerificationType('bank_statement')}
+                    >
+                      <Text style={[styles.chipText, bankVerificationType === 'bank_statement' ? styles.chipTextActive : null]}>Statement</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.chip, bankVerificationType === 'void_check' ? styles.chipActive : null]}
+                      onPress={() => setBankVerificationType('void_check')}
+                    >
+                      <Text style={[styles.chipText, bankVerificationType === 'void_check' ? styles.chipTextActive : null]}>Void check</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.chip, bankVerificationType === 'utility_bill' ? styles.chipActive : null]}
+                      onPress={() => setBankVerificationType('utility_bill')}
+                    >
+                      <Text style={[styles.chipText, bankVerificationType === 'utility_bill' ? styles.chipTextActive : null]}>Utility bill</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={{ height: 10 }} />
+                  <TouchableOpacity style={styles.secondaryButton} onPress={pickBankProof}>
+                    <Text style={styles.secondaryButtonText}>
+                      {bankProofAsset ? 'Change document' : 'Choose document photo'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <View style={{ height: 10 }} />
+                  <TouchableOpacity
+                    style={[styles.primaryButton, submittingBankProof ? styles.primaryButtonDisabled : null]}
+                    onPress={submitBankVerification}
+                    disabled={submittingBankProof}
+                  >
+                    {submittingBankProof ? (
+                      <ActivityIndicator color={COLORS.white} />
+                    ) : (
+                      <Text style={styles.primaryButtonText}>Submit for review</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : null}
+
+            <View style={{ height: 20 }} />
+            <Text style={styles.metaHint}>
+              Note: Withdrawals require identity + payout method verification to be approved.
+            </Text>
           </>
-        ) : null}
-
-        {method === 'bank_transfer' ? (
-          <>
-            <View style={{ height: 12 }} />
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Bank verification</Text>
-              <Text style={styles.metaText}>Status: {bankStatus}</Text>
-              <Text style={styles.metaHint}>
-                Upload a bank statement or void check. This will be reviewed by an admin.
-              </Text>
-
-              <View style={{ height: 10 }} />
-              <View style={styles.row}>
-                <TouchableOpacity
-                  style={[styles.chip, bankVerificationType === 'bank_statement' ? styles.chipActive : null]}
-                  onPress={() => setBankVerificationType('bank_statement')}
-                >
-                  <Text style={[styles.chipText, bankVerificationType === 'bank_statement' ? styles.chipTextActive : null]}>Statement</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.chip, bankVerificationType === 'void_check' ? styles.chipActive : null]}
-                  onPress={() => setBankVerificationType('void_check')}
-                >
-                  <Text style={[styles.chipText, bankVerificationType === 'void_check' ? styles.chipTextActive : null]}>Void check</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.chip, bankVerificationType === 'utility_bill' ? styles.chipActive : null]}
-                  onPress={() => setBankVerificationType('utility_bill')}
-                >
-                  <Text style={[styles.chipText, bankVerificationType === 'utility_bill' ? styles.chipTextActive : null]}>Utility bill</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={{ height: 10 }} />
-              <TouchableOpacity style={styles.secondaryButton} onPress={pickBankProof}>
-                <Text style={styles.secondaryButtonText}>
-                  {bankProofAsset ? 'Change document' : 'Choose document photo'}
-                </Text>
-              </TouchableOpacity>
-
-              <View style={{ height: 10 }} />
-              <TouchableOpacity
-                style={[styles.primaryButton, submittingBankProof ? styles.primaryButtonDisabled : null]}
-                onPress={submitBankVerification}
-                disabled={submittingBankProof}
-              >
-                {submittingBankProof ? (
-                  <ActivityIndicator color={COLORS.white} />
-                ) : (
-                  <Text style={styles.primaryButtonText}>Submit for review</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </>
-        ) : null}
-
-        <View style={{ height: 20 }} />
-        <Text style={styles.metaHint}>
-          Note: Withdrawals require identity + payout method verification to be approved.
-        </Text>
+        )}
       </ScrollView>
     </View>
   )

@@ -5,6 +5,7 @@ import { getEventEarnings, withdrawFromEarnings } from '@/lib/earnings'
 import { moncashPrefundedTransfer } from '@/lib/moncash'
 import type { WithdrawalRequest } from '@/types/earnings'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
+import { getRequiredPayoutProfileIdForEventCountry } from '@/lib/firestore/payout-profiles'
 
 const PREFUNDING_FEE_PERCENT = 0.03
 
@@ -74,6 +75,18 @@ export async function POST(req: NextRequest) {
     const eventData = eventDoc.data()
     if (eventData?.organizer_id !== user.id) {
       return NextResponse.json({ error: 'Not authorized for this event' }, { status: 403 })
+    }
+
+    // Event-based routing: US/CA events must use Stripe Connect.
+    const requiredProfile = getRequiredPayoutProfileIdForEventCountry(eventData?.country)
+    if (requiredProfile === 'stripe_connect') {
+      return NextResponse.json(
+        {
+          error: 'Stripe Connect required',
+          message: 'US/Canada events must withdraw via Stripe Connect. MonCash is not available for this event.',
+        },
+        { status: 400 }
+      )
     }
 
     // Verify earnings and settlement status (normalized against event end time)

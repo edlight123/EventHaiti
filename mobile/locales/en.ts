@@ -899,6 +899,29 @@ export default {
     },
   },
 
+  organizerPayoutSettings: {
+    headerTitle: 'Payout Settings',
+    profileTitle: 'Payout profile',
+    profiles: {
+      haiti: 'Haiti',
+      stripe: 'US/Canada (Stripe)',
+    },
+    stripe: {
+      title: 'Stripe Connect',
+      description: 'Complete onboarding to receive payouts for US/Canada events.',
+      accountLocation: 'Account location',
+      locations: {
+        united_states: 'United States',
+        canada: 'Canada',
+      },
+      statusLabel: 'Status',
+      connect: 'Connect / continue',
+      refresh: 'Refresh status',
+      openDashboard: 'Open Stripe dashboard',
+      dashboardTitle: 'Stripe dashboard',
+    },
+  },
+
   organizerEarnings: {
     loading: 'Loading earnings...',
     headerTitle: 'Event Earnings',
