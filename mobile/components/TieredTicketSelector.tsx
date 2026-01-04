@@ -13,6 +13,7 @@ import { X, Check, Minus, Plus, Tag } from 'lucide-react-native';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useI18n } from '../contexts/I18nContext';
+import { normalizePromoValidationResponse } from '../lib/promoCodes';
 
 interface TicketTier {
   id: string;
@@ -147,13 +148,17 @@ export default function TieredTicketSelector({
 
     setValidatingPromo(true);
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+      const apiUrl = (
+        process.env.EXPO_PUBLIC_API_URL ||
+        process.env.EXPO_PUBLIC_WEB_URL ||
+        'https://eventhaiti.vercel.app'
+      ).replace(/\/$/, '');
       const response = await fetch(
         `${apiUrl}/api/promo-codes?eventId=${eventId}&code=${encodeURIComponent(promoCode)}`
       );
       const data = await response.json();
-      
-      setPromoValidation(data);
+
+      setPromoValidation(normalizePromoValidationResponse(data));
     } catch (error) {
       console.error('Error validating promo code:', error);
       setPromoValidation({ valid: false, error: 'Failed to validate promo code' });
@@ -401,7 +406,11 @@ export default function TieredTicketSelector({
                       { color: promoValidation.valid ? COLORS.success : COLORS.error }
                     ]}>
                       {promoValidation.valid 
-                        ? `✓ ${promoValidation.discount_percentage}% ${t('ticketSelector.discountApplied')}`
+                        ? promoValidation.discount_percentage
+                          ? `✓ ${promoValidation.discount_percentage}% ${t('ticketSelector.discountApplied')}`
+                          : promoValidation.discount_amount
+                            ? `✓ ${promoValidation.discount_amount} ${displayCurrency} ${t('ticketSelector.discountApplied')}`
+                            : `✓ ${t('ticketSelector.discountApplied')}`
                         : `✗ ${promoValidation.error}`
                       }
                     </Text>

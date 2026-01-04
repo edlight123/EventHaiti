@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
+import { getPromoExpiresAt, getPromoStartAt, getPromoUsesCount, isPromoActive } from '@/lib/promo-code-shared'
 
 export async function POST(request: Request) {
   try {
@@ -37,15 +38,24 @@ export async function POST(request: Request) {
 
     // Check validity period
     const now = new Date()
-    if (promoCode.valid_from && new Date(promoCode.valid_from) > now) {
+
+    if (!isPromoActive(promoCode)) {
+      return NextResponse.json({ error: 'This promo code is inactive' }, { status: 400 })
+    }
+
+    const startAt = getPromoStartAt(promoCode)
+    if (startAt && startAt > now) {
       return NextResponse.json({ error: 'This promo code is not yet valid' }, { status: 400 })
     }
-    if (promoCode.valid_until && new Date(promoCode.valid_until) < now) {
+
+    const expiresAt = getPromoExpiresAt(promoCode)
+    if (expiresAt && expiresAt < now) {
       return NextResponse.json({ error: 'This promo code has expired' }, { status: 400 })
     }
 
     // Check max uses
-    if (promoCode.max_uses && promoCode.uses_count >= promoCode.max_uses) {
+    const usesCount = getPromoUsesCount(promoCode)
+    if (promoCode.max_uses && usesCount >= promoCode.max_uses) {
       return NextResponse.json({ error: 'This promo code has reached its usage limit' }, { status: 400 })
     }
 
