@@ -547,26 +547,80 @@ export async function withdrawFromEarnings(
     return { success: false, error: 'Earnings not found' }
   }
 
-  // Validate withdrawal
-  if (data.availableToWithdraw < amount) {
-    return {
-      success: false,
-      error: `Insufficient funds. Available: ${data.availableToWithdraw}, Requested: ${amount}`,
+  const netAmount = Math.max(0, Number((data as any).netAmount || 0) || 0)
+  const withdrawnAmount = Math.max(0, Number((data as any).withdrawnAmount || 0) || 0)
+
+  // Recompute settlement/availability on demand so policy changes (e.g. hold days -> 0)
+  // take effect immediately, without waiting for cron to update stored docs.
+  let effectiveSettlementStatus: SettlementStatus = data.settlementStatus
+  let effectiveSettlementReadyDateIso: string | null = (data as any).settlementReadyDate || null
+  let effectiveAvailableToWithdraw = Math.max(0, Number((data as any).availableToWithdraw || 0) || 0)
+
+  if (data.settlementStatus !== 'locked') {
+    const eventDoc = await adminDb.collection('events').doc(eventId).get()
+    const eventData = eventDoc.exists ? (eventDoc.data() as any) : null
+    const eventEndDate =
+      toDateOrNull(eventData?.end_datetime || eventData?.endDateTime) ||
+      toDateOrNull(eventData?.start_datetime || eventData?.startDateTime || eventData?.date_time || eventData?.date) ||
+      toDateOrNull(eventData?.created_at)
+
+    const storedReadyDate = toDateOrNull((data as any).settlementReadyDate)
+    const computedFromEventEnd = eventEndDate ? calculateSettlementDate(eventEndDate) : null
+
+    const chosen = (() => {
+      if (storedReadyDate && computedFromEventEnd) {
+        return storedReadyDate.getTime() <= computedFromEventEnd.getTime() ? storedReadyDate : computedFromEventEnd
+      }
+      return storedReadyDate || computedFromEventEnd
+    })()
+
+    effectiveSettlementReadyDateIso = chosen ? chosen.toISOString() : null
+    effectiveSettlementStatus =
+      effectiveSettlementReadyDateIso && isSettlementReady(effectiveSettlementReadyDateIso) ? 'ready' : 'pending'
+
+    effectiveAvailableToWithdraw =
+      effectiveSettlementStatus === 'ready' ? Math.max(0, netAmount - withdrawnAmount) : 0
+
+    const needsSync =
+      (data as any).settlementReadyDate !== effectiveSettlementReadyDateIso ||
+      data.settlementStatus !== effectiveSettlementStatus ||
+      Number((data as any).availableToWithdraw || 0) !== effectiveAvailableToWithdraw ||
+      Number((data as any).withdrawnAmount || 0) !== withdrawnAmount
+
+    if (needsSync && effectiveSettlementReadyDateIso) {
+      await ref.update({
+        settlementReadyDate: effectiveSettlementReadyDateIso,
+        settlementStatus: effectiveSettlementStatus,
+        availableToWithdraw: effectiveAvailableToWithdraw,
+        withdrawnAmount,
+        netAmount,
+        updatedAt: new Date().toISOString(),
+      })
     }
   }
 
-  if (data.settlementStatus !== 'ready') {
+  // Validate withdrawal
+  if (effectiveAvailableToWithdraw < amount) {
     return {
       success: false,
-      error: `Funds not yet available. Settlement status: ${data.settlementStatus}`,
+      error: `Insufficient funds. Available: ${effectiveAvailableToWithdraw}, Requested: ${amount}`,
+    }
+  }
+
+  if (effectiveSettlementStatus !== 'ready') {
+    return {
+      success: false,
+      error: `Funds not yet available. Settlement status: ${effectiveSettlementStatus}`,
     }
   }
 
   // Process withdrawal
+  const remaining = Math.max(0, effectiveAvailableToWithdraw - amount)
+  const newWithdrawn = withdrawnAmount + amount
   await ref.update({
-    availableToWithdraw: data.availableToWithdraw - amount,
-    withdrawnAmount: data.withdrawnAmount + amount,
-    settlementStatus: data.availableToWithdraw - amount === 0 ? 'locked' : 'ready',
+    availableToWithdraw: remaining,
+    withdrawnAmount: newWithdrawn,
+    settlementStatus: remaining === 0 ? 'locked' : 'ready',
     updatedAt: new Date().toISOString(),
   })
 
@@ -626,23 +680,40 @@ export async function updateSettlementStatus(eventId: string): Promise<Settlemen
     throw new Error('Earnings not found')
   }
 
-  let newStatus: SettlementStatus = data.settlementStatus
-
-  // Check if settlement date has passed
-  if (
-    data.settlementStatus === 'pending' &&
-    data.settlementReadyDate &&
-    isSettlementReady(data.settlementReadyDate)
-  ) {
-    newStatus = 'ready'
-    await ref.update({
-      settlementStatus: newStatus,
-      updatedAt: new Date().toISOString(),
-    })
-    console.log(`✅ Event ${eventId} settlement status changed to 'ready'`)
+  if (data.settlementStatus === 'locked') {
+    return 'locked'
   }
 
-  return newStatus
+  const eventDoc = await adminDb.collection('events').doc(eventId).get()
+  const eventData = eventDoc.exists ? (eventDoc.data() as any) : null
+  const eventEndDate =
+    toDateOrNull(eventData?.end_datetime || eventData?.endDateTime) ||
+    toDateOrNull(eventData?.start_datetime || eventData?.startDateTime || eventData?.date_time || eventData?.date) ||
+    toDateOrNull(eventData?.created_at)
+
+  const storedReadyDate = toDateOrNull((data as any).settlementReadyDate)
+  const computedFromEventEnd = eventEndDate ? calculateSettlementDate(eventEndDate) : null
+  const chosen = (() => {
+    if (storedReadyDate && computedFromEventEnd) {
+      return storedReadyDate.getTime() <= computedFromEventEnd.getTime() ? storedReadyDate : computedFromEventEnd
+    }
+    return storedReadyDate || computedFromEventEnd
+  })()
+
+  const effectiveReadyIso = chosen ? chosen.toISOString() : null
+  const effectiveStatus: SettlementStatus =
+    effectiveReadyIso && isSettlementReady(effectiveReadyIso) ? 'ready' : 'pending'
+
+  if (effectiveStatus !== data.settlementStatus) {
+    await ref.update({
+      settlementStatus: effectiveStatus,
+      ...(effectiveReadyIso ? { settlementReadyDate: effectiveReadyIso } : {}),
+      updatedAt: new Date().toISOString(),
+    })
+    console.log(`✅ Event ${eventId} settlement status changed to '${effectiveStatus}'`)
+  }
+
+  return effectiveStatus
 }
 
 /**
@@ -686,24 +757,52 @@ export async function getOrganizerEarningsSummary(
       totalProcessingFees: 0,
     }
 
-    totalGrossSales += data.grossSales
-    totalNetAmount += data.netAmount
-    totalAvailableToWithdraw += data.availableToWithdraw
-    totalWithdrawn += data.withdrawnAmount
-    totalPlatformFees += data.platformFee
-    totalProcessingFees += data.processingFees
-
-    bucket.totalGrossSales += data.grossSales
-    bucket.totalNetAmount += data.netAmount
-    bucket.totalAvailableToWithdraw += data.availableToWithdraw
-    bucket.totalWithdrawn += data.withdrawnAmount
-    bucket.totalPlatformFees += data.platformFee
-    bucket.totalProcessingFees += data.processingFees
-    totalsByCurrency[cur] = bucket
+    const netAmount = Math.max(0, Number((data as any).netAmount || 0) || 0)
+    const withdrawnAmount = Math.max(0, Number((data as any).withdrawnAmount || 0) || 0)
 
     // Get event details
     const eventDoc = await adminDb.collection('events').doc(data.eventId).get()
     const event = eventDoc.data()
+
+    const eventEndDate =
+      toDateOrNull((event as any)?.end_datetime || (event as any)?.endDateTime) ||
+      toDateOrNull((event as any)?.start_datetime || (event as any)?.startDateTime || (event as any)?.date_time || (event as any)?.date) ||
+      toDateOrNull((event as any)?.created_at)
+
+    const storedReadyDate = toDateOrNull((data as any).settlementReadyDate)
+    const computedFromEnd = eventEndDate ? calculateSettlementDate(eventEndDate) : null
+    const chosen = (() => {
+      if (storedReadyDate && computedFromEnd) {
+        return storedReadyDate.getTime() <= computedFromEnd.getTime() ? storedReadyDate : computedFromEnd
+      }
+      return storedReadyDate || computedFromEnd
+    })()
+
+    const effectiveReadyIso = chosen ? chosen.toISOString() : null
+    const effectiveSettlementStatus: SettlementStatus =
+      data.settlementStatus === 'locked'
+        ? 'locked'
+        : effectiveReadyIso && isSettlementReady(effectiveReadyIso)
+          ? 'ready'
+          : 'pending'
+
+    const effectiveAvailableToWithdraw =
+      effectiveSettlementStatus === 'ready' ? Math.max(0, netAmount - withdrawnAmount) : 0
+
+    totalGrossSales += data.grossSales
+    totalNetAmount += netAmount
+    totalAvailableToWithdraw += effectiveAvailableToWithdraw
+    totalWithdrawn += withdrawnAmount
+    totalPlatformFees += data.platformFee
+    totalProcessingFees += data.processingFees
+
+    bucket.totalGrossSales += data.grossSales
+    bucket.totalNetAmount += netAmount
+    bucket.totalAvailableToWithdraw += effectiveAvailableToWithdraw
+    bucket.totalWithdrawn += withdrawnAmount
+    bucket.totalPlatformFees += data.platformFee
+    bucket.totalProcessingFees += data.processingFees
+    totalsByCurrency[cur] = bucket
 
     const eventDateRaw = (event as any)?.start_datetime || (event as any)?.date_time || (event as any)?.date || (event as any)?.created_at || ''
     const eventDate = (eventDateRaw as any)?.toDate ? (eventDateRaw as any).toDate() : (eventDateRaw ? new Date(eventDateRaw) : null)
@@ -714,9 +813,9 @@ export async function getOrganizerEarningsSummary(
       eventTitle: event?.title || 'Unknown Event',
       eventDate: eventDateIso,
       grossSales: data.grossSales,
-      netAmount: data.netAmount,
-      availableToWithdraw: data.availableToWithdraw,
-      settlementStatus: data.settlementStatus,
+      netAmount,
+      availableToWithdraw: effectiveAvailableToWithdraw,
+      settlementStatus: effectiveSettlementStatus,
       currency: cur,
     })
   }

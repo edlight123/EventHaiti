@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
-import { withdrawFromEarnings } from '@/lib/earnings'
+import { getEventEarnings, withdrawFromEarnings } from '@/lib/earnings'
 import { moncashPrefundedTransfer } from '@/lib/moncash'
 import type { WithdrawalRequest } from '@/types/earnings'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
@@ -76,19 +76,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Not authorized for this event' }, { status: 403 })
     }
 
-    // Verify earnings and settlement status
-    const earningsSnapshot = await adminDb
-      .collection('event_earnings')
-      .where('eventId', '==', eventId)
-      .limit(1)
-      .get()
-
-    if (earningsSnapshot.empty) {
+    // Verify earnings and settlement status (normalized against event end time)
+    const earnings = await getEventEarnings(String(eventId))
+    if (!earnings) {
       return NextResponse.json({ error: 'No earnings found for this event' }, { status: 404 })
     }
 
-    const earnings = earningsSnapshot.docs[0].data()
-    if (earnings?.settlementStatus !== 'ready') {
+    if (earnings.settlementStatus !== 'ready') {
       return NextResponse.json(
         { error: 'Earnings are not yet available for withdrawal' },
         { status: 400 }

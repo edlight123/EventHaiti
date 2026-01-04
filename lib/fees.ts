@@ -85,7 +85,7 @@ export function meetsMinimumPayout(amount: number): boolean {
 
 /**
  * Calculate settlement ready date
- * (After event ends)
+ * (Event end + configured hold period)
  * 
  * @param eventEndDate - Event end date/time
  * @returns Settlement ready date

@@ -17,11 +17,20 @@ Notifications.setNotificationHandler({
 })
 
 function getExpoProjectId(): string | undefined {
-  return (
+  const raw =
     (Constants as any)?.easConfig?.projectId ||
     (Constants as any)?.expoConfig?.extra?.eas?.projectId ||
     (Constants as any)?.expoConfig?.extra?.projectId
-  )
+
+  const projectId = typeof raw === 'string' ? raw.trim() : ''
+  if (!projectId) return undefined
+
+  // Expo expects a UUID. Some configs accidentally provide a slug, which throws at runtime.
+  const uuidRegex =
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+  if (!uuidRegex.test(projectId)) return undefined
+
+  return projectId
 }
 
 export async function registerForPushNotificationsIfPossible(): Promise<string | null> {
@@ -42,10 +51,22 @@ export async function registerForPushNotificationsIfPossible(): Promise<string |
   }
 
   const projectId = getExpoProjectId()
-  const tokenResponse = projectId
-    ? await Notifications.getExpoPushTokenAsync({ projectId })
-    : await Notifications.getExpoPushTokenAsync()
-  const token = tokenResponse.data
+
+  let token: string | null = null
+  try {
+    const tokenResponse = projectId
+      ? await Notifications.getExpoPushTokenAsync({ projectId })
+      : await Notifications.getExpoPushTokenAsync()
+    token = tokenResponse?.data || null
+  } catch (e) {
+    // Retry without projectId (some environments don't have a stable projectId).
+    try {
+      const tokenResponse = await Notifications.getExpoPushTokenAsync()
+      token = tokenResponse?.data || null
+    } catch {
+      return null
+    }
+  }
 
   if (!token) return null
 
