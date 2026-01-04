@@ -226,6 +226,12 @@ service cloud.firestore {
         allow read: if isOwner(organizerId);
         allow write: if isOwner(organizerId);
       }
+
+      // Payout profiles (new system)
+      match /payoutProfiles/{profileId} {
+        allow read: if isOwner(organizerId);
+        allow write: if isOwner(organizerId);
+      }
       
       // Verification documents subcollection
       match /verificationDocuments/{docId} {

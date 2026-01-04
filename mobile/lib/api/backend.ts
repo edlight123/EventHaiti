@@ -13,6 +13,10 @@ let sessionCookieValue: string | null = null
 
 type FetchInit = Omit<RequestInit, 'headers'> & { headers?: Record<string, string> }
 
+function isFormData(value: any): boolean {
+  return typeof FormData !== 'undefined' && value instanceof FormData
+}
+
 async function ensureWebSessionCookie(idToken: string): Promise<boolean> {
   try {
     const res = await fetch(`${API_URL}/api/auth/session`, {
@@ -93,7 +97,9 @@ export async function backendFetch(path: string, init: FetchInit = {}) {
     }
   }
 
-  if (!headers['Content-Type'] && init.body) {
+  // Only set JSON content-type for JSON-ish payloads.
+  // For FormData/multipart, let fetch set the boundary header.
+  if (!headers['Content-Type'] && init.body && !isFormData(init.body)) {
     headers['Content-Type'] = 'application/json'
   }
 
