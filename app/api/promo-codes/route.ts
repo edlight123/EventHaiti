@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/firebase-db/server'
+import {
+  getPromoExpiresAt,
+  getPromoStartAt,
+  getPromoUsesCount,
+  isPromoActive,
+  promoDiscountFields,
+} from '@/lib/promo-code-shared'
 
 /**
  * Create promo code for an event
@@ -55,6 +62,8 @@ export async function POST(req: NextRequest) {
     // Create promo code
     const promoId = `promo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
+    const expiresAt = validUntil || null
+
     const { error: insertError } = await supabase.from('promo_codes').insert({
       id: promoId,
       event_id: eventId,
@@ -62,6 +71,11 @@ export async function POST(req: NextRequest) {
       discount_type: discountType,
       discount_value: discountValue,
       max_uses: maxUses || null,
+      // Canonical fields used by the organizer UI & mobile
+      is_active: true,
+      uses_count: 0,
+      expires_at: expiresAt,
+      // Legacy compatibility (some code paths still read these)
       valid_from: validFrom || null,
       valid_until: validUntil || null,
       created_at: new Date().toISOString(),
@@ -119,35 +133,50 @@ export async function GET(req: NextRequest) {
 
     // Check if code is still valid
     const now = new Date()
+
+    if (!isPromoActive(promoCode)) {
+      return NextResponse.json(
+        { valid: false, error: 'Promo code is inactive' },
+        { status: 400 }
+      )
+    }
     
-    if (promoCode.valid_from && new Date(promoCode.valid_from) > now) {
+    const startAt = getPromoStartAt(promoCode)
+    if (startAt && startAt > now) {
       return NextResponse.json(
         { valid: false, error: 'Promo code not yet valid' },
         { status: 400 }
       )
     }
 
-    if (promoCode.valid_until && new Date(promoCode.valid_until) < now) {
+    const expiresAt = getPromoExpiresAt(promoCode)
+    if (expiresAt && expiresAt < now) {
       return NextResponse.json(
         { valid: false, error: 'Promo code has expired' },
         { status: 400 }
       )
     }
 
-    if (promoCode.max_uses && promoCode.times_used >= promoCode.max_uses) {
+    const usesCount = getPromoUsesCount(promoCode)
+    if (promoCode.max_uses && usesCount >= promoCode.max_uses) {
       return NextResponse.json(
         { valid: false, error: 'Promo code has reached maximum uses' },
         { status: 400 }
       )
     }
 
+    const discount = promoDiscountFields(promoCode)
+
     return NextResponse.json({ 
       valid: true, 
+      // Mobile client expects these legacy fields
+      discount_percentage: discount.discount_percentage,
+      discount_amount: discount.discount_amount,
       promoCode: {
         id: promoCode.id,
         code: promoCode.code,
-        discountType: promoCode.discount_type,
-        discountValue: promoCode.discount_value,
+        discountType: discount.discountType,
+        discountValue: discount.discountValue,
       }
     })
   } catch (error) {
