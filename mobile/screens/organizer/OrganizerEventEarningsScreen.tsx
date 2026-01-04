@@ -21,7 +21,7 @@ import { COLORS } from '../../config/brand'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { useI18n } from '../../contexts/I18nContext'
-import { backendJson } from '../../lib/api/backend'
+import { backendFetch, backendJson } from '../../lib/api/backend'
 import { getEventById } from '../../lib/api/organizer'
 
 type RouteParams = {
@@ -281,8 +281,22 @@ export default function OrganizerEventEarningsScreen() {
 
     if (nextMethod === 'bank') {
       try {
-        const data = await backendJson<{ destinations: BankDestination[] }>('/api/organizer/payout-destinations/bank')
-        const destinations = data?.destinations || []
+        const res = await backendFetch('/api/organizer/payout-destinations/bank')
+        const raw = await res.text().catch(() => '')
+        const data = (() => {
+          try {
+            return raw ? (JSON.parse(raw) as any) : {}
+          } catch {
+            return {}
+          }
+        })()
+
+        if (!res.ok) {
+          const msg = String(data?.error || data?.message || `Request failed (${res.status})`)
+          throw new Error(msg)
+        }
+
+        const destinations = (data?.destinations || []) as BankDestination[]
         setBankDestinations(destinations)
 
         const primary = destinations.find((d) => d.isPrimary)
@@ -297,6 +311,20 @@ export default function OrganizerEventEarningsScreen() {
           setSelectedBankDestinationId('')
         }
       } catch (e: any) {
+        const msg = String(e?.message || '')
+        if (/payout profile required/i.test(msg) || /payout profile not active/i.test(msg) || /not configured/i.test(msg)) {
+          Alert.alert(
+            t('common.error'),
+            msg || 'Payout setup is required before using bank withdrawals.',
+            [
+              {
+                text: t('organizerEarnings.openPayoutSettings'),
+                onPress: () => navigation.navigate('OrganizerPayoutSettings'),
+              },
+              { text: t('common.cancel'), style: 'cancel' },
+            ]
+          )
+        }
         setBankDestinations(null)
         setBankMode('new')
         setSelectedBankDestinationId('')
@@ -371,6 +399,21 @@ export default function OrganizerEventEarningsScreen() {
     } catch (e: any) {
       const message = e?.message || 'Failed to submit withdrawal'
       const requires = /verify|verification/i.test(message)
+
+      if (/payout profile required/i.test(message) || /payout profile not active/i.test(message) || /not configured/i.test(message)) {
+        Alert.alert(
+          t('common.error'),
+          message,
+          [
+            {
+              text: t('organizerEarnings.openPayoutSettings'),
+              onPress: () => navigation.navigate('OrganizerPayoutSettings'),
+            },
+            { text: t('common.ok'), style: 'cancel' },
+          ]
+        )
+        return
+      }
 
       if (requires) {
         setVerificationRequired(true)

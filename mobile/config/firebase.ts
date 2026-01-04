@@ -1,9 +1,10 @@
 // Firebase configuration for mobile app
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, getReactNativePersistence, initializeAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 import { getStorage } from 'firebase/storage';
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 // Use the same Firebase config as the web app
 const firebaseConfig = {
@@ -24,7 +25,17 @@ console.log('[Firebase] Initializing with config:', {
 const app = initializeApp(firebaseConfig);
 
 // Initialize Auth
-export const auth = getAuth(app);
+// Use AsyncStorage persistence so auth survives app restarts.
+// If Auth is already initialized (can happen during hot reload), fall back to getAuth().
+export const auth = (() => {
+  try {
+    return initializeAuth(app, {
+      persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+    });
+  } catch {
+    return getAuth(app);
+  }
+})();
 
 // Initialize services
 export const db = getFirestore(app);

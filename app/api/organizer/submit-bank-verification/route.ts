@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase/admin'
+import { adminDb } from '@/lib/firebase/admin'
 import { adminStorage } from '@/lib/firebase/admin'
-import { cookies } from 'next/headers'
+import { requireAuth } from '@/lib/auth'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 
 function normalizeBucketName(bucket: string): string {
@@ -20,16 +20,12 @@ function sanitizeFilename(filename: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('session')?.value
-
-    if (!sessionCookie) {
+    const { user, error } = await requireAuth('organizer')
+    if (error || !user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
-    const organizerId = decodedClaims.uid
+    const organizerId = user.id
 
     const formData = await request.formData()
     const proofDocument = formData.get('proofDocument') as File

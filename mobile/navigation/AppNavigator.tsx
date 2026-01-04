@@ -31,6 +31,8 @@ import OrganizerScanScreen from '../screens/organizer/OrganizerScanScreen';
 import OrganizerEventManagementScreen from '../screens/organizer/OrganizerEventManagementScreen';
 import OrganizerEventEarningsScreen from '../screens/organizer/OrganizerEventEarningsScreen';
 import OrganizerEventStaffScreen from '../screens/organizer/OrganizerEventStaffScreen';
+import OrganizerPayoutSettingsScreen from '../screens/organizer/OrganizerPayoutSettingsScreen';
+import OrganizerPromoCodesScreen from '../screens/organizer/OrganizerPromoCodesScreen';
 import CreateEventFlowRefactored from '../screens/organizer/CreateEventFlowRefactored';
 import TicketScannerScreen from '../screens/organizer/TicketScannerScreen';
 import EventAttendeesScreen from '../screens/organizer/EventAttendeesScreen';
@@ -70,7 +72,9 @@ export type RootStackParamList = {
   Notifications: { userId: string };
   OrganizerEventManagement: { eventId: string };
   OrganizerEventEarnings: { eventId: string };
+  OrganizerPayoutSettings: undefined;
   OrganizerEventStaff: { eventId: string };
+  OrganizerPromoCodes: { eventId: string };
   OrganizerVerification: undefined;
   OrganizerInfoForm: { onComplete?: () => void };
   GovernmentIDUpload: { onComplete?: () => void };
@@ -458,7 +462,13 @@ export default function AppNavigator() {
             />
             <Stack.Screen name="OrganizerEventManagement" component={OrganizerEventManagementScreen} options={{ headerShown: true, headerTitle: 'Manage Event' }} />
             <Stack.Screen name="OrganizerEventEarnings" component={OrganizerEventEarningsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="OrganizerPayoutSettings" component={OrganizerPayoutSettingsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="OrganizerEventStaff" component={OrganizerEventStaffScreen} options={{ headerShown: true }} />
+            <Stack.Screen
+              name="OrganizerPromoCodes"
+              component={OrganizerPromoCodesScreen}
+              options={{ headerShown: true, headerTitle: t('organizerPromoCodes.title') }}
+            />
             <Stack.Screen name="CreateEvent" component={CreateEventFlowRefactored} options={{ headerShown: false }} />
             <Stack.Screen name="TicketScanner" component={TicketScannerScreen} options={{ headerShown: false }} />
             <Stack.Screen name="EventAttendees" component={EventAttendeesScreen} options={{ headerShown: false }} />
