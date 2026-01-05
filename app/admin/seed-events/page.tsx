@@ -1,10 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 
 export default function SeedEventsPage() {
   const [loading, setLoading] = useState(false)
@@ -49,17 +45,18 @@ export default function SeedEventsPage() {
 
   return (
     <div className="container max-w-4xl mx-auto py-8 px-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Seed Template Events</CardTitle>
-          <CardDescription>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-2">Seed Template Events</h1>
+          <p className="text-gray-600 dark:text-gray-400">
             Create 30 template events across Haiti, USA, and Canada under the info@edlight.org organizer account.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+          </p>
+        </div>
+
+        <div className="space-y-6">
           <div className="space-y-2">
             <h3 className="font-semibold">What will be created:</h3>
-            <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
               <li>15 events in Haiti (50%) - Mix of USD and HTG pricing</li>
               <li>8 events in USA (Miami, New York, Boston, etc.)</li>
               <li>7 events in Canada (Montreal, Toronto, Vancouver, etc.)</li>
@@ -70,73 +67,56 @@ export default function SeedEventsPage() {
             </ul>
           </div>
 
-          <Button
+          <button
             onClick={handleSeedEvents}
             disabled={loading}
-            className="w-full"
-            size="lg"
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
           >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating Events...
-              </>
-            ) : (
-              'Create 30 Template Events'
-            )}
-          </Button>
+            {loading ? 'Creating Events...' : 'Create 30 Template Events'}
+          </button>
 
           {result && (
-            <Alert variant={result.success ? 'default' : 'destructive'}>
-              {result.success ? (
-                <CheckCircle2 className="h-4 w-4" />
-              ) : (
-                <AlertCircle className="h-4 w-4" />
-              )}
-              <AlertDescription>
-                <p className="font-semibold mb-2">{result.message}</p>
-                {result.events && result.events.length > 0 && (
-                  <div className="mt-4 max-h-96 overflow-y-auto">
-                    <p className="text-sm mb-2">Created events:</p>
-                    <div className="space-y-2">
-                      {result.events.map((event, idx) => (
-                        <div
-                          key={event.id}
-                          className="text-xs bg-background/50 p-2 rounded border"
-                        >
-                          <div className="font-medium">{idx + 1}. {event.title}</div>
-                          <div className="text-muted-foreground">
-                            {event.location} • {new Date(event.date).toLocaleDateString()} • {event.price}
-                          </div>
+            <div className={`p-4 rounded-lg ${result.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+              <p className="font-semibold mb-2">{result.message}</p>
+              {result.events && result.events.length > 0 && (
+                <div className="mt-4 max-h-96 overflow-y-auto">
+                  <p className="text-sm mb-2">Created events:</p>
+                  <div className="space-y-2">
+                    {result.events.map((event, idx) => (
+                      <div
+                        key={event.id}
+                        className="text-xs bg-white p-2 rounded border"
+                      >
+                        <div className="font-medium">{idx + 1}. {event.title}</div>
+                        <div className="text-gray-600">
+                          {event.location} • {new Date(event.date).toLocaleDateString()} • {event.price}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
-                )}
-              </AlertDescription>
-            </Alert>
+                </div>
+              )}
+            </div>
           )}
 
           {result?.success && (
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
+              <button
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors"
                 onClick={() => window.location.href = '/discover'}
               >
                 View Events
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1"
+              </button>
+              <button
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors"
                 onClick={() => window.location.href = '/organizer/events'}
               >
                 Manage Events
-              </Button>
+              </button>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }
