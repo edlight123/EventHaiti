@@ -4,11 +4,14 @@ import { useState } from 'react'
 
 export default function SeedEventsPage() {
   const [loading, setLoading] = useState(false)
+  const [verifying, setVerifying] = useState(false)
   const [result, setResult] = useState<{
     success: boolean
     message: string
     events?: Array<{ id: string; title: string; location: string; date: string; price: string; currency: string }>
   } | null>(null)
+
+  const [verifyResult, setVerifyResult] = useState<any>(null)
 
   const handleSeedEvents = async () => {
     if (!confirm('This will create 30 template events. Continue?')) {
@@ -46,6 +49,31 @@ export default function SeedEventsPage() {
     }
   }
 
+  const handleVerify = async () => {
+    setVerifying(true)
+    setVerifyResult(null)
+    try {
+      const response = await fetch('/api/admin/seed-events/verify', {
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        const details = data?.details ? `\n${JSON.stringify(data.details)}` : ''
+        throw new Error(`${data.error || 'Failed to verify'}${details}`)
+      }
+      setVerifyResult(data)
+    } catch (error) {
+      setVerifyResult({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Failed to verify',
+      })
+    } finally {
+      setVerifying(false)
+    }
+  }
+
   return (
     <div className="container max-w-4xl mx-auto py-8 px-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
@@ -54,6 +82,40 @@ export default function SeedEventsPage() {
           <p className="text-gray-600 dark:text-gray-400">
             Create 30 template events across Haiti, USA, and Canada under the info@edlight.org organizer account.
           </p>
+        </div>
+
+        <div className="mb-6 grid gap-3">
+          <div className="rounded-lg border p-3 text-sm bg-gray-50">
+            <div className="font-semibold mb-1">Quick diagnostics</div>
+            <div className="text-gray-700">
+              Demo mode (client build): <span className="font-mono">{String(process.env.NEXT_PUBLIC_DEMO_MODE)}</span>
+            </div>
+            <div className="text-gray-700">
+              Firebase project (client): <span className="font-mono">{String(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID)}</span>
+            </div>
+            <div className="text-gray-500 mt-1">
+              If demo mode is <span className="font-mono">true</span>, Discover/Home will show demo events instead of Firestore.
+            </div>
+          </div>
+
+          <button
+            onClick={handleVerify}
+            disabled={verifying}
+            className="w-full bg-gray-900 hover:bg-black disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+          >
+            {verifying ? 'Verifying…' : 'Verify seeded events visibility'}
+          </button>
+
+          {verifyResult && (
+            <div className={`p-4 rounded-lg ${verifyResult.ok ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+              <div className="font-semibold mb-2">
+                {verifyResult.ok ? 'Verify OK' : 'Verify failed'}
+              </div>
+              <pre className="text-xs overflow-auto whitespace-pre-wrap">
+                {JSON.stringify(verifyResult, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">
