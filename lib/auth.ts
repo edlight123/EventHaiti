@@ -96,7 +96,25 @@ export async function requireAuth(requiredRole?: UserRole) {
   }
 
   if (requiredRole && user.role !== requiredRole) {
+    // Special case: super_admin can access admin routes
+    if (requiredRole === 'admin' && user.role === 'super_admin') {
+      return { user, error: null }
+    }
     return { user: null, error: 'Unauthorized' }
+  }
+
+  return { user, error: null }
+}
+
+export async function requireAdmin() {
+  const user = await getCurrentUser()
+  
+  if (!user) {
+    return { user: null, error: 'Not authenticated' }
+  }
+
+  if (user.role !== 'admin' && user.role !== 'super_admin') {
+    return { user: null, error: 'Admin access required' }
   }
 
   return { user, error: null }
@@ -105,4 +123,9 @@ export async function requireAuth(requiredRole?: UserRole) {
 export async function isOrganizer() {
   const user = await getCurrentUser()
   return user?.role === 'organizer'
+}
+
+export async function isAdmin() {
+  const user = await getCurrentUser()
+  return user?.role === 'admin' || user?.role === 'super_admin'
 }

@@ -1,4 +1,4 @@
-export type UserRole = 'attendee' | 'organizer'
+export type UserRole = 'attendee' | 'organizer' | 'admin' | 'super_admin'
 
 export type TicketStatus = 'active' | 'used' | 'cancelled'
 
