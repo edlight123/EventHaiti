@@ -31,7 +31,7 @@ import OrganizerScanScreen from '../screens/organizer/OrganizerScanScreen';
 import OrganizerEventManagementScreen from '../screens/organizer/OrganizerEventManagementScreen';
 import OrganizerEventEarningsScreen from '../screens/organizer/OrganizerEventEarningsScreen';
 import OrganizerEventStaffScreen from '../screens/organizer/OrganizerEventStaffScreen';
-import OrganizerPayoutSettingsScreen from '../screens/organizer/OrganizerPayoutSettingsScreen';
+import OrganizerPayoutSettingsScreen from '../screens/organizer/OrganizerPayoutSettingsScreenV2';
 import OrganizerPromoCodesScreen from '../screens/organizer/OrganizerPromoCodesScreen';
 import CreateEventFlowRefactored from '../screens/organizer/CreateEventFlowRefactored';
 import TicketScannerScreen from '../screens/organizer/TicketScannerScreen';
