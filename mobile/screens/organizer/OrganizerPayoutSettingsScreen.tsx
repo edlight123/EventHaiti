@@ -14,15 +14,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import * as ImagePicker from 'expo-image-picker'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore'
 
 import { COLORS } from '../../config/brand'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { useI18n } from '../../contexts/I18nContext'
 import { backendFetch, backendJson } from '../../lib/api/backend'
+import { getVerificationRequest, type VerificationRequest } from '../../lib/verification'
 
 type VerificationStatus = 'pending' | 'verified' | 'failed'
+
+type VerificationBadgeStatus = 'not_started' | 'pending' | 'verified' | 'failed'
 
 type HaitiPayoutProfile = {
   status?: 'not_setup' | 'pending_verification' | 'active' | 'on_hold'
@@ -119,9 +122,118 @@ export default function OrganizerPayoutSettingsScreen() {
   const [bankProofAsset, setBankProofAsset] = useState<ImagePicker.ImagePickerAsset | null>(null)
   const [submittingBankProof, setSubmittingBankProof] = useState(false)
 
-  const identityStatus = profile?.verificationStatus?.identity || 'pending'
-  const bankStatus = profile?.verificationStatus?.bank || 'pending'
-  const phoneStatus = profile?.verificationStatus?.phone || 'pending'
+  const [verificationRequest, setVerificationRequest] = useState<VerificationRequest | null>(null)
+  const [identityStatus, setIdentityStatus] = useState<VerificationBadgeStatus>('not_started')
+  const [bankStatus, setBankStatus] = useState<VerificationBadgeStatus>('not_started')
+  const [phoneStatus, setPhoneStatus] = useState<VerificationBadgeStatus>('not_started')
+
+  const statusPill = useCallback(
+    (status: VerificationBadgeStatus) => {
+      const base = {
+        backgroundColor: `${COLORS.textSecondary}20`,
+        textColor: COLORS.textSecondary,
+        label: 'Not started',
+      }
+
+      if (status === 'verified') {
+        return { backgroundColor: `${COLORS.success}20`, textColor: COLORS.success, label: 'Verified' }
+      }
+      if (status === 'pending') {
+        return { backgroundColor: `${COLORS.primary}20`, textColor: COLORS.primary, label: 'Pending' }
+      }
+      if (status === 'failed') {
+        return { backgroundColor: `${COLORS.error}20`, textColor: COLORS.error, label: 'Needs attention' }
+      }
+      return base
+    },
+    []
+  )
+
+  const mapVerificationRequestToBadge = useCallback((req: VerificationRequest | null): VerificationBadgeStatus => {
+    if (!req) return 'not_started'
+    const status = String(req.status || '')
+    if (status === 'approved') return 'verified'
+    if (status === 'rejected' || status === 'changes_requested') return 'failed'
+    if (status === 'pending' || status === 'pending_review' || status === 'in_review') return 'pending'
+    if (status === 'in_progress') return 'pending'
+    return 'pending'
+  }, [])
+
+  const mapVerificationDocStatusToBadge = useCallback((raw: unknown): VerificationBadgeStatus => {
+    const s = String(raw || '').toLowerCase()
+    if (!s) return 'not_started'
+    if (s === 'verified' || s === 'approved') return 'verified'
+    if (s === 'pending' || s === 'pending_review' || s === 'in_review') return 'pending'
+    if (s === 'failed' || s === 'rejected' || s === 'changes_requested') return 'failed'
+    return 'pending'
+  }, [])
+
+  const refreshVerification = useCallback(async () => {
+    if (!user?.uid) return
+
+    try {
+      const reqPromise = getVerificationRequest(user.uid).catch(() => null)
+      const docsPromise = getDocs(collection(db, 'organizers', user.uid, 'verificationDocuments')).catch(() => null as any)
+
+      const [req, docsSnap] = await Promise.all([reqPromise, docsPromise])
+      setVerificationRequest(req)
+
+      const fromRequest = mapVerificationRequestToBadge(req)
+
+      let phone: VerificationBadgeStatus = 'not_started'
+      let bank: VerificationBadgeStatus = 'not_started'
+      let identityDoc: VerificationBadgeStatus = 'not_started'
+
+      if (docsSnap && 'docs' in docsSnap) {
+        // phone: organizers/{id}/verificationDocuments/phone
+        // identity: organizers/{id}/verificationDocuments/identity (legacy/admin flow)
+        // bank: organizers/{id}/verificationDocuments/bank_<destinationId>
+        for (const d of (docsSnap as any).docs || []) {
+          const docId = String(d.id || '')
+          const data = d.data ? d.data() : null
+          const mapped = mapVerificationDocStatusToBadge(data?.status)
+
+          if (docId === 'phone') {
+            phone = mapped
+            continue
+          }
+
+          if (docId === 'identity') {
+            identityDoc = mapped
+            continue
+          }
+
+          if (docId.startsWith('bank_')) {
+            // Prefer the strongest status across all bank destinations.
+            if (mapped === 'verified') {
+              bank = 'verified'
+            } else if (mapped === 'failed' && bank !== 'verified') {
+              bank = 'failed'
+            } else if (mapped === 'pending' && bank === 'not_started') {
+              bank = 'pending'
+            }
+          }
+        }
+      }
+
+      // Identity: request approval is the source of truth for organizer verification.
+      // If the legacy identity doc is verified, treat it as verified as well.
+      const identity: VerificationBadgeStatus =
+        fromRequest === 'verified' || identityDoc === 'verified'
+          ? 'verified'
+          : fromRequest === 'failed' || identityDoc === 'failed'
+            ? 'failed'
+            : fromRequest === 'pending' || identityDoc === 'pending'
+              ? 'pending'
+              : 'not_started'
+
+      setIdentityStatus(identity)
+      setPhoneStatus(phone)
+      setBankStatus(bank)
+    } catch {
+      // ignore verification refresh errors (we don't want to block payout setup)
+    }
+  }, [mapVerificationDocStatusToBadge, mapVerificationRequestToBadge, user?.uid])
 
   const refreshStripeStatus = useCallback(async () => {
     try {
@@ -207,6 +319,9 @@ export default function OrganizerPayoutSettingsScreen() {
 
       setProfile(next)
 
+      // Verification is stored outside payout profile (verification_requests + verificationDocuments).
+      await refreshVerification()
+
       const nextMethod = (next?.method === 'mobile_money' ? 'mobile_money' : 'bank_transfer') as
         | 'bank_transfer'
         | 'mobile_money'
@@ -263,7 +378,7 @@ export default function OrganizerPayoutSettingsScreen() {
     } finally {
       setLoading(false)
     }
-  }, [t, user?.uid])
+  }, [refreshVerification, t, user?.uid])
 
   useEffect(() => {
     load()
@@ -279,6 +394,13 @@ export default function OrganizerPayoutSettingsScreen() {
       if (activeProfile !== 'stripe_connect') return
       void refreshStripeStatus()
     }, [activeProfile, refreshStripeStatus])
+  )
+
+  useFocusEffect(
+    useCallback(() => {
+      if (activeProfile !== 'haiti') return
+      void refreshVerification()
+    }, [activeProfile, refreshVerification])
   )
 
   const save = useCallback(async () => {
@@ -641,22 +763,56 @@ export default function OrganizerPayoutSettingsScreen() {
         ) : (
           <>
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Status</Text>
+              <View style={[styles.row, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                <Text style={styles.cardTitle}>Status</Text>
+                <TouchableOpacity onPress={refreshVerification} style={styles.iconPill}>
+                  <Ionicons name="refresh" size={16} color={COLORS.textSecondary} />
+                  <Text style={styles.iconPillText}>Refresh</Text>
+                </TouchableOpacity>
+              </View>
+
               <Text style={styles.metaText}>{statusLabel}</Text>
 
               <View style={{ height: 10 }} />
               <Text style={styles.cardTitle}>Verification</Text>
-              <Text style={styles.metaText}>Identity: {identityStatus}</Text>
-              <Text style={styles.metaText}>Bank: {bankStatus}</Text>
-              <Text style={styles.metaText}>Phone: {phoneStatus}</Text>
 
-              <View style={{ height: 12 }} />
-              <TouchableOpacity
-                style={[styles.secondaryButton]}
-                onPress={() => navigation.navigate('OrganizerVerification')}
-              >
-                <Text style={styles.secondaryButtonText}>Complete identity verification</Text>
-              </TouchableOpacity>
+              {(() => {
+                const i = statusPill(identityStatus)
+                const p = statusPill(phoneStatus)
+                const b = statusPill(bankStatus)
+
+                return (
+                  <>
+                    <View style={styles.statusRow}>
+                      <Text style={styles.statusLabel}>Identity</Text>
+                      <View style={[styles.statusPill, { backgroundColor: i.backgroundColor }]}>
+                        <Text style={[styles.statusPillText, { color: i.textColor }]}>{i.label}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.statusRow}>
+                      <Text style={styles.statusLabel}>Phone</Text>
+                      <View style={[styles.statusPill, { backgroundColor: p.backgroundColor }]}>
+                        <Text style={[styles.statusPillText, { color: p.textColor }]}>{p.label}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.statusRow}>
+                      <Text style={styles.statusLabel}>Bank</Text>
+                      <View style={[styles.statusPill, { backgroundColor: b.backgroundColor }]}>
+                        <Text style={[styles.statusPillText, { color: b.textColor }]}>{b.label}</Text>
+                      </View>
+                    </View>
+                  </>
+                )
+              })()}
+
+              {identityStatus !== 'verified' ? (
+                <>
+                  <View style={{ height: 12 }} />
+                  <TouchableOpacity style={[styles.secondaryButton]} onPress={() => navigation.navigate('OrganizerVerification')}>
+                    <Text style={styles.secondaryButtonText}>Complete identity verification</Text>
+                  </TouchableOpacity>
+                </>
+              ) : null}
             </View>
 
             <View style={{ height: 12 }} />
@@ -786,7 +942,14 @@ export default function OrganizerPayoutSettingsScreen() {
                 <View style={{ height: 12 }} />
                 <View style={styles.card}>
                   <Text style={styles.cardTitle}>Phone verification</Text>
-                  <Text style={styles.metaText}>Status: {phoneStatus}</Text>
+                  <Text style={styles.metaText}>Status: {statusPill(phoneStatus).label}</Text>
+
+                  <View style={{ height: 10 }} />
+                  {phoneStatus === 'verified' ? (
+                    <Text style={styles.metaHint}>Your phone is verified.</Text>
+                  ) : (
+                    <Text style={styles.metaHint}>Verify your phone before withdrawals.</Text>
+                  )}
 
                   <View style={{ height: 10 }} />
                   <TouchableOpacity
@@ -830,7 +993,7 @@ export default function OrganizerPayoutSettingsScreen() {
                 <View style={{ height: 12 }} />
                 <View style={styles.card}>
                   <Text style={styles.cardTitle}>Bank verification</Text>
-                  <Text style={styles.metaText}>Status: {bankStatus}</Text>
+                  <Text style={styles.metaText}>Status: {statusPill(bankStatus).label}</Text>
                   <Text style={styles.metaHint}>
                     Upload a bank statement or void check. This will be reviewed by an admin.
                   </Text>
@@ -952,6 +1115,42 @@ const styles = StyleSheet.create({
     gap: 8,
     flexWrap: 'wrap',
     marginTop: 10,
+  },
+
+  iconPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: `${COLORS.textSecondary}15`,
+  },
+  iconPillText: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  statusLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  statusPillText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   chip: {
     paddingHorizontal: 12,
