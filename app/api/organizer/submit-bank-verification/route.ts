@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { adminStorage } from '@/lib/firebase/admin'
 import { requireAuth } from '@/lib/auth'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
+import { notifyAdminsOfVerificationSubmission } from '@/lib/notifications/payout-verification'
 
 function normalizeBucketName(bucket: string): string {
   if (bucket.startsWith('gs://')) return bucket.slice('gs://'.length)
@@ -110,6 +111,21 @@ export async function POST(request: NextRequest) {
     }
 
     await verificationRef.set(verificationData)
+
+    // Notify admins of new verification submission
+    try {
+      const userDoc = await adminDb.collection('users').doc(organizerId).get()
+      const organizerName = userDoc.exists ? (userDoc.data() as any)?.full_name || (userDoc.data() as any)?.email || 'Organizer' : 'Organizer'
+      await notifyAdminsOfVerificationSubmission({
+        organizerId,
+        organizerName,
+        verificationType: 'bank',
+        destinationId,
+      })
+    } catch (notifError) {
+      console.error('Failed to send admin notification:', notifError)
+      // Don't fail the request if notification fails
+    }
 
     return NextResponse.json({
       success: true,

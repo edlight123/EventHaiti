@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
+import { notifyAdminsOfVerificationSubmission } from '@/lib/notifications/payout-verification'
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,6 +61,20 @@ export async function POST(request: NextRequest) {
     }
 
     await verificationRef.set(verificationData)
+
+    // Notify admins of new verification submission
+    try {
+      const userDoc = await adminDb.collection('users').doc(organizerId).get()
+      const organizerName = userDoc.exists ? (userDoc.data() as any)?.full_name || (userDoc.data() as any)?.email || 'Organizer' : 'Organizer'
+      await notifyAdminsOfVerificationSubmission({
+        organizerId,
+        organizerName,
+        verificationType: 'identity',
+      })
+    } catch (notifError) {
+      console.error('Failed to send admin notification:', notifError)
+      // Don't fail the request if notification fails
+    }
 
     return NextResponse.json({
       success: true,

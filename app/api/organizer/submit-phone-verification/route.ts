@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { requireAuth } from '@/lib/auth'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
+import { notifyOrganizerVerificationApproved } from '@/lib/notifications/payout-verification'
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,6 +73,16 @@ export async function POST(request: NextRequest) {
         status: 'verified',
         verifiedAt: new Date().toISOString(),
       })
+
+    // Notify organizer of successful verification
+    try {
+      await notifyOrganizerVerificationApproved({
+        organizerId,
+        verificationType: 'phone',
+      })
+    } catch (notifError) {
+      console.error('Failed to send organizer notification:', notifError)
+    }
 
     return NextResponse.json({
       success: true,
