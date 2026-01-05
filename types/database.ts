@@ -14,6 +14,10 @@ export type NotificationType =
   | 'event_cancelled'
   | 'verification'
   | 'staff_invite'
+  | 'verification_submitted'
+  | 'verification_approved'
+  | 'verification_rejected'
+  | 'verification_info_needed'
 
 export interface Database {
   public: {
