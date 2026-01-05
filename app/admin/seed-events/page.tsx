@@ -24,12 +24,15 @@ export default function SeedEventsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
+        cache: 'no-store',
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to seed events')
+        const details = data?.details ? `\n${JSON.stringify(data.details)}` : ''
+        throw new Error(`${data.error || 'Failed to seed events'}${details}`)
       }
 
       setResult(data)

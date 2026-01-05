@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { Timestamp } from 'firebase-admin/firestore'
+import { isAdmin as isAdminEmail } from '@/lib/admin'
 
 const templateEvents = [
   // Haiti Events (15 events - 50%)
@@ -43,10 +44,30 @@ const templateEvents = [
 
 export async function POST(req: NextRequest) {
   try {
-    // Require admin access (admin OR super_admin)
-    const { user, error } = await requireAdmin()
-    if (error || !user) {
-      return NextResponse.json({ error: error || 'Unauthorized' }, { status: 403 })
+    // Require admin access.
+    // Note: This app has two admin models:
+    // 1) Role-based: Firestore `users.role` in ['admin','super_admin']
+    // 2) Email-based: `ADMIN_EMAILS` env var (see `lib/admin.ts`)
+    const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
+
+    const role = user.role
+    const emailIsAdmin = isAdminEmail(user.email || '')
+    const roleIsAdmin = role === 'admin' || role === 'super_admin'
+    if (!emailIsAdmin && !roleIsAdmin) {
+      return NextResponse.json(
+        {
+          error: 'Admin access required',
+          details: {
+            email: user.email || null,
+            role,
+            hint: 'Add your email to ADMIN_EMAILS or set users.role to admin/super_admin',
+          },
+        },
+        { status: 403 }
+      )
     }
 
     // Find the organizer with email info@edlight.org
