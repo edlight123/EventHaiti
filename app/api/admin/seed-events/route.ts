@@ -49,11 +49,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is super admin
+    // Check if user is admin or super admin
     const userDoc = await adminDb.collection('users').doc(user.id).get()
     const userData = userDoc.data()
-    if (userData?.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Super admin access required' }, { status: 403 })
+    if (userData?.role !== 'admin' && userData?.role !== 'super_admin') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
     // Find the organizer with email info@edlight.org
