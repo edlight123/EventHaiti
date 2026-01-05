@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LogOut, Trash2, AlertTriangle, HelpCircle } from 'lucide-react'
+import { LogOut, Trash2, AlertTriangle, HelpCircle, Briefcase } from 'lucide-react'
 import { signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase/client'
 import { useRouter } from 'next/navigation'
@@ -14,6 +14,7 @@ interface AccountCardProps {
 
 export function AccountCard({ onDeleteAccount }: AccountCardProps) {
   const { t } = useTranslation('profile')
+  const { t: tCommon } = useTranslation('common')
   const router = useRouter()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
@@ -62,6 +63,20 @@ export function AccountCard({ onDeleteAccount }: AccountCardProps) {
         </div>
 
         <div className="space-y-3">
+          {/* Staff (hidden from global nav; accessible from Profile) */}
+          <Link
+            href="/staff"
+            className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-colors group"
+          >
+            <div className="w-10 h-10 bg-gray-100 group-hover:bg-gray-200 rounded-lg flex items-center justify-center">
+              <Briefcase className="w-5 h-5 text-gray-600" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-semibold text-gray-900">{tCommon('nav.staff')}</p>
+              <p className="text-sm text-gray-600">Staff tools and check-in</p>
+            </div>
+          </Link>
+
           {/* Sign Out */}
           <button
             onClick={handleSignOut}
