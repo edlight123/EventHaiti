@@ -19,6 +19,36 @@ function sanitizeFilename(filename: string): string {
   return filename.replace(/[^a-zA-Z0-9._-]+/g, '_')
 }
 
+// File validation constants
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+  'application/pdf',
+]
+
+function validateFile(file: File, context: string): { valid: boolean; error?: string } {
+  if (file.size > MAX_FILE_SIZE) {
+    return {
+      valid: false,
+      error: `${context} exceeds maximum size of 10MB (${(file.size / 1024 / 1024).toFixed(2)}MB provided)`,
+    }
+  }
+
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    return {
+      valid: false,
+      error: `${context} has invalid type '${file.type}'. Allowed types: JPEG, PNG, WebP, HEIC, PDF`,
+    }
+  }
+
+  return { valid: true }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { user, error } = await requireAuth('organizer')
@@ -39,6 +69,12 @@ export async function POST(request: NextRequest) {
         { error: 'Proof document and verification type are required' },
         { status: 400 }
       )
+    }
+
+    // Validate file size and type
+    const validation = validateFile(proofDocument, 'Bank verification document')
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
     // Ensure Haiti payout profile exists and is configured for bank transfers.

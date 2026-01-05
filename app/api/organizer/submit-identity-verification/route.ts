@@ -3,6 +3,36 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
 import { notifyAdminsOfVerificationSubmission } from '@/lib/notifications/payout-verification'
 
+// File validation constants
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+  'application/pdf',
+]
+
+function validateFile(file: File, context: string): { valid: boolean; error?: string } {
+  if (file.size > MAX_FILE_SIZE) {
+    return {
+      valid: false,
+      error: `${context} exceeds maximum size of 10MB (${(file.size / 1024 / 1024).toFixed(2)}MB provided)`,
+    }
+  }
+
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    return {
+      valid: false,
+      error: `${context} has invalid type '${file.type}'. Allowed types: JPEG, PNG, WebP, HEIC, PDF`,
+    }
+  }
+
+  return { valid: true }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Verify authentication
@@ -34,6 +64,20 @@ export async function POST(request: NextRequest) {
         { error: 'Back image is required for this ID type' },
         { status: 400 }
       )
+    }
+
+    // Validate front image
+    const frontValidation = validateFile(frontImage, 'Front ID image')
+    if (!frontValidation.valid) {
+      return NextResponse.json({ error: frontValidation.error }, { status: 400 })
+    }
+
+    // Validate back image if provided
+    if (backImage) {
+      const backValidation = validateFile(backImage, 'Back ID image')
+      if (!backValidation.valid) {
+        return NextResponse.json({ error: backValidation.error }, { status: 400 })
+      }
     }
 
     // In production, you would:
