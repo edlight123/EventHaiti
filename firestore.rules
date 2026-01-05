@@ -227,16 +227,25 @@ service cloud.firestore {
         allow write: if isOwner(organizerId);
       }
 
-      // Payout profiles (new system)
+      // Payout profiles - READ ONLY from client (writes via server API only)
+      // This prevents clients from directly writing sensitive unencrypted data
       match /payoutProfiles/{profileId} {
         allow read: if isOwner(organizerId);
-        allow write: if isOwner(organizerId);
+        allow write: if false; // Server-side only via Admin SDK
       }
       
-      // Verification documents subcollection
+      // Payout destinations - READ ONLY from client (managed via server API)
+      // Contains encrypted sensitive data that must only be written server-side
+      match /payoutDestinations/{destinationId} {
+        allow read: if isOwner(organizerId);
+        allow write: if false; // Server-side only via Admin SDK
+      }
+      
+      // Verification documents - READ ONLY from client
+      // Document uploads go through server API which validates and stores in Storage
       match /verificationDocuments/{docId} {
         allow read: if isOwner(organizerId);
-        allow write: if isOwner(organizerId);
+        allow write: if false; // Server-side only via Admin SDK
       }
     }
     
