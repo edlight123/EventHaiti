@@ -570,22 +570,10 @@ export default function OrganizerEventEarningsScreen() {
                 {t('organizerEarnings.stripeNotice')}
               </Text>
               <TouchableOpacity
-                onPress={async () => {
-                  const url = `${String(webBaseUrl).replace(/\/$/, '')}/organizer/settings/payouts`
-                  try {
-                    const supported = await Linking.canOpenURL(url)
-                    if (supported) {
-                      await Linking.openURL(url)
-                    } else {
-                      await Linking.openURL(url)
-                    }
-                  } catch {
-                    Alert.alert(t('organizerEarnings.errors.unableToOpenLinkTitle'), url)
-                  }
-                }}
+                onPress={() => navigation.navigate('OrganizerPayoutSettings')}
                 style={[styles.actionButton, { backgroundColor: COLORS.primary, marginTop: 10 }]}
               >
-                <Ionicons name="open-outline" size={20} color={COLORS.white} />
+                <Ionicons name="settings-outline" size={20} color={COLORS.white} />
                 <Text style={styles.actionButtonText}>{t('organizerEarnings.openPayoutSettings')}</Text>
               </TouchableOpacity>
             </View>
