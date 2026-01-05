@@ -17,8 +17,12 @@ describe('Encryption Module', () => {
   it('should encrypt and decrypt data correctly', () => {
     const encrypted = encryptJson(testData)
     expect(encrypted).toBeDefined()
-    expect(typeof encrypted).toBe('string')
-    expect(encrypted).not.toContain('1234567890') // Should not contain plain text
+    expect(typeof encrypted).toBe('object')
+    expect(encrypted).toHaveProperty('v', 1)
+    expect(encrypted).toHaveProperty('iv')
+    expect(encrypted).toHaveProperty('tag')
+    expect(encrypted).toHaveProperty('ciphertext')
+    expect(encrypted.ciphertext).not.toContain('1234567890') // Should not contain plain text
 
     const decrypted = decryptJson(encrypted)
     expect(decrypted).toEqual(testData)

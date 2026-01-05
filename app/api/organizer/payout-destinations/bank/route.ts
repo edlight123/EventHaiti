@@ -15,6 +15,8 @@ import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 const normalizeName = (value: string) =>
   String(value || '')
     .toLowerCase()
+    .replace(/[']/g, '') // Remove apostrophes
+    .replace(/[-]/g, ' ') // Replace hyphens with spaces
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
