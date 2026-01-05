@@ -57,7 +57,23 @@ export async function getCurrentUser() {
   const created_at = userData?.created_at?.toDate ? userData.created_at.toDate().toISOString() : (userData?.created_at || new Date().toISOString())
   const updated_at = userData?.updated_at?.toDate ? userData.updated_at.toDate().toISOString() : (userData?.updated_at || new Date().toISOString())
   
-  const normalizedRole = (userData?.role || 'attendee') as UserRole
+  const normalizeRole = (value: unknown): UserRole => {
+    if (typeof value !== 'string') return 'attendee'
+
+    const raw = value.trim().toLowerCase()
+    // Normalize common separators/variants
+    const key = raw.replace(/[\s-]+/g, '_')
+
+    if (key === 'admin') return 'admin'
+    if (key === 'super_admin' || key === 'superadmin') return 'super_admin'
+    if (key === 'organizer') return 'organizer'
+    if (key === 'attendee') return 'attendee'
+
+    // Unknown role values should not grant privileges
+    return 'attendee'
+  }
+
+  const normalizedRole = normalizeRole(userData?.role)
   const verified = Boolean(userData?.is_verified) || userData?.verification_status === 'approved'
 
   // Option A: auto-upgrade verified users to organizer.
