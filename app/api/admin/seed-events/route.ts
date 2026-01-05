@@ -43,17 +43,26 @@ const templateEvents = [
 
 export async function POST(req: NextRequest) {
   try {
-    // Require super admin access
+    // Require admin access
     const { user, error } = await requireAuth()
     if (error || !user) {
+      console.error('Auth error:', error)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Check if user is admin or super admin
     const userDoc = await adminDb.collection('users').doc(user.id).get()
     const userData = userDoc.data()
+    
+    console.log('User ID:', user.id)
+    console.log('User role:', userData?.role)
+    console.log('User data:', userData)
+    
     if (userData?.role !== 'admin' && userData?.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+      return NextResponse.json({ 
+        error: 'Admin access required',
+        details: `Your role is: ${userData?.role || 'undefined'}`
+      }, { status: 403 })
     }
 
     // Find the organizer with email info@edlight.org
