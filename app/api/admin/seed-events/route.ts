@@ -4,41 +4,41 @@ import { adminDb } from '@/lib/firebase/admin'
 import { Timestamp } from 'firebase-admin/firestore'
 
 const templateEvents = [
-  // Haiti Events
-  { name: 'Carnaval de Port-au-Prince', location: 'Port-au-Prince, Haiti', country: 'HT', category: 'festival', price: 50 },
-  { name: 'Festival de Jazz de Port-au-Prince', location: 'Port-au-Prince, Haiti', country: 'HT', category: 'music', price: 75 },
-  { name: 'Fête Gede Celebration', location: 'Port-au-Prince, Haiti', country: 'HT', category: 'cultural', price: 25 },
-  { name: 'Haitian Art Exhibition', location: 'Pétion-Ville, Haiti', country: 'HT', category: 'art', price: 30 },
-  { name: 'Compas Music Festival', location: 'Cap-Haïtien, Haiti', country: 'HT', category: 'music', price: 60 },
-  { name: 'Haitian Food Festival', location: 'Jacmel, Haiti', country: 'HT', category: 'food', price: 40 },
-  { name: 'Rara Street Festival', location: 'Gonaïves, Haiti', country: 'HT', category: 'festival', price: 20 },
-  { name: 'Haitian Independence Day Celebration', location: 'Port-au-Prince, Haiti', country: 'HT', category: 'cultural', price: 35 },
-  { name: 'Caribbean Literature Conference', location: 'Port-au-Prince, Haiti', country: 'HT', category: 'conference', price: 100 },
-  { name: 'Haitian Film Festival', location: 'Port-au-Prince, Haiti', country: 'HT', category: 'entertainment', price: 45 },
+  // Haiti Events (15 events - 50%)
+  { name: 'Carnaval de Port-au-Prince', location: 'Port-au-Prince, Haiti', country: 'HT', category: 'festival', price: 50, currency: 'USD' },
+  { name: 'Festival de Jazz de Port-au-Prince', location: 'Port-au-Prince, Haiti', country: 'HT', category: 'music', price: 4500, currency: 'HTG' },
+  { name: 'Fête Gede Celebration', location: 'Port-au-Prince, Haiti', country: 'HT', category: 'cultural', price: 25, currency: 'USD' },
+  { name: 'Haitian Art Exhibition', location: 'Pétion-Ville, Haiti', country: 'HT', category: 'art', price: 2000, currency: 'HTG' },
+  { name: 'Compas Music Festival', location: 'Cap-Haïtien, Haiti', country: 'HT', category: 'music', price: 60, currency: 'USD' },
+  { name: 'Haitian Food Festival', location: 'Jacmel, Haiti', country: 'HT', category: 'food', price: 3000, currency: 'HTG' },
+  { name: 'Rara Street Festival', location: 'Gonaïves, Haiti', country: 'HT', category: 'festival', price: 1500, currency: 'HTG' },
+  { name: 'Haitian Independence Day Celebration', location: 'Port-au-Prince, Haiti', country: 'HT', category: 'cultural', price: 35, currency: 'USD' },
+  { name: 'Caribbean Literature Conference', location: 'Port-au-Prince, Haiti', country: 'HT', category: 'conference', price: 100, currency: 'USD' },
+  { name: 'Haitian Film Festival', location: 'Port-au-Prince, Haiti', country: 'HT', category: 'entertainment', price: 3500, currency: 'HTG' },
+  { name: 'Vodou Cultural Experience', location: 'Jacmel, Haiti', country: 'HT', category: 'cultural', price: 2500, currency: 'HTG' },
+  { name: 'Port-au-Prince Tech Summit', location: 'Port-au-Prince, Haiti', country: 'HT', category: 'conference', price: 85, currency: 'USD' },
+  { name: 'Haitian Fashion Show', location: 'Pétion-Ville, Haiti', country: 'HT', category: 'entertainment', price: 55, currency: 'USD' },
+  { name: 'Traditional Dance Workshop', location: 'Cap-Haïtien, Haiti', country: 'HT', category: 'workshop', price: 1800, currency: 'HTG' },
+  { name: 'Haitian Artisan Market', location: 'Jacmel, Haiti', country: 'HT', category: 'art', price: 1000, currency: 'HTG' },
 
-  // US Events
-  { name: 'Little Haiti Cultural Festival', location: 'Miami, FL, USA', country: 'US', category: 'festival', price: 55 },
-  { name: 'Haitian Flag Day Celebration', location: 'Brooklyn, NY, USA', country: 'US', category: 'cultural', price: 40 },
-  { name: 'Kompa Music Night', location: 'New York, NY, USA', country: 'US', category: 'music', price: 80 },
-  { name: 'Haitian-American Heritage Month Gala', location: 'Boston, MA, USA', country: 'US', category: 'gala', price: 120 },
-  { name: 'Haitian Art & Craft Fair', location: 'Orlando, FL, USA', country: 'US', category: 'art', price: 25 },
-  { name: 'Konpa Dance Workshop', location: 'Atlanta, GA, USA', country: 'US', category: 'workshop', price: 50 },
-  { name: 'Haitian Business Expo', location: 'Miami, FL, USA', country: 'US', category: 'conference', price: 75 },
-  { name: 'Haitian Creole Language Conference', location: 'Chicago, IL, USA', country: 'US', category: 'conference', price: 90 },
-  { name: 'Caribbean Food Festival', location: 'Fort Lauderdale, FL, USA', country: 'US', category: 'food', price: 45 },
-  { name: 'Haitian Comedy Night', location: 'Queens, NY, USA', country: 'US', category: 'entertainment', price: 60 },
+  // US Events (8 events)
+  { name: 'Little Haiti Cultural Festival', location: 'Miami, FL, USA', country: 'US', category: 'festival', price: 55, currency: 'USD' },
+  { name: 'Haitian Flag Day Celebration', location: 'Brooklyn, NY, USA', country: 'US', category: 'cultural', price: 40, currency: 'USD' },
+  { name: 'Kompa Music Night', location: 'New York, NY, USA', country: 'US', category: 'music', price: 80, currency: 'USD' },
+  { name: 'Haitian-American Heritage Month Gala', location: 'Boston, MA, USA', country: 'US', category: 'gala', price: 120, currency: 'USD' },
+  { name: 'Haitian Art & Craft Fair', location: 'Orlando, FL, USA', country: 'US', category: 'art', price: 25, currency: 'USD' },
+  { name: 'Konpa Dance Workshop', location: 'Atlanta, GA, USA', country: 'US', category: 'workshop', price: 50, currency: 'USD' },
+  { name: 'Haitian Business Expo', location: 'Miami, FL, USA', country: 'US', category: 'conference', price: 75, currency: 'USD' },
+  { name: 'Caribbean Food Festival', location: 'Fort Lauderdale, FL, USA', country: 'US', category: 'food', price: 45, currency: 'USD' },
 
-  // Canada Events
-  { name: 'Festival Haïtien de Montréal', location: 'Montreal, QC, Canada', country: 'CA', category: 'festival', price: 65 },
-  { name: 'Haitian Heritage Celebration', location: 'Toronto, ON, Canada', country: 'CA', category: 'cultural', price: 50 },
-  { name: 'Kompa Festival Canada', location: 'Montreal, QC, Canada', country: 'CA', category: 'music', price: 85 },
-  { name: 'Haitian Film Screening Series', location: 'Ottawa, ON, Canada', country: 'CA', category: 'entertainment', price: 35 },
-  { name: 'Haitian Art Gallery Opening', location: 'Toronto, ON, Canada', country: 'CA', category: 'art', price: 40 },
-  { name: 'Haitian Independence Gala', location: 'Montreal, QC, Canada', country: 'CA', category: 'gala', price: 110 },
-  { name: 'Caribbean Music Festival', location: 'Vancouver, BC, Canada', country: 'CA', category: 'music', price: 70 },
-  { name: 'Haitian Business Summit', location: 'Toronto, ON, Canada', country: 'CA', category: 'conference', price: 95 },
-  { name: 'Haitian Cuisine Workshop', location: 'Montreal, QC, Canada', country: 'CA', category: 'workshop', price: 55 },
-  { name: 'Haitian Literary Evening', location: 'Quebec City, QC, Canada', country: 'CA', category: 'cultural', price: 30 },
+  // Canada Events (7 events)
+  { name: 'Festival Haïtien de Montréal', location: 'Montreal, QC, Canada', country: 'CA', category: 'festival', price: 65, currency: 'USD' },
+  { name: 'Haitian Heritage Celebration', location: 'Toronto, ON, Canada', country: 'CA', category: 'cultural', price: 50, currency: 'USD' },
+  { name: 'Kompa Festival Canada', location: 'Montreal, QC, Canada', country: 'CA', category: 'music', price: 85, currency: 'USD' },
+  { name: 'Haitian Film Screening Series', location: 'Ottawa, ON, Canada', country: 'CA', category: 'entertainment', price: 35, currency: 'USD' },
+  { name: 'Haitian Independence Gala', location: 'Montreal, QC, Canada', country: 'CA', category: 'gala', price: 110, currency: 'USD' },
+  { name: 'Haitian Business Summit', location: 'Toronto, ON, Canada', country: 'CA', category: 'conference', price: 95, currency: 'USD' },
+  { name: 'Haitian Cuisine Workshop', location: 'Montreal, QC, Canada', country: 'CA', category: 'workshop', price: 55, currency: 'USD' },
 ]
 
 export async function POST(req: NextRequest) {
@@ -86,6 +86,7 @@ export async function POST(req: NextRequest) {
       eventDate.setDate(eventDate.getDate() + daysInFuture)
       eventDate.setHours(19, 0, 0, 0) // 7 PM
 
+      const totalCapacity = 250
       const eventData = {
         title: template.name,
         description: `Join us for ${template.name}! This exciting event brings together the community for an unforgettable experience celebrating Haitian culture and heritage.`,
@@ -98,8 +99,8 @@ export async function POST(req: NextRequest) {
         organizerName: organizerData.full_name || 'Edlight Events',
         isVirtual: false,
         imageUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800',
-        capacity: 200,
-        availableTickets: 200,
+        capacity: totalCapacity,
+        availableTickets: totalCapacity,
         status: 'upcoming',
         featured: Math.random() > 0.7, // 30% chance of being featured
         tags: [template.category, 'haitian', 'community'],
@@ -109,13 +110,39 @@ export async function POST(req: NextRequest) {
 
       const eventRef = await adminDb.collection('events').add(eventData)
 
-      // Create ticket tier
-      const tierData = {
+      // Create multiple ticket tiers with early bird
+      const currency = template.currency
+      const basePrice = template.price
+      
+      // Early bird tier (expires 14 days before event)
+      const earlyBirdEndDate = new Date(eventDate)
+      earlyBirdEndDate.setDate(earlyBirdEndDate.getDate() - 14)
+      
+      const earlyBirdPrice = Math.round(basePrice * 0.7) // 30% discount
+      const earlyBirdTier = {
+        eventId: eventRef.id,
+        name: 'Early Bird',
+        price: earlyBirdPrice,
+        currency: currency,
+        capacity: 80,
+        available: 80,
+        description: 'Limited early bird discount - Save 30%!',
+        salesStart: now,
+        salesEnd: Timestamp.fromDate(earlyBirdEndDate),
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      }
+      await adminDb.collection('ticketTiers').add(earlyBirdTier)
+
+      // General admission tier
+      const generalTier = {
         eventId: eventRef.id,
         name: 'General Admission',
-        price: template.price,
-        capacity: 200,
-        available: 200,
+        price: basePrice,
+        currency: currency,
+        capacity: 120,
+        available: 120,
         description: 'Standard admission ticket',
         salesStart: now,
         salesEnd: Timestamp.fromDate(eventDate),
@@ -123,15 +150,36 @@ export async function POST(req: NextRequest) {
         createdAt: now,
         updatedAt: now,
       }
+      await adminDb.collection('ticketTiers').add(generalTier)
 
-      await adminDb.collection('ticketTiers').add(tierData)
+      // VIP tier (only for certain event types)
+      const hasVIP = ['music', 'festival', 'gala', 'conference'].includes(template.category)
+      if (hasVIP) {
+        const vipPrice = Math.round(basePrice * 1.8) // 80% premium
+        const vipTier = {
+          eventId: eventRef.id,
+          name: 'VIP',
+          price: vipPrice,
+          currency: currency,
+          capacity: 50,
+          available: 50,
+          description: 'VIP access with premium seating and exclusive perks',
+          salesStart: now,
+          salesEnd: Timestamp.fromDate(eventDate),
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        }
+        await adminDb.collection('ticketTiers').add(vipTier)
+      }
       
       createdEvents.push({
         id: eventRef.id,
         title: eventData.title,
         location: eventData.location,
         date: eventDate.toISOString(),
-        price: template.price,
+        price: `${earlyBirdPrice} - ${hasVIP ? Math.round(basePrice * 1.8) : basePrice} ${currency}`,
+        currency: currency,
       })
     }
 

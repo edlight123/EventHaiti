@@ -11,7 +11,7 @@ export default function SeedEventsPage() {
   const [result, setResult] = useState<{
     success: boolean
     message: string
-    events?: Array<{ id: string; title: string; location: string; date: string; price: number }>
+    events?: Array<{ id: string; title: string; location: string; date: string; price: string; currency: string }>
   } | null>(null)
 
   const handleSeedEvents = async () => {
@@ -60,11 +60,12 @@ export default function SeedEventsPage() {
           <div className="space-y-2">
             <h3 className="font-semibold">What will be created:</h3>
             <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-              <li>10 events in Haiti (Port-au-Prince, Cap-Haïtien, Jacmel, etc.)</li>
-              <li>10 events in USA (Miami, New York, Boston, Chicago, etc.)</li>
-              <li>10 events in Canada (Montreal, Toronto, Vancouver, etc.)</li>
+              <li>15 events in Haiti (50%) - Mix of USD and HTG pricing</li>
+              <li>8 events in USA (Miami, New York, Boston, etc.)</li>
+              <li>7 events in Canada (Montreal, Toronto, Vancouver, etc.)</li>
               <li>Categories: Music, Festival, Cultural, Food, Art, Conference, Workshop</li>
-              <li>Ticket prices: $20 - $120</li>
+              <li>Multiple ticket tiers: Early Bird (30% off, expires 14 days before), General, VIP</li>
+              <li>Haiti events: HTG 1,000-4,500 or USD $20-$100</li>
               <li>Event dates: 30-90 days in the future</li>
             </ul>
           </div>
@@ -105,7 +106,7 @@ export default function SeedEventsPage() {
                         >
                           <div className="font-medium">{idx + 1}. {event.title}</div>
                           <div className="text-muted-foreground">
-                            {event.location} • {new Date(event.date).toLocaleDateString()} • ${event.price}
+                            {event.location} • {new Date(event.date).toLocaleDateString()} • {event.price}
                           </div>
                         </div>
                       ))}
