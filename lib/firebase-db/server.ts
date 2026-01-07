@@ -213,7 +213,37 @@ class ServerQueryBuilder {
       
       // Handle pending update
       if (this.pendingUpdate !== null) {
-        // Find documents matching constraints
+        const updateData = {
+          ...this.pendingUpdate,
+          updated_at: new Date().toISOString(),
+        }
+
+        // Special case: updating by document ID
+        if (this.constraints.length === 1 && 
+            this.constraints[0].field === 'id' && 
+            this.constraints[0].op === '==') {
+          console.log('Server update - updating by document ID:', this.constraints[0].value)
+          const docRef = adminDb.collection(this.collectionName).doc(this.constraints[0].value as string)
+          const docSnapshot = await docRef.get()
+          
+          if (!docSnapshot.exists) {
+            console.log('Server update - document not found')
+            return { data: [], error: null }
+          }
+          
+          await docRef.set(updateData, { merge: true })
+          console.log('Server update - document updated:', this.constraints[0].value)
+          
+          const updatedData = serializeFirestoreData({
+            id: docSnapshot.id,
+            ...docSnapshot.data(),
+            ...updateData
+          })
+          
+          return { data: [updatedData], error: null }
+        }
+
+        // Regular update: find documents matching constraints
         let query: any = adminDb.collection(this.collectionName)
         
         for (const constraint of this.constraints) {
@@ -221,10 +251,6 @@ class ServerQueryBuilder {
         }
         
         const snapshot = await query.get()
-        const updateData = {
-          ...this.pendingUpdate,
-          updated_at: new Date().toISOString(),
-        }
 
         // Update all matching documents using set with merge to allow adding new fields
         const batch = adminDb.batch()
