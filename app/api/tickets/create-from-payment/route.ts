@@ -71,14 +71,21 @@ export async function POST(request: Request) {
       const eventCurrency = String(paymentIntent.metadata.originalCurrency || '').toUpperCase() || 'USD'
       const priceInOriginalCurrency = Number(paymentIntent.metadata.priceInOriginalCurrency || paymentIntent.metadata.finalPrice || 0)
 
+      const normalizedEventCurrency = (() => {
+        const upper = String(eventCurrency || '').toUpperCase()
+        if (upper === 'HTG') return 'HTG'
+        if (upper === 'CAD') return 'CAD'
+        return 'USD'
+      })()
+
       const ticketData = {
         event_id: paymentIntent.metadata.eventId,
         attendee_id: paymentIntent.metadata.userId,
         attendee_name: attendee?.full_name || attendee?.email || 'Guest',
         // Organizer-facing/event-currency amount.
         price_paid: Number.isFinite(priceInOriginalCurrency) && priceInOriginalCurrency > 0 ? priceInOriginalCurrency : pricePerTicket,
-        currency: eventCurrency === 'HTG' ? 'HTG' : 'USD',
-        original_currency: eventCurrency === 'HTG' ? 'HTG' : 'USD',
+        currency: normalizedEventCurrency,
+        original_currency: normalizedEventCurrency,
         // When conversion occurs, this is the settlement-per-event rate (e.g., USD per HTG for Stripe).
         exchange_rate_used: paymentIntent.metadata.exchangeRate ? parseFloat(paymentIntent.metadata.exchangeRate) : null,
         // Admin/auditing fields (charged/settlement amounts)

@@ -42,6 +42,11 @@ export async function POST(request: Request) {
       const quantity = parseInt(session.metadata.quantity || '1', 10)
       const pricePerTicket = session.amount_total / 100 / quantity // Total price divided by quantity
       const originalCurrency = String(session.metadata.originalCurrency || '').toUpperCase() || 'USD'
+      const normalizedOriginalCurrency = (() => {
+        if (originalCurrency === 'HTG') return 'HTG'
+        if (originalCurrency === 'CAD') return 'CAD'
+        return 'USD'
+      })()
       const priceInOriginalCurrency = Number(session.metadata.priceInOriginalCurrency || session.metadata.finalPrice || 0)
       const exchangeRateUsed = session.metadata.exchangeRate ? parseFloat(session.metadata.exchangeRate) : null
       const payoutProvider = String(session.metadata.payoutProvider || '').toLowerCase()
@@ -56,8 +61,8 @@ export async function POST(request: Request) {
           attendee_id: session.client_reference_id,
           // Organizer-facing/event-currency amount.
           price_paid: Number.isFinite(priceInOriginalCurrency) && priceInOriginalCurrency > 0 ? priceInOriginalCurrency : pricePerTicket,
-          currency: originalCurrency === 'HTG' ? 'HTG' : 'USD',
-          original_currency: originalCurrency === 'HTG' ? 'HTG' : 'USD',
+          currency: normalizedOriginalCurrency,
+          original_currency: normalizedOriginalCurrency,
           // settlement-per-event rate (USD per HTG for Stripe when event is HTG)
           exchange_rate_used: exchangeRateUsed,
           payment_method: paymentMethod,
@@ -268,6 +273,11 @@ export async function POST(request: Request) {
       const quantity = parseInt(paymentIntent.metadata.quantity || '1', 10)
       const pricePerTicket = paymentIntent.amount / 100 / quantity
       const originalCurrency = String(paymentIntent.metadata.originalCurrency || '').toUpperCase() || 'USD'
+      const normalizedOriginalCurrency = (() => {
+        if (originalCurrency === 'HTG') return 'HTG'
+        if (originalCurrency === 'CAD') return 'CAD'
+        return 'USD'
+      })()
       const priceInOriginalCurrency = Number(paymentIntent.metadata.priceInOriginalCurrency || paymentIntent.metadata.finalPrice || 0)
       const exchangeRateUsed = paymentIntent.metadata.exchangeRate ? parseFloat(paymentIntent.metadata.exchangeRate) : null
       const payoutProvider = String(paymentIntent.metadata.payoutProvider || '').toLowerCase()
@@ -281,8 +291,8 @@ export async function POST(request: Request) {
           event_id: paymentIntent.metadata.eventId,
           attendee_id: paymentIntent.metadata.userId,
           price_paid: Number.isFinite(priceInOriginalCurrency) && priceInOriginalCurrency > 0 ? priceInOriginalCurrency : pricePerTicket,
-          currency: originalCurrency === 'HTG' ? 'HTG' : 'USD',
-          original_currency: originalCurrency === 'HTG' ? 'HTG' : 'USD',
+          currency: normalizedOriginalCurrency,
+          original_currency: normalizedOriginalCurrency,
           exchange_rate_used: exchangeRateUsed,
           payment_method: paymentMethod,
           payment_id: paymentIntent.id,

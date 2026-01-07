@@ -185,7 +185,7 @@ export async function POST(request: Request) {
     }
 
     // Handle currency conversion for Stripe
-    const eventCurrency = (event.currency?.toUpperCase() || 'USD') as 'USD' | 'HTG'
+    const eventCurrency = (event.currency?.toUpperCase() || 'USD') as 'USD' | 'HTG' | 'CAD'
     let stripeAmount = finalPrice
     let stripeCurrency = eventCurrency.toLowerCase()
     let exchangeRateUsed: number | null = null

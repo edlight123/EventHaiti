@@ -91,7 +91,22 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
 
   useEffect(() => {
     if (!showModal) return
+    if (!isHaitiEvent) {
+      setUsdHtgQuote(null)
+      setUsdHtgQuoteError(null)
+      setUsdHtgQuoteLoading(false)
+      return
+    }
     if (String(currency || 'HTG').toUpperCase() !== 'USD') {
+      setUsdHtgQuote(null)
+      setUsdHtgQuoteError(null)
+      setUsdHtgQuoteLoading(false)
+      return
+    }
+
+    // Only Haiti events can settle USD-priced tickets in HTG via local mobile money.
+    // If the user is paying by card, we charge in the event currency.
+    if (paymentMethod === 'stripe') {
       setUsdHtgQuote(null)
       setUsdHtgQuoteError(null)
       setUsdHtgQuoteLoading(false)
@@ -124,7 +139,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
 
     run()
     return () => controller.abort()
-  }, [currency, showModal, totalAmountDisplay])
+  }, [currency, isHaitiEvent, paymentMethod, showModal, totalAmountDisplay])
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
@@ -572,7 +587,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
                 </div>
               )}
 
-              {String(currency || 'HTG').toUpperCase() === 'USD' && (
+              {isHaitiEvent && String(currency || 'HTG').toUpperCase() === 'USD' && (
                 <div className="mt-3 text-sm text-gray-600">
                   {usdHtgQuoteLoading && <span>Estimating MonCash total in HTG…</span>}
                   {!usdHtgQuoteLoading && usdHtgQuote && (

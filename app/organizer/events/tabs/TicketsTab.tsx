@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useMemo } from 'react'
 import { EventFormData, TabValidation, TicketTier } from '@/lib/event-validation'
 import { AlertCircle, CheckCircle, DollarSign, Ticket, Plus, Trash2 } from 'lucide-react'
 
@@ -14,6 +15,26 @@ interface TicketsTabProps {
 export function TicketsTab({ formData, onChange, tiers, onTiersChange, validation }: TicketsTabProps) {
   const priceError = validation.missingFields.find(f => f.toLowerCase().includes('price'))
   const quantityError = validation.missingFields.find(f => f.toLowerCase().includes('quantity') || f.toLowerCase().includes('tier'))
+
+  const countryCode = String(formData.country || '').trim().toUpperCase()
+  const allowedCurrencies = useMemo(() => {
+    if (countryCode === 'US') return ['USD']
+    if (countryCode === 'CA') return ['CAD']
+    // Haiti and default: allow USD and HTG.
+    return ['USD', 'HTG']
+  }, [countryCode])
+
+  const enforcedCurrency = useMemo(() => {
+    const current = String(formData.currency || '').trim().toUpperCase()
+    if (allowedCurrencies.includes(current)) return current
+    return allowedCurrencies[0]
+  }, [allowedCurrencies, formData.currency])
+
+  useEffect(() => {
+    if (String(formData.currency || '').trim().toUpperCase() !== enforcedCurrency) {
+      onChange('currency', enforcedCurrency)
+    }
+  }, [enforcedCurrency, formData.currency, onChange])
 
   const toDateTimeLocalValue = (iso: string | undefined) => {
     if (!iso) return ''
@@ -52,12 +73,14 @@ export function TicketsTab({ formData, onChange, tiers, onTiersChange, validatio
         </label>
         <select
           id="currency"
-          value={formData.currency}
+          value={enforcedCurrency}
           onChange={(e) => onChange('currency', e.target.value)}
+          disabled={allowedCurrencies.length === 1}
           className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 transition-all"
         >
-          <option value="USD">USD ($)</option>
-          <option value="HTG">HTG (G)</option>
+          {allowedCurrencies.includes('USD') && <option value="USD">USD ($)</option>}
+          {allowedCurrencies.includes('CAD') && <option value="CAD">CAD ($)</option>}
+          {allowedCurrencies.includes('HTG') && <option value="HTG">HTG (G)</option>}
         </select>
       </div>
 

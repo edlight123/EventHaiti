@@ -3,6 +3,7 @@ import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { calculateDiscount } from '@/lib/promo-codes'
 import { convertUsdToHtgAmount, getUsdToHtgRateWithSpread } from '@/lib/fx/usd-htg'
+import { inferCountryFromEventText } from '@/lib/event-country'
 import {
   createMonCashButtonCheckoutToken,
   getMonCashButtonRedirectUrl,
@@ -117,6 +118,16 @@ export async function POST(request: Request) {
 
     if (eventError || !event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+    }
+
+    // MonCash is Haiti-only. Do not fall back to organizer location here, otherwise
+    // a US/CA event created by a Haiti organizer could be incorrectly routed to MonCash.
+    const eventCountry = inferCountryFromEventText(event)
+    if (eventCountry !== 'HT') {
+      return NextResponse.json(
+        { error: 'MonCash is only available for events in Haiti.' },
+        { status: 400 }
+      )
     }
 
     // Promo code (optional)

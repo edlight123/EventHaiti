@@ -27,7 +27,7 @@ export interface Order {
   platformFee: number            // EventHaiti's fee
   processingFee: number          // Stripe processing fee (estimated)
   total: number                  // Final amount charged
-  currency: 'HTG' | 'USD'
+  currency: 'HTG' | 'USD' | 'CAD'
   
   // Payment tracking
   status: OrderStatus

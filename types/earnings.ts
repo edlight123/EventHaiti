@@ -33,7 +33,7 @@ export interface EventEarnings {
   settlementReadyDate?: string | null  // When funds become available
   
   // Currency
-  currency: 'HTG' | 'USD'
+  currency: 'HTG' | 'USD' | 'CAD'
   
   // Timestamps
   lastCalculatedAt: string       // Last time earnings were recalculated
@@ -118,7 +118,7 @@ export interface EarningsSummary {
   currency: 'HTG' | 'USD' | 'mixed' | string
 
   // Optional: totals split by currency for mixed-currency organizers.
-  totalsByCurrency?: Partial<Record<'HTG' | 'USD', {
+  totalsByCurrency?: Partial<Record<'HTG' | 'USD' | 'CAD', {
     totalGrossSales: number
     totalNetAmount: number
     totalAvailableToWithdraw: number
@@ -136,7 +136,7 @@ export interface EarningsSummary {
     netAmount: number
     availableToWithdraw: number
     settlementStatus: SettlementStatus
-    currency?: 'HTG' | 'USD'
+    currency?: 'HTG' | 'USD' | 'CAD'
   }>
 }
 
@@ -177,7 +177,7 @@ export interface WithdrawalRequest {
   organizerId: string
   eventId: string
   amount: number                       // Amount in cents (deducted from event earnings)
-  currency?: 'HTG' | 'USD'
+  currency?: 'HTG' | 'USD' | 'CAD'
   method: 'moncash' | 'bank'
   status: 'pending' | 'processing' | 'completed' | 'failed'
 

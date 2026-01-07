@@ -226,7 +226,7 @@ export default function OrganizerEventEarningsScreen() {
         const totalCents = prices.reduce((sum, v) => sum + (looksLikeDollars ? Math.round(v * 100) : Math.round(v)), 0)
 
         const curr = String((event as any)?.currency || '').toUpperCase()
-        const currency: 'HTG' | 'USD' = curr === 'HTG' ? 'HTG' : 'USD'
+        const currency: 'HTG' | 'USD' | 'CAD' = curr === 'HTG' ? 'HTG' : curr === 'CAD' ? 'CAD' : 'USD'
 
         setEarnings({
           totalEarned: totalCents,

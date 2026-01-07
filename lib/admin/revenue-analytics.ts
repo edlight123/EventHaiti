@@ -74,7 +74,10 @@ function toNumber(value: unknown): number | null {
 
 function normalizeCurrency(raw: unknown): 'HTG' | 'USD' {
   const upper = String(raw || '').toUpperCase()
-  return upper === 'USD' ? 'USD' : 'HTG'
+  // Admin dashboard currently tracks USD + HTG only.
+  // Treat CAD as USD for aggregation to avoid classifying it as HTG.
+  if (upper === 'USD' || upper === 'CAD') return 'USD'
+  return 'HTG'
 }
 
 function normalizePaymentMethod(raw: unknown): 'stripe' | 'moncash' | 'natcash' {
