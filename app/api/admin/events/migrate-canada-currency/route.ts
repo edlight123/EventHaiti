@@ -7,6 +7,15 @@ import { adminDb } from '@/lib/firebase/admin'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+function getDeploymentMeta() {
+  return {
+    vercelEnv: process.env.VERCEL_ENV || null,
+    vercelGitCommitSha: process.env.VERCEL_GIT_COMMIT_SHA || null,
+    vercelGitCommitRef: process.env.VERCEL_GIT_COMMIT_REF || null,
+    vercelGitCommitMessage: process.env.VERCEL_GIT_COMMIT_MESSAGE || null,
+  }
+}
+
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
@@ -73,6 +82,7 @@ export async function GET() {
       ok: true,
       authenticated,
       admin,
+      deployment: getDeploymentMeta(),
       message:
         'Use POST to migrate Canada events to CAD. Start with dryRun=true. This updates Supabase by default, and optionally Firestore when includeFirestore=true.',
     })
@@ -209,6 +219,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       ok: true,
+      deployment: getDeploymentMeta(),
       dryRun,
       limit,
       supabase: {
