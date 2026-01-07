@@ -109,11 +109,13 @@ export async function POST(request: NextRequest) {
 
     // Fetch ALL events since Firestore wrapper doesn't support .in('country') without an index.
     // We'll filter by country in JS to avoid the FAILED_PRECONDITION index error.
+    // Fetch a large batch to ensure we get all Canada events (not just the first 20)
+    const fetchLimit = Math.max(limit * 10, 1000)
     const { data: allEvents, error: fetchErr } = await supabase
       .from('events')
       .select('id,title,country,currency,ticket_price,organizer_id')
       .order('id', { ascending: true })
-      .limit(Math.min(limit * 5, 2500)) // Fetch extra to ensure we get enough CA events
+      .limit(fetchLimit)
 
     if (fetchErr) {
       return NextResponse.json({ error: fetchErr.message || 'Failed to query events' }, { status: 500 })
