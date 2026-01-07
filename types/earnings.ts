@@ -186,6 +186,12 @@ export interface WithdrawalRequest {
   payoutAmountCents?: number
   prefundingUsed?: boolean
   prefundingFeePercent?: number
+  prefundingTransferRaw?: any
+
+  // Reservation metadata (used for instant prefunded payouts)
+  reservedAt?: Date
+  reservedCents?: number
+  reservationRolledBackAt?: Date
 
   // Bank destination selection
   bankDestinationId?: string
