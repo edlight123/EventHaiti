@@ -32,8 +32,17 @@ export async function POST(request: NextRequest) {
 
     const newStatus = decision === 'approve' ? 'verified' : 'failed'
 
-    const resolvedDestinationId = destinationId ? String(destinationId) : null
-    const docId = resolvedDestinationId ? `bank_${resolvedDestinationId}` : 'bank'
+    const resolvedDestinationId = destinationId ? String(destinationId) : ''
+    const docId = (() => {
+      const normalized = resolvedDestinationId.trim()
+      // Legacy primary bank verification used doc id "bank".
+      if (!normalized || normalized === 'bank' || normalized === 'bank_primary' || normalized === 'primary') {
+        return 'bank'
+      }
+      // Some callers may already provide the full verification doc id.
+      if (normalized.startsWith('bank_')) return normalized
+      return `bank_${normalized}`
+    })()
 
     // Update verification document
     await adminDb

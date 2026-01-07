@@ -83,7 +83,10 @@ export default async function AdminBankVerificationsPage() {
       const docId = String(verificationDoc.id || '')
 
       const destinationId = (() => {
-        if (verificationData?.destinationId) return String(verificationData.destinationId)
+        if (verificationData?.destinationId) {
+          const raw = String(verificationData.destinationId)
+          return raw.startsWith('bank_') ? raw.slice('bank_'.length) : raw
+        }
         if (docId.startsWith('bank_')) return docId.slice('bank_'.length)
         // Legacy doc id "bank" historically implied the main/primary bank.
         if (docId === 'bank') return 'bank_primary'
