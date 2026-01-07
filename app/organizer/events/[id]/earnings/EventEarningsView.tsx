@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { calculateFees, formatCurrency, calculateSettlementDate } from '@/lib/fees'
+import { formatCurrency, calculateSettlementDate } from '@/lib/fees'
 import type { EventEarnings } from '@/types/earnings'
 import type { EventTierSalesBreakdownRow } from '@/lib/earnings'
 
@@ -199,10 +199,6 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
     )
   }
 
-  const derivedFees = calculateFees(earnings.grossSales)
-  const platformFee = Number(earnings.platformFee || 0) || derivedFees.platformFee
-  const processingFee = Number(earnings.processingFees || 0) || derivedFees.processingFee
-
   const eventDateRaw = event.end_datetime || event.endDateTime || event.start_datetime || event.startDateTime || event.date_time || event.date || event.created_at
   const eventDate = eventDateRaw ? new Date(eventDateRaw) : null
 
@@ -398,48 +394,21 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
             <div className="text-3xl font-bold">{formatCurrency(earnings.grossSales, earnings.currency)}</div>
             <div className="text-teal-100 text-sm mt-1">{earnings.ticketsSold} tickets sold</div>
           </div>
-          
+
           <div>
-            <div className="text-teal-100 text-sm font-medium mb-1">Total Fees</div>
-            <div className="text-3xl font-bold">-{formatCurrency(platformFee + processingFee, earnings.currency)}</div>
-            <div className="text-teal-100 text-sm mt-1">Platform + Stripe</div>
-          </div>
-          
-          <div>
-            <div className="text-teal-100 text-sm font-medium mb-1">Your Earnings</div>
+            <div className="text-teal-100 text-sm font-medium mb-1">Net Earnings</div>
             <div className="text-3xl font-bold">{formatCurrency(earnings.netAmount, earnings.currency)}</div>
             <div className="text-teal-100 text-sm mt-1">
               {earnings.withdrawnAmount > 0 ? `${formatCurrency(earnings.withdrawnAmount, earnings.currency)} withdrawn` : 'Not withdrawn yet'}
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Fee Breakdown */}
-      <div className="bg-white rounded-xl p-6 mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">💳 Fee Breakdown</h2>
-        <div className="space-y-3">
-          <div className="flex justify-between py-2 border-b border-gray-100">
-            <span className="text-gray-600">Gross Revenue</span>
-            <span className="font-semibold text-gray-900">{formatCurrency(earnings.grossSales, earnings.currency)}</span>
-          </div>
-          <div className="flex justify-between py-2 border-b border-gray-100">
-            <div>
-              <div className="text-gray-600">Platform Fee (10%)</div>
-              <div className="text-xs text-gray-400">Minimum $0.50 per ticket</div>
+          <div>
+            <div className="text-teal-100 text-sm font-medium mb-1">Available to Withdraw</div>
+            <div className="text-3xl font-bold">{formatCurrency(availableToWithdraw, earnings.currency)}</div>
+            <div className="text-teal-100 text-sm mt-1">
+              {earnings.settlementStatus === 'ready' ? 'Ready now' : 'After settlement'}
             </div>
-            <span className="font-semibold text-red-600">-{formatCurrency(platformFee, earnings.currency)}</span>
-          </div>
-          <div className="flex justify-between py-2 border-b border-gray-100">
-            <div>
-              <div className="text-gray-600">Stripe Processing Fee</div>
-              <div className="text-xs text-gray-400">2.9% + $0.30 per transaction</div>
-            </div>
-            <span className="font-semibold text-red-600">-{formatCurrency(processingFee, earnings.currency)}</span>
-          </div>
-          <div className="flex justify-between py-3 bg-teal-50 rounded-lg px-3">
-            <span className="font-bold text-gray-900">Net Earnings</span>
-            <span className="font-bold text-teal-600 text-lg">{formatCurrency(earnings.netAmount, earnings.currency)}</span>
           </div>
         </div>
       </div>
@@ -486,18 +455,8 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                     <td className="py-3 text-gray-900">{formatCurrency(row.grossSales, row.listedCurrency)}</td>
                   </tr>
                 ))}
-                          <span>
-                            {moncashQuote?.payoutCurrency === 'HTG' && typeof moncashQuote?.payoutAmountHtgCents === 'number'
-                              ? formatCurrency(moncashQuote.payoutAmountHtgCents, 'HTG')
-                              : formatCurrency(prefundingPayoutCents, earnings.currency)}
-                          </span>
+              </tbody>
             </table>
-                        {moncashQuote?.currency === 'USD' && typeof moncashQuote?.usdToHtgRate === 'number' ? (
-                          <div className="flex justify-between">
-                            <span>Rate</span>
-                            <span>1 USD ≈ {moncashQuote.usdToHtgRate.toFixed(2)} HTG</span>
-                          </div>
-                        ) : null}
           </div>
         )}
       </div>
@@ -647,7 +606,63 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                       required
                     />
                   </div>
-                  {isInstantPrefundingAvailable ? (
+                  {moncashQuote ? (
+                    <div
+                      className={
+                        moncashQuote.instantAvailable
+                          ? 'bg-purple-50 border border-purple-200 rounded-lg p-3'
+                          : 'bg-gray-50 border border-gray-200 rounded-lg p-3'
+                      }
+                    >
+                      <p
+                        className={
+                          moncashQuote.instantAvailable
+                            ? 'text-sm font-medium text-purple-900'
+                            : 'text-sm font-medium text-gray-900'
+                        }
+                      >
+                        {moncashQuote.instantAvailable ? 'Instant MonCash (prefunding)' : 'MonCash payout'}
+                      </p>
+                      <p
+                        className={
+                          moncashQuote.instantAvailable
+                            ? 'text-xs text-purple-800 mt-1'
+                            : 'text-xs text-gray-600 mt-1'
+                        }
+                      >
+                        {moncashQuote.instantAvailable
+                          ? 'Sent instantly using platform prefunding.'
+                          : 'Sent to your MonCash account (typically within 24 hours).'}
+                      </p>
+
+                      <div
+                        className={
+                          moncashQuote.instantAvailable
+                            ? 'mt-2 text-xs text-purple-900 space-y-1'
+                            : 'mt-2 text-xs text-gray-800 space-y-1'
+                        }
+                      >
+                        <div className="flex justify-between">
+                          <span>Fee ({moncashQuote.prefundingFeePercent}%)</span>
+                          <span>-{formatCurrency(moncashQuote.feeCents, moncashQuote.currency)}</span>
+                        </div>
+                        <div className="flex justify-between font-semibold">
+                          <span>You receive</span>
+                          <span>
+                            {moncashQuote.payoutCurrency === 'HTG' && typeof moncashQuote.payoutAmountHtgCents === 'number'
+                              ? formatCurrency(moncashQuote.payoutAmountHtgCents, 'HTG')
+                              : formatCurrency(moncashQuote.payoutAmountCents, moncashQuote.currency)}
+                          </span>
+                        </div>
+                        {moncashQuote.currency === 'USD' && typeof moncashQuote.usdToHtgRate === 'number' ? (
+                          <div className="flex justify-between">
+                            <span>Rate</span>
+                            <span>1 USD ≈ {moncashQuote.usdToHtgRate.toFixed(2)} HTG</span>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : isInstantPrefundingAvailable ? (
                     <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
                       <p className="text-sm font-medium text-purple-900">Instant MonCash (prefunding)</p>
                       <p className="text-xs text-purple-800 mt-1">
@@ -666,7 +681,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                     </div>
                   ) : (
                     <p className="text-sm text-gray-600">
-                      Your withdrawal will be sent to your MonCash account within 24 hours.
+                      Your withdrawal will be sent to your MonCash account (typically within 24 hours).
                     </p>
                   )}
                 </div>
