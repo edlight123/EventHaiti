@@ -19,23 +19,13 @@ service cloud.firestore {
       let c = normalizedCountry(countryRaw);
       let cur = normalizedCurrency(currencyRaw);
 
-      // Canada: CAD only
-      if (c == 'CA' || c == 'CAN' || c == 'CANADA') {
-        return cur == 'CAD';
-      }
-
-      // US: USD only
-      if (c == 'US' || c == 'USA' || c == 'UNITED STATES' || c == 'UNITED_STATES') {
-        return cur == 'USD';
-      }
-
-      // Haiti: USD or HTG
-      if (c == 'HT' || c == 'HAITI') {
-        return cur == 'USD' || cur == 'HTG';
-      }
-
-      // Default: USD only
-      return cur == 'USD';
+      return (c == 'CA' || c == 'CAN' || c == 'CANADA')
+        ? (cur == 'CAD')
+        : (c == 'US' || c == 'USA' || c == 'UNITED STATES' || c == 'UNITED_STATES')
+          ? (cur == 'USD')
+          : (c == 'HT' || c == 'HAITI')
+            ? (cur == 'USD' || cur == 'HTG')
+            : (cur == 'USD');
     }
 
     function eventDoc(eventId) {
