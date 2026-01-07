@@ -102,7 +102,8 @@ export async function POST(request: NextRequest) {
     const body = (await request.json().catch(() => ({}))) as Body
     const dryRun = Boolean(body?.dryRun)
     const limit = Math.min(Math.max(Number(body?.limit || 500), 1), 5000)
-    const includeFirestore = body?.includeFirestore === true || isTruthy(body?.includeFirestore)
+    // Firestore is now OPT-IN ONLY due to index issues; default to Supabase-only migration
+    const includeFirestore = false // body?.includeFirestore === true || isTruthy(body?.includeFirestore)
 
     const supabase = await createClient()
 
