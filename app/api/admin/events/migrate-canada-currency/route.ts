@@ -234,6 +234,17 @@ export async function POST(request: NextRequest) {
     })
   } catch (err: any) {
     console.error('migrate-canada-currency POST error:', err)
-    return NextResponse.json({ error: err?.message || 'Internal server error' }, { status: 500 })
+    console.error('Error stack:', err?.stack)
+    console.error('Error code:', err?.code)
+    console.error('Error details:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2))
+    return NextResponse.json(
+      {
+        error: err?.message || 'Internal server error',
+        code: err?.code,
+        stack: err?.stack,
+        details: err?.details || null,
+      },
+      { status: 500 }
+    )
   }
 }
