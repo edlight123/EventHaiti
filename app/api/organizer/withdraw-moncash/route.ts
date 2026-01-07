@@ -6,6 +6,7 @@ import { moncashPrefundedTransfer } from '@/lib/moncash'
 import type { WithdrawalRequest } from '@/types/earnings'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { getRequiredPayoutProfileIdForEventCountry } from '@/lib/firestore/payout-profiles'
+import { fetchUsdToHtgRate } from '@/lib/currency'
 
 const PREFUNDING_FEE_PERCENT = 0.03
 
@@ -126,16 +127,13 @@ export async function POST(req: NextRequest) {
 
     const shouldUsePrefunding = prefundingEnabled && prefundingAvailable && allowInstantMoncash
 
-    // Prefunding only makes sense for HTG transfers.
-    if (shouldUsePrefunding && currency !== 'HTG') {
-      return NextResponse.json(
-        { error: 'Instant MonCash is only available for HTG withdrawals' },
-        { status: 400 }
-      )
-    }
+    // MonCash transfers are executed in HTG. If earnings are in USD, we convert at withdrawal time.
+    const usdToHtgRate = currency === 'USD' ? await fetchUsdToHtgRate() : 1
 
     const feeCents = shouldUsePrefunding ? Math.max(0, Math.round(Number(amount) * PREFUNDING_FEE_PERCENT)) : 0
     const payoutAmountCents = Math.max(0, Number(amount) - feeCents)
+
+    const payoutAmountHtgCents = Math.max(0, Math.round((payoutAmountCents / 100) * usdToHtgRate * 100))
 
     // Pre-create withdrawal request ref so we can use it as MonCash `reference`.
     // This also makes retries safer (same request id is used throughout the flow).
@@ -153,6 +151,9 @@ export async function POST(req: NextRequest) {
       moncashNumber,
       feeCents: feeCents || undefined,
       payoutAmountCents: payoutAmountCents || undefined,
+      payoutCurrency: 'HTG',
+      payoutAmountHtgCents: payoutAmountHtgCents || undefined,
+      usdToHtgRateUsed: currency === 'USD' ? usdToHtgRate : undefined,
       prefundingUsed: shouldUsePrefunding || undefined,
       prefundingFeePercent: shouldUsePrefunding ? PREFUNDING_FEE_PERCENT : undefined,
       createdAt: new Date(),
@@ -214,7 +215,7 @@ export async function POST(req: NextRequest) {
       })
 
       try {
-        const payoutAmount = Number((payoutAmountCents / 100).toFixed(2))
+        const payoutAmount = Number((payoutAmountHtgCents / 100).toFixed(2))
         const result = await moncashPrefundedTransfer({
           amount: payoutAmount,
           receiver: String(moncashNumber),
@@ -229,6 +230,9 @@ export async function POST(req: NextRequest) {
             processedAt: new Date(),
             moncashTransactionId: result.transactionId,
             prefundingTransferRaw: result.raw,
+            payoutCurrency: 'HTG',
+            payoutAmountHtgCents,
+            usdToHtgRateUsed: currency === 'USD' ? usdToHtgRate : undefined,
             updatedAt: new Date(),
           },
           { merge: true }
@@ -240,6 +244,9 @@ export async function POST(req: NextRequest) {
           instant: true,
           feeCents,
           payoutAmountCents,
+          payoutCurrency: 'HTG',
+          payoutAmountHtgCents,
+          usdToHtgRateUsed: currency === 'USD' ? usdToHtgRate : null,
           message: 'Instant MonCash withdrawal completed successfully'
         })
       } catch (e: any) {
@@ -333,6 +340,9 @@ export async function POST(req: NextRequest) {
       success: true,
       withdrawalId: withdrawalRef.id,
       instant: false,
+      payoutCurrency: 'HTG',
+      payoutAmountHtgCents,
+      usdToHtgRateUsed: currency === 'USD' ? usdToHtgRate : null,
       message: 'MonCash withdrawal request submitted successfully'
     })
   } catch (err: any) {

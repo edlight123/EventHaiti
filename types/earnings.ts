@@ -184,6 +184,10 @@ export interface WithdrawalRequest {
   // Fees (all in cents)
   feeCents?: number
   payoutAmountCents?: number
+  // MonCash payouts are executed in HTG (even if event earnings are USD).
+  payoutCurrency?: 'HTG'
+  payoutAmountHtgCents?: number
+  usdToHtgRateUsed?: number
   prefundingUsed?: boolean
   prefundingFeePercent?: number
   prefundingTransferRaw?: any

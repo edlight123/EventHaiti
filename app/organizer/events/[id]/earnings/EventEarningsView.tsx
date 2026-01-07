@@ -34,6 +34,17 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
 
   const [prefunding, setPrefunding] = useState<{ enabled: boolean; available: boolean } | null>(null)
   const [allowInstantMoncash, setAllowInstantMoncash] = useState(false)
+  const [moncashQuote, setMoncashQuote] = useState<null | {
+    amountCents: number
+    currency: 'HTG' | 'USD'
+    instantAvailable: boolean
+    prefundingFeePercent: number
+    feeCents: number
+    payoutAmountCents: number
+    payoutCurrency: 'HTG'
+    payoutAmountHtgCents: number
+    usdToHtgRate: number | null
+  }>(null)
 
   type BankDestination = {
     id: string
@@ -144,6 +155,19 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
         } catch {
           setPrefunding({ enabled: false, available: false })
           setAllowInstantMoncash(false)
+        }
+      }
+
+      if (withdrawMethod === 'moncash') {
+        try {
+          const res = await fetch(`/api/organizer/withdraw-moncash/quote?eventId=${encodeURIComponent(String(event.id))}`, {
+            cache: 'no-store' as any,
+          })
+          const data = await res.json().catch(() => ({}))
+          if (!res.ok) throw new Error(data?.error || data?.message || 'Failed to load MonCash payout quote')
+          setMoncashQuote(data?.quote || null)
+        } catch {
+          setMoncashQuote(null)
         }
       }
     }
@@ -286,11 +310,14 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
 
     // Success - reload page to show updated balance
     if (withdrawMethod === 'moncash' && data?.instant) {
+      const payoutCurrency = String(data?.payoutCurrency || '').toUpperCase() === 'HTG' ? 'HTG' : null
+      const payoutAmountHtgCents = typeof data?.payoutAmountHtgCents === 'number' ? data.payoutAmountHtgCents : null
       alert(
-        `✅ Instant MonCash sent! Fee: ${formatCurrency(data?.feeCents || 0, earnings.currency)}. You received: ${formatCurrency(
-          data?.payoutAmountCents || 0,
-          earnings.currency
-        )}.`
+        `✅ Instant MonCash sent! Fee: ${formatCurrency(data?.feeCents || 0, earnings.currency)}. You receive: ${
+          payoutCurrency && payoutAmountHtgCents != null
+            ? formatCurrency(payoutAmountHtgCents, payoutCurrency)
+            : formatCurrency(data?.payoutAmountCents || 0, earnings.currency)
+        }.`
       )
     } else {
       alert(
@@ -459,8 +486,18 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
                     <td className="py-3 text-gray-900">{formatCurrency(row.grossSales, row.listedCurrency)}</td>
                   </tr>
                 ))}
-              </tbody>
+                          <span>
+                            {moncashQuote?.payoutCurrency === 'HTG' && typeof moncashQuote?.payoutAmountHtgCents === 'number'
+                              ? formatCurrency(moncashQuote.payoutAmountHtgCents, 'HTG')
+                              : formatCurrency(prefundingPayoutCents, earnings.currency)}
+                          </span>
             </table>
+                        {moncashQuote?.currency === 'USD' && typeof moncashQuote?.usdToHtgRate === 'number' ? (
+                          <div className="flex justify-between">
+                            <span>Rate</span>
+                            <span>1 USD ≈ {moncashQuote.usdToHtgRate.toFixed(2)} HTG</span>
+                          </div>
+                        ) : null}
           </div>
         )}
       </div>

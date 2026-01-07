@@ -163,6 +163,26 @@ export async function fetchStripeHTGRate(): Promise<number> {
   return EXCHANGE_RATES.HTG_TO_USD
 }
 
+/**
+ * Fetch live USD→HTG exchange rate.
+ *
+ * Uses the same sources as `fetchStripeHTGRate()` (HTG→USD), then inverts.
+ * Falls back to hardcoded USD_TO_HTG.
+ */
+export async function fetchUsdToHtgRate(): Promise<number> {
+  try {
+    const htgToUsd = await fetchStripeHTGRate()
+    if (typeof htgToUsd === 'number' && Number.isFinite(htgToUsd) && htgToUsd > 0) {
+      return 1 / htgToUsd
+    }
+  } catch {
+    // ignore and fall back
+  }
+
+  const fallback = EXCHANGE_RATES.USD_TO_HTG
+  return typeof fallback === 'number' && Number.isFinite(fallback) && fallback > 0 ? fallback : 131.58
+}
+
 // Parse currency from string (e.g., "$25.00 USD" -> { amount: 25, currency: 'USD' })
 export function parseCurrency(str: string): { amount: number; currency: Currency } | null {
   const match = str.match(/([G$])?(\d+(?:\.\d+)?)\s*([A-Z]{3})?/)
