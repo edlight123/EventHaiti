@@ -107,20 +107,25 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Fetch candidate Supabase events.
-    // Note: Supabase filters for NULL/empty are awkward; we pull a broader set and filter in JS.
-    const { data: caEvents, error: caErr } = await supabase
+    // Fetch ALL events since Firestore wrapper doesn't support .in('country') without an index.
+    // We'll filter by country in JS to avoid the FAILED_PRECONDITION index error.
+    const { data: allEvents, error: fetchErr } = await supabase
       .from('events')
       .select('id,title,country,currency,ticket_price,organizer_id')
-      .in('country', ['CA', 'Canada', 'CANADA', 'canada'])
       .order('id', { ascending: true })
-      .limit(limit)
+      .limit(Math.min(limit * 5, 2500)) // Fetch extra to ensure we get enough CA events
 
-    if (caErr) {
-      return NextResponse.json({ error: caErr.message || 'Failed to query events' }, { status: 500 })
+    if (fetchErr) {
+      return NextResponse.json({ error: fetchErr.message || 'Failed to query events' }, { status: 500 })
     }
 
-    const candidates = (caEvents || []).filter((e: any) => {
+    // Filter for Canada events with USD or empty currency
+    const caEvents = (allEvents || []).filter((e: any) => {
+      const country = String(e?.country || '').trim().toUpperCase()
+      return country === 'CA' || country === 'CANADA'
+    })
+
+    const candidates = caEvents.filter((e: any) => {
       const currency = String(e?.currency || '').trim().toUpperCase()
       return !currency || currency === 'USD'
     })
@@ -224,7 +229,8 @@ export async function POST(request: NextRequest) {
       dryRun,
       limit,
       supabase: {
-        scanned: (caEvents || []).length,
+        fetched: (allEvents || []).length,
+        canadaEvents: caEvents.length,
         candidates: candidates.length,
         updated: dryRun ? 0 : updatedSupabaseIds.length,
         examples,
