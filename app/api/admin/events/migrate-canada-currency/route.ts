@@ -111,6 +111,7 @@ export async function POST(request: NextRequest) {
     // We'll filter by country in JS to avoid the FAILED_PRECONDITION index error.
     // Fetch a large batch to ensure we get all Canada events (not just the first 20)
     const fetchLimit = Math.max(limit * 10, 1000)
+    console.log('🔍 Migration fetch limit:', fetchLimit, '(from request limit:', limit, ')')
     const { data: allEvents, error: fetchErr } = await supabase
       .from('events')
       .select('id,title,country,currency,ticket_price,organizer_id')
@@ -120,6 +121,8 @@ export async function POST(request: NextRequest) {
     if (fetchErr) {
       return NextResponse.json({ error: fetchErr.message || 'Failed to query events' }, { status: 500 })
     }
+
+    console.log('📊 Fetched', allEvents?.length || 0, 'events (requested limit:', fetchLimit, ')')
 
     // Filter for Canada events with USD or empty currency
     const caEvents = (allEvents || []).filter((e: any) => {
@@ -233,6 +236,7 @@ export async function POST(request: NextRequest) {
       deployment: getDeploymentMeta(),
       dryRun,
       limit,
+      fetchLimit, // Show actual fetch limit used
       supabase: {
         fetched: (allEvents || []).length,
         canadaEvents: caEvents.length,

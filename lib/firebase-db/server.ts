@@ -307,7 +307,10 @@ class ServerQueryBuilder {
 
       // Apply limit
       if (this.limitCount) {
+        console.log('Applying limit:', this.limitCount)
         query = query.limit(this.limitCount)
+      } else {
+        console.log('No limit set - may default to 20')
       }
 
       console.log('Executing query...')
