@@ -1,8 +1,10 @@
+
 'use client'
 
 import { useEffect, useMemo } from 'react'
 import { EventFormData, TabValidation, TicketTier } from '@/lib/event-validation'
 import { AlertCircle, CheckCircle, DollarSign, Ticket, Plus, Trash2 } from 'lucide-react'
+import { getAllowedEventCurrencies, normalizeEventCurrencyForCountry } from '@/lib/currency-policy'
 
 interface TicketsTabProps {
   formData: EventFormData
@@ -16,19 +18,13 @@ export function TicketsTab({ formData, onChange, tiers, onTiersChange, validatio
   const priceError = validation.missingFields.find(f => f.toLowerCase().includes('price'))
   const quantityError = validation.missingFields.find(f => f.toLowerCase().includes('quantity') || f.toLowerCase().includes('tier'))
 
-  const countryCode = String(formData.country || '').trim().toUpperCase()
   const allowedCurrencies = useMemo(() => {
-    if (countryCode === 'US') return ['USD']
-    if (countryCode === 'CA') return ['CAD']
-    // Haiti and default: allow USD and HTG.
-    return ['USD', 'HTG']
-  }, [countryCode])
+    return getAllowedEventCurrencies(formData.country)
+  }, [formData.country])
 
   const enforcedCurrency = useMemo(() => {
-    const current = String(formData.currency || '').trim().toUpperCase()
-    if (allowedCurrencies.includes(current)) return current
-    return allowedCurrencies[0]
-  }, [allowedCurrencies, formData.currency])
+    return normalizeEventCurrencyForCountry(formData.country, formData.currency)
+  }, [formData.country, formData.currency])
 
   useEffect(() => {
     if (String(formData.currency || '').trim().toUpperCase() !== enforcedCurrency) {

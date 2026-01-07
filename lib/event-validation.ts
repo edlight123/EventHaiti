@@ -1,5 +1,7 @@
 // Centralized event validation for create/edit forms
 
+import { isEventCurrencyAllowedForCountry } from '@/lib/currency-policy'
+
 export interface EventFormData {
   title: string
   description: string
@@ -192,6 +194,8 @@ function validateTickets(data: EventFormData, tiers?: TicketTier[]): TabValidati
 
   if (!data.currency || data.currency.trim() === '') {
     missingFields.push('Currency')
+  } else if (!isEventCurrencyAllowedForCountry(data.country || 'HT', data.currency)) {
+    missingFields.push('Currency (must match event country)')
   }
 
   // Warnings

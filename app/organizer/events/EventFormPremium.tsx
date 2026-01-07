@@ -8,6 +8,7 @@ import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 import { isDemoMode } from '@/lib/demo'
 import { useToast } from '@/components/ui/Toast'
 import { getEventCompletion, getPublishBlockingIssues, EventFormData, TicketTier } from '@/lib/event-validation'
+import { normalizeEventCurrencyForCountry } from '@/lib/currency-policy'
 import { EditEventHeader } from '@/components/organizer/event-edit/EditEventHeader'
 import { StepperTabs } from '@/components/organizer/event-edit/StepperTabs'
 import { EventLivePreview } from '@/components/organizer/event-edit/EventLivePreview'
@@ -54,6 +55,14 @@ export default function EventFormPremium({ userId, event, isVerified = false, ve
     join_url: event?.join_url || '',
     tags: event?.tags || []
   })
+
+  // Enforce currency rules regardless of which tabs are opened.
+  useEffect(() => {
+    const enforced = normalizeEventCurrencyForCountry(formData.country || 'HT', formData.currency)
+    if (String(formData.currency || '').trim().toUpperCase() !== enforced) {
+      setFormData((prev) => ({ ...prev, currency: enforced }))
+    }
+  }, [formData.country])
 
   // Calculate validation and completion
   const completion = getEventCompletion(formData, ticketTiers)
@@ -167,7 +176,7 @@ export default function EventFormPremium({ userId, event, isVerified = false, ve
         end_datetime: formData.end_datetime ? new Date(formData.end_datetime).toISOString() : null,
         ticket_price: parseFloat(formData.ticket_price?.toString() || '0'),
         total_tickets: parseInt(formData.total_tickets?.toString() || '0'),
-        currency: formData.currency,
+        currency: normalizeEventCurrencyForCountry(formData.country || 'HT', formData.currency),
         banner_image_url: formData.banner_image_url || null,
         is_published: formData.is_published,
         is_online: formData.is_online,
@@ -321,6 +330,7 @@ export default function EventFormPremium({ userId, event, isVerified = false, ve
         .update({
           is_published: newPublishState,
           country: formData.country || 'HT',
+          currency: normalizeEventCurrencyForCountry(formData.country || 'HT', formData.currency),
         })
         .eq('id', event?.id)
 
