@@ -141,17 +141,20 @@ export async function POST(request: NextRequest) {
     }))
 
     if (!dryRun && toUpdate.length > 0) {
-      const ids = toUpdate.map((e: any) => e.id)
-      const { error: updateErr } = await supabase
-        .from('events')
-        .update({ currency: 'CAD' })
-        .in('id', ids)
+      // Update events individually to avoid Firestore .in() index requirement
+      for (const event of toUpdate) {
+        const { error: updateErr } = await supabase
+          .from('events')
+          .update({ currency: 'CAD', updated_at: new Date().toISOString() })
+          .eq('id', event.id)
 
-      if (updateErr) {
-        return NextResponse.json({ error: updateErr.message || 'Failed to update events' }, { status: 500 })
+        if (updateErr) {
+          console.error(`Failed to update event ${event.id}:`, updateErr)
+          continue
+        }
+        
+        updatedSupabaseIds.push(event.id)
       }
-
-      updatedSupabaseIds.push(...ids)
     }
 
     // Optional: update Firestore mirror so Discover/display stays consistent if it reads Firestore.
