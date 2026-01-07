@@ -22,6 +22,16 @@ type Body = {
   includeFirestore?: boolean
 }
 
+type FirestoreSummary =
+  | { skipped: true }
+  | {
+      attempted: number
+      found: number
+      updated: number
+      missing: number
+      examples: Array<{ id: string; title?: string; oldCurrency?: string; newCurrency: string }>
+    }
+
 function isRoleAdmin(user: any): boolean {
   const role = String(user?.role || '').toLowerCase()
   return role === 'admin' || role === 'super_admin'
@@ -129,30 +139,48 @@ export async function POST(request: NextRequest) {
     }
 
     // Optional: update Firestore mirror so Discover/display stays consistent if it reads Firestore.
-    let firestoreScanned = 0
-    let firestoreUpdated = 0
-    const firestoreExamples: Array<{ id: string; title?: string; oldCurrency?: string; newCurrency: string }> = []
+    let firestore: FirestoreSummary = { skipped: true }
 
     if (includeFirestore) {
-      const snapshot = await adminDb
-        .collection('events')
-        .where('country', '==', 'CA')
-        .limit(limit)
-        .get()
+      // IMPORTANT: Avoid querying Firestore by country, since some deployments disable single-field
+      // indexing on `events.country` which triggers FAILED_PRECONDITION index errors.
+      // Instead, update the Firestore mirror by Supabase event id (which should match the doc id).
+      const ids = toUpdate.map((e: any) => String(e.id))
+      const firestoreExamples: Array<{ id: string; title?: string; oldCurrency?: string; newCurrency: string }> = []
+      let found = 0
+      let missing = 0
+      let updated = 0
+      let attempted = ids.length
 
-      firestoreScanned = snapshot.size
-      const batch = adminDb.batch()
+      let batch = adminDb.batch()
       let batchOps = 0
+      const commitIfNeeded = async () => {
+        if (!dryRun && batchOps > 0) {
+          await batch.commit()
+          batch = adminDb.batch()
+          batchOps = 0
+        }
+      }
 
-      for (const doc of snapshot.docs) {
-        const data: any = doc.data() || {}
+      for (const id of ids) {
+        const ref = adminDb.collection('events').doc(id)
+        const snap = await ref.get()
+        if (!snap.exists) {
+          missing += 1
+          continue
+        }
+
+        found += 1
+        const data: any = snap.data() || {}
         const current = String(data.currency || '').trim().toUpperCase()
-        if (current && current !== 'USD') continue
+        if (current && current !== 'USD') {
+          continue
+        }
 
-        firestoreUpdated += 1
+        updated += 1
         if (firestoreExamples.length < 25) {
           firestoreExamples.push({
-            id: doc.id,
+            id,
             title: data.title,
             oldCurrency: data.currency,
             newCurrency: 'CAD',
@@ -160,13 +188,22 @@ export async function POST(request: NextRequest) {
         }
 
         if (!dryRun) {
-          batch.update(doc.ref, { currency: 'CAD', updated_at: new Date() })
+          batch.update(ref, { currency: 'CAD', updated_at: new Date() })
           batchOps += 1
+          if (batchOps >= 450) {
+            await commitIfNeeded()
+          }
         }
       }
 
-      if (!dryRun && batchOps > 0) {
-        await batch.commit()
+      await commitIfNeeded()
+
+      firestore = {
+        attempted,
+        found,
+        updated: dryRun ? 0 : updated,
+        missing,
+        examples: firestoreExamples,
       }
     }
 
@@ -180,13 +217,7 @@ export async function POST(request: NextRequest) {
         updated: dryRun ? 0 : updatedSupabaseIds.length,
         examples,
       },
-      firestore: includeFirestore
-        ? {
-            scanned: firestoreScanned,
-            updated: dryRun ? 0 : firestoreUpdated,
-            examples: firestoreExamples,
-          }
-        : { skipped: true },
+      firestore,
       warning:
         'This migration only changes currency codes (USD→CAD) without converting prices. If you need FX conversion for existing CAD events, we should do a separate rate-based migration.',
     })
