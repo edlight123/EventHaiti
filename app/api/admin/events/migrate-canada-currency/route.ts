@@ -113,17 +113,16 @@ export async function POST(request: NextRequest) {
     const fetchLimit = Math.max(limit * 10, 1000)
     console.log('🔍 Migration fetch limit:', fetchLimit, '(from request limit:', limit, ')')
     
-    // First check: how many events exist total without any limit
+    // First check: how many events exist total without any limit or ordering
     const { data: testFetch, error: testErr } = await supabase
       .from('events')
       .select('id')
-      .order('id', { ascending: true })
-    console.log('🧪 TEST: Total events in database:', testFetch?.length || 0)
+    console.log('🧪 TEST: Total events in database (no limit):', testFetch?.length || 0)
     
+    // Don't use .order() - it may silently fail due to missing index
     const { data: allEvents, error: fetchErr } = await supabase
       .from('events')
       .select('id,title,country,currency,ticket_price,organizer_id')
-      .order('id', { ascending: true })
       .limit(fetchLimit)
 
     if (fetchErr) {
