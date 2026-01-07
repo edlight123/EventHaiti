@@ -12,16 +12,27 @@ interface EarningsViewProps {
 export default function EarningsView({ summary, organizerId }: EarningsViewProps) {
   const [filter, setFilter] = useState<'all' | 'ready' | 'pending' | 'locked'>('all')
 
-  const formatCurrency = (cents: number, currencyOverride?: 'HTG' | 'USD') => {
-    const amount = (cents / 100).toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
+  const formatCurrency = (cents: number, currencyOverride?: 'HTG' | 'USD' | 'CAD') => {
+    const amount = cents / 100
 
     const currency =
-      currencyOverride || (summary.currency === 'HTG' || summary.currency === 'USD' ? summary.currency : 'USD')
+      currencyOverride ||
+      (summary.currency === 'HTG' || summary.currency === 'USD' || summary.currency === 'CAD' ? summary.currency : 'USD')
 
-    return currency === 'HTG' ? `HTG ${amount}` : `$${amount}`
+    if (currency === 'HTG') {
+      const formatted = amount.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+      return `HTG ${formatted}`
+    }
+
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount)
   }
 
   const getStatusBadge = (status: string) => {

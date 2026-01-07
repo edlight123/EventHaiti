@@ -740,7 +740,7 @@ export async function getOrganizerEarningsSummary(
   let totalProcessingFees = 0
 
   const totalsByCurrency: NonNullable<EarningsSummary['totalsByCurrency']> = {}
-  const currenciesSeen = new Set<'HTG' | 'USD'>()
+  const currenciesSeen = new Set<EventEarnings['currency']>()
 
   const events: EarningsSummary['events'] = []
 
