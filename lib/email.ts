@@ -68,6 +68,9 @@ export function getTicketConfirmationEmail(params: {
   ticketId: string
   qrCodeDataURL?: string
 }) {
+  const ticketCode = String(params.ticketId || '').slice(0, 12).toUpperCase()
+  const ticketsUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://eventhaiti.com'}/tickets`
+
   return `
     <!DOCTYPE html>
     <html>
@@ -76,75 +79,114 @@ export function getTicketConfirmationEmail(params: {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Your EventHaiti Ticket</title>
       </head>
-      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0b1220;">
         <table role="presentation" style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td align="center" style="padding: 40px 0;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                <!-- Header -->
+            <td align="center" style="padding: 36px 12px;">
+              <table role="presentation" style="width: 640px; max-width: 100%; background-color: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);">
                 <tr>
-                  <td style="background: linear-gradient(135deg, #f97316 0%, #ec4899 100%); padding: 40px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">EventHaiti</h1>
-                    <p style="margin: 8px 0 0; color: rgba(255, 255, 255, 0.9); font-size: 14px;">Your ticket is confirmed! 🎉</p>
-                  </td>
-                </tr>
-                
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 40px;">
-                    <h2 style="margin: 0 0 16px; color: #111827; font-size: 24px;">Bonjou ${params.attendeeName}!</h2>
-                    <p style="margin: 0 0 24px; color: #6b7280; font-size: 16px; line-height: 1.6;">
-                      Your ticket for <strong style="color: #111827;">${params.eventTitle}</strong> has been confirmed.
-                    </p>
-                    
-                    <!-- Event Details -->
-                    <table role="presentation" style="width: 100%; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; margin: 24px 0;">
+                  <td style="padding: 28px 28px 18px; background: linear-gradient(135deg, #f97316 0%, #ec4899 55%, #8b5cf6 100%);">
+                    <table role="presentation" style="width: 100%; border-collapse: collapse;">
                       <tr>
-                        <td style="padding: 16px; background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-                          <p style="margin: 0; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Event</p>
-                          <p style="margin: 4px 0 0; color: #111827; font-size: 16px; font-weight: 600;">${params.eventTitle}</p>
+                        <td align="left">
+                          <div style="font-size: 18px; font-weight: 800; color: #ffffff; letter-spacing: 0.2px;">EventHaiti</div>
+                          <div style="margin-top: 6px; font-size: 13px; color: rgba(255, 255, 255, 0.92);">Ticket confirmed</div>
                         </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 16px; background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-                          <p style="margin: 0; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Date & Time</p>
-                          <p style="margin: 4px 0 0; color: #111827; font-size: 16px;">${params.eventDate}</p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 16px; background-color: #f9fafb;">
-                          <p style="margin: 0; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Location</p>
-                          <p style="margin: 4px 0 0; color: #111827; font-size: 16px;">${params.eventVenue}</p>
+                        <td align="right" style="font-size: 12px; color: rgba(255, 255, 255, 0.85);">
+                          <span style="display: inline-block; padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.16);">${ticketCode}</span>
                         </td>
                       </tr>
                     </table>
-                    
-                    ${params.qrCodeDataURL ? `
-                    <!-- QR Code -->
-                    <div style="text-align: center; margin: 32px 0;">
-                      <p style="margin: 0 0 16px; color: #6b7280; font-size: 14px;">Show this QR code at the entrance:</p>
-                      <img src="${params.qrCodeDataURL}" alt="Ticket QR Code" style="width: 200px; height: 200px; border: 4px solid #f3f4f6; border-radius: 12px;">
-                      <p style="margin: 16px 0 0; color: #9ca3af; font-size: 12px; font-family: monospace;">Ticket ID: ${params.ticketId.slice(0, 8)}</p>
-                    </div>
-                    ` : ''}
-                    
-                    <div style="margin: 32px 0; padding: 16px; background-color: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 8px;">
-                      <p style="margin: 0; color: #1e40af; font-size: 14px;">
-                        <strong>💡 Pro tip:</strong> Save this email or take a screenshot of your QR code for quick access at the event.
-                      </p>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding: 26px 28px 8px;">
+                    <div style="font-size: 20px; font-weight: 800; color: #111827;">Hi ${params.attendeeName},</div>
+                    <div style="margin-top: 8px; font-size: 15px; line-height: 1.7; color: #4b5563;">
+                      Your ticket is confirmed for <strong style="color: #111827;">${params.eventTitle}</strong>.
+                      Present the QR code below at the entrance.
                     </div>
                   </td>
                 </tr>
-                
-                <!-- Footer -->
+
                 <tr>
-                  <td style="padding: 24px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
-                    <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px; text-align: center;">
-                      Questions? Contact the organizer or visit <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://eventhaiti.com'}" style="color: #f97316; text-decoration: none;">EventHaiti.com</a>
-                    </p>
-                    <p style="margin: 0; color: #9ca3af; font-size: 12px; text-align: center;">
-                      Made with ❤️ in Haiti 🇭🇹
-                    </p>
+                  <td style="padding: 18px 28px 0;">
+                    <table role="presentation" style="width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden;">
+                      <tr>
+                        <td style="padding: 16px 16px 8px; background-color: #f9fafb;">
+                          <div style="font-size: 11px; color: #6b7280; letter-spacing: 0.6px; text-transform: uppercase;">Event</div>
+                          <div style="margin-top: 4px; font-size: 16px; font-weight: 700; color: #111827;">${params.eventTitle}</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 14px 16px; border-top: 1px solid #e5e7eb; background-color: #ffffff;">
+                          <div style="font-size: 11px; color: #6b7280; letter-spacing: 0.6px; text-transform: uppercase;">Date & Time</div>
+                          <div style="margin-top: 4px; font-size: 15px; color: #111827;">${params.eventDate}</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 14px 16px; border-top: 1px solid #e5e7eb; background-color: #ffffff;">
+                          <div style="font-size: 11px; color: #6b7280; letter-spacing: 0.6px; text-transform: uppercase;">Location</div>
+                          <div style="margin-top: 4px; font-size: 15px; color: #111827;">${params.eventVenue}</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding: 18px 28px 0;">
+                    <table role="presentation" style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden;">
+                      <tr>
+                        <td style="padding: 18px; background-color: #ffffff;" align="center">
+                          <div style="font-size: 12px; color: #6b7280;">Scan at entry</div>
+                          <div style="height: 12px;"></div>
+                          ${params.qrCodeDataURL ? `
+                            <img src="${params.qrCodeDataURL}" alt="Ticket QR Code" style="width: 220px; height: 220px; display: block; border-radius: 14px; border: 1px solid #e5e7eb; background: #ffffff;">
+                          ` : ''}
+                          <div style="height: 12px;"></div>
+                          <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 14px; color: #111827; letter-spacing: 0.6px;">${ticketCode}</div>
+                          <div style="margin-top: 6px; font-size: 12px; color: #9ca3af;">If the image is blocked, show this code to staff.</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding: 18px 28px 0;">
+                    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden;">
+                      <tr>
+                        <td style="padding: 14px 16px;">
+                          <div style="font-size: 13px; color: #111827; font-weight: 700;">Entry tips</div>
+                          <div style="margin-top: 8px; font-size: 13px; line-height: 1.7; color: #4b5563;">
+                            • Arrive 15–30 minutes early<br>
+                            • Bring a valid ID if requested<br>
+                            • Save this email or take a screenshot
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td align="center" style="padding: 22px 28px 8px;">
+                    <a href="${ticketsUrl}" style="display: inline-block; padding: 12px 18px; background-color: #111827; color: #ffffff; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 14px;">View my tickets</a>
+                    <div style="height: 10px;"></div>
+                    <div style="font-size: 12px; color: #9ca3af;">Questions? Reply to this email or contact the organizer.</div>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding: 18px 28px 24px; background-color: #ffffff;">
+                    <div style="height: 1px; background-color: #f3f4f6; width: 100%;"></div>
+                    <div style="margin-top: 14px; text-align: center; font-size: 12px; color: #9ca3af;">
+                      EventHaiti • Discover events in Haiti
+                      <br>
+                      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://eventhaiti.com'}" style="color: #6b7280; text-decoration: none;">eventhaiti.com</a>
+                    </div>
                   </td>
                 </tr>
               </table>
