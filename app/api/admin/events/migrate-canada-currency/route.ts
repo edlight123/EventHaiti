@@ -112,6 +112,14 @@ export async function POST(request: NextRequest) {
     // Fetch a large batch to ensure we get all Canada events (not just the first 20)
     const fetchLimit = Math.max(limit * 10, 1000)
     console.log('🔍 Migration fetch limit:', fetchLimit, '(from request limit:', limit, ')')
+    
+    // First check: how many events exist total without any limit
+    const { data: testFetch, error: testErr } = await supabase
+      .from('events')
+      .select('id')
+      .order('id', { ascending: true })
+    console.log('🧪 TEST: Total events in database:', testFetch?.length || 0)
+    
     const { data: allEvents, error: fetchErr } = await supabase
       .from('events')
       .select('id,title,country,currency,ticket_price,organizer_id')
