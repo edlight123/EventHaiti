@@ -19,6 +19,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    if (user.role !== 'organizer') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const { eventId, code, discountType, discountValue, maxUses, validFrom, validUntil } = await req.json()
 
     if (!eventId || !code || !discountType || discountValue === undefined) {
@@ -45,14 +49,18 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if code already exists for this event
-    const { data: existingCode } = await supabase
+    const { data: existingCodes, error: existingCodeError } = await supabase
       .from('promo_codes')
       .select('id')
       .eq('event_id', eventId)
       .eq('code', code.toUpperCase())
-      .single()
+      .limit(1)
 
-    if (existingCode) {
+    if (existingCodeError) {
+      console.warn('Error checking existing promo code:', existingCodeError)
+    }
+
+    if (existingCodes && existingCodes.length > 0) {
       return NextResponse.json(
         { error: 'Promo code already exists for this event' },
         { status: 400 }
@@ -96,6 +104,65 @@ export async function POST(req: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     )
+  }
+}
+
+/**
+ * Toggle promo code active state (organizer only)
+ */
+export async function PATCH(req: NextRequest) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (user.role !== 'organizer') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const { promoId, isActive } = await req.json()
+    if (!promoId || typeof isActive !== 'boolean') {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    const supabase = await createClient()
+
+    // Verify promo belongs to one of the organizer's events
+    const { data: promo, error: promoError } = await supabase
+      .from('promo_codes')
+      .select('id,event_id')
+      .eq('id', promoId)
+      .single()
+
+    if (promoError || !promo?.event_id) {
+      return NextResponse.json({ error: 'Promo code not found' }, { status: 404 })
+    }
+
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('organizer_id')
+      .eq('id', promo.event_id)
+      .single()
+
+    if (eventError || !event || event.organizer_id !== user.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
+    const { error: updateError } = await supabase
+      .from('promo_codes')
+      .update({ is_active: isActive })
+      .eq('id', promoId)
+
+    if (updateError) {
+      console.error('Error updating promo code:', updateError)
+      return NextResponse.json({ error: 'Failed to update promo code' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error in PATCH /api/promo-codes:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -196,6 +263,10 @@ export async function DELETE(req: NextRequest) {
     const user = await getCurrentUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (user.role !== 'organizer') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const { searchParams } = new URL(req.url)

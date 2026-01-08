@@ -39,28 +39,40 @@ export default async function PromoCodesPage({
   let promoCodesData: any[] = []
   
   try {
-    const promoCodesQuery = await supabase
-      .from('promo_codes')
-      .select('id,code,discount_type,discount_value,max_uses,uses_count,event_id,is_active,expires_at,created_at,organizer_id')
-      .eq('organizer_id', user.id)
-      .order('created_at', { ascending: false })
+    const eventIds = events.map((e: any) => e.id).filter(Boolean)
+    if (eventIds.length > 0) {
+      // Supabase `in()` can get unwieldy with huge lists; chunk defensively.
+      const chunks: string[][] = []
+      for (let i = 0; i < eventIds.length; i += 500) {
+        chunks.push(eventIds.slice(i, i + 500))
+      }
 
-    const userPromoCodes = promoCodesQuery.data || []
+      const results = await Promise.all(
+        chunks.map((chunk) =>
+          supabase
+            .from('promo_codes')
+            .select('id,code,discount_type,discount_value,max_uses,uses_count,event_id,is_active,expires_at,created_at')
+            .in('event_id', chunk)
+            .order('created_at', { ascending: false })
+        )
+      )
 
-    // Get event titles separately
-    const eventsMap = new Map()
-    events.forEach((event: any) => {
-      eventsMap.set(event.id, event.title)
-    })
+      const userPromoCodes = results.flatMap((r) => r.data || [])
 
-    // Attach event data manually
-    promoCodesData = userPromoCodes.map((pc: any) => ({
-      ...pc,
-      event: pc.event_id ? { title: eventsMap.get(pc.event_id) } : null
-    }))
+      // Get event titles separately
+      const eventsMap = new Map()
+      events.forEach((event: any) => {
+        eventsMap.set(event.id, event.title)
+      })
+
+      // Attach event data manually
+      promoCodesData = userPromoCodes.map((pc: any) => ({
+        ...pc,
+        event: pc.event_id ? { title: eventsMap.get(pc.event_id) } : null,
+      }))
+    }
   } catch (error) {
-    // Table doesn't exist yet
-    console.log('Promo codes table not found')
+    console.error('Failed to load promo codes:', error)
   }
 
   const eventsData = events || []

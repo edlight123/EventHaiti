@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { firebaseDb as supabase } from '@/lib/firebase-db/client'
 
 type Event = {
   id: string
@@ -49,30 +48,42 @@ export default function PromoCodeManager({
     setLoading(true)
 
     try {
-      const { data, error } = await supabase
-        .from('promo_codes')
-        .insert({
-          code: code.toUpperCase(),
-          event_id: eventId,
-          organizer_id: organizerId,
-          discount_type: discountType,
-          discount_value: parseFloat(discountValue),
-          max_uses: maxUses ? parseInt(maxUses) : null,
-          expires_at: expiresAt || null,
-          is_active: true,
-          uses_count: 0,
-        })
-        .select(`
-          *,
-          event:events (
-            title
-          )
-        `)
-        .single()
+      const payload = {
+        eventId,
+        code: code.toUpperCase(),
+        discountType,
+        discountValue: parseFloat(discountValue),
+        maxUses: maxUses ? parseInt(maxUses) : null,
+        validFrom: null,
+        validUntil: expiresAt ? new Date(expiresAt).toISOString() : null,
+      }
 
-      if (error) throw error
+      const res = await fetch('/api/promo-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
 
-      setPromoCodes([data, ...promoCodes])
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json?.error || 'Failed to create promo code')
+
+      const eventTitle = events.find((e) => e.id === eventId)?.title || ''
+      const created: PromoCode = {
+        id: String(json?.promoId || ''),
+        code: payload.code,
+        discount_type: discountType,
+        discount_value: payload.discountValue,
+        max_uses: payload.maxUses,
+        uses_count: 0,
+        event_id: eventId,
+        is_active: true,
+        expires_at: payload.validUntil,
+        event: eventTitle ? { title: eventTitle } : null,
+      }
+
+      if (!created.id) throw new Error('Promo ID missing from response')
+
+      setPromoCodes([created, ...promoCodes])
       
       // Reset form
       setCode('')
@@ -90,12 +101,13 @@ export default function PromoCodeManager({
 
   async function toggleActive(promoId: string, isActive: boolean) {
     try {
-      const { error } = await supabase
-        .from('promo_codes')
-        .update({ is_active: !isActive })
-        .eq('id', promoId)
-
-      if (error) throw error
+      const res = await fetch('/api/promo-codes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ promoId, isActive: !isActive }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json?.error || 'Failed to update promo code')
 
       setPromoCodes(promoCodes.map(p => 
         p.id === promoId ? { ...p, is_active: !isActive } : p
@@ -109,12 +121,11 @@ export default function PromoCodeManager({
     if (!confirm('Are you sure you want to delete this promo code?')) return
 
     try {
-      const { error } = await supabase
-        .from('promo_codes')
-        .delete()
-        .eq('id', promoId)
-
-      if (error) throw error
+      const res = await fetch(`/api/promo-codes?promoId=${encodeURIComponent(promoId)}`, {
+        method: 'DELETE',
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json?.error || 'Failed to delete promo code')
 
       setPromoCodes(promoCodes.filter(p => p.id !== promoId))
     } catch (error: any) {
