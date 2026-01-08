@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 
 interface SuspiciousActivity {
   id: string
@@ -429,7 +428,6 @@ export default function SecurityDashboardClient() {
           </div>
         )}
       </div>
-      <MobileNavWrapper user={null} />
     </>
   )
 }

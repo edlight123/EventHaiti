@@ -264,3 +264,15 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+export async function GET() {
+  const { user, error } = await requireAdmin()
+  if (error || !user) {
+    return adminError(error || 'Unauthorized', 401)
+  }
+
+  return adminOk({
+    message:
+      'Use POST with JSON body { type: "users"|"events"|"tickets", cursor?: string, limit?: number } to rebuild the admin search index. GET does not run a rebuild.',
+  })
+}
