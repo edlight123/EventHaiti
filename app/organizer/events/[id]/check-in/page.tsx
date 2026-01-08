@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { CheckInInterface } from '@/components/check-in/CheckInInterface'
 import { checkInTicket } from './actions'
+import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -45,17 +46,14 @@ export default async function CheckInPage({ params }: PageProps) {
     redirect('/organizer/events')
   }
 
-  // Fetch all tickets for this event
-  const ticketsSnapshot = await adminDb
-    .collection('tickets')
-    .where('event_id', '==', eventId)
-    .get()
+  // Fetch all tickets for this event (supports legacy `eventId` field too)
+  const ticketDocs = await loadTicketDocsForEvent(eventId)
 
-  const tickets = ticketsSnapshot.docs.map((doc: any) => {
+  const tickets = ticketDocs.map((doc: any) => {
     const data = doc.data()
     return {
       id: doc.id,
-      event_id: data.event_id,
+      event_id: data.event_id || data.eventId,
       user_id: data.user_id,
       order_id: data.order_id,
       ticket_type: data.ticket_type,

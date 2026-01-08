@@ -2,6 +2,7 @@
 
 import { adminDb } from '@/lib/firebase/admin'
 import { revalidatePath } from 'next/cache'
+import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
 
 export async function checkInTicket(
   eventId: string,
@@ -10,14 +11,12 @@ export async function checkInTicket(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Find ticket by QR code or ticket ID
-    const ticketsSnapshot = await adminDb
-      .collection('tickets')
-      .where('event_id', '==', eventId)
-      .get()
+    const ticketDocs = await loadTicketDocsForEvent(eventId)
 
-    const ticketDoc = ticketsSnapshot.docs.find(
-      (doc: any) => doc.data().qr_code === qrCode || doc.id === qrCode
-    )
+    const ticketDoc = ticketDocs.find((doc: any) => {
+      const data = doc.data() || {}
+      return data.qr_code === qrCode || data.qr_code_data === qrCode || doc.id === qrCode
+    })
 
     if (!ticketDoc) {
       return { success: false, error: 'Ticket not found' }

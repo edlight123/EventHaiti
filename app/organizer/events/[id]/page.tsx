@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar'
 import { isAdmin } from '@/lib/admin'
 import { EventCommandCenter } from './EventCommandCenter'
 import { normalizeCurrency } from '@/lib/money'
+import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
 
 export const revalidate = 0
 
@@ -34,13 +35,10 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
     notFound()
   }
 
-  // Fetch tickets for this event
-  const ticketsSnapshot = await adminDb
-    .collection('tickets')
-    .where('event_id', '==', id)
-    .get()
+  // Fetch tickets for this event (supports legacy `eventId` field too)
+  const ticketDocs = await loadTicketDocsForEvent(id)
 
-  const tickets = ticketsSnapshot.docs.map((doc: any) => {
+  const tickets = ticketDocs.map((doc: any) => {
     const data = doc.data()
     return {
       id: doc.id,

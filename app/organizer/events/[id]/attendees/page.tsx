@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import Link from 'next/link'
 import { AttendeesManager } from './AttendeesManager'
+import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -68,20 +69,17 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
     )
   }
 
-  // Fetch all tickets for this event
-  let ticketsSnapshot
+  // Fetch all tickets for this event (supports legacy `eventId` field too)
+  let ticketDocs: any[] = []
   try {
-    ticketsSnapshot = await adminDb
-      .collection('tickets')
-      .where('event_id', '==', eventId)
-      .get()
+    ticketDocs = await loadTicketDocsForEvent(eventId)
   } catch (error) {
     console.error('Error fetching tickets:', error)
-    ticketsSnapshot = { docs: [] } as any
+    ticketDocs = []
   }
 
   const tickets = await Promise.all(
-    ticketsSnapshot.docs.map(async (doc: any) => {
+    ticketDocs.map(async (doc: any) => {
       const ticketData = doc.data()
       
       // Fetch attendee user data
@@ -107,7 +105,7 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
       // Explicitly map only the fields we need, ensuring all are serializable
       return {
         id: doc.id,
-        event_id: ticketData.event_id || '',
+        event_id: ticketData.event_id || ticketData.eventId || '',
         attendee_id: ticketData.attendee_id || '',
         status: ticketData.status || 'confirmed',
         ticket_type: ticketData.ticket_type || 'General Admission',

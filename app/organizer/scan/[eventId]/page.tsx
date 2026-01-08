@@ -2,6 +2,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { redirect, notFound } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { DoorModeInterface } from '@/components/scan/DoorModeInterface'
+import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -73,15 +74,11 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
     // ok
   }
 
-  // Fetch all confirmed tickets for this event (limited attendee fields for staff)
-  const ticketsSnapshot = await adminDb
-    .collection('tickets')
-    .where('event_id', '==', eventId)
-    .where('status', '==', 'confirmed')
-    .get()
+  // Fetch all confirmed tickets for this event (supports legacy `eventId` field too)
+  const ticketDocs = await loadTicketDocsForEvent(eventId, { status: 'confirmed' })
 
   const tickets = await Promise.all(
-    ticketsSnapshot.docs.map(async (doc: any) => {
+    ticketDocs.map(async (doc: any) => {
       const ticketData = doc.data()
       
       // Fetch attendee user data (only include limited fields for staff)
@@ -111,7 +108,7 @@ export default async function DoorModeScanPage({ params }: { params: Promise<{ e
       // Explicitly map only the fields we need
       return {
         id: doc.id,
-        event_id: ticketData.event_id || '',
+        event_id: ticketData.event_id || ticketData.eventId || '',
         attendee_id: ticketData.attendee_id || '',
         status: ticketData.status || 'confirmed',
         ticket_type: ticketData.ticket_type || 'General Admission',
