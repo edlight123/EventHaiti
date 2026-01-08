@@ -172,16 +172,23 @@ export function serializeFilters(filters: EventFilters): URLSearchParams {
 /**
  * Parse filters from URL query string
  */
-export function parseFiltersFromURL(searchParams: URLSearchParams): EventFilters {
+type SearchParamsLike = {
+  get(name: string): string | null
+  getAll(name: string): string[]
+}
+
+export function parseFiltersFromURL(searchParams?: SearchParamsLike | null): EventFilters {
+  const params = searchParams ?? new URLSearchParams()
+
   return {
-    date: (searchParams.get('date') as DateFilter) || DEFAULT_FILTERS.date,
-    pickedDate: searchParams.get('pickedDate') || undefined,
-    city: searchParams.get('city') || '',
-    commune: searchParams.get('commune') || undefined,
-    categories: searchParams.getAll('category'),
-    price: searchParams.get('price') || DEFAULT_FILTERS.price,
-    eventType: searchParams.get('eventType') || DEFAULT_FILTERS.eventType,
-    sortBy: searchParams.get('sort') || DEFAULT_FILTERS.sortBy,
+    date: (params.get('date') as DateFilter) || DEFAULT_FILTERS.date,
+    pickedDate: params.get('pickedDate') || undefined,
+    city: params.get('city') || '',
+    commune: params.get('commune') || undefined,
+    categories: params.getAll('category'),
+    price: params.get('price') || DEFAULT_FILTERS.price,
+    eventType: params.get('eventType') || DEFAULT_FILTERS.eventType,
+    sortBy: params.get('sort') || DEFAULT_FILTERS.sortBy,
   } as EventFilters
 }
 

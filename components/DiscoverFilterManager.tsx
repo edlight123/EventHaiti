@@ -14,7 +14,7 @@ export function DiscoverFilterManager() {
   
   // Parse filters from URL
   const [appliedFilters, setAppliedFilters] = useState<EventFilters>(() => 
-    parseFiltersFromURL(searchParams)
+    parseFiltersFromURL(searchParams ?? new URLSearchParams())
   )
   const [draftFilters, setDraftFilters] = useState<EventFilters>(appliedFilters)
   const [isModalOpen, setIsModalOpen] = useState(false)
