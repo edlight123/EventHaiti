@@ -96,10 +96,19 @@ export async function GET(request: NextRequest) {
     const results = snap.docs.map((doc: QueryDoc) => {
       const data = doc.data() as any
 
+      const rawIsPublished = data?.isPublished
+      const rawIsPublishedSnake = data?.is_published
+      const legacyStatus = String(data?.status || '').trim().toLowerCase()
+
       const isPublished =
-        data?.is_published === true ||
-        data?.isPublished === true ||
-        String(data?.status || '').toLowerCase() === 'published'
+        rawIsPublishedSnake === true ||
+        rawIsPublished === true ||
+        legacyStatus === 'published'
+
+      const publishFlagsConflict =
+        typeof rawIsPublished === 'boolean' &&
+        typeof rawIsPublishedSnake === 'boolean' &&
+        rawIsPublished !== rawIsPublishedSnake
 
       const start = parseDate(data?.start_datetime ?? data?.startDateTime)
       const end = parseDate(data?.end_datetime ?? data?.endDateTime)
@@ -120,8 +129,11 @@ export async function GET(request: NextRequest) {
       return {
         id: doc.id,
         title: data?.title || null,
+        isPublished: rawIsPublished ?? null,
         is_published: data?.is_published ?? null,
         status: data?.status ?? null,
+        status_normalized: legacyStatus || null,
+        publishFlagsConflict,
         start_datetime: start,
         end_datetime: end,
         visibleOnDiscover,

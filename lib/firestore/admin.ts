@@ -159,12 +159,13 @@ export async function get7DayMetrics(): Promise<{
 export async function getRecentEvents(limit: number = 8) {
   try {
     // Try createdAt first (camelCase), fall back to created_at (snake_case)
-    let eventsSnapshot
+    let eventsSnapshot: any
+    const poolLimit = Math.max(limit, Math.min(100, limit * 10))
     try {
       eventsSnapshot = await adminDb
         .collection('events')
         .orderBy('createdAt', 'desc')
-        .limit(limit)
+        .limit(poolLimit)
         .get()
     } catch (error) {
       // If createdAt doesn't exist, try created_at
@@ -172,13 +173,30 @@ export async function getRecentEvents(limit: number = 8) {
       eventsSnapshot = await adminDb
         .collection('events')
         .orderBy('created_at', 'desc')
-        .limit(limit)
+        .limit(poolLimit)
         .get()
     }
 
-    return eventsSnapshot.docs.map((doc: any) => {
+    const isTrueish = (value: unknown): boolean => {
+      if (value === true) return true
+      if (value === false || value === null || value === undefined) return false
+      if (typeof value === 'number') return value === 1
+      if (typeof value === 'string') {
+        const v = value.trim().toLowerCase()
+        return v === 'true' || v === '1' || v === 'yes'
+      }
+      return false
+    }
+
+    const normalized = eventsSnapshot.docs.map((doc: any) => {
       const data = doc.data()
       
+      const legacyStatus = String(data?.status || '').trim().toLowerCase()
+      const isPublished =
+        isTrueish(data?.isPublished) ||
+        isTrueish(data?.is_published) ||
+        legacyStatus === 'published'
+
       // Safe date conversion helper
       const toISOSafe = (dateValue: any): string => {
         try {
@@ -200,13 +218,17 @@ export async function getRecentEvents(limit: number = 8) {
         ticketPrice: data.ticketPrice || data.ticket_price || data.price || 0,
         currency: data.currency || 'HTG',
         createdAt: toISOSafe(data.createdAt || data.created_at),
-        isPublished: data.isPublished ?? data.is_published ?? data.status === 'published',
+        isPublished,
         city: data.city || '',
         commune: data.commune || '',
         venueName: data.venueName || data.venue_name || data.address || '',
         organizerId: data.organizerId || data.organizer_id
       }
     })
+
+    const published = normalized.filter((e: any) => e.isPublished)
+    const drafts = normalized.filter((e: any) => !e.isPublished)
+    return published.concat(drafts).slice(0, limit)
   } catch (error) {
     console.error('Error fetching recent events:', error)
     return []
