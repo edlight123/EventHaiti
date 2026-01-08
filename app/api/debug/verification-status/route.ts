@@ -7,9 +7,9 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const { user, error } = await requireAdmin()
-    if (error || !user) {
-      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
+    const { user, error: authError } = await requireAdmin()
+    if (authError || !user) {
+      return adminError(authError || 'Unauthorized', authError === 'Not authenticated' ? 401 : 403)
     }
 
     const supabase = await createClient()
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const userData = allUsers.data?.find((u: any) => u.id === user.id)
 
     // Get all verification requests for this user - without ordering to avoid index requirement
-    const { data: requests, error } = await supabase
+    const { data: requests, error: requestsError } = await supabase
       .from('verification_requests')
       .select('*')
       .eq('user_id', user.id)
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       userEmail: user.email,
       userData: userData || null,
       verificationRequests: sortedRequests || [],
-      error: error ? error.message : null,
+      error: requestsError ? requestsError.message : null,
     })
   } catch (err: any) {
     return adminError('Internal server error', 500, err?.message || String(err))
