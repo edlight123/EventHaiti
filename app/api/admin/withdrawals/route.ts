@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
+    const { user, error } = await requireAdmin()
     if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (!isAdmin(user.email)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
     const { searchParams } = new URL(req.url)

@@ -7,6 +7,9 @@ import FavoritesSignInPrompt from './FavoritesSignInPrompt'
 
 export const revalidate = 30 // Cache for 30 seconds
 
+// Uses auth cookies for personalization / access control.
+export const dynamic = 'force-dynamic'
+
 export default async function FavoritesPage() {
   const user = await getCurrentUser()
 

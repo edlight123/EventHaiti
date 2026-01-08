@@ -17,6 +17,9 @@ import OrganizerUpgradePrompt from './OrganizerUpgradePrompt'
 
 export const revalidate = 30 // Cache for 30 seconds
 
+// Depends on auth cookies and organizer-specific data.
+export const dynamic = 'force-dynamic'
+
 function sanitizeRedirectTarget(target: string | undefined): string {
   if (!target) return '/organizer'
   if (!target.startsWith('/')) return '/organizer'

@@ -7,6 +7,9 @@ import CategoriesContent from './CategoriesContent'
 
 export const revalidate = 120 // Cache for 2 minutes
 
+// Uses auth cookies for Navbar/user context.
+export const dynamic = 'force-dynamic'
+
 export default async function CategoriesPage({
   searchParams,
 }: {

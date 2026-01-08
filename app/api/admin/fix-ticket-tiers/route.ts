@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
-import { getCurrentUser } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 /**
  * Migration endpoint to fix ticket tiers created by mobile app
@@ -9,13 +10,12 @@ import { isAdmin } from '@/lib/admin'
  */
 export async function POST(req: NextRequest) {
   try {
-    // Check admin auth
-    const user = await getCurrentUser()
-    if (!user || !isAdmin(user.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
-    const { eventId } = await req.json()
+    const { eventId } = await req.json().catch(() => ({}))
 
     console.log('Starting ticket tier migration...')
     
@@ -78,9 +78,22 @@ export async function POST(req: NextRequest) {
         skipped++
       }
     }
+
+    await logAdminAction({
+      action: 'admin.backfill',
+      adminId: user.id,
+      adminEmail: user.email || 'unknown',
+      resourceType: 'ticket_tiers',
+      details: {
+        name: 'fix-ticket-tiers',
+        eventId: eventId || null,
+        total: tiersSnapshot.docs.length,
+        fixed,
+        skipped,
+      },
+    })
     
-    return NextResponse.json({
-      success: true,
+    return adminOk({
       total: tiersSnapshot.docs.length,
       fixed,
       skipped,
@@ -89,9 +102,6 @@ export async function POST(req: NextRequest) {
     
   } catch (error: any) {
     console.error('Migration failed:', error)
-    return NextResponse.json(
-      { error: 'Migration failed', details: error.message },
-      { status: 500 }
-    )
+    return adminError('Migration failed', 500, error?.message || String(error))
   }
 }

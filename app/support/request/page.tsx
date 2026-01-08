@@ -10,6 +10,9 @@ export const metadata = {
   description: 'Submit a detailed support request and our team will get back to you within 24 hours.',
 }
 
+// Uses auth cookies for Navbar/user context.
+export const dynamic = 'force-dynamic'
+
 export default async function SupportRequestPage() {
   const user = await getCurrentUser()
 

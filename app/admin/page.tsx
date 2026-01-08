@@ -1,5 +1,4 @@
-import { getCurrentUser } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { getCurrentUser, requireAdmin } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
@@ -17,6 +16,9 @@ import { AdminDashboardClient } from './AdminDashboardClient'
 
 export const revalidate = 0
 
+// Admin pages depend on session cookies and should always be dynamic.
+export const dynamic = 'force-dynamic'
+
 export default async function AdminDashboard() {
   async function refreshPage() {
     'use server'
@@ -30,7 +32,8 @@ export default async function AdminDashboard() {
       redirect('/auth/login?redirect=/admin')
     }
 
-    if (!isAdmin(user.email)) {
+    const { error } = await requireAdmin()
+    if (error) {
       return <AdminAccessDenied userEmail={user.email} />
     }
 

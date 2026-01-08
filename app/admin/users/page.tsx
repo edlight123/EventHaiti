@@ -1,5 +1,5 @@
-import { getCurrentUser } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
+import { isAdmin as isAdminEmail } from '@/lib/admin'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
@@ -9,6 +9,8 @@ import { getAdminUsers, getUserCounts } from '@/lib/data/users'
 import AdminUsersClient from './AdminUsersClient'
 
 export const revalidate = 60 // Cache for 1 minute
+
+export const dynamic = 'force-dynamic'
 
 async function promoteToOrganizer(formData: FormData) {
   'use server'
@@ -23,9 +25,9 @@ async function promoteToOrganizer(formData: FormData) {
 }
 
 export default async function AdminUsersPage() {
-  const user = await getCurrentUser()
+  const { user, error } = await requireAdmin()
 
-  if (!user || !isAdmin(user.email)) {
+  if (error || !user) {
     redirect('/')
   }
 
@@ -52,9 +54,11 @@ export default async function AdminUsersPage() {
   }))
   
   // Pre-compute admin status for each user to avoid issues with module-level constants
+  // Note: this is an email-based flag (ADMIN_EMAILS) and is used only for UI labeling.
+  // Canonical admin access should be role-based via users.role = admin|super_admin.
   const usersWithAdminFlag = serializedUsers.map((u: any) => ({
     ...u,
-    isAdminUser: isAdmin(u.email)
+    isAdminUser: isAdminEmail(u.email)
   }))
 
   return (
@@ -67,7 +71,7 @@ export default async function AdminUsersPage() {
         promoteToOrganizer={promoteToOrganizer}
       />
 
-      <MobileNavWrapper user={user} />
+      <MobileNavWrapper user={user} isAdmin={true} />
     </div>
   )
 }

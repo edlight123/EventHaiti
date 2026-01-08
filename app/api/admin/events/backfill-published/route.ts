@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { logAdminAction } from '@/lib/admin/audit-log'
+import { adminError, adminOk } from '@/lib/api/admin-response'
 
 export async function POST(_request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
-
-    if (error || !user || !isAdmin(user?.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     // Keep it small and safe: scan a reasonable amount and only backfill when clearly intended.
@@ -71,9 +70,9 @@ export async function POST(_request: NextRequest) {
       details: { name: 'events.backfill-published', scanned, updated, skipped },
     })
 
-    return NextResponse.json({ success: true, scanned, updated, skipped })
+    return adminOk({ scanned, updated, skipped })
   } catch (e: any) {
     console.error('backfill-published failed:', e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return adminError('Internal server error', 500, e?.message || String(e))
   }
 }

@@ -1,33 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { Resend } from 'resend'
 import { adminDb } from '@/lib/firebase/admin'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
 import { FieldValue } from 'firebase-admin/firestore'
+import { logAdminAction } from '@/lib/admin/audit-log'
+import { adminError, adminOk } from '@/lib/api/admin-response'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
+    const { user, error } = await requireAdmin()
 
     // Only allow admin users
-    if (!user || !isAdmin(user.email)) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', 401)
     }
 
     const { requestId, status, rejectionReason } = await request.json()
 
     if (!requestId || !status || !['approved', 'rejected', 'changes_requested'].includes(status)) {
-      return NextResponse.json(
-        { error: 'Invalid request data' },
-        { status: 400 }
-      )
+      return adminError('Invalid request data', 400)
     }
 
     // Map the legacy UI "rejected" action to the newer, resubmittable state.
@@ -38,10 +33,7 @@ export async function POST(request: NextRequest) {
     const verificationDoc = await verificationRef.get()
 
     if (!verificationDoc.exists) {
-      return NextResponse.json(
-        { error: 'Verification request not found' },
-        { status: 404 }
-      )
+      return adminError('Verification request not found', 404)
     }
 
     const verificationRequest = verificationDoc.data()
@@ -90,12 +82,9 @@ export async function POST(request: NextRequest) {
         },
         { merge: true }
       )
-    } catch (adminError) {
-      console.error('Error updating user via Admin SDK:', adminError)
-      return NextResponse.json(
-        { error: 'Failed to update user status' },
-        { status: 500 }
-      )
+    } catch (err) {
+      console.error('Error updating user via Admin SDK:', err)
+      return adminError('Failed to update user status', 500)
     }
 
     // Fetch user details for notifications/emails.
@@ -210,15 +199,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      success: true,
+    await logAdminAction({
+      action: normalizedStatus === 'approved' ? 'verification.approve' : 'verification.reject',
+      adminId: user.id,
+      adminEmail: user.email || 'unknown',
+      resourceId: requestId,
+      resourceType: 'verification_request',
+      details: {
+        requestId,
+        userId,
+        status: normalizedStatus,
+        reason: rejectionReason || null,
+        userEmail: (organizer as any)?.email || null,
+        userName: (organizer as any)?.full_name || null,
+      },
+    })
+
+    return adminOk({
       message: `Verification ${normalizedStatus}`,
     })
   } catch (error) {
     console.error('Review verification error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return adminError('Internal server error', 500)
   }
 }

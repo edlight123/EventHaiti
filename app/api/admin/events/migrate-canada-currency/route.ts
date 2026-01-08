@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin as isAdminEmail } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { createClient } from '@/lib/firebase-db/server'
 import { adminDb } from '@/lib/firebase/admin'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -41,62 +42,33 @@ type FirestoreSummary =
       examples: Array<{ id: string; title?: string; oldCurrency?: string; newCurrency: string }>
     }
 
-function isRoleAdmin(user: any): boolean {
-  const role = String(user?.role || '').toLowerCase()
-  return role === 'admin' || role === 'super_admin'
-}
-
 function isTruthy(value: unknown): boolean {
   return String(value || '').toLowerCase() === 'true'
 }
 
 export async function GET() {
   try {
-    const { user, error } = await requireAuth()
-    const authenticated = Boolean(!error && user)
-    const admin = Boolean(authenticated && (isRoleAdmin(user) || isAdminEmail(user?.email)))
-
-    if (!admin) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: authenticated ? 'Unauthorized' : 'Unauthorized',
-          authenticated,
-          admin,
-          message:
-            'This endpoint requires an admin session. Log in with an admin account and ensure ADMIN_EMAILS includes your email or your user role is admin/super_admin.',
-          usage: {
-            method: 'POST',
-            url: '/api/admin/events/migrate-canada-currency',
-            bodyExamples: [
-              { dryRun: true, limit: 500, includeFirestore: true },
-              { dryRun: false, limit: 500, includeFirestore: true },
-            ],
-          },
-        },
-        { status: 401 }
-      )
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
-    return NextResponse.json({
-      ok: true,
-      authenticated,
-      admin,
+    return adminOk({
       deployment: getDeploymentMeta(),
       message:
         'Use POST to migrate Canada events to CAD. Start with dryRun=true. This updates Supabase by default, and optionally Firestore when includeFirestore=true.',
     })
   } catch (err: any) {
     console.error('migrate-canada-currency GET error:', err)
-    return NextResponse.json({ ok: false, error: err?.message || 'Internal server error' }, { status: 500 })
+    return adminError('Internal server error', 500, err?.message || String(err))
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
-    if (error || !user || !(isRoleAdmin(user) || isAdminEmail(user?.email))) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     const body = (await request.json().catch(() => ({}))) as Body
@@ -126,7 +98,7 @@ export async function POST(request: NextRequest) {
       .limit(fetchLimit)
 
     if (fetchErr) {
-      return NextResponse.json({ error: fetchErr.message || 'Failed to query events' }, { status: 500 })
+      return adminError(fetchErr.message || 'Failed to query events', 500)
     }
 
     console.log('📊 Fetched', allEvents?.length || 0, 'events (requested limit:', fetchLimit, ')')
@@ -238,8 +210,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      ok: true,
+    await logAdminAction({
+      action: 'admin.backfill',
+      adminId: user.id,
+      adminEmail: user.email || 'unknown',
+      resourceType: 'events',
+      details: {
+        name: 'events.migrate-canada-currency',
+        dryRun,
+        limit,
+        includeFirestore,
+        supabase: {
+          fetched: (allEvents || []).length,
+          canadaEvents: caEvents.length,
+          candidates: candidates.length,
+          updated: dryRun ? 0 : updatedSupabaseIds.length,
+        },
+        firestore,
+      },
+    })
+
+    return adminOk({
       deployment: getDeploymentMeta(),
       dryRun,
       limit,
@@ -260,14 +251,6 @@ export async function POST(request: NextRequest) {
     console.error('Error stack:', err?.stack)
     console.error('Error code:', err?.code)
     console.error('Error details:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2))
-    return NextResponse.json(
-      {
-        error: err?.message || 'Internal server error',
-        code: err?.code,
-        stack: err?.stack,
-        details: err?.details || null,
-      },
-      { status: 500 }
-    )
+    return adminError('Internal server error', 500, err?.message || 'Unknown error')
   }
 }

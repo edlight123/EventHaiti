@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
+    const { user, error } = await requireAdmin()
 
-    if (error || !user || !isAdmin(user?.email)) {
+    if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

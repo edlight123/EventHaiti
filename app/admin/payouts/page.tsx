@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
-import { isAdmin } from '@/lib/admin'
 import AdminPayoutQueue from './AdminPayoutQueue'
 
 export const metadata = {
@@ -10,6 +9,8 @@ export const metadata = {
 }
 
 export const revalidate = 60 // Cache for 1 minute
+
+export const dynamic = 'force-dynamic'
 
 async function getPendingPayouts() {
   try {
@@ -60,14 +61,9 @@ async function getPendingPayouts() {
 }
 
 export default async function AdminPayoutsPage() {
-  const user = await getCurrentUser()
-
-  if (!user) {
+  const { user, error } = await requireAdmin()
+  if (error || !user) {
     redirect('/auth/login?redirect=/admin/payouts')
-  }
-
-  if (!isAdmin(user.email)) {
-    redirect('/organizer')
   }
 
   const pendingPayouts = await getPendingPayouts()

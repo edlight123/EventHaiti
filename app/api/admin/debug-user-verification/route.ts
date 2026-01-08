@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+
+export const dynamic = 'force-dynamic'
 
 function normalizeStatus(value: unknown): string {
   return String(value || '').trim().toLowerCase()
@@ -9,16 +11,16 @@ function normalizeStatus(value: unknown): string {
 
 export async function GET(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
-    if (error || !user || !isAdmin(user?.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     const { searchParams } = new URL(request.url)
     const email = (searchParams.get('email') || '').trim().toLowerCase()
 
     if (!email) {
-      return NextResponse.json({ error: 'Email parameter required' }, { status: 400 })
+      return adminError('Email parameter required', 400)
     }
 
     // Firestore user lookup
@@ -33,13 +35,7 @@ export async function GET(request: NextRequest) {
     const firestoreUser = firestoreUserDoc?.data() || null
 
     if (!uid) {
-      return NextResponse.json(
-        {
-          email,
-          error: 'User not found in Firestore users collection',
-        },
-        { status: 404 }
-      )
+      return adminError('User not found in Firestore users collection', 404)
     }
 
     const [organizerDoc, payoutConfigDoc] = await Promise.all([
@@ -86,7 +82,7 @@ export async function GET(request: NextRequest) {
       return 'pending'
     })()
 
-    return NextResponse.json({
+    return adminOk({
       email,
       uid,
       firestore: {
@@ -112,9 +108,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (err: any) {
     console.error('debug-user-verification error:', err)
-    return NextResponse.json(
-      { error: 'Internal server error', message: err?.message || String(err) },
-      { status: 500 }
-    )
+    return adminError('Internal server error', 500, err?.message || String(err))
   }
 }

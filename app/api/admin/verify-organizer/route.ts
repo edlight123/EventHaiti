@@ -1,37 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { FieldValue } from 'firebase-admin/firestore'
+import { logAdminAction } from '@/lib/admin/audit-log'
+import { adminError, adminOk } from '@/lib/api/admin-response'
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
+    const { user, error } = await requireAdmin()
 
     // Only allow admin users
-    if (!user || !isAdmin(user.email)) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', 401)
     }
 
     const { organizerId, isVerified } = await request.json()
 
     if (!organizerId || typeof isVerified !== 'boolean') {
-      return NextResponse.json(
-        { error: 'Invalid request data' },
-        { status: 400 }
-      )
+      return adminError('Invalid request data', 400)
     }
 
     const userDoc = await adminDb.collection('users').doc(organizerId).get()
     if (!userDoc.exists) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
+      return adminError('User not found', 404)
     }
+
+    const targetUser = userDoc.data() as any
 
     const nowIso = new Date().toISOString()
     const verification_status = isVerified ? 'approved' : 'none'
@@ -74,15 +68,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({
-      success: true,
+    await logAdminAction({
+      action: isVerified ? 'user.verify' : 'user.unverify',
+      adminId: user.id,
+      adminEmail: user.email || 'unknown',
+      resourceId: organizerId,
+      resourceType: 'user',
+      details: {
+        userEmail: targetUser?.email || null,
+        userName: targetUser?.full_name || targetUser?.name || null,
+        verification_status,
+      },
+    })
+
+    return adminOk({
       message: `Organizer ${isVerified ? 'verified' : 'unverified'} successfully`,
     })
   } catch (error) {
     console.error('Admin verification error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return adminError('Internal server error', 500)
   }
 }

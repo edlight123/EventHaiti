@@ -16,6 +16,8 @@ import { addTicketToEarnings } from '@/lib/earnings'
 
 export const runtime = 'nodejs'
 
+export const dynamic = 'force-dynamic'
+
 function tryExtractReferenceFromJwtLikeToken(token: string): string | null {
   // Digicel sometimes passes a JWT-like token as `transactionId`.
   // We don't need to verify the signature; we only want the embedded `ref`/reference

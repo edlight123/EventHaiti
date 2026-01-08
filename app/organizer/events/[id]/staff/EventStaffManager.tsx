@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
-import { auth, db } from '@/lib/firebase/client'
-import { onAuthStateChanged } from 'firebase/auth'
+import { db } from '@/lib/firebase/client'
 import { useToast } from '@/components/ui/Toast'
+import { useOrganizerClientGuard } from '@/lib/hooks/useOrganizerClientGuard'
 
 type InviteMethod = 'link' | 'email' | 'phone'
 
@@ -34,12 +34,17 @@ type MemberProfile = {
 
 export default function EventStaffManager({ eventId }: { eventId: string }) {
   const { showToast } = useToast()
+  const { firebaseUser, loading: authLoading } = useOrganizerClientGuard({
+    loginRedirectPath: `/auth/login?redirect=/organizer/events/${eventId}/staff`,
+    upgradeRedirectPath: `/organizer?redirect=/organizer/events/${eventId}/staff`,
+  })
+
+  const authReady = !authLoading
+  const authUid = firebaseUser?.uid || null
 
   const [invites, setInvites] = useState<EventInvite[]>([])
   const [members, setMembers] = useState<EventMember[]>([])
   const [memberProfiles, setMemberProfiles] = useState<Record<string, MemberProfile>>({})
-  const [authReady, setAuthReady] = useState(false)
-  const [authUid, setAuthUid] = useState<string | null>(null)
   const [listenerError, setListenerError] = useState<string | null>(null)
 
   const [showInviteModal, setShowInviteModal] = useState(false)
@@ -54,14 +59,6 @@ export default function EventStaffManager({ eventId }: { eventId: string }) {
     if (method === 'phone') return Boolean(targetPhone.trim())
     return true
   }, [method, targetEmail, targetPhone])
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      setAuthUid(user?.uid || null)
-      setAuthReady(true)
-    })
-    return () => unsub()
-  }, [])
 
   useEffect(() => {
     if (!authReady) return

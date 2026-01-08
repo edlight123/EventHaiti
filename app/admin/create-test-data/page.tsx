@@ -1,15 +1,13 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import CreateTestDataClient from './CreateTestDataClient'
 
+export const dynamic = 'force-dynamic'
+
 export default async function CreateTestDataPage() {
-  const user = await getCurrentUser()
-  if (!user) {
+  const { user, error } = await requireAdmin()
+  if (error || !user) {
     redirect('/auth/login?redirect=/admin/create-test-data')
-  }
-  if (!isAdmin(user.email)) {
-    redirect('/organizer')
   }
   return <CreateTestDataClient />
 }

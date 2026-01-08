@@ -1,3 +1,5 @@
+/* eslint-disable @next/next/no-img-element */
+
 import { ImageResponse } from 'next/og'
 
 export const runtime = 'edge'
@@ -34,6 +36,7 @@ export default async function Icon() {
       >
         <img
           src={logoSrc}
+          alt=""
           width={size.width}
           height={size.height}
           style={{

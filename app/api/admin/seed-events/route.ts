@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { Timestamp } from 'firebase-admin/firestore'
-import { isAdmin as isAdminEmail } from '@/lib/admin'
 import { randomUUID } from 'crypto'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 type TemplateEvent = {
   name: string
@@ -57,30 +58,9 @@ const templateEvents: TemplateEvent[] = [
 
 export async function POST(req: NextRequest) {
   try {
-    // Require admin access.
-    // Note: This app has two admin models:
-    // 1) Role-based: Firestore `users.role` in ['admin','super_admin']
-    // 2) Email-based: `ADMIN_EMAILS` env var (see `lib/admin.ts`)
-    const user = await getCurrentUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-    }
-
-    const role = user.role
-    const emailIsAdmin = isAdminEmail(user.email || '')
-    const roleIsAdmin = role === 'admin' || role === 'super_admin'
-    if (!emailIsAdmin && !roleIsAdmin) {
-      return NextResponse.json(
-        {
-          error: 'Admin access required',
-          details: {
-            email: user.email || null,
-            role,
-            hint: 'Add your email to ADMIN_EMAILS or set users.role to admin/super_admin',
-          },
-        },
-        { status: 403 }
-      )
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     // Find the organizer with email info@edlight.org (Firestore user doc id is treated as canonical user id).
@@ -91,10 +71,7 @@ export async function POST(req: NextRequest) {
       .get()
 
     if (organizersSnap.empty) {
-      return NextResponse.json(
-        { error: 'Organizer account info@edlight.org not found' },
-        { status: 404 }
-      )
+      return adminError('Organizer account info@edlight.org not found', 404)
     }
 
     const organizerId = organizersSnap.docs[0].id
@@ -236,16 +213,24 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    return NextResponse.json({
-      success: true,
+    await logAdminAction({
+      action: 'admin.backfill',
+      adminId: user.id,
+      adminEmail: user.email || 'unknown',
+      resourceType: 'events',
+      details: { name: 'seed-events', created: createdEvents.length },
+    })
+
+    return adminOk({
       message: `Successfully created ${createdEvents.length} events for ${organizerData.full_name || 'info@edlight.org'}`,
       events: createdEvents,
     })
   } catch (error) {
     console.error('Error seeding events:', error)
-    return NextResponse.json(
-      { error: 'Failed to seed events', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+    return adminError(
+      'Failed to seed events',
+      500,
+      error instanceof Error ? error.message : 'Unknown error'
     )
   }
 }

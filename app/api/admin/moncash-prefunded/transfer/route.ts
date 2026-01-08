@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { moncashPrefundedTransfer } from '@/lib/moncash'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 const BodySchema = z.object({
   amount: z.number().positive(),
@@ -13,23 +14,33 @@ const BodySchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
-    if (error || !user || !isAdmin(user?.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', 401)
     }
 
     const json = await request.json().catch(() => null)
     const parsed = BodySchema.safeParse(json)
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Invalid request body', details: parsed.error.flatten() },
-        { status: 400 }
-      )
+      return adminError('Invalid request body', 400, JSON.stringify(parsed.error.flatten()))
     }
 
     const result = await moncashPrefundedTransfer(parsed.data)
 
-    return NextResponse.json({
+    await logAdminAction({
+      action: 'moncash.prefunded.transfer',
+      adminId: user.id,
+      adminEmail: user.email || 'unknown',
+      resourceType: 'moncash',
+      details: {
+        amount: parsed.data.amount,
+        receiver: parsed.data.receiver,
+        reference: parsed.data.reference,
+        transactionId: result.transactionId,
+      },
+    })
+
+    return adminOk({
       success: true,
       transfer: {
         transactionId: result.transactionId,
@@ -41,9 +52,10 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('admin moncash-prefunded transfer error:', error)
-    return NextResponse.json(
-      { error: 'Failed to transfer via MonCash prefunded', message: error?.message || String(error) },
-      { status: 500 }
+    return adminError(
+      'Failed to transfer via MonCash prefunded',
+      500,
+      error?.message || String(error)
     )
   }
 }

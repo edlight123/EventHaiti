@@ -1,5 +1,4 @@
-import { getCurrentUser } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getEndedEventsForDisbursement, getDisbursementStats } from '@/lib/admin/disbursement-tracking'
 import { AdminDisbursementDashboard } from '@/components/admin/AdminDisbursementDashboard'
@@ -14,10 +13,12 @@ export const metadata = {
 
 export const revalidate = 60 // Refresh every minute
 
-export default async function AdminDisbursementsPage() {
-  const user = await getCurrentUser()
+export const dynamic = 'force-dynamic'
 
-  if (!user || !isAdmin(user.email)) {
+export default async function AdminDisbursementsPage() {
+  const { user, error } = await requireAdmin()
+
+  if (error || !user) {
     redirect('/auth/login?redirect=/admin/disbursements')
   }
 

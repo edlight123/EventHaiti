@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminStorage } from '@/lib/firebase/admin'
+
+export const dynamic = 'force-dynamic'
 
 function normalizeBucketName(bucket: string): string {
   if (bucket.startsWith('gs://')) return bucket.slice('gs://'.length)
@@ -33,10 +34,10 @@ function parseStorageTarget(rawPath: string): { bucketName: string | null; objec
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
+    const { user, error } = await requireAdmin()
 
     // Only allow admin users
-    if (!user || !isAdmin(user.email)) {
+    if (error || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

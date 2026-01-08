@@ -1,22 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { logAdminAction } from '@/lib/admin/audit-log'
+import { adminError, adminOk } from '@/lib/api/admin-response'
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
+    const { user, error } = await requireAdmin()
 
-    if (error || !user || !isAdmin(user?.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', 401)
     }
 
-    const { eventId, action, reason, adminId, adminEmail } = await request.json()
+    const { eventId, action, reason } = await request.json()
+
+    const adminId = user.id
+    const effectiveAdminEmail = user.email || 'unknown'
 
     const eventRef = adminDb.collection('events').doc(eventId)
     const deletedRef = adminDb.collection('events_deleted').doc(eventId)
-    const effectiveAdminEmail = adminEmail || user.email || 'unknown'
 
     const eventDoc = await eventRef.get()
 
@@ -24,7 +26,7 @@ export async function POST(request: NextRequest) {
     if (action === 'restore') {
       const deletedDoc = await deletedRef.get()
       if (!deletedDoc.exists) {
-        return NextResponse.json({ error: 'Deleted event backup not found' }, { status: 404 })
+        return adminError('Deleted event backup not found', 404)
       }
 
       const deletedData = deletedDoc.data() || {}
@@ -50,11 +52,11 @@ export async function POST(request: NextRequest) {
         details: { eventTitle: (eventData as any)?.title || deletedData?.title || 'Untitled' },
       })
 
-      return NextResponse.json({ success: true })
+      return adminOk({ success: true })
     }
 
     if (!eventDoc.exists) {
-      return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+      return adminError('Event not found', 404)
     }
 
     const eventData = eventDoc.data()!
@@ -70,7 +72,7 @@ export async function POST(request: NextRequest) {
         await logAdminAction({
           action: 'event.publish',
           adminId,
-          adminEmail,
+          adminEmail: effectiveAdminEmail,
           resourceId: eventId,
           resourceType: 'event',
           details: { eventTitle: eventData.title }
@@ -87,7 +89,7 @@ export async function POST(request: NextRequest) {
         await logAdminAction({
           action: 'event.unpublish',
           adminId,
-          adminEmail,
+          adminEmail: effectiveAdminEmail,
           resourceId: eventId,
           resourceType: 'event',
           details: { eventTitle: eventData.title, reason }
@@ -110,7 +112,7 @@ export async function POST(request: NextRequest) {
         await logAdminAction({
           action: 'event.delete',
           adminId,
-          adminEmail,
+          adminEmail: effectiveAdminEmail,
           resourceId: eventId,
           resourceType: 'event',
           details: { eventTitle: eventData.title, reason }
@@ -125,9 +127,9 @@ export async function POST(request: NextRequest) {
         break
     }
 
-    return NextResponse.json({ success: true })
+    return adminOk({ success: true })
   } catch (error) {
     console.error('Error performing action:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return adminError('Internal server error', 500)
   }
 }

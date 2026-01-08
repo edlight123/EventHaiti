@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+
+export const dynamic = 'force-dynamic'
 
 function safeServiceAccountInfo() {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
@@ -33,10 +35,10 @@ async function safeCount(ref: FirebaseFirestore.Query | FirebaseFirestore.Collec
 
 export async function GET(_request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
+    const { user, error } = await requireAdmin()
 
-    if (error || !user || !isAdmin(user?.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', 401)
     }
 
     const adminProjectId =
@@ -60,7 +62,7 @@ export async function GET(_request: NextRequest) {
     )
     const eventsDeletedBackups = await safeCount(adminDb.collection('events_deleted'))
 
-    return NextResponse.json({
+    return adminOk({
       admin: { projectId: adminProjectId },
       env,
       counts: {
@@ -71,6 +73,6 @@ export async function GET(_request: NextRequest) {
     })
   } catch (e: any) {
     console.error('debug/firestore failed:', e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return adminError('Internal server error', 500)
   }
 }

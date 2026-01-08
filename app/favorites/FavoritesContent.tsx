@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import EventCard from '@/components/EventCard'
 import EventCardHorizontal from '@/components/EventCardHorizontal'
@@ -23,7 +23,7 @@ export default function FavoritesContent({ userId }: FavoritesContentProps) {
   const [favoriteEvents, setFavoriteEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
 
-  const loadFavorites = async () => {
+  const loadFavorites = useCallback(async () => {
     setLoading(true)
     try {
       console.log('=== FAVORITES PAGE QUERY ===')
@@ -130,11 +130,11 @@ export default function FavoritesContent({ userId }: FavoritesContentProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId])
 
   useEffect(() => {
-    loadFavorites()
-  }, [userId])
+    void loadFavorites()
+  }, [loadFavorites])
 
   if (loading) {
     return (

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+
+export const dynamic = 'force-dynamic'
 
 type QueryDoc = FirebaseFirestore.QueryDocumentSnapshot
 
@@ -76,10 +78,10 @@ function parseDate(value: unknown): ParsedDate {
 
 export async function GET(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
+    const { user, error } = await requireAdmin()
 
-    if (error || !user || !isAdmin(user?.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', 401)
     }
 
     const url = new URL(request.url)
@@ -127,7 +129,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({
+    return adminOk({
       now: now.toISOString(),
       limit,
       count: results.length,
@@ -136,6 +138,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (e: any) {
     console.error('debug/events/visibility failed:', e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return adminError('Internal server error', 500)
   }
 }

@@ -9,8 +9,12 @@ import { TrendingUp, DollarSign, Ticket, Calendar, ArrowLeft } from 'lucide-reac
 import Badge from '@/components/ui/Badge'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { revalidatePath } from 'next/cache'
+import { formatMoneyFromCents, normalizeCurrency } from '@/lib/money'
 
 export const revalidate = 120 // Cache for 2 minutes
+
+// Depends on auth cookies and organizer-specific data.
+export const dynamic = 'force-dynamic'
 
 export default async function AnalyticsPage() {
   const user = await getCurrentUser()
@@ -25,63 +29,131 @@ export default async function AnalyticsPage() {
 
   const supabase = await createClient()
 
-  // Fetch organizer's events (no joins with Firebase)
-  const allEventsQuery = await supabase.from('events').select('*')
-  const allEvents = allEventsQuery.data || []
-  const eventsData = allEvents.filter((e: any) => e.organizer_id === user.id)
+  // Fetch organizer's events only.
+  const eventsQuery = await supabase
+    .from('events')
+    .select('id,title,start_datetime,is_published,category,organizer_id,currency')
+    .eq('organizer_id', user.id)
 
-  // Fetch all tickets
-  const allTicketsQuery = await supabase.from('tickets').select('*')
-  const allTickets = allTicketsQuery.data || []
+  const allOrganizerEvents = eventsQuery.data || []
+
+  // Organizer-facing analytics should be shown in the event currency (no FX conversion).
+  // If an organizer has mixed currencies (unexpected), prefer USD and scope analytics to that currency.
+  const eventCurrencies = new Set<string>(
+    allOrganizerEvents.map((e: any) => normalizeCurrency(e?.currency, 'HTG'))
+  )
+
+  const organizerCurrency: string = (() => {
+    const values = Array.from(eventCurrencies)
+    if (values.length === 1) return values[0]
+    if (eventCurrencies.has('USD')) return 'USD'
+    return values[0] || 'HTG'
+  })()
+
+  const eventsData = allOrganizerEvents.filter(
+    (e: any) => normalizeCurrency(e?.currency, 'HTG') === organizerCurrency
+  )
+
+  // Fetch tickets for organizer's events in the chosen currency.
+  // Join through events to avoid large `IN (...)` lists as event count grows.
+  const ticketsQuery = eventsData.length
+    ? await supabase
+        .from('tickets')
+        .select('event_id,price_paid,created_at,status,events!inner(organizer_id,currency)')
+        .eq('events.organizer_id', user.id)
+        .eq('events.currency', organizerCurrency)
+    : { data: [] as any[] }
+
+  const allTickets = (ticketsQuery as any).data || []
+
+  const isValidTicketStatus = (raw: unknown) => {
+    const status = String(raw || '').toLowerCase()
+    // Legacy + current accepted values.
+    if (!status) return true
+    return status === 'valid' || status === 'confirmed'
+  }
   
   // Group tickets by event
-  const ticketsByEvent = new Map()
+  const ticketsByEvent = new Map<string, { ticketCount: number; revenueCents: number }>()
+
   allTickets.forEach((ticket: any) => {
-    if (!ticketsByEvent.has(ticket.event_id)) {
-      ticketsByEvent.set(ticket.event_id, [])
+    if (!isValidTicketStatus(ticket?.status)) return
+    const eventId = String(ticket?.event_id || '')
+    if (!eventId) return
+
+    const pricePaid = Number(ticket?.price_paid || 0)
+    const revenueCents = Math.round(pricePaid * 100)
+    if (!Number.isFinite(revenueCents) || revenueCents <= 0) {
+      // Free tickets still count as tickets sold.
+      const existing = ticketsByEvent.get(eventId) || { ticketCount: 0, revenueCents: 0 }
+      ticketsByEvent.set(eventId, { ticketCount: existing.ticketCount + 1, revenueCents: existing.revenueCents })
+      return
     }
-    ticketsByEvent.get(ticket.event_id).push(ticket)
+
+    const existing = ticketsByEvent.get(eventId) || { ticketCount: 0, revenueCents: 0 }
+    ticketsByEvent.set(eventId, {
+      ticketCount: existing.ticketCount + 1,
+      revenueCents: existing.revenueCents + revenueCents,
+    })
   })
 
   // Calculate analytics
   const totalEvents = eventsData.length
   let totalTicketsSold = 0
-  let totalRevenue = 0
+  let totalRevenueCents = 0
   
   eventsData.forEach((event: any) => {
-    const eventTickets = ticketsByEvent.get(event.id) || []
-    totalTicketsSold += eventTickets.length
-    totalRevenue += eventTickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0)
+    const stats = ticketsByEvent.get(String(event.id)) || { ticketCount: 0, revenueCents: 0 }
+    totalTicketsSold += stats.ticketCount
+    totalRevenueCents += stats.revenueCents
   })
   
   const publishedEvents = eventsData.filter((e: any) => e.is_published).length
 
   // Events with ticket sales
   const eventsWithSales = eventsData.map((event: any) => {
-    const eventTickets = ticketsByEvent.get(event.id) || []
+    const stats = ticketsByEvent.get(String(event.id)) || { ticketCount: 0, revenueCents: 0 }
     return {
       ...event,
-      ticketCount: eventTickets.length,
-      revenue: eventTickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0),
+      ticketCount: stats.ticketCount,
+      revenueCents: stats.revenueCents,
     }
   }).sort((a: any, b: any) => b.ticketCount - a.ticketCount)
 
   // Prepare chart data - Sales over time (last 7 days)
+  const salesByDay: Record<string, { sales: number; revenueCents: number }> = {}
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const startOfWindow = new Date(today)
+  startOfWindow.setDate(startOfWindow.getDate() - 6)
+
+  for (const t of allTickets) {
+    if (!isValidTicketStatus(t?.status)) continue
+    const createdAt = new Date(t?.created_at)
+    if (isNaN(createdAt.getTime())) continue
+    if (createdAt < startOfWindow) continue
+
+    const key = createdAt.toISOString().split('T')[0]
+    const existing = salesByDay[key] || { sales: 0, revenueCents: 0 }
+    const cents = Math.round(Number(t?.price_paid || 0) * 100)
+
+    salesByDay[key] = {
+      sales: existing.sales + 1,
+      revenueCents: existing.revenueCents + (Number.isFinite(cents) ? Math.max(0, cents) : 0),
+    }
+  }
+
   const salesChartData = []
   for (let i = 6; i >= 0; i--) {
-    const date = new Date()
+    const date = new Date(today)
     date.setDate(date.getDate() - i)
     const dateStr = date.toISOString().split('T')[0]
-    
-    const dayTickets = allTickets.filter((t: any) => {
-      const ticketDate = new Date(t.created_at).toISOString().split('T')[0]
-      return ticketDate === dateStr && eventsData.some((e: any) => e.id === t.event_id)
-    })
-    
+    const day = salesByDay[dateStr] || { sales: 0, revenueCents: 0 }
+
     salesChartData.push({
       date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      sales: dayTickets.length,
-      revenue: dayTickets.reduce((sum: number, t: any) => sum + (t.price_paid || 0), 0),
+      sales: day.sales,
+      revenue: day.revenueCents / 100,
     })
   }
 
@@ -153,7 +225,9 @@ export default async function AnalyticsPage() {
                 <DollarSign className="w-6 h-6 text-accent-600" />
               </div>
             </div>
-            <p className="text-4xl font-bold text-accent-700 mb-2">${totalRevenue.toFixed(2)}</p>
+            <p className="text-4xl font-bold text-accent-700 mb-2">
+              {formatMoneyFromCents(totalRevenueCents, organizerCurrency, 'en-US', { currencyDisplay: 'code' })}
+            </p>
             <p className="text-sm text-gray-600">Lifetime earnings</p>
           </div>
 
@@ -179,7 +253,7 @@ export default async function AnalyticsPage() {
               <TrendingUp className="w-6 h-6 text-brand-600" />
               Sales Trend (Last 7 Days)
             </h2>
-            <SalesChart data={salesChartData} />
+            <SalesChart data={salesChartData} currency={organizerCurrency} />
             <div className="flex items-center justify-center gap-6 mt-4">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-brand-600 rounded-full"></div>
@@ -249,7 +323,9 @@ export default async function AnalyticsPage() {
                     </div>
                     <div className="text-center">
                       <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Revenue</p>
-                      <p className="text-2xl font-bold text-accent-700">${event.revenue.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-accent-700">
+                        {formatMoneyFromCents(event.revenueCents, organizerCurrency, 'en-US', { currencyDisplay: 'code' })}
+                      </p>
                     </div>
                     {!event.is_published && (
                       <Badge variant="neutral" size="md">Draft</Badge>

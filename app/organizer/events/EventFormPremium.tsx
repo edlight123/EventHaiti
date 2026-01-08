@@ -62,7 +62,7 @@ export default function EventFormPremium({ userId, event, isVerified = false, ve
     if (String(formData.currency || '').trim().toUpperCase() !== enforced) {
       setFormData((prev) => ({ ...prev, currency: enforced }))
     }
-  }, [formData.country])
+  }, [formData.country, formData.currency])
 
   // Calculate validation and completion
   const completion = getEventCompletion(formData, ticketTiers)
@@ -124,17 +124,6 @@ export default function EventFormPremium({ userId, event, isVerified = false, ve
     }
   }, [formData, event])
 
-  // Autosave draft (debounced)
-  useEffect(() => {
-    if (!hasUnsavedChanges || !event?.id || formData.is_published) return
-
-    const timer = setTimeout(async () => {
-      await handleSave(true) // silent autosave
-    }, 5000) // 5 second debounce
-
-    return () => clearTimeout(timer)
-  }, [formData, hasUnsavedChanges, event?.id])
-
   const handleChange = useCallback((field: keyof EventFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     
@@ -144,7 +133,7 @@ export default function EventFormPremium({ userId, event, isVerified = false, ve
     }
   }, [isVerified])
 
-  const handleSave = async (silent = false) => {
+  const handleSave = useCallback(async (silent = false) => {
     setIsSaving(true)
 
     try {
@@ -283,7 +272,18 @@ export default function EventFormPremium({ userId, event, isVerified = false, ve
     } finally {
       setIsSaving(false)
     }
-  }
+  }, [event?.id, formData, router, showToast, ticketTiers, userId])
+
+  // Autosave draft (debounced)
+  useEffect(() => {
+    if (!hasUnsavedChanges || !event?.id || formData.is_published) return
+
+    const timer = setTimeout(async () => {
+      await handleSave(true) // silent autosave
+    }, 5000) // 5 second debounce
+
+    return () => clearTimeout(timer)
+  }, [event?.id, formData, handleSave, hasUnsavedChanges])
 
   const handlePublish = async () => {
     if (!completion.canPublish) {

@@ -258,6 +258,21 @@
       "action_items_plural": "aksyon yo"
     },
     "your_events": "Evènman ou yo",
+    "tools": {
+      "title": "Zouti",
+      "analytics": {
+        "title": "Analiz",
+        "description": "Tandans lavant ak revni"
+      },
+      "scan": {
+        "title": "Eskane tikè",
+        "description": "Verifye patisipan yo nan pòt la"
+      },
+      "promoCodes": {
+        "title": "Kòd pwomo",
+        "description": "Kreye rabè epi swiv itilizasyon"
+      }
+    },
     "view_all_events": "Gade tout evènman",
     "create_event": "Kreye evènman",
     "no_events": {

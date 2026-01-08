@@ -3,6 +3,8 @@ import { adminDb } from '@/lib/firebase/admin'
 import { createNotification } from '@/lib/notifications/helpers'
 import { sendPushNotification } from '@/lib/notification-triggers'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Favorite Event Reminder Cron Job
  * 

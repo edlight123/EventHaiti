@@ -3,6 +3,8 @@ import { adminAuth } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
 import { getOrganizerEarningsSummary } from '@/lib/earnings'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies()

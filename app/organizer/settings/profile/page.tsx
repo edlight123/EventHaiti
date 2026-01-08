@@ -5,6 +5,8 @@ import ProfileForm from './ProfileForm';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 async function getUserProfile(userId: string) {
   const userDoc = await adminDb.collection('users').doc(userId).get();
   return userDoc.exists ? userDoc.data() : null;

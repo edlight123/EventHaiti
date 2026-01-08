@@ -7,6 +7,8 @@ import { createClient } from '@/lib/firebase-db/server'
 import EventSelector from './EventSelector'
 import { QrCode, Sparkles } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ScanTicketPage() {
   const { user, error } = await requireAuth()
 
@@ -20,11 +22,12 @@ export default async function ScanTicketPage() {
 
   // Fetch organizer's events
   const supabase = await createClient()
-  const allEventsQuery = await supabase.from('events').select('*')
-  const allEvents = allEventsQuery.data || []
-  
-  // Filter user's events
-  const userEvents = allEvents.filter((e: any) => e.organizer_id === user.id)
+  const userEventsQuery = await supabase
+    .from('events')
+    .select('id,title,start_datetime,venue_name,city,tickets_sold,organizer_id')
+    .eq('organizer_id', user.id)
+
+  const userEvents = userEventsQuery.data || []
   
   // Get today's date boundaries
   const today = new Date()

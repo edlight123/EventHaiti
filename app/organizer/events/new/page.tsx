@@ -6,6 +6,8 @@ import Navbar from '@/components/Navbar'
 import { isAdmin } from '@/lib/admin'
 import { getOrganizerVerificationStatus } from '@/lib/organizerVerification'
 
+export const dynamic = 'force-dynamic'
+
 export default async function NewEventPage() {
   const { user, error } = await requireAuth()
 

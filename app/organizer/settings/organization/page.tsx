@@ -5,6 +5,8 @@ import OrganizationForm from './OrganizationForm';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 async function getOrganizerData(userId: string) {
   const organizerDoc = await adminDb.collection('organizers').doc(userId).get();
   return organizerDoc.exists ? organizerDoc.data() : null;

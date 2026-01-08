@@ -1,5 +1,4 @@
-import { getCurrentUser } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -10,6 +9,8 @@ import { getDecryptedBankDestination } from '@/lib/firestore/payout-destinations
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+const PAGE_SIZE = 50
 
 interface BankVerification {
   organizerId: string
@@ -34,127 +35,314 @@ interface BankVerification {
   }
 }
 
-export default async function AdminBankVerificationsPage() {
-  const user = await getCurrentUser()
-  if (!user) {
+function toISOStringMaybe(value: any): string {
+  if (!value) return ''
+  if (typeof value === 'string') return value
+  if (value instanceof Date) return value.toISOString()
+  if (typeof value?.toDate === 'function') {
+    try {
+      const date = value.toDate()
+      if (date instanceof Date) return date.toISOString()
+    } catch {
+      // no-op
+    }
+  }
+  return String(value)
+}
+
+function encodeCursor(cursor: { submittedAt: string; path: string }): string {
+  const payload = JSON.stringify(cursor)
+  return Buffer.from(payload, 'utf8').toString('base64url')
+}
+
+function decodeCursor(raw: string | undefined): { submittedAt: string; path: string } | null {
+  if (!raw) return null
+  try {
+    const json = Buffer.from(raw, 'base64url').toString('utf8')
+    const parsed = JSON.parse(json)
+    if (!parsed || typeof parsed !== 'object') return null
+    if (typeof (parsed as any).submittedAt !== 'string') return null
+    if (typeof (parsed as any).path !== 'string') return null
+    return { submittedAt: (parsed as any).submittedAt, path: (parsed as any).path }
+  } catch {
+    return null
+  }
+}
+
+async function getBankVerificationCount(status: 'pending' | 'verified' | 'failed'): Promise<number | null> {
+  try {
+    const q: any = adminDb
+      .collectionGroup('verificationDocuments')
+      .where('type', '==', 'bank')
+      .where('status', '==', status)
+
+    // Firestore aggregate count (preferred).
+    if (typeof (q as any).count === 'function') {
+      const agg = await (q as any).count().get()
+      const data = agg?.data?.()
+      const count = Number(data?.count)
+      return Number.isFinite(count) ? count : null
+    }
+
+    // Fallback (avoid scanning; best-effort sample only).
+    const snap = await q.limit(1000).get()
+    return snap.size
+  } catch {
+    return null
+  }
+}
+
+export default async function AdminBankVerificationsPage({
+  searchParams,
+}: {
+  searchParams?: { status?: string; cursor?: string }
+}) {
+  const { user, error } = await requireAdmin()
+  if (error || !user) {
     redirect('/auth/login?redirect=/admin/bank-verifications')
   }
 
-  if (!isAdmin(user.email)) {
-    redirect('/organizer')
-  }
+  const statusParamRaw = String(searchParams?.status || 'pending').toLowerCase()
+  const statusParam = (['pending', 'verified', 'failed', 'all'] as const).includes(statusParamRaw as any)
+    ? (statusParamRaw as 'pending' | 'verified' | 'failed' | 'all')
+    : 'pending'
 
-  // Fetch all bank verifications
+  const cursor = decodeCursor(searchParams?.cursor)
+
+  const [pendingCount, verifiedCount, failedCount] = await Promise.all([
+    getBankVerificationCount('pending'),
+    getBankVerificationCount('verified'),
+    getBankVerificationCount('failed'),
+  ])
+
+  // Fetch recent bank verifications (bounded; avoids scanning all organizers).
   const bankVerifications: BankVerification[] = []
 
-  // Get all organizers
-  const usersSnapshot = await adminDb
-    .collection('users')
-    .where('role', '==', 'organizer')
-    .get()
+  let bankVerificationDocs: any[] = []
+  try {
+    let queryRef: any = adminDb.collectionGroup('verificationDocuments').where('type', '==', 'bank')
+    if (statusParam !== 'all') {
+      queryRef = queryRef.where('status', '==', statusParam)
+    }
 
-  for (const userDoc of usersSnapshot.docs) {
-    const userData = userDoc.data()
-    const organizerId = userDoc.id
+    let usesSubmittedAtOrdering = false
+    try {
+      queryRef = queryRef.orderBy('submittedAt', 'desc').orderBy('__name__', 'desc')
+      usesSubmittedAtOrdering = true
+    } catch {
+      queryRef = queryRef.orderBy('__name__', 'desc')
+      usesSubmittedAtOrdering = false
+    }
 
-    // Pull all bank verification docs (supports per-destination ids: bank_<destinationId>, plus legacy id: bank).
-    const bankVerificationDocsSnap = await adminDb
-      .collection('organizers')
-      .doc(organizerId)
-      .collection('verificationDocuments')
-      .where('type', '==', 'bank')
-      .get()
+    if (cursor) {
+      if (usesSubmittedAtOrdering) {
+        queryRef = queryRef.startAfter(cursor.submittedAt, adminDb.doc(cursor.path))
+      } else {
+        queryRef = queryRef.startAfter(adminDb.doc(cursor.path))
+      }
+    }
 
-    if (bankVerificationDocsSnap.empty) continue
+    const snap = await queryRef.limit(PAGE_SIZE + 1).get()
+    bankVerificationDocs = snap.docs
+  } catch (err) {
+    console.error('Failed to fetch bank verification docs:', err)
+    bankVerificationDocs = []
+  }
 
-    // Legacy fallback for bank details.
-    const payoutConfigDocPromise = adminDb
-      .collection('organizers')
-      .doc(organizerId)
-      .collection('payoutConfig')
-      .doc('main')
-      .get()
+  const hasNextPage = bankVerificationDocs.length > PAGE_SIZE
+  const pageDocs = hasNextPage ? bankVerificationDocs.slice(0, PAGE_SIZE) : bankVerificationDocs
+  const nextCursor = (() => {
+    if (!hasNextPage) return null
+    const last = pageDocs[pageDocs.length - 1]
+    if (!last) return null
+    const data = (last.data?.() || {}) as any
+    const submittedAt = toISOStringMaybe(data?.submittedAt || data?.submitted_at || data?.createdAt || data?.created_at)
+    const path = String(last?.ref?.path || '')
+    if (!submittedAt || !path) return null
+    return encodeCursor({ submittedAt, path })
+  })()
 
-    const payoutConfigDoc = await payoutConfigDocPromise
-    const legacyBankDetails = payoutConfigDoc.data()?.bankDetails
-
-    for (const verificationDoc of bankVerificationDocsSnap.docs) {
-      const verificationData = verificationDoc.data() as any
-      const docId = String(verificationDoc.id || '')
+  const rows = pageDocs
+    .map((doc: any) => {
+      const data = (doc.data?.() || {}) as any
+      const organizerId = doc?.ref?.parent?.parent?.id ? String(doc.ref.parent.parent.id) : ''
+      const docId = String(doc.id || '')
 
       const destinationId = (() => {
-        if (verificationData?.destinationId) {
-          const raw = String(verificationData.destinationId)
+        if (data?.destinationId) {
+          const raw = String(data.destinationId)
           return raw.startsWith('bank_') ? raw.slice('bank_'.length) : raw
         }
         if (docId.startsWith('bank_')) return docId.slice('bank_'.length)
-        // Legacy doc id "bank" historically implied the main/primary bank.
         if (docId === 'bank') return 'bank_primary'
         return ''
       })()
 
-      if (!destinationId) continue
+      if (!organizerId || !destinationId) return null
 
-      const destinationDoc = await adminDb
-        .collection('organizers')
-        .doc(organizerId)
-        .collection('payoutDestinations')
-        .doc(destinationId)
-        .get()
+      const statusRaw = String(data?.status || 'pending').toLowerCase()
+      const normalizedStatus = statusRaw === 'verified' || statusRaw === 'failed' ? statusRaw : 'pending'
 
-      const destinationData = destinationDoc.exists ? (destinationDoc.data() as any) : null
+      return {
+        organizerId,
+        destinationId,
+        status: normalizedStatus,
+        submittedAt: toISOStringMaybe(data?.submittedAt || data?.submitted_at || data?.createdAt || data?.created_at),
+        verificationData: data,
+        docId,
+      }
+    })
+    .filter(Boolean) as Array<{
+    organizerId: string
+    destinationId: string
+    status: string
+    submittedAt: string
+    verificationData: any
+    docId: string
+  }>
 
-      // Attempt to show the full on-file account number for admins.
-      // This is only available when PAYOUT_DETAILS_ENCRYPTION_KEY is configured and the destination has encrypted details.
-      let decryptedAccountNumber: string | null = null
-      let decryptedRoutingNumber: string | null = null
+  const organizerIds = Array.from(new Set(rows.map((r) => r.organizerId)))
+
+  // Batch-load organizer user docs (Firestore `in` supports max 10 ids per query).
+  const organizersById = new Map<string, any>()
+  try {
+    const batches: Promise<any>[] = []
+    for (let i = 0; i < organizerIds.length; i += 10) {
+      const batch = organizerIds.slice(i, i + 10)
+      batches.push(adminDb.collection('users').where('__name__', 'in', batch).get())
+    }
+    const snaps = await Promise.all(batches)
+    for (const snap of snaps) {
+      for (const doc of snap.docs) {
+        organizersById.set(doc.id, doc.data())
+      }
+    }
+  } catch (err) {
+    console.error('Failed to fetch organizers for bank verifications:', err)
+  }
+
+  // Prefetch payout destinations + legacy payout config per organizer.
+  const destinationRefs: any[] = []
+  const payoutConfigRefs: any[] = []
+  const destinationKeyForRef = new Map<string, string>()
+
+  for (const r of rows) {
+    const destRef = adminDb
+      .collection('organizers')
+      .doc(r.organizerId)
+      .collection('payoutDestinations')
+      .doc(r.destinationId)
+    destinationRefs.push(destRef)
+    destinationKeyForRef.set(destRef.path, `${r.organizerId}:${r.destinationId}`)
+  }
+
+  for (const organizerId of organizerIds) {
+    payoutConfigRefs.push(
+      adminDb.collection('organizers').doc(organizerId).collection('payoutConfig').doc('main')
+    )
+  }
+
+  const destinationByKey = new Map<string, any>()
+  const payoutConfigByOrganizerId = new Map<string, any>()
+
+  try {
+    const getAll = (adminDb as any).getAll?.bind(adminDb)
+    if (typeof getAll === 'function') {
+      const destSnaps = destinationRefs.length ? await getAll(...destinationRefs) : []
+      for (const snap of destSnaps) {
+        const key = destinationKeyForRef.get(snap.ref.path)
+        if (!key) continue
+        destinationByKey.set(key, snap.exists ? snap.data() : null)
+      }
+
+      const payoutSnaps = payoutConfigRefs.length ? await getAll(...payoutConfigRefs) : []
+      for (const snap of payoutSnaps) {
+        const organizerId = snap?.ref?.parent?.parent?.id ? String(snap.ref.parent.parent.id) : ''
+        if (!organizerId) continue
+        payoutConfigByOrganizerId.set(organizerId, snap.exists ? snap.data() : null)
+      }
+    } else {
+      // Fallback if getAll isn't available (should be available in Firestore Admin).
+      const [destSnaps, payoutSnaps] = await Promise.all([
+        Promise.all(destinationRefs.map((ref) => ref.get())),
+        Promise.all(payoutConfigRefs.map((ref) => ref.get())),
+      ])
+
+      for (const snap of destSnaps) {
+        const key = destinationKeyForRef.get(snap.ref.path)
+        if (!key) continue
+        destinationByKey.set(key, snap.exists ? snap.data() : null)
+      }
+
+      for (const snap of payoutSnaps) {
+        const organizerId = snap?.ref?.parent?.parent?.id ? String(snap.ref.parent.parent.id) : ''
+        if (!organizerId) continue
+        payoutConfigByOrganizerId.set(organizerId, snap.exists ? snap.data() : null)
+      }
+    }
+  } catch (err) {
+    console.error('Failed to prefetch payout destinations/config:', err)
+  }
+
+  for (const r of rows) {
+    const organizerData = organizersById.get(r.organizerId) || {}
+    const destinationData = destinationByKey.get(`${r.organizerId}:${r.destinationId}`)
+    const legacyBankDetails = payoutConfigByOrganizerId.get(r.organizerId)?.bankDetails
+
+    // Best-effort decrypt (only for pending; avoids extra work for historical rows).
+    let decryptedAccountNumber: string | null = null
+    let decryptedRoutingNumber: string | null = null
+    if (r.status === 'pending' && destinationData) {
       try {
-        const decrypted = await getDecryptedBankDestination({ organizerId, destinationId })
+        const decrypted = await getDecryptedBankDestination({
+          organizerId: r.organizerId,
+          destinationId: r.destinationId,
+        })
         decryptedAccountNumber = decrypted?.accountNumber ? String(decrypted.accountNumber) : null
         decryptedRoutingNumber = decrypted?.routingNumber ? String(decrypted.routingNumber) : null
       } catch {
         decryptedAccountNumber = null
         decryptedRoutingNumber = null
       }
-
-      const bankDetails = destinationData
-        ? {
-            accountName: String(destinationData.accountName || ''),
-            accountNumber:
-              decryptedAccountNumber ||
-              (destinationData.accountNumberLast4
-                ? `****${String(destinationData.accountNumberLast4)}`
-                : '****'),
-            bankName: String(destinationData.bankName || ''),
-            routingNumber: decryptedRoutingNumber || undefined,
-          }
-        : legacyBankDetails
-
-      if (!bankDetails) continue
-
-      bankVerifications.push({
-        organizerId,
-        organizerName: userData.full_name || userData.email || 'Unknown',
-        organizerEmail: userData.email || '',
-        destinationId,
-        isPrimary: Boolean(destinationData?.isPrimary) || destinationId === 'bank_primary',
-        bankDetails,
-        verificationDoc: {
-          type: String(verificationData.type || 'bank'),
-          verificationType: String(verificationData.verificationType || ''),
-          status: String(verificationData.status || 'pending'),
-          submittedAt: String(verificationData.submittedAt || ''),
-          documentPath: verificationData.documentPath ? String(verificationData.documentPath) : undefined,
-          documentName: String(verificationData.documentName || ''),
-          documentSize: Number(verificationData.documentSize || 0),
-        },
-      })
     }
+
+    const bankDetails = destinationData
+      ? {
+          accountName: String(destinationData.accountName || ''),
+          accountNumber:
+            decryptedAccountNumber ||
+            (destinationData.accountNumberLast4
+              ? `****${String(destinationData.accountNumberLast4)}`
+              : '****'),
+          bankName: String(destinationData.bankName || ''),
+          routingNumber: decryptedRoutingNumber || undefined,
+        }
+      : legacyBankDetails
+
+    if (!bankDetails) continue
+
+    bankVerifications.push({
+      organizerId: r.organizerId,
+      organizerName: organizerData.full_name || organizerData.email || 'Unknown',
+      organizerEmail: organizerData.email || '',
+      destinationId: r.destinationId,
+      isPrimary: Boolean(destinationData?.isPrimary) || r.destinationId === 'bank_primary',
+      bankDetails,
+      verificationDoc: {
+        type: String(r.verificationData?.type || 'bank'),
+        verificationType: String(r.verificationData?.verificationType || ''),
+        status: r.status,
+        submittedAt: r.submittedAt,
+        documentPath: r.verificationData?.documentPath ? String(r.verificationData.documentPath) : undefined,
+        documentName: String(r.verificationData?.documentName || ''),
+        documentSize: Number(r.verificationData?.documentSize || 0),
+      },
+    })
   }
 
   // Sort by submission date (newest first)
-  bankVerifications.sort((a, b) => 
-    new Date(b.verificationDoc.submittedAt).getTime() - new Date(a.verificationDoc.submittedAt).getTime()
+  bankVerifications.sort(
+    (a, b) => new Date(b.verificationDoc.submittedAt).getTime() - new Date(a.verificationDoc.submittedAt).getTime()
   )
 
   // Filter by status
@@ -188,16 +376,44 @@ export default async function AdminBankVerificationsPage() {
           <div className="grid grid-cols-3 gap-4 mt-6">
             <div className="bg-purple-500/30 backdrop-blur-sm rounded-xl p-4">
               <div className="text-purple-100 text-sm font-medium">Pending</div>
-              <div className="text-white text-3xl font-bold mt-1">{pending.length}</div>
+              <div className="text-white text-3xl font-bold mt-1">{pendingCount ?? '—'}</div>
             </div>
             <div className="bg-green-500/30 backdrop-blur-sm rounded-xl p-4">
               <div className="text-green-100 text-sm font-medium">Verified</div>
-              <div className="text-white text-3xl font-bold mt-1">{verified.length}</div>
+              <div className="text-white text-3xl font-bold mt-1">{verifiedCount ?? '—'}</div>
             </div>
             <div className="bg-red-500/30 backdrop-blur-sm rounded-xl p-4">
               <div className="text-red-100 text-sm font-medium">Failed</div>
-              <div className="text-white text-3xl font-bold mt-1">{failed.length}</div>
+              <div className="text-white text-3xl font-bold mt-1">{failedCount ?? '—'}</div>
             </div>
+          </div>
+
+          {/* Status Filter */}
+          <div className="flex flex-wrap gap-2 mt-6">
+            <Link
+              href={{ pathname: '/admin/bank-verifications', query: { status: 'pending' } }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${statusParam === 'pending' ? 'bg-white text-purple-700' : 'bg-purple-500/20 text-purple-100 hover:bg-purple-500/30'}`}
+            >
+              Pending
+            </Link>
+            <Link
+              href={{ pathname: '/admin/bank-verifications', query: { status: 'verified' } }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${statusParam === 'verified' ? 'bg-white text-purple-700' : 'bg-purple-500/20 text-purple-100 hover:bg-purple-500/30'}`}
+            >
+              Verified
+            </Link>
+            <Link
+              href={{ pathname: '/admin/bank-verifications', query: { status: 'failed' } }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${statusParam === 'failed' ? 'bg-white text-purple-700' : 'bg-purple-500/20 text-purple-100 hover:bg-purple-500/30'}`}
+            >
+              Failed
+            </Link>
+            <Link
+              href={{ pathname: '/admin/bank-verifications', query: { status: 'all' } }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${statusParam === 'all' ? 'bg-white text-purple-700' : 'bg-purple-500/20 text-purple-100 hover:bg-purple-500/30'}`}
+            >
+              All
+            </Link>
           </div>
         </div>
       </div>
@@ -205,7 +421,7 @@ export default async function AdminBankVerificationsPage() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Pending Verifications */}
-        {pending.length > 0 && (
+        {(statusParam === 'pending' || statusParam === 'all') && pending.length > 0 && (
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               Pending Review ({pending.length})
@@ -222,7 +438,7 @@ export default async function AdminBankVerificationsPage() {
         )}
 
         {/* Verified */}
-        {verified.length > 0 && (
+        {(statusParam === 'verified' || statusParam === 'all') && verified.length > 0 && (
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               Verified ({verified.length})
@@ -239,7 +455,7 @@ export default async function AdminBankVerificationsPage() {
         )}
 
         {/* Failed */}
-        {failed.length > 0 && (
+        {(statusParam === 'failed' || statusParam === 'all') && failed.length > 0 && (
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               Failed ({failed.length})
@@ -264,6 +480,17 @@ export default async function AdminBankVerificationsPage() {
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No verifications yet</h3>
             <p className="text-gray-600">Bank verification requests will appear here when organizers submit them.</p>
+          </div>
+        )}
+
+        {hasNextPage && nextCursor && (
+          <div className="flex justify-end mt-8">
+            <Link
+              href={{ pathname: '/admin/bank-verifications', query: { status: statusParam, cursor: nextCursor } }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-900 hover:bg-gray-50"
+            >
+              Next page →
+            </Link>
           </div>
         )}
       </div>

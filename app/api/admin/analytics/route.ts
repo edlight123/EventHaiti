@@ -1,27 +1,23 @@
 import { NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(req: Request) {
   try {
-    const user = await getCurrentUser()
-    if (!user || !isAdmin(user.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', 401)
     }
 
-    return NextResponse.json(
-      {
-        error: 'Deprecated',
-        message:
-          'This endpoint has been deprecated. Use /api/admin/revenue-analytics (Firestore-backed) and Firestore rollups (platform_stats_daily) for platform metrics.',
-      },
-      { status: 410 }
+    return adminError(
+      'Deprecated',
+      410,
+      'Use /api/admin/revenue-analytics (Firestore-backed) and Firestore rollups (platform_stats_daily) for platform metrics.'
     )
   } catch (error) {
     console.error('Error fetching admin analytics:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch analytics' },
-      { status: 500 }
-    )
+    return adminError('Failed to fetch analytics', 500)
   }
 }

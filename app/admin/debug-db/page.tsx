@@ -1,15 +1,13 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import DebugDBClient from './DebugDBClient'
 
+export const dynamic = 'force-dynamic'
+
 export default async function DebugDBPage() {
-  const user = await getCurrentUser()
-  if (!user) {
+  const { user, error } = await requireAdmin()
+  if (error || !user) {
     redirect('/auth/login?redirect=/admin/debug-db')
-  }
-  if (!isAdmin(user.email)) {
-    redirect('/organizer')
   }
   return <DebugDBClient />
 }

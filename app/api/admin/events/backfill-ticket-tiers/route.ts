@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 export const runtime = 'nodejs'
 
@@ -17,9 +18,9 @@ function toFiniteNumber(value: unknown, fallback = 0): number {
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
-    if (error || !user || !isAdmin(user?.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     const body = (await request.json().catch(() => ({}))) as Partial<BackfillRequest>
@@ -27,10 +28,7 @@ export async function POST(request: NextRequest) {
     const dryRun = body?.dryRun === true
 
     if (!batchTag) {
-      return NextResponse.json(
-        { error: 'batchTag is required (used to find seeded events via tags array)' },
-        { status: 400 }
-      )
+      return adminError('batchTag is required (used to find seeded events via tags array)', 400)
     }
 
     const eventsSnap = await adminDb
@@ -85,8 +83,15 @@ export async function POST(request: NextRequest) {
       details.push({ eventId, title, tierId, action: 'created' })
     }
 
-    return NextResponse.json({
-      success: true,
+    await logAdminAction({
+      action: 'admin.backfill',
+      adminId: user.id,
+      adminEmail: user.email || 'unknown',
+      resourceType: 'ticket_tiers',
+      details: { name: 'events.backfill-ticket-tiers', batchTag, dryRun, scanned, created, skipped },
+    })
+
+    return adminOk({
       batchTag,
       dryRun,
       scanned,
@@ -97,21 +102,19 @@ export async function POST(request: NextRequest) {
     })
   } catch (err: any) {
     console.error('Backfill ticket tiers error:', err)
-    return NextResponse.json({ error: err?.message || 'Internal server error' }, { status: 500 })
+    return adminError('Internal server error', 500, err?.message || String(err))
   }
 }
 
 export async function GET() {
   try {
-    const { user, error } = await requireAuth()
-    const authed = Boolean(user && !error)
-    const admin = authed ? isAdmin(user?.email) : false
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
+    }
 
-    return NextResponse.json({
-      ok: true,
-      authed,
-      admin,
-      email: user?.email || null,
+    return adminOk({
+      email: user.email || null,
       usage: {
         method: 'POST',
         url: '/api/admin/events/backfill-ticket-tiers',
@@ -126,9 +129,6 @@ export async function GET() {
       ],
     })
   } catch (err: any) {
-    return NextResponse.json(
-      { ok: false, error: err?.message || 'Internal server error' },
-      { status: 500 }
-    )
+    return adminError('Internal server error', 500, err?.message || String(err))
   }
 }

@@ -1,10 +1,11 @@
-import { getCurrentUser } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { adminDb } from '@/lib/firebase/admin'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import OrganizerDetailsClient from './OrganizerDetailsClient'
+
+export const dynamic = 'force-dynamic'
 
 async function getOrganizerDetails(organizerId: string) {
   try {
@@ -108,9 +109,9 @@ async function getOrganizerDetails(organizerId: string) {
 }
 
 export default async function OrganizerDetailPage({ params }: { params: { id: string } }) {
-  const user = await getCurrentUser()
+  const { user, error } = await requireAdmin()
   
-  if (!user || !isAdmin(user.email)) {
+  if (error || !user) {
     redirect('/')
   }
 

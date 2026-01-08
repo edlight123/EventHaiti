@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
 import { ArrowLeft, Calendar, MapPin, User, Clock, Sparkles, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import Badge from '@/components/ui/Badge'
 import QRCodeDisplay from './QRCodeDisplay'
 import TicketActions from './TicketActions'
@@ -108,10 +109,13 @@ export default function TicketDetailContent({ ticket, event, user }: TicketDetai
           <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
             {event.banner && (
               <div className="relative w-full h-40 sm:h-48">
-                <img
+                <Image
                   src={event.banner}
                   alt={event.title}
-                  className="w-full h-full object-cover"
+                  fill
+                  sizes="(max-width: 640px) 100vw, 50vw"
+                  className="object-cover"
+                  unoptimized
                 />
               </div>
             )}

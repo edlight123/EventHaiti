@@ -1,16 +1,17 @@
 import { redirect } from 'next/navigation'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { AdminEventsModerationConsole } from './AdminEventsModerationConsole'
 
 export const revalidate = 60 // Cache for 1 minute
 
-export default async function AdminEventsPage() {
-  const { user, error } = await requireAuth()
+export const dynamic = 'force-dynamic'
 
-  if (error || !user || !isAdmin(user?.email)) {
+export default async function AdminEventsPage() {
+  const { user, error } = await requireAdmin()
+
+  if (error || !user) {
     redirect('/')
   }
 

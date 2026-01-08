@@ -1,31 +1,16 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import adminApp from '@/lib/firebase/admin'
-import { getCurrentUser } from '@/lib/auth'
-import { isAdmin as isAdminEmail } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-    }
-
-    const role = user.role
-    const emailIsAdmin = isAdminEmail(user.email || '')
-    const roleIsAdmin = role === 'admin' || role === 'super_admin'
-    if (!emailIsAdmin && !roleIsAdmin) {
-      return NextResponse.json(
-        {
-          error: 'Admin access required',
-          details: {
-            email: user.email || null,
-            role,
-            hint: 'Add your email to ADMIN_EMAILS or set users.role to admin/super_admin',
-          },
-        },
-        { status: 403 }
-      )
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     const organizersSnap = await adminDb
@@ -35,10 +20,7 @@ export async function GET() {
       .get()
 
     if (organizersSnap.empty) {
-      return NextResponse.json(
-        { error: 'Organizer account info@edlight.org not found' },
-        { status: 404 }
-      )
+      return adminError('Organizer account info@edlight.org not found', 404)
     }
 
     const organizerId = organizersSnap.docs[0].id
@@ -78,8 +60,7 @@ export async function GET() {
       }
     })
 
-    return NextResponse.json({
-      ok: true,
+    return adminOk({
       demoMode: process.env.NEXT_PUBLIC_DEMO_MODE === 'true',
       clientProjectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || null,
       serverProjectId: (adminApp as any)?.options?.projectId || null,
@@ -92,9 +73,6 @@ export async function GET() {
     })
   } catch (error: any) {
     console.error('Error verifying seeded events:', error)
-    return NextResponse.json(
-      { error: 'Failed to verify seeded events', details: error?.message || 'Unknown error' },
-      { status: 500 }
-    )
+    return adminError('Failed to verify seeded events', 500, error?.message || 'Unknown error')
   }
 }

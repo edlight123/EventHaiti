@@ -5,6 +5,8 @@ import SecurityForm from './SecurityForm';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 async function getLoginHistory(userId: string) {
   const loginSnapshot = await adminDb
     .collection('organizers')

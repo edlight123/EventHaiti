@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { createClient } from '@/lib/firebase-db/server'
-import { isAdmin } from '@/lib/admin'
 import { adminDb } from '@/lib/firebase/admin'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 type NormalizedSuspiciousActivity = {
   id: string
@@ -149,9 +150,9 @@ async function fetchSuspiciousActivitiesFromFirestore(params: {
  */
 export async function GET(req: NextRequest) {
   try {
-    const user = await getCurrentUser()
-    if (!user || !isAdmin(user.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error: authError } = await requireAdmin()
+    if (authError || !user) {
+      return adminError(authError || 'Unauthorized', 401)
     }
 
     const { searchParams } = new URL(req.url)
@@ -169,7 +170,7 @@ export async function GET(req: NextRequest) {
     })
 
     if (firestoreResult && firestoreResult.total > 0) {
-      return NextResponse.json({
+      return adminOk({
         activities: firestoreResult.activities,
         unreviewedCount: firestoreResult.unreviewedCount,
         total: firestoreResult.total,
@@ -196,14 +197,11 @@ export async function GET(req: NextRequest) {
       query = query.eq('activity_type', activityType)
     }
 
-    const { data: activities, error } = await query
+    const { data: activities, error: queryError } = await query
 
-    if (error) {
-      console.error('Error fetching suspicious activities:', error)
-      return NextResponse.json(
-        { error: 'Failed to fetch activities' },
-        { status: 500 }
-      )
+    if (queryError) {
+      console.error('Error fetching suspicious activities:', queryError)
+      return adminError('Failed to fetch activities', 500)
     }
 
     // Get count of unreviewed activities
@@ -212,17 +210,14 @@ export async function GET(req: NextRequest) {
       .select('id')
       .eq('reviewed', false)
 
-    return NextResponse.json({
+    return adminOk({
       activities,
       unreviewedCount: unreviewedActivities?.length || 0,
       total: activities.length,
     })
-  } catch (error) {
-    console.error('Error in suspicious activities endpoint:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+  } catch (err) {
+    console.error('Error in suspicious activities endpoint:', err)
+    return adminError('Internal server error', 500)
   }
 }
 
@@ -231,18 +226,15 @@ export async function GET(req: NextRequest) {
  */
 export async function PATCH(req: NextRequest) {
   try {
-    const user = await getCurrentUser()
-    if (!user || !isAdmin(user.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error: authError } = await requireAdmin()
+    if (authError || !user) {
+      return adminError(authError || 'Unauthorized', 401)
     }
 
     const { activityId, actionTaken } = await req.json()
 
     if (!activityId) {
-      return NextResponse.json(
-        { error: 'Activity ID is required' },
-        { status: 400 }
-      )
+      return adminError('Activity ID is required', 400)
     }
 
     // If the activity exists in Firestore, update it there (migration path).
@@ -252,7 +244,7 @@ export async function PATCH(req: NextRequest) {
 
     const supabase = await createClient()
 
-    const { error } = await supabase
+    const { error: updateError } = await supabase
       .from('suspicious_activities')
       .update({
         reviewed: true,
@@ -275,17 +267,23 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    if (error && !hasFirestore) {
-      console.error('Error updating suspicious activity:', error)
-      return NextResponse.json({ error: 'Failed to update activity' }, { status: 500 })
+    if (updateError && !hasFirestore) {
+      console.error('Error updating suspicious activity:', updateError)
+      return adminError('Failed to update activity', 500)
     }
 
-    return NextResponse.json({ success: true })
+    await logAdminAction({
+      action: 'suspicious_activity.review',
+      adminId: user.id,
+      adminEmail: user.email || 'unknown',
+      resourceType: 'suspicious_activity',
+      resourceId: activityId,
+      details: { activityId, actionTaken: actionTaken || null },
+    })
+
+    return adminOk({ success: true })
   } catch (error) {
     console.error('Error in PATCH suspicious activities:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return adminError('Internal server error', 500)
   }
 }

@@ -258,6 +258,21 @@
       "action_items_plural": "éléments d'action"
     },
     "your_events": "Vos événements",
+    "tools": {
+      "title": "Outils",
+      "analytics": {
+        "title": "Analyses",
+        "description": "Tendances des ventes et revenus"
+      },
+      "scan": {
+        "title": "Scanner les billets",
+        "description": "Vérifier les participants à l'entrée"
+      },
+      "promoCodes": {
+        "title": "Codes promo",
+        "description": "Créer des réductions et suivre l'utilisation"
+      }
+    },
     "view_all_events": "Voir tous les événements",
     "create_event": "Créer un événement",
     "no_events": {

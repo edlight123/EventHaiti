@@ -1,18 +1,19 @@
-import { getCurrentUser } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import Link from 'next/link'
 import { adminDb } from '@/lib/firebase/admin'
-import { isAdmin } from '@/lib/admin'
 import { AdminRevenueAnalytics } from '@/components/admin/AdminRevenueAnalytics'
 
 export const revalidate = 120 // Cache for 2 minutes
 
-export default async function AdminAnalyticsPage() {
-  const user = await getCurrentUser()
+export const dynamic = 'force-dynamic'
 
-  if (!user || !isAdmin(user.email)) {
+export default async function AdminAnalyticsPage() {
+  const { user, error } = await requireAdmin()
+
+  if (error || !user) {
     redirect('/')
   }
 

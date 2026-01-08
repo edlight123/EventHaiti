@@ -1,28 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
-import { requireAuth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import {
   notifyOrganizerVerificationApproved,
   notifyOrganizerVerificationRejected,
   notifyOrganizerVerificationNeedsInfo,
 } from '@/lib/notifications/payout-verification'
+import { logAdminAction } from '@/lib/admin/audit-log'
+import { adminError, adminOk } from '@/lib/api/admin-response'
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth('admin')
+    const { user, error } = await requireAdmin()
     if (error || !user) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+      return adminError(error || 'Admin access required', 403)
     }
 
     const body = await request.json()
     const { organizerId, verificationType, documentId, status, reason } = body
 
     if (!organizerId || !verificationType || !documentId || !status) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      return adminError('Missing required fields', 400)
     }
 
     if (!['verified', 'rejected', 'needs_info'].includes(status)) {
-      return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
+      return adminError('Invalid status', 400)
     }
 
     // Update verification document
@@ -64,12 +66,33 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({ success: true })
+    const auditAction = (() => {
+      const isBank = String(verificationType).toLowerCase() === 'bank'
+
+      if (status === 'verified') return isBank ? 'bank_verification.approve' : 'verification.approve'
+      if (status === 'rejected') return isBank ? 'bank_verification.reject' : 'verification.reject'
+      return isBank ? 'bank_verification.needs_info' : 'verification.needs_info'
+    })()
+
+    await logAdminAction({
+      action: auditAction as any,
+      adminId: user.id,
+      adminEmail: user.email || 'unknown',
+      resourceId: documentId,
+      resourceType: 'verification_document',
+      details: {
+        organizerId,
+        verificationType,
+        documentId,
+        status,
+        reason: reason || null,
+        destinationId: destinationId || null,
+      },
+    })
+
+    return adminOk({ success: true })
   } catch (e: any) {
     console.error('Error updating verification status:', e)
-    return NextResponse.json(
-      { error: 'Failed to update verification', message: e?.message || String(e) },
-      { status: 500 }
-    )
+    return adminError('Failed to update verification', 500, e?.message || String(e))
   }
 }

@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+
+export const dynamic = 'force-dynamic'
 
 type QueryDoc = FirebaseFirestore.QueryDocumentSnapshot
 type AuditRow = { id: string } & Record<string, any>
 
 export async function GET(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
-
-    if (error || !user || !isAdmin(user?.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     const url = new URL(request.url)
@@ -55,13 +56,13 @@ export async function GET(request: NextRequest) {
       })
     )
 
-    return NextResponse.json({
+    return adminOk({
       limit,
       found: checked.length,
       deletes: checked,
     })
   } catch (e: any) {
     console.error('debug/audit/deletes failed:', e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return adminError('Internal server error', 500, e?.message || String(e))
   }
 }

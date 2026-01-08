@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { AdminEventsTopBar } from '@/components/admin/events/AdminEventsTopBar'
@@ -33,6 +33,7 @@ export function AdminEventsModerationConsole({ userId, userEmail }: AdminEventsM
   const [selectedEvent, setSelectedEvent] = useState<any>(null)
   const [events, setEvents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [filters, setFilters] = useState<FilterOptions>({
     dateRange: 'any',
     city: '',
@@ -42,18 +43,13 @@ export function AdminEventsModerationConsole({ userId, userEmail }: AdminEventsM
     sortBy: 'newest'
   })
 
-  // Load events
-  useEffect(() => {
-    loadEvents()
-  }, [activeTab, filters])
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async (searchOverride?: string) => {
     setLoading(true)
     try {
       const response = await fetch('/api/admin/events/list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tab: activeTab, filters, searchQuery })
+        body: JSON.stringify({ tab: activeTab, filters, searchQuery: searchOverride ?? searchQuery })
       })
       const data = await response.json()
       setEvents(data.events || [])
@@ -62,12 +58,22 @@ export function AdminEventsModerationConsole({ userId, userEmail }: AdminEventsM
     } finally {
       setLoading(false)
     }
-  }
+  }, [activeTab, filters, searchQuery])
+
+  // Load events
+  useEffect(() => {
+    void loadEvents()
+  }, [loadEvents])
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)
     // Debounce search
-    setTimeout(() => loadEvents(), 300)
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current)
+    }
+    searchDebounceRef.current = setTimeout(() => {
+      void loadEvents(query)
+    }, 300)
   }
 
   const handleToggleSelect = (id: string) => {
@@ -101,7 +107,7 @@ export function AdminEventsModerationConsole({ userId, userEmail }: AdminEventsM
         })
       })
       setSelectedIds(new Set())
-      loadEvents()
+      void loadEvents()
     } catch (error) {
       console.error('Bulk action failed:', error)
     }
@@ -123,7 +129,7 @@ export function AdminEventsModerationConsole({ userId, userEmail }: AdminEventsM
         })
       })
       setSelectedEvent(null)
-      loadEvents()
+      void loadEvents()
     } catch (error) {
       console.error('Action failed:', error)
     }
@@ -230,7 +236,7 @@ export function AdminEventsModerationConsole({ userId, userEmail }: AdminEventsM
         filters={filters}
         onApply={(newFilters) => {
           setFilters(newFilters)
-          loadEvents()
+          void loadEvents()
         }}
       />
 

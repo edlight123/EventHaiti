@@ -26,43 +26,38 @@ export default async function PromoCodesPage({
   const supabase = await createClient()
   const params = await searchParams
 
-  // Fetch all events and filter for this organizer
-  const allEventsQuery = await supabase
+  // Fetch organizer's events only
+  const eventsQuery = await supabase
     .from('events')
-    .select('id, title, start_datetime, organizer_id')
-  
-  const allEvents = allEventsQuery.data || []
-  const events = allEvents
-    .filter((e: any) => e.organizer_id === user.id)
-    .sort((a: any, b: any) => new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime())
+    .select('id,title,start_datetime,organizer_id')
+    .eq('organizer_id', user.id)
+    .order('start_datetime', { ascending: false })
+
+  const events = eventsQuery.data || []
 
   // Fetch promo codes (no joins with Firebase)
   let promoCodesData: any[] = []
   
   try {
-    const allPromoCodesQuery = await supabase
+    const promoCodesQuery = await supabase
       .from('promo_codes')
-      .select('*')
-    
-    const allPromoCodes = allPromoCodesQuery.data || []
-    const userPromoCodes = allPromoCodes.filter((pc: any) => pc.organizer_id === user.id)
-    
+      .select('id,code,discount_type,discount_value,max_uses,uses_count,event_id,is_active,expires_at,created_at,organizer_id')
+      .eq('organizer_id', user.id)
+      .order('created_at', { ascending: false })
+
+    const userPromoCodes = promoCodesQuery.data || []
+
     // Get event titles separately
     const eventsMap = new Map()
-    if (events) {
-      events.forEach((event: any) => {
-        eventsMap.set(event.id, event.title)
-      })
-    }
-    
+    events.forEach((event: any) => {
+      eventsMap.set(event.id, event.title)
+    })
+
     // Attach event data manually
     promoCodesData = userPromoCodes.map((pc: any) => ({
       ...pc,
       event: pc.event_id ? { title: eventsMap.get(pc.event_id) } : null
     }))
-    
-    // Sort by created_at descending
-    promoCodesData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   } catch (error) {
     // Table doesn't exist yet
     console.log('Promo codes table not found')

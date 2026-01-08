@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
-    if (error || !user || !isAdmin(user?.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')
 
     if (!email) {
-      return NextResponse.json({ error: 'Email parameter required' }, { status: 400 })
+      return adminError('Email parameter required', 400)
     }
 
     // Find user by email
@@ -25,7 +27,7 @@ export async function GET(request: NextRequest) {
       .get()
 
     if (usersSnapshot.empty) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      return adminError('User not found', 404)
     }
 
     const userDoc = usersSnapshot.docs[0]
@@ -58,7 +60,7 @@ export async function GET(request: NextRequest) {
       verificationDocs[doc.id] = doc.data()
     })
 
-    return NextResponse.json({
+    return adminOk({
       userId,
       email,
       user: {
@@ -78,9 +80,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Error checking verification:', error)
-    return NextResponse.json(
-      { error: 'Failed to check verification', message: error.message },
-      { status: 500 }
-    )
+    return adminError('Failed to check verification', 500, error?.message || String(error))
   }
 }

@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { onAuthStateChanged } from 'firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import OrganizerEventsTopBar from '@/components/organizer/events-manager/OrganizerEventsTopBar'
@@ -14,22 +12,26 @@ import CalendarView from '@/components/organizer/events-manager/CalendarView'
 import EventCardSkeleton from '@/components/organizer/events-manager/EventCardSkeleton'
 import EventsEmptyState from '@/components/organizer/events-manager/EventsEmptyState'
 import QuickLinksBar from '@/components/organizer/events-manager/QuickLinksBar'
-import { auth, db } from '@/lib/firebase/client'
 import { isDemoMode, DEMO_EVENTS } from '@/lib/demo'
 import { getOrganizerEventsClient } from '@/lib/data/events.client'
 import { debounce } from '@/lib/data/utils'
 import Link from 'next/link'
+import { useOrganizerClientGuard } from '@/lib/hooks/useOrganizerClientGuard'
 
 export default function OrganizerEventsPage() {
   const router = useRouter()
-  const [firebaseUser, setFirebaseUser] = useState<any>(null)
-  const [navbarUser, setNavbarUser] = useState<any>(null)
-  const [authLoading, setAuthLoading] = useState(true)
-  const [roleChecked, setRoleChecked] = useState(false)
+
+  const { firebaseUser, navbarUser, loading: authLoading } = useOrganizerClientGuard({
+    loginRedirectPath: '/organizer/events',
+    upgradeRedirectPath: '/organizer/events',
+  })
   
   // State
   const [events, setEvents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
+  const [lastDoc, setLastDoc] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<EventTabType>('upcoming')
   const [view, setView] = useState<'list' | 'calendar'>('list')
@@ -52,63 +54,74 @@ export default function OrganizerEventsPage() {
     []
   )
   
-  // Fetch events
+  // Fetch first page of events once authenticated.
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      if (!authUser) {
-        router.push('/auth/login?redirect=/organizer/events')
-        return
-      }
+    if (authLoading) return
+    if (!firebaseUser) return
 
-      // Check user role in Firestore
+    let cancelled = false
+
+    const load = async () => {
       try {
-        const userDocRef = doc(db, 'users', authUser.uid)
-        const userDoc = await getDoc(userDocRef)
-        const userData = userDoc.data()
-        const userRole = userData?.role || 'attendee'
+        setLoading(true)
 
-        if (userRole !== 'organizer') {
-          // Not an organizer, show upgrade flow
-          router.push('/organizer?redirect=/organizer/events')
+        if (isDemoMode()) {
+          if (cancelled) return
+          setEvents(DEMO_EVENTS)
+          setHasMore(false)
+          setLastDoc(null)
           return
         }
 
-        setFirebaseUser(authUser)
-        setNavbarUser({
-          id: authUser.uid,
-          full_name: authUser.displayName || userData?.full_name || '',
-          email: authUser.email || '',
-          role: 'organizer' as const
-        })
-        setRoleChecked(true)
-      } catch (error) {
-        console.error('Error checking user role:', error)
-        router.push('/profile')
-        return
-      }
-      setAuthLoading(false)
+        const result = await getOrganizerEventsClient(firebaseUser.uid, 50)
+        if (cancelled) return
 
-      // Fetch events using optimized data layer
-      try {
-        setLoading(true)
-        
-        if (isDemoMode()) {
-          setEvents(DEMO_EVENTS)
-        } else {
-          // Fetch all events for this organizer (uses indexed query)
-          const result = await getOrganizerEventsClient(authUser.uid, 200)
-          setEvents(result.data)
-        }
+        setEvents(result.data)
+        setHasMore(Boolean(result.hasMore))
+        setLastDoc(result.lastDoc)
       } catch (error) {
         console.error('Error fetching events:', error)
-        setEvents([])
+        if (!cancelled) {
+          setEvents([])
+          setHasMore(false)
+          setLastDoc(null)
+        }
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
-    })
+    }
 
-    return () => unsubscribe()
-  }, [router])
+    load()
+
+    return () => {
+      cancelled = true
+    }
+  }, [authLoading, firebaseUser])
+
+  const handleLoadMore = async () => {
+    if (!firebaseUser) return
+    if (!hasMore || !lastDoc) return
+    if (loadingMore) return
+
+    try {
+      setLoadingMore(true)
+      const result = await getOrganizerEventsClient(firebaseUser.uid, 50, lastDoc)
+      const next = result.data || []
+
+      setEvents((prev) => {
+        const existingIds = new Set(prev.map((e: any) => String(e?.id || '')))
+        const deduped = next.filter((e: any) => !existingIds.has(String(e?.id || '')))
+        return [...prev, ...deduped]
+      })
+
+      setHasMore(Boolean(result.hasMore))
+      setLastDoc(result.lastDoc)
+    } catch (error) {
+      console.error('Error loading more events:', error)
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   // Filter and categorize events
   const categorizedEvents = useMemo(() => {
@@ -319,15 +332,30 @@ export default function OrganizerEventsPage() {
             onMonthChange={setCalendarMonth}
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {currentEvents.map((event) => (
-              <OrganizerEventCard
-                key={event.id}
-                event={event}
-                showNeedsAttention={activeTab === 'upcoming' || activeTab === 'drafts'}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {currentEvents.map((event) => (
+                <OrganizerEventCard
+                  key={event.id}
+                  event={event}
+                  showNeedsAttention={activeTab === 'upcoming' || activeTab === 'drafts'}
+                />
+              ))}
+            </div>
+
+            {hasMore && view === 'list' && !hasSearchOrFilters && (
+              <div className="flex justify-center mt-8">
+                <button
+                  type="button"
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white border border-gray-300 hover:bg-gray-50 text-gray-900 font-medium disabled:opacity-60"
+                >
+                  {loadingMore ? 'Loading…' : 'Load more events'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

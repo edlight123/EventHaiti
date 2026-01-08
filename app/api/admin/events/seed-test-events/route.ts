@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 export const runtime = 'nodejs'
 
@@ -73,9 +74,9 @@ async function ensureOrganizerUser(options: {
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
-    if (error || !user || !isAdmin(user?.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     const body = (await request.json().catch(() => ({}))) as SeedRequest
@@ -352,8 +353,15 @@ export async function POST(request: NextRequest) {
 
     await batch.commit()
 
-    return NextResponse.json({
-      success: true,
+    await logAdminAction({
+      action: 'admin.backfill',
+      adminId: user.id,
+      adminEmail: user.email || 'unknown',
+      resourceType: 'events',
+      details: { name: 'events.seed-test-events', batchTag, publish, createdCount: created.length },
+    })
+
+    return adminOk({
       batchTag,
       publish,
       createdCount: created.length,
@@ -365,6 +373,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (err: any) {
     console.error('Seed test events error:', err)
-    return NextResponse.json({ error: err?.message || 'Internal server error' }, { status: 500 })
+    return adminError('Internal server error', 500, err?.message || String(err))
   }
 }

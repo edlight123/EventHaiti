@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
       // transferring money without deducting the organizer's available balance.
       const { ref: earningsRef } = await getOrCreateEventEarnings(String(eventId))
 
-      await adminDb.runTransaction(async (tx) => {
+      await adminDb.runTransaction(async (tx: any) => {
         const [earningsSnap, withdrawalSnap] = await Promise.all([
           tx.get(earningsRef),
           tx.get(withdrawalRef),
@@ -255,7 +255,7 @@ export async function POST(req: NextRequest) {
         // Rollback reserved earnings if the MonCash transfer failed.
         try {
           const { ref: earningsRef } = await getOrCreateEventEarnings(String(eventId))
-          await adminDb.runTransaction(async (tx) => {
+          await adminDb.runTransaction(async (tx: any) => {
             const [earningsSnap, withdrawalSnap] = await Promise.all([
               tx.get(earningsRef),
               tx.get(withdrawalRef),

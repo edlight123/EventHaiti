@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { FieldValue } from 'firebase-admin/firestore'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
-    if (error || !user || !isAdmin(user?.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', 401)
     }
 
     const body = await request.json()
@@ -27,12 +28,18 @@ export async function POST(request: NextRequest) {
       { merge: true }
     )
 
-    return NextResponse.json({ success: true, prefunding: { enabled, available } })
+    await logAdminAction({
+      action: 'payout.prefunding.update',
+      adminId: user.id,
+      adminEmail: user.email || 'unknown',
+      resourceType: 'config',
+      resourceId: 'payouts',
+      details: { enabled, available },
+    })
+
+    return adminOk({ success: true, prefunding: { enabled, available } })
   } catch (error: any) {
     console.error('admin payout-prefunding error:', error)
-    return NextResponse.json(
-      { error: 'Failed to update prefunding status', message: error?.message || String(error) },
-      { status: 500 }
-    )
+    return adminError('Failed to update prefunding status', 500, error?.message || String(error))
   }
 }

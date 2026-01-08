@@ -7,7 +7,7 @@ import { SalesSnapshot } from '@/components/organizer/SalesSnapshot'
 import { OrganizerEventCard } from '@/components/organizer/OrganizerEventCard'
 import { PayoutsWidget } from '@/components/organizer/PayoutsWidget'
 import Link from 'next/link'
-import { CalendarPlus, DollarSign, CalendarDays, Wallet } from 'lucide-react'
+import { CalendarPlus, DollarSign, CalendarDays, Wallet, BarChart3, QrCode, TicketPercent } from 'lucide-react'
 
 interface Alert {
   id: string
@@ -110,7 +110,7 @@ export default function OrganizerDashboardClient({
           </Link>
 
           <Link
-            href="/organizer/payouts"
+            href="/organizer/settings/payouts"
             className="bg-white p-4 rounded-xl border border-gray-200 hover:border-teal-300 hover:shadow-md transition-all group"
           >
             <div className="flex items-center gap-3">
@@ -135,6 +135,59 @@ export default function OrganizerDashboardClient({
               <div>
                 <div className="font-semibold text-white">Create Event</div>
                 <div className="text-xs text-white/80">Start selling tickets</div>
+              </div>
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* Discovery Links */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-bold text-gray-900">{t('organizer.tools.title')}</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Link
+            href="/organizer/analytics"
+            className="bg-white p-4 rounded-xl border border-gray-200 hover:border-teal-300 hover:shadow-md transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-teal-50 rounded-lg flex items-center justify-center group-hover:bg-teal-100 transition-colors">
+                <BarChart3 className="w-5 h-5 text-teal-700" />
+              </div>
+              <div>
+                <div className="font-semibold text-gray-900">{t('organizer.tools.analytics.title')}</div>
+                <div className="text-xs text-gray-500">{t('organizer.tools.analytics.description')}</div>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/organizer/scan"
+            className="bg-white p-4 rounded-xl border border-gray-200 hover:border-teal-300 hover:shadow-md transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                <QrCode className="w-5 h-5 text-purple-700" />
+              </div>
+              <div>
+                <div className="font-semibold text-gray-900">{t('organizer.tools.scan.title')}</div>
+                <div className="text-xs text-gray-500">{t('organizer.tools.scan.description')}</div>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/organizer/promo-codes"
+            className="bg-white p-4 rounded-xl border border-gray-200 hover:border-teal-300 hover:shadow-md transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                <TicketPercent className="w-5 h-5 text-blue-700" />
+              </div>
+              <div>
+                <div className="font-semibold text-gray-900">{t('organizer.tools.promoCodes.title')}</div>
+                <div className="text-xs text-gray-500">{t('organizer.tools.promoCodes.description')}</div>
               </div>
             </div>
           </Link>

@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb, adminStorage } from '@/lib/firebase/admin'
-import { isAdmin } from '@/lib/admin'
+import { isAdmin as isAdminEmail } from '@/lib/admin'
+import { logAdminAction } from '@/lib/admin/audit-log'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+
+function isRoleAdmin(role: unknown): boolean {
+  if (typeof role !== 'string') return false
+  const normalized = role.trim().toLowerCase().replace(/[\s-]+/g, '_')
+  return normalized === 'admin' || normalized === 'super_admin'
+}
 
 export async function POST(request: NextRequest) {
   try {
     // Verify admin authentication
     const token = request.headers.get('authorization')?.split('Bearer ')[1]
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return adminError('Unauthorized', 401)
     }
 
     const decodedToken = await adminAuth.verifyIdToken(token)
@@ -16,8 +24,11 @@ export async function POST(request: NextRequest) {
     // Check if user is admin
     const userDoc = await adminDb.collection('users').doc(userId).get()
     const userData = userDoc.data()
-    if (!isAdmin(userData?.email)) {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
+
+    const roleIsAdmin = isRoleAdmin(userData?.role)
+    const emailIsAdmin = isAdminEmail(String(userData?.email || ''))
+    if (!roleIsAdmin && !emailIsAdmin) {
+      return adminError('Forbidden - Admin access required', 403)
     }
 
     // Parse form data
@@ -27,26 +38,17 @@ export async function POST(request: NextRequest) {
     const organizerId = formData.get('organizerId') as string
 
     if (!file || !payoutId || !organizerId) {
-      return NextResponse.json(
-        { error: 'Missing required fields: file, payoutId, organizerId' },
-        { status: 400 }
-      )
+      return adminError('Missing required fields: file, payoutId, organizerId', 400)
     }
 
     // Validate file
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf']
     if (!validTypes.includes(file.type)) {
-      return NextResponse.json(
-        { error: 'Invalid file type. Must be JPG, PNG, WebP, or PDF' },
-        { status: 400 }
-      )
+      return adminError('Invalid file type. Must be JPG, PNG, WebP, or PDF', 400)
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json(
-        { error: 'File size must be less than 5MB' },
-        { status: 400 }
-      )
+      return adminError('File size must be less than 5MB', 400)
     }
 
     // Verify payout exists
@@ -58,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     const payoutDoc = await payoutRef.get()
     if (!payoutDoc.exists) {
-      return NextResponse.json({ error: 'Payout not found' }, { status: 404 })
+      return adminError('Payout not found', 404)
     }
 
     // Generate unique filename
@@ -97,18 +99,29 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date().toISOString()
     })
 
-    return NextResponse.json({
-      success: true,
+    await logAdminAction({
+      action: 'payout.receipt.upload',
+      adminId: userId,
+      adminEmail: String(userData?.email || decodedToken.email || 'unknown'),
+      resourceId: payoutId,
+      resourceType: 'payout',
+      details: {
+        payoutId,
+        organizerId,
+        receiptUrl,
+        fileName,
+        contentType: file.type,
+      },
+    })
+
+    return adminOk({
       receiptUrl,
       message: 'Receipt uploaded successfully'
     })
 
   } catch (error: any) {
     console.error('Receipt upload error:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to upload receipt' },
-      { status: 500 }
-    )
+    return adminError('Failed to upload receipt', 500, error?.message || 'Unknown error')
   }
 }
 
@@ -118,7 +131,7 @@ export async function DELETE(request: NextRequest) {
     // Verify admin authentication
     const token = request.headers.get('authorization')?.split('Bearer ')[1]
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return adminError('Unauthorized', 401)
     }
 
     const decodedToken = await adminAuth.verifyIdToken(token)
@@ -127,8 +140,11 @@ export async function DELETE(request: NextRequest) {
     // Check if user is admin
     const userDoc = await adminDb.collection('users').doc(userId).get()
     const userData = userDoc.data()
-    if (!isAdmin(userData?.email)) {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
+
+    const roleIsAdmin = isRoleAdmin(userData?.role)
+    const emailIsAdmin = isAdminEmail(String(userData?.email || ''))
+    if (!roleIsAdmin && !emailIsAdmin) {
+      return adminError('Forbidden - Admin access required', 403)
     }
 
     const { searchParams } = new URL(request.url)
@@ -136,10 +152,7 @@ export async function DELETE(request: NextRequest) {
     const organizerId = searchParams.get('organizerId')
 
     if (!payoutId || !organizerId) {
-      return NextResponse.json(
-        { error: 'Missing required parameters: payoutId, organizerId' },
-        { status: 400 }
-      )
+      return adminError('Missing required parameters: payoutId, organizerId', 400)
     }
 
     // Get payout document
@@ -151,19 +164,19 @@ export async function DELETE(request: NextRequest) {
 
     const payoutDoc = await payoutRef.get()
     if (!payoutDoc.exists) {
-      return NextResponse.json({ error: 'Payout not found' }, { status: 404 })
+      return adminError('Payout not found', 404)
     }
 
     const payout = payoutDoc.data()
     if (!payout?.receiptUrl) {
-      return NextResponse.json({ error: 'No receipt found' }, { status: 404 })
+      return adminError('No receipt found', 404)
     }
 
     // Extract file path from URL
     const bucket = adminStorage.bucket()
     const urlParts = payout.receiptUrl.split(`${bucket.name}/`)
     if (urlParts.length < 2) {
-      return NextResponse.json({ error: 'Invalid receipt URL' }, { status: 400 })
+      return adminError('Invalid receipt URL', 400)
     }
 
     const filePath = urlParts[1]
@@ -184,16 +197,26 @@ export async function DELETE(request: NextRequest) {
       updatedAt: new Date().toISOString()
     })
 
-    return NextResponse.json({
-      success: true,
+    await logAdminAction({
+      action: 'payout.receipt.delete',
+      adminId: userId,
+      adminEmail: String(userData?.email || decodedToken.email || 'unknown'),
+      resourceId: payoutId,
+      resourceType: 'payout',
+      details: {
+        payoutId,
+        organizerId,
+        previousReceiptUrl: payout.receiptUrl,
+        filePath,
+      },
+    })
+
+    return adminOk({
       message: 'Receipt deleted successfully'
     })
 
   } catch (error: any) {
     console.error('Receipt deletion error:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to delete receipt' },
-      { status: 500 }
-    )
+    return adminError('Failed to delete receipt', 500, error?.message || 'Unknown error')
   }
 }

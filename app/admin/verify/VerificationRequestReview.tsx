@@ -175,7 +175,7 @@ export default function VerificationRequestReview({ request, user }: Props) {
     }
 
     loadImageUrls()
-  }, [request.id, request.files])
+  }, [request])
 
   // Normalize date
   const submittedDate =

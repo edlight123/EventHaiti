@@ -7,6 +7,8 @@ import NotificationPreferences from '@/components/settings/NotificationPreferenc
 
 export const revalidate = 0
 
+export const dynamic = 'force-dynamic'
+
 export default async function NotificationSettingsPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/auth/login?redirect=/settings/notifications')

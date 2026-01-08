@@ -173,7 +173,7 @@ export default function EventEarningsView({ event, earnings, organizerId, tierBr
     }
 
     void run()
-  }, [showWithdrawModal, withdrawMethod])
+  }, [event?.id, showWithdrawModal, withdrawMethod])
 
   if (!earnings) {
     return (

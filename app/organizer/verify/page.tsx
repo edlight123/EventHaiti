@@ -7,9 +7,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { onAuthStateChanged } from 'firebase/auth'
-import { auth, db } from '@/lib/firebase/client'
-import { doc, getDoc } from 'firebase/firestore'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import Link from 'next/link'
@@ -30,13 +27,18 @@ import {
   canSubmitForReview,
   type VerificationRequest
 } from '@/lib/verification'
+import { useOrganizerClientGuard } from '@/lib/hooks/useOrganizerClientGuard'
 
 type ViewMode = 'overview' | 'organizerInfo' | 'governmentId' | 'selfie' | 'businessDetails' | 'review'
 
 export default function VerifyOrganizerPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [user, setUser] = useState<any>(null)
+  const { firebaseUser, navbarUser: user, userProfile, loading: authLoading } = useOrganizerClientGuard({
+    loginRedirectPath: '/organizer/verify',
+    upgradeRedirectPath: '/organizer/verify',
+  })
+
   const [loading, setLoading] = useState(true)
   const [restarting, setRestarting] = useState(false)
   const [request, setRequest] = useState<VerificationRequest | null>(null)
@@ -73,67 +75,53 @@ export default function VerifyOrganizerPage() {
     setViewMode('review')
   }, [request, wantsDetails])
 
-  // Load verification request
+  // Load verification request once authenticated.
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      if (!authUser) {
-        router.push('/auth/login?redirect=/organizer/verify')
-        return
-      }
+    if (authLoading) return
+    if (!firebaseUser) return
 
-      setUser({
-        id: authUser.uid,
-        full_name: authUser.displayName || '',
-        email: authUser.email || '',
-        role: 'organizer' as const
-      })
+    const uid = firebaseUser.uid
+    setUserVerification({
+      is_verified: userProfile?.is_verified ?? false,
+      verification_status: userProfile?.verification_status ?? undefined,
+    })
 
+    let cancelled = false
+
+    const load = async () => {
       try {
-        // Fetch user profile verification flag (source of truth for "already verified").
-        try {
-          const userDoc = await getDoc(doc(db, 'users', authUser.uid))
-          if (userDoc.exists()) {
-            const userData = userDoc.data() as any
-            setUserVerification({
-              is_verified: userData?.is_verified ?? false,
-              verification_status: userData?.verification_status ?? undefined,
-            })
-          } else {
-            setUserVerification(null)
-          }
-        } catch (e) {
-          // If rules prevent reads or doc is missing, fall back to verification_requests only.
-          setUserVerification(null)
-        }
+        let verificationRequest = await getVerificationRequest(uid)
 
-        let verificationRequest = await getVerificationRequest(authUser.uid)
-        
         // Initialize if doesn't exist
         if (!verificationRequest) {
-          verificationRequest = await initializeVerificationRequest(authUser.uid)
+          verificationRequest = await initializeVerificationRequest(uid)
         } else {
           // Migrate old payout step to optional (persisted so submit validation won't be blocked).
           if (verificationRequest.steps.payoutSetup?.required === true) {
-            await updateVerificationStep(authUser.uid, 'payoutSetup', {
+            await updateVerificationStep(uid, 'payoutSetup', {
               required: false,
               missingFields: [],
               description: 'Configure how you receive payments (can be set up later)'
             })
-            verificationRequest = (await getVerificationRequest(authUser.uid)) || verificationRequest
+            verificationRequest = (await getVerificationRequest(uid)) || verificationRequest
           }
         }
 
-        setRequest(verificationRequest)
+        if (!cancelled) setRequest(verificationRequest)
       } catch (err: any) {
         console.error('Error loading verification:', err)
-        setError(err.message || 'Failed to load verification data')
+        if (!cancelled) setError(err.message || 'Failed to load verification data')
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
-    })
+    }
 
-    return () => unsubscribe()
-  }, [router])
+    load()
+
+    return () => {
+      cancelled = true
+    }
+  }, [authLoading, firebaseUser, userProfile])
 
   // Reload verification data
   const reloadRequest = async () => {
@@ -264,7 +252,7 @@ export default function VerifyOrganizerPage() {
     setViewMode(viewModes[stepId] || 'overview')
   }
 
-  if (loading || restarting) {
+  if (authLoading || loading || restarting) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

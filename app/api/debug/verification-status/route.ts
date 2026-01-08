@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/firebase-db/server'
-import { getCurrentUser } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
-
-    if (!user || !isAdmin(user.email || '')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     const supabase = await createClient()
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )
 
-    return NextResponse.json({
+    return adminOk({
       userId: user.id,
       userEmail: user.email,
       userData: userData || null,
@@ -36,9 +37,6 @@ export async function GET(request: NextRequest) {
       error: error ? error.message : null,
     })
   } catch (err: any) {
-    return NextResponse.json({
-      error: err.message,
-      stack: err.stack,
-    }, { status: 500 })
+    return adminError('Internal server error', 500, err?.message || String(err))
   }
 }

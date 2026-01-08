@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
+    const { user, error } = await requireAdmin()
 
-    if (error || !user || !isAdmin(user?.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', 401)
     }
 
     console.log('Fetching verification requests with status "pending"...')
@@ -58,7 +59,19 @@ export async function POST(request: NextRequest) {
       console.log(`✅ Successfully updated ${userCount} users to verification_status "pending_review"`)
     }
 
-    return NextResponse.json({
+    await logAdminAction({
+      action: 'admin.backfill',
+      adminId: user.id,
+      adminEmail: user.email || 'unknown',
+      resourceType: 'verification_requests',
+      details: {
+        name: 'migrate_verification_status',
+        verificationsUpdated: count,
+        usersUpdated: userCount,
+      },
+    })
+
+    return adminOk({
       success: true,
       verificationsUpdated: count,
       usersUpdated: userCount,
@@ -67,9 +80,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error migrating verification statuses:', error)
-    return NextResponse.json({ 
-      error: 'Migration failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return adminError(
+      'Migration failed',
+      500,
+      error instanceof Error ? error.message : 'Unknown error'
+    )
   }
 }

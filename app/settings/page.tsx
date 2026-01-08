@@ -8,6 +8,9 @@ import SettingsPageClient from './SettingsPageClient'
 
 export const revalidate = 60 // Cache for 1 minute
 
+// Depends on auth cookies and per-user settings.
+export const dynamic = 'force-dynamic'
+
 export default async function SettingsPage() {
   const user = await getCurrentUser()
 

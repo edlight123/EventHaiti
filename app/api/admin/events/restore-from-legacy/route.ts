@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 function clampInt(value: unknown, min: number, max: number, fallback: number): number {
   const n = typeof value === 'number' ? value : Number(value)
@@ -111,9 +112,9 @@ async function fetchLegacyEventsFromSupabase(params: {
  */
 export async function POST(req: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
-    if (error || !user || !isAdmin(user.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     const body = await req.json().catch(() => ({}))
@@ -124,13 +125,10 @@ export async function POST(req: NextRequest) {
 
     const cfg = getSupabaseConfig()
     if (!cfg) {
-      return NextResponse.json(
-        {
-          error: 'Supabase not configured',
-          message:
-            'Set SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY to restore from the legacy SQL events table. If you do not have Supabase anymore, restoration requires a Firestore backup/export.',
-        },
-        { status: 412 }
+      return adminError(
+        'Supabase not configured',
+        412,
+        'Set SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY to restore from the legacy SQL events table. If you do not have Supabase anymore, restoration requires a Firestore backup/export.'
       )
     }
 
@@ -242,8 +240,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      success: true,
+    await logAdminAction({
+      action: 'admin.backfill',
+      adminId: user.id,
+      adminEmail: user.email || 'unknown',
+      resourceType: 'events',
+      details: { name: 'events.restore-from-legacy', dryRun, onlyMissing, limit, since, processed, restored, skippedExisting, failures: failures.length },
+    })
+
+    return adminOk({
       dryRun,
       onlyMissing,
       processed,
@@ -253,9 +258,6 @@ export async function POST(req: NextRequest) {
     })
   } catch (err: any) {
     console.error('restore-from-legacy error:', err)
-    return NextResponse.json(
-      { error: 'Internal server error', message: err?.message || String(err) },
-      { status: 500 }
-    )
+    return adminError('Internal server error', 500, err?.message || String(err))
   }
 }

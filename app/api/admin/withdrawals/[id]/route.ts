@@ -1,45 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 export async function POST(req: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
+    const { user, error } = await requireAdmin()
     if (error || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (!isAdmin(user.email)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+      return adminError('Unauthorized', 401)
     }
 
     const body = await req.json()
     const { withdrawalId, action, note } = body
 
     if (!withdrawalId || !action) {
-      return NextResponse.json(
-        { error: 'Missing withdrawalId or action' },
-        { status: 400 }
-      )
+      return adminError('Missing withdrawalId or action', 400)
     }
 
     if (!['approve', 'reject', 'complete', 'fail'].includes(action)) {
-      return NextResponse.json(
-        { error: 'Invalid action. Must be: approve, reject, complete, or fail' },
-        { status: 400 }
-      )
+      return adminError('Invalid action. Must be: approve, reject, complete, or fail', 400)
     }
 
     const withdrawalRef = adminDb.collection('withdrawal_requests').doc(withdrawalId)
-    const withdrawalDoc = await withdrawalRef.get()
-
-    if (!withdrawalDoc.exists) {
-      return NextResponse.json({ error: 'Withdrawal not found' }, { status: 404 })
-    }
-
-    const withdrawal = withdrawalDoc.data()!
-    const now = new Date()
 
     const normalizeAmountToCents = (raw: any): number => {
       const n = Number(raw)
@@ -49,114 +32,120 @@ export async function POST(req: NextRequest) {
       return n
     }
 
-    let updates: any = {
-      updatedAt: now
-    }
+    const txResult = await adminDb.runTransaction(async (tx: any) => {
+      const withdrawalSnap = await tx.get(withdrawalRef)
+      if (!withdrawalSnap.exists) {
+        return { notFound: true }
+      }
 
-    switch (action) {
-      case 'approve':
-        if (withdrawal.status !== 'pending') {
-          return NextResponse.json(
-            { error: 'Can only approve pending withdrawals' },
-            { status: 400 }
-          )
+      const withdrawal = withdrawalSnap.data() as any
+      const beforeStatus = String(withdrawal.status || '')
+      const now = new Date()
+
+      const updates: any = { updatedAt: now }
+
+      const setFailedWithRefund = async (reason: string) => {
+        updates.status = 'failed'
+        updates.failureReason = reason
+        updates.processedBy = user.id
+        updates.processedAt = now
+
+        const amountInCents = normalizeAmountToCents(withdrawal.amount)
+        const earningsQuery = adminDb
+          .collection('event_earnings')
+          .where('eventId', '==', withdrawal.eventId)
+          .limit(1)
+
+        const earningsSnap = await tx.get(earningsQuery)
+        if (!earningsSnap.empty) {
+          const earningsDoc = earningsSnap.docs[0]
+          const earnings = earningsDoc.data() as any
+
+          const available = Number(earnings.availableToWithdraw || 0)
+          const withdrawn = Number(earnings.withdrawnAmount || 0)
+
+          tx.update(earningsDoc.ref, {
+            availableToWithdraw: available + amountInCents,
+            withdrawnAmount: Math.max(0, withdrawn - amountInCents),
+            settlementStatus: 'ready',
+            updatedAt: now.toISOString(),
+          })
         }
+      }
+
+      // Idempotent + allowed transitions
+      if (action === 'approve') {
+        if (beforeStatus === 'processing') return { idempotent: true, afterStatus: beforeStatus }
+        if (beforeStatus !== 'pending') return { conflict: true, beforeStatus }
         updates.status = 'processing'
         updates.processedBy = user.id
         updates.processedAt = now
         if (note) updates.adminNote = note
-        break
+      }
 
-      case 'reject':
-        if (withdrawal.status !== 'pending') {
-          return NextResponse.json(
-            { error: 'Can only reject pending withdrawals' },
-            { status: 400 }
-          )
-        }
-        updates.status = 'failed'
-        updates.failureReason = note || 'Rejected by admin'
-        updates.processedBy = user.id
-        updates.processedAt = now
+      if (action === 'reject') {
+        if (beforeStatus === 'failed') return { idempotent: true, afterStatus: beforeStatus }
+        if (beforeStatus !== 'pending') return { conflict: true, beforeStatus }
+        await setFailedWithRefund(note || 'Rejected by admin')
+      }
 
-        // Refund the amount back to earnings
-        const earningsRef = adminDb
-          .collection('event_earnings')
-          .where('eventId', '==', withdrawal.eventId)
-          .limit(1)
-
-        const earningsSnapshot = await earningsRef.get()
-        if (!earningsSnapshot.empty) {
-          const earningsDoc = earningsSnapshot.docs[0]
-          const earnings = earningsDoc.data()
-          
-          const amountInCents = normalizeAmountToCents(withdrawal.amount)
-          
-          await earningsDoc.ref.update({
-            availableToWithdraw: earnings.availableToWithdraw + amountInCents,
-            withdrawnAmount: Math.max(0, earnings.withdrawnAmount - amountInCents),
-            settlementStatus: 'ready',
-            updatedAt: now.toISOString()
-          })
-        }
-        break
-
-      case 'complete':
-        if (withdrawal.status !== 'processing') {
-          return NextResponse.json(
-            { error: 'Can only complete processing withdrawals' },
-            { status: 400 }
-          )
-        }
+      if (action === 'complete') {
+        if (beforeStatus === 'completed') return { idempotent: true, afterStatus: beforeStatus }
+        if (beforeStatus !== 'processing') return { conflict: true, beforeStatus }
         updates.status = 'completed'
         updates.completedAt = now
         if (note) updates.completionNote = note
-        break
+      }
 
-      case 'fail':
-        if (withdrawal.status === 'completed') {
-          return NextResponse.json(
-            { error: 'Cannot fail a completed withdrawal' },
-            { status: 400 }
-          )
-        }
-        updates.status = 'failed'
-        updates.failureReason = note || 'Processing failed'
-        
-        // Refund the amount back to earnings
-        const earningsRef2 = adminDb
-          .collection('event_earnings')
-          .where('eventId', '==', withdrawal.eventId)
-          .limit(1)
+      if (action === 'fail') {
+        if (beforeStatus === 'failed') return { idempotent: true, afterStatus: beforeStatus }
+        if (beforeStatus === 'completed') return { conflict: true, beforeStatus }
+        await setFailedWithRefund(note || 'Processing failed')
+      }
 
-        const earningsSnapshot2 = await earningsRef2.get()
-        if (!earningsSnapshot2.empty) {
-          const earningsDoc = earningsSnapshot2.docs[0]
-          const earnings = earningsDoc.data()
-          
-          const amountInCents = normalizeAmountToCents(withdrawal.amount)
-          
-          await earningsDoc.ref.update({
-            availableToWithdraw: earnings.availableToWithdraw + amountInCents,
-            withdrawnAmount: Math.max(0, earnings.withdrawnAmount - amountInCents),
-            settlementStatus: 'ready',
-            updatedAt: now.toISOString()
-          })
-        }
-        break
+      tx.update(withdrawalRef, updates)
+      return { idempotent: false, beforeStatus, afterStatus: String(updates.status || beforeStatus) }
+    })
+
+    if ((txResult as any)?.notFound) {
+      return adminError('Withdrawal not found', 404)
     }
 
-    await withdrawalRef.update(updates)
+    if ((txResult as any)?.conflict) {
+      return adminError('Invalid withdrawal status transition', 409, `Cannot ${action} - withdrawal is ${(txResult as any).beforeStatus}`)
+    }
 
-    return NextResponse.json({
-      success: true,
-      message: `Withdrawal ${action}d successfully`
+    const idempotent = Boolean((txResult as any)?.idempotent)
+
+    if (!idempotent) {
+      const actionMap: Record<string, any> = {
+        approve: 'withdrawal.approve',
+        reject: 'withdrawal.reject',
+        complete: 'withdrawal.complete',
+        fail: 'withdrawal.fail',
+      }
+
+      logAdminAction({
+        action: actionMap[action] || 'admin.backfill',
+        adminId: user.id,
+        adminEmail: user.email || 'unknown',
+        resourceType: 'withdrawal',
+        resourceId: withdrawalId,
+        details: {
+          withdrawalId,
+          note: note || null,
+          beforeStatus: (txResult as any)?.beforeStatus,
+          afterStatus: (txResult as any)?.afterStatus,
+        },
+      }).catch(() => {})
+    }
+
+    return adminOk({
+      message: `Withdrawal ${action}d successfully`,
+      idempotent,
     })
   } catch (err: any) {
     console.error('Error updating withdrawal:', err)
-    return NextResponse.json(
-      { error: err.message || 'Failed to update withdrawal' },
-      { status: 500 }
-    )
+    return adminError('Failed to update withdrawal', 500, err?.message)
   }
 }

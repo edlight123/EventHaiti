@@ -1,35 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
+import { logAdminAction } from '@/lib/admin/audit-log'
+import { adminError, adminOk } from '@/lib/api/admin-response'
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
+    const { user, error } = await requireAdmin()
     if (error || !user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-    }
-
-    if (!isAdmin(user.email)) {
-      return NextResponse.json({ error: 'Unauthorized - Admin only' }, { status: 403 })
+      return adminError(error || 'Not authenticated', error ? 403 : 401)
     }
 
     const { organizerId, action } = await request.json()
 
     if (!organizerId || !action) {
-      return NextResponse.json(
-        { error: 'Organizer ID and action are required' },
-        { status: 400 }
-      )
+      return adminError('Organizer ID and action are required', 400)
     }
 
     // Validate action
     const validActions = ['ban', 'unban', 'disable_posting', 'enable_posting']
     if (!validActions.includes(action)) {
-      return NextResponse.json(
-        { error: 'Invalid action' },
-        { status: 400 }
-      )
+      return adminError('Invalid action', 400)
     }
 
     // Get organizer data
@@ -37,10 +28,7 @@ export async function POST(request: NextRequest) {
     const organizerDoc = await organizerDocRef.get()
 
     if (!organizerDoc.exists) {
-      return NextResponse.json(
-        { error: 'Organizer not found' },
-        { status: 404 }
-      )
+      return adminError('Organizer not found', 404)
     }
 
     const organizerData = organizerDoc.data()
@@ -90,16 +78,32 @@ export async function POST(request: NextRequest) {
       details: updates
     })
 
-    return NextResponse.json({
-      success: true,
+    const auditAction = (() => {
+      if (action === 'ban') return 'user.ban'
+      if (action === 'unban') return 'user.unban'
+      if (action === 'disable_posting') return 'user.disable_posting'
+      return 'user.enable_posting'
+    })()
+
+    await logAdminAction({
+      action: auditAction as any,
+      adminId: user.id,
+      adminEmail: user.email || 'unknown',
+      resourceId: organizerId,
+      resourceType: 'user',
+      details: {
+        userEmail: organizerData?.email || null,
+        userName: organizerData?.full_name || organizerData?.name || null,
+        updates,
+      },
+    })
+
+    return adminOk({
       message: successMessage
     })
 
   } catch (error: any) {
     console.error('Error performing organizer action:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to perform action' },
-      { status: 500 }
-    )
+    return adminError('Failed to perform action', 500, error?.message || 'Unknown error')
   }
 }

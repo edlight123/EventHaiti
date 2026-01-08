@@ -41,6 +41,15 @@ export default function SecurityDashboardClient() {
   const [activities, setActivities] = useState<SuspiciousActivity[]>([])
   const [unreviewedCount, setUnreviewedCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [rebuildStatus, setRebuildStatus] = useState<
+    | null
+    | {
+        running: boolean
+        step: 'users' | 'events' | 'tickets' | 'done'
+        processed: { users: number; events: number; tickets: number }
+        error?: string
+      }
+  >(null)
   const [filter, setFilter] = useState<{
     reviewed: string
     severity: string
@@ -52,6 +61,97 @@ export default function SecurityDashboardClient() {
   })
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [actionText, setActionText] = useState('')
+
+  const rebuildSearchIndex = async () => {
+    if (!confirm('Rebuild admin search index now? This may take a few minutes.')) return
+
+    setRebuildStatus({
+      running: true,
+      step: 'users',
+      processed: { users: 0, events: 0, tickets: 0 },
+    })
+
+    const runStep = async (type: 'users' | 'events' | 'tickets') => {
+      let cursor: string | null = null
+      let total = 0
+
+      while (true) {
+        setRebuildStatus((prev) =>
+          prev
+            ? {
+                ...prev,
+                running: true,
+                step: type,
+              }
+            : prev
+        )
+
+        const res: Response = await fetch('/api/admin/search/rebuild', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type, cursor, limit: 200 }),
+        })
+
+        const data: any = await res.json().catch(() => ({}))
+        if (!res.ok || !data?.ok) {
+          throw new Error(data?.error || data?.details || 'Rebuild failed')
+        }
+
+        total += Number(data.processed || 0)
+        cursor = data.nextCursor || null
+
+        setRebuildStatus((prev) => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            running: true,
+            step: type,
+            processed: {
+              ...prev.processed,
+              [type]: total,
+            },
+          }
+        })
+
+        if (data.done || !cursor) break
+      }
+    }
+
+    try {
+      await runStep('users')
+      await runStep('events')
+      await runStep('tickets')
+
+      setRebuildStatus((prev) =>
+        prev
+          ? {
+              ...prev,
+              running: false,
+              step: 'done',
+            }
+          : {
+              running: false,
+              step: 'done',
+              processed: { users: 0, events: 0, tickets: 0 },
+            }
+      )
+    } catch (e) {
+      setRebuildStatus((prev) =>
+        prev
+          ? {
+              ...prev,
+              running: false,
+              error: e instanceof Error ? e.message : 'Rebuild failed',
+            }
+          : {
+              running: false,
+              step: 'users',
+              processed: { users: 0, events: 0, tickets: 0 },
+              error: e instanceof Error ? e.message : 'Rebuild failed',
+            }
+      )
+    }
+  }
 
   const fetchActivities = useCallback(async () => {
     setLoading(true)
@@ -128,6 +228,39 @@ export default function SecurityDashboardClient() {
               <p className="text-[13px] sm:text-base text-red-800 font-medium">
                 ⚠️ {unreviewedCount} unreviewed suspicious {unreviewedCount === 1 ? 'activity' : 'activities'}
               </p>
+            </div>
+          )}
+        </div>
+
+        {/* Admin Tools */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Admin tools</h2>
+          <p className="text-[13px] sm:text-sm text-gray-600 mb-4">
+            Rebuild the admin search index so search is fully populated immediately.
+          </p>
+
+          <button
+            onClick={rebuildSearchIndex}
+            disabled={Boolean(rebuildStatus?.running)}
+            className="bg-gray-900 hover:bg-black text-white px-4 py-2.5 rounded-lg text-[15px] sm:text-base font-semibold disabled:opacity-50 min-h-[44px]"
+          >
+            {rebuildStatus?.running ? 'Rebuilding…' : 'Rebuild search index'}
+          </button>
+
+          {rebuildStatus && (
+            <div className="mt-4 text-sm text-gray-700">
+              <div>Users indexed: {rebuildStatus.processed.users}</div>
+              <div>Events indexed: {rebuildStatus.processed.events}</div>
+              <div>Tickets indexed: {rebuildStatus.processed.tickets}</div>
+              {rebuildStatus.step !== 'done' && (
+                <div className="text-gray-500 mt-1">Current step: {rebuildStatus.step}</div>
+              )}
+              {rebuildStatus.step === 'done' && (
+                <div className="text-green-700 font-semibold mt-1">Rebuild complete</div>
+              )}
+              {rebuildStatus.error && (
+                <div className="text-red-700 font-semibold mt-1">{rebuildStatus.error}</div>
+              )}
             </div>
           )}
         </div>

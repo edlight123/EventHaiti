@@ -13,6 +13,9 @@ export const metadata = {
 
 export const revalidate = 30 // Cache for 30 seconds
 
+// Depends on auth cookies and per-user notifications.
+export const dynamic = 'force-dynamic'
+
 export default async function NotificationsPage() {
   const user = await getCurrentUser()
   

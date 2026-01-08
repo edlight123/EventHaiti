@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
-
-    if (error || !user || !isAdmin(user?.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     // Get all verification requests
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
       createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || doc.data().createdAt,
     }))
 
-    return NextResponse.json({
+    return adminOk({
       total: verifications.length,
       verifications,
       statusCounts: {
@@ -37,9 +38,10 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error fetching verification requests:', error)
-    return NextResponse.json({ 
-      error: 'Failed to fetch',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return adminError(
+      'Failed to fetch',
+      500,
+      error instanceof Error ? error.message : 'Unknown error'
+    )
   }
 }

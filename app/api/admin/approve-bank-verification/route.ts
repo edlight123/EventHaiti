@@ -1,33 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
+    const { user, error } = await requireAdmin()
     if (error || !user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-    }
-
-    if (!isAdmin(user.email)) {
-      return NextResponse.json({ error: 'Unauthorized - Admin only' }, { status: 403 })
+      return adminError('Not authenticated', 401)
     }
 
     const { organizerId, decision, reason, destinationId } = await request.json()
 
     if (!organizerId || !decision) {
-      return NextResponse.json(
-        { error: 'Organization ID and decision are required' },
-        { status: 400 }
-      )
+      return adminError('Organization ID and decision are required', 400)
     }
 
     if (decision !== 'approve' && decision !== 'reject') {
-      return NextResponse.json(
-        { error: 'Decision must be "approve" or "reject"' },
-        { status: 400 }
-      )
+      return adminError('Decision must be "approve" or "reject"', 400)
     }
 
     const newStatus = decision === 'approve' ? 'verified' : 'failed'
@@ -44,32 +35,68 @@ export async function POST(request: NextRequest) {
       return `bank_${normalized}`
     })()
 
-    // Update verification document
-    await adminDb
+    const verificationRef = adminDb
       .collection('organizers')
       .doc(organizerId)
       .collection('verificationDocuments')
       .doc(docId)
-      .update({
+
+    const txResult = await adminDb.runTransaction(async (tx: any) => {
+      const snap = await tx.get(verificationRef)
+      if (!snap.exists) return { notFound: true }
+
+      const before = snap.data() as any
+      const beforeStatus = String(before?.status || 'pending')
+
+      if (beforeStatus === newStatus) {
+        return { idempotent: true, beforeStatus, afterStatus: beforeStatus }
+      }
+
+      tx.update(verificationRef, {
         status: newStatus,
         reviewedAt: new Date().toISOString(),
         reviewedBy: user.id,
         rejectionReason: decision === 'reject' ? reason : null,
       })
 
+      return { idempotent: false, beforeStatus, afterStatus: newStatus }
+    })
+
+    if ((txResult as any)?.notFound) {
+      return adminError('Bank verification not found', 404)
+    }
+
+    const idempotent = Boolean((txResult as any)?.idempotent)
+
+    if (!idempotent) {
+      logAdminAction({
+        action: decision === 'approve' ? 'bank_verification.approve' : 'bank_verification.reject',
+        adminId: user.id,
+        adminEmail: user.email || 'unknown',
+        resourceType: 'bank_verification',
+        resourceId: `${organizerId}:${docId}`,
+        details: {
+          organizerId,
+          destinationId,
+          verificationDocId: docId,
+          decision,
+          reason: decision === 'reject' ? reason : null,
+          beforeStatus: (txResult as any)?.beforeStatus,
+          afterStatus: (txResult as any)?.afterStatus,
+        },
+      }).catch(() => {})
+    }
+
     // TODO: Send email notification to organizer
     // In production, you would notify the organizer of the decision
 
-    return NextResponse.json({
-      success: true,
+    return adminOk({
       message: `Bank verification ${decision}d successfully`,
       status: newStatus,
+      idempotent,
     })
   } catch (error: any) {
     console.error('Error processing bank verification:', error)
-    return NextResponse.json(
-      { error: 'Failed to process verification', message: error.message },
-      { status: 500 }
-    )
+    return adminError('Failed to process verification', 500, error?.message)
   }
 }

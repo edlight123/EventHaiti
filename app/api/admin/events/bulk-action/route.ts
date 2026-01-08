@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { logAdminAction } from '@/lib/admin/audit-log'
+import { adminError, adminOk } from '@/lib/api/admin-response'
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
+    const { user, error } = await requireAdmin()
 
-    if (error || !user || !isAdmin(user?.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', 401)
     }
 
-    const { eventIds, action, adminId, adminEmail } = await request.json()
+    const { eventIds, action } = await request.json()
 
-    const effectiveAdminEmail = adminEmail || user.email || 'unknown'
+    const adminId = user.id
+    const effectiveAdminEmail = user.email || 'unknown'
 
     // Firestore batch limit is 500 ops; delete+backup is 2 ops per event.
     // Keep a conservative chunk size.
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
             await logAdminAction({
               action: 'event.publish',
               adminId,
-              adminEmail,
+              adminEmail: effectiveAdminEmail,
               resourceId: eventId,
               resourceType: 'event',
               details: { eventTitle: eventData.title, bulk: true }
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
             await logAdminAction({
               action: 'event.unpublish',
               adminId,
-              adminEmail,
+              adminEmail: effectiveAdminEmail,
               resourceId: eventId,
               resourceType: 'event',
               details: { eventTitle: eventData.title, bulk: true }
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
             await logAdminAction({
               action: 'event.delete',
               adminId,
-              adminEmail,
+              adminEmail: effectiveAdminEmail,
               resourceId: eventId,
               resourceType: 'event',
               details: { eventTitle: eventData.title, bulk: true }
@@ -135,9 +136,9 @@ export async function POST(request: NextRequest) {
       await batch.commit()
     }
 
-    return NextResponse.json({ success: true, count: processed })
+    return adminOk({ success: true, count: processed })
   } catch (error) {
     console.error('Error performing bulk action:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return adminError('Internal server error', 500)
   }
 }

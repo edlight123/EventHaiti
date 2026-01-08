@@ -258,6 +258,21 @@
       "action_items_plural": "action items"
     },
     "your_events": "Your Events",
+    "tools": {
+      "title": "Tools",
+      "analytics": {
+        "title": "Analytics",
+        "description": "Sales trends & revenue"
+      },
+      "scan": {
+        "title": "Scan Tickets",
+        "description": "Verify attendees at the door"
+      },
+      "promoCodes": {
+        "title": "Promo Codes",
+        "description": "Create discounts & track usage"
+      }
+    },
     "view_all_events": "View all events",
     "create_event": "Create Event",
     "no_events": {

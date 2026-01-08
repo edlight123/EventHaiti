@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 export const runtime = 'nodejs'
 
@@ -84,10 +85,7 @@ function pick<T>(arr: T[], index: number): T {
   return arr[index % arr.length]
 }
 
-async function seed20(options: { userEmail: string | null | undefined; input: Seed20Request }) {
-  if (!options.userEmail || !isAdmin(options.userEmail)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+async function seed20(options: { admin: { id: string; email: string | null | undefined }; input: Seed20Request }) {
 
   const organizerEmail = String(options.input?.organizerEmail || 'info@edlight.org')
     .trim()
@@ -278,8 +276,22 @@ async function seed20(options: { userEmail: string | null | undefined; input: Se
 
   await batch.commit()
 
-  return NextResponse.json({
-    success: true,
+  await logAdminAction({
+    action: 'admin.backfill',
+    adminId: options.admin.id,
+    adminEmail: options.admin.email || 'unknown',
+    resourceType: 'events',
+    details: {
+      name: 'events.seed-20',
+      organizerEmail,
+      organizerId,
+      batchTag,
+      publish,
+      createdCount: created.length,
+    },
+  })
+
+  return adminOk({
     organizerEmail,
     organizerId,
     batchTag,
@@ -295,9 +307,9 @@ async function seed20(options: { userEmail: string | null | undefined; input: Se
 
 export async function GET(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
+    const { user, error } = await requireAdmin()
     if (error || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     const url = new URL(request.url)
@@ -310,8 +322,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!run) {
-      return NextResponse.json({
-        ok: true,
+      return adminOk({
         message:
           'This endpoint seeds 20 events. To run from the browser, pass ?run=1. Prefer POST for scripted usage.',
         defaults: {
@@ -328,10 +339,10 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    return await seed20({ userEmail: user.email, input })
+    return await seed20({ admin: { id: user.id, email: user.email }, input })
   } catch (e: any) {
     console.error('seed-20 GET failed:', e)
-    return NextResponse.json({ error: e?.message || 'Internal server error' }, { status: 500 })
+    return adminError('Internal server error', 500, e?.message || String(e))
   }
 }
 
@@ -346,15 +357,15 @@ export async function OPTIONS() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
-    if (error || !user || !isAdmin(user?.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     const body = (await request.json().catch(() => ({}))) as Seed20Request
-    return await seed20({ userEmail: user.email, input: body })
+    return await seed20({ admin: { id: user.id, email: user.email }, input: body })
   } catch (e: any) {
     console.error('seed-20 failed:', e)
-    return NextResponse.json({ error: e?.message || 'Internal server error' }, { status: 500 })
+    return adminError('Internal server error', 500, e?.message || String(e))
   }
 }

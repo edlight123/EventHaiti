@@ -3,6 +3,8 @@ import { adminAuth } from '@/lib/firebase/admin'
 import { cookies } from 'next/headers'
 import { getPayoutHistory } from '@/lib/firestore/payout'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     // Verify authentication

@@ -8,6 +8,9 @@ import ProfileClient from './ProfileClient'
 
 export const revalidate = 60 // Cache for 1 minute
 
+// Depends on auth cookies and per-user profile data.
+export const dynamic = 'force-dynamic'
+
 export default async function ProfilePage() {
   const user = await getCurrentUser()
 

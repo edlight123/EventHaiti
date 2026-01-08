@@ -4,6 +4,8 @@ import { sendEmail, getTicketConfirmationEmail } from '@/lib/email'
 import { sendWhatsAppMessage, getEventReminderWhatsApp } from '@/lib/whatsapp'
 import { sendEventReminder } from '@/lib/notification-triggers'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Event Reminder Cron Job
  * 

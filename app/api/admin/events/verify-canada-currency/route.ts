@@ -1,21 +1,16 @@
 import { NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin as isAdminEmail } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
+import { adminError, adminOk } from '@/lib/api/admin-response'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-function isRoleAdmin(user: any): boolean {
-  const role = String(user?.role || '').toLowerCase()
-  return role === 'admin' || role === 'super_admin'
-}
-
 export async function GET() {
   try {
-    const { user, error } = await requireAuth()
-    if (error || !user || !(isRoleAdmin(user) || isAdminEmail(user?.email))) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     // Fetch a few Canada events directly from Firestore to verify currency
@@ -36,14 +31,13 @@ export async function GET() {
       }
     })
 
-    return NextResponse.json({
-      ok: true,
+    return adminOk({
       count: events.length,
       events,
       message: 'Direct Firestore query bypassing all caches',
     })
   } catch (err: any) {
     console.error('verify-canada-currency error:', err)
-    return NextResponse.json({ error: err?.message || 'Internal server error' }, { status: 500 })
+    return adminError('Internal server error', 500, err?.message || String(err))
   }
 }

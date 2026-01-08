@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(_request: NextRequest) {
   try {
     const { user, error } = await requireAuth('organizer')

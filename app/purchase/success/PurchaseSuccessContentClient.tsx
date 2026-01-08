@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useTranslation } from 'react-i18next'
 
 type Props = {
@@ -105,10 +106,13 @@ export default function PurchaseSuccessContentClient(props: Props) {
           <div className="p-4 md:p-6 bg-gray-50 border-t border-gray-200">
             {props.qrCodeDataUrl ? (
               <div className="flex flex-col items-center justify-center bg-white rounded-lg border border-gray-200 p-4 md:p-6">
-                <img
+                <Image
                   src={props.qrCodeDataUrl}
                   alt={t('tickets:purchase_success.qr_alt')}
+                  width={208}
+                  height={208}
                   className="w-44 h-44 md:w-52 md:h-52 border-4 border-gray-100 rounded-xl"
+                  unoptimized
                 />
                 <p className="text-sm text-gray-600 mt-3">{t('tickets:purchase_success.qr_title')}</p>
                 <p className="text-[11px] md:text-xs text-gray-500 mt-1">{t('tickets:purchase_success.qr_subtitle')}</p>

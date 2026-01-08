@@ -10,6 +10,9 @@ export const metadata = {
   description: 'Get help with tickets, events, and your organizer account. Browse FAQs and contact support.',
 }
 
+// Uses auth cookies for Navbar/user context.
+export const dynamic = 'force-dynamic'
+
 export default async function SupportPage() {
   const user = await getCurrentUser()
 

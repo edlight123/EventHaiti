@@ -3,6 +3,8 @@ import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(_req: NextRequest) {
   try {
     const { user, error } = await requireAuth()

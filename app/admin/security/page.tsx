@@ -1,15 +1,13 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import SecurityDashboardClient from './SecurityDashboardClient'
 
+export const dynamic = 'force-dynamic'
+
 export default async function SecurityDashboard() {
-  const user = await getCurrentUser()
-  if (!user) {
+  const { user, error } = await requireAdmin()
+  if (error || !user) {
     redirect('/auth/login?redirect=/admin/security')
-  }
-  if (!isAdmin(user.email)) {
-    redirect('/organizer')
   }
   return <SecurityDashboardClient />
 }

@@ -5,6 +5,8 @@ import NotificationsForm from './NotificationsForm';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 async function getNotificationPreferences(userId: string) {
   const prefsDoc = await adminDb
     .collection('organizers')

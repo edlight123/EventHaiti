@@ -4,6 +4,8 @@ import DangerZone from './DangerZone';
 import Link from 'next/link';
 import { ChevronLeft, AlertTriangle } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DangerZoneSettingsPage() {
   const user = await getCurrentUser();
 

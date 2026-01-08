@@ -3,6 +3,8 @@ import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { getCurrentUser } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
+export const dynamic = 'force-dynamic'
+
 export default async function PrivacyPolicyPage() {
   const user = await getCurrentUser()
 

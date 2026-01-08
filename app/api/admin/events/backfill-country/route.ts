@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FieldPath } from 'firebase-admin/firestore'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { resolveEventCountry } from '@/lib/event-country'
 import { normalizeCountryCode } from '@/lib/payment-provider'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 export const runtime = 'nodejs'
 
@@ -21,36 +22,12 @@ type BackfillRequest = {
 
 export async function GET() {
   try {
-    const { user, error } = await requireAuth()
-    const authenticated = Boolean(!error && user)
-    const admin = Boolean(authenticated && isAdmin(user?.email))
-
-    if (!admin) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: authenticated ? 'Unauthorized' : 'Unauthorized',
-          authenticated,
-          admin,
-          message:
-            'This endpoint requires an admin session. Log in with an admin account and ensure ADMIN_EMAILS includes your email.',
-          usage: {
-            method: 'POST',
-            url: '/api/admin/events/backfill-country',
-            bodyExamples: [
-              { dryRun: true, onlyPublished: true, limit: 500 },
-              { dryRun: false, onlyPublished: true, limit: 500 },
-            ],
-          },
-        },
-        { status: 401 }
-      )
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
-    return NextResponse.json({
-      ok: true,
-      authenticated,
-      admin,
+    return adminOk({
       message:
         'Use POST to run the backfill. Start with dryRun=true. For pagination, pass startAfterId from the previous response.',
       usage: {
@@ -65,15 +42,15 @@ export async function GET() {
     })
   } catch (err: any) {
     console.error('Backfill country GET error:', err)
-    return NextResponse.json({ ok: false, error: err?.message || 'Internal server error' }, { status: 500 })
+    return adminError('Internal server error', 500, err?.message || String(err))
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
-    if (error || !user || !isAdmin(user?.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     const body = (await request.json().catch(() => ({}))) as BackfillRequest
@@ -169,8 +146,25 @@ export async function POST(request: NextRequest) {
 
     const lastId = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1].id : null
 
-    return NextResponse.json({
-      success: true,
+    await logAdminAction({
+      action: 'admin.backfill',
+      adminId: user.id,
+      adminEmail: user.email || 'unknown',
+      resourceType: 'events',
+      details: {
+        name: 'events.backfill-country',
+        dryRun,
+        onlyPublished,
+        limit,
+        startAfterId: startAfterId || null,
+        scanned,
+        updated,
+        skipped,
+        unable,
+      },
+    })
+
+    return adminOk({
       dryRun,
       onlyPublished,
       limit,
@@ -186,6 +180,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (err: any) {
     console.error('Backfill country error:', err)
-    return NextResponse.json({ error: err?.message || 'Internal server error' }, { status: 500 })
+    return adminError('Internal server error', 500, err?.message || String(err))
   }
 }

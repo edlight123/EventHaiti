@@ -10,9 +10,19 @@ interface ScanViewportProps {
 
 export function ScanViewport({ onScan, isProcessing }: ScanViewportProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null)
+  const onScanRef = useRef(onScan)
+  const isProcessingRef = useRef(isProcessing)
   const [error, setError] = useState<string | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
   const [showOpenInApp, setShowOpenInApp] = useState(false)
+
+  useEffect(() => {
+    onScanRef.current = onScan
+  }, [onScan])
+
+  useEffect(() => {
+    isProcessingRef.current = isProcessing
+  }, [isProcessing])
 
   const openInAppUrl = 'eventhaiti://'
 
@@ -72,8 +82,8 @@ export function ScanViewport({ onScan, isProcessing }: ScanViewportProps) {
         { facingMode: 'environment' },
         config,
         (decodedText) => {
-          if (!isProcessing) {
-            onScan(decodedText)
+          if (!isProcessingRef.current) {
+            onScanRef.current(decodedText)
           }
         },
         () => {

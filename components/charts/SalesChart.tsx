@@ -1,16 +1,33 @@
-'use client';
+'use client'
 
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface SalesChartProps {
   data: Array<{
-    date: string;
-    sales: number;
-    revenue: number;
-  }>;
+    date: string
+    sales: number
+    revenue: number
+  }>
+  currency?: string
 }
 
-export default function SalesChart({ data }: SalesChartProps) {
+export default function SalesChart({ data, currency = 'HTG' }: SalesChartProps) {
+  const formatRevenue = (value: unknown) => {
+    const amount = Number(value || 0)
+    if (!Number.isFinite(amount)) return ''
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: String(currency || 'HTG'),
+        currencyDisplay: 'code',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount)
+    } catch {
+      return `${String(currency || 'HTG')} ${amount.toFixed(2)}`
+    }
+  }
+
   return (
     <ResponsiveContainer width="100%" height={300}>
       <AreaChart data={data}>
@@ -33,8 +50,19 @@ export default function SalesChart({ data }: SalesChartProps) {
         <YAxis 
           stroke="#6B7280"
           style={{ fontSize: '12px' }}
+          tickFormatter={(value) => {
+            const n = Number(value || 0)
+            if (!Number.isFinite(n)) return ''
+            // Avoid showing long decimals for the mixed-axis chart.
+            if (Math.abs(n) >= 1000) return `${Math.round(n / 100) / 10}k`
+            return String(Math.round(n))
+          }}
         />
         <Tooltip 
+          formatter={(value: any, name: any) => {
+            if (name === 'revenue') return [formatRevenue(value), 'Revenue']
+            return [Number(value || 0), 'Tickets']
+          }}
           contentStyle={{
             backgroundColor: '#FFFFFF',
             border: '1px solid #E5E7EB',
@@ -60,5 +88,5 @@ export default function SalesChart({ data }: SalesChartProps) {
         />
       </AreaChart>
     </ResponsiveContainer>
-  );
+  )
 }

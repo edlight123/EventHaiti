@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { UserRole } from '@/types/database'
 import { isDemoMode } from '@/lib/demo'
 import { cookies } from 'next/headers'
+import { isAdmin as isAdminEmail } from '@/lib/admin'
 
 async function getDemoUser() {
   if (!isDemoMode()) return null
@@ -116,6 +117,10 @@ export async function requireAuth(requiredRole?: UserRole) {
     if (requiredRole === 'admin' && user.role === 'super_admin') {
       return { user, error: null }
     }
+    // Bootstrap/override: allow emails in ADMIN_EMAILS to access admin routes
+    if (requiredRole === 'admin' && isAdminEmail(user.email)) {
+      return { user, error: null }
+    }
     return { user: null, error: 'Unauthorized' }
   }
 
@@ -129,7 +134,12 @@ export async function requireAdmin() {
     return { user: null, error: 'Not authenticated' }
   }
 
-  if (user.role !== 'admin' && user.role !== 'super_admin') {
+  // Canonical model: role-based admin
+  const roleIsAdmin = user.role === 'admin' || user.role === 'super_admin'
+  // Bootstrap model: allow emails in ADMIN_EMAILS (useful before roles are seeded)
+  const emailIsAdmin = isAdminEmail(user.email)
+
+  if (!roleIsAdmin && !emailIsAdmin) {
     return { user: null, error: 'Admin access required' }
   }
 
@@ -143,5 +153,5 @@ export async function isOrganizer() {
 
 export async function isAdmin() {
   const user = await getCurrentUser()
-  return user?.role === 'admin' || user?.role === 'super_admin'
+  return Boolean(user && (user.role === 'admin' || user.role === 'super_admin' || isAdminEmail(user.email)))
 }

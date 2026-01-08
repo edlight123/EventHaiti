@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
-import { isAdmin } from '@/lib/admin'
+import { requireAdmin } from '@/lib/auth'
 import { createClient } from '@/lib/firebase-db/server'
 import { adminDb } from '@/lib/firebase/admin'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 function clampInt(value: unknown, min: number, max: number, fallback: number): number {
   const n = typeof value === 'number' ? value : Number(value)
@@ -31,9 +32,9 @@ function safeJsonParse(value: any): any {
  */
 export async function POST(req: NextRequest) {
   try {
-    const { user, error } = await requireAuth()
-    if (error || !user || !isAdmin(user.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', error === 'Not authenticated' ? 401 : 403)
     }
 
     const body = await req.json().catch(() => ({}))
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     if (dbError) {
       console.error('Backfill suspicious_activities query failed:', dbError)
-      return NextResponse.json({ error: 'Failed to read legacy suspicious activities' }, { status: 500 })
+      return adminError('Failed to read legacy suspicious activities', 500, dbError.message)
     }
 
     const rows = Array.isArray(data) ? data : []
@@ -99,8 +100,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      success: true,
+    await logAdminAction({
+      action: 'admin.backfill',
+      adminId: user.id,
+      adminEmail: user.email || 'unknown',
+      resourceType: 'suspicious_activities',
+      details: {
+        name: 'suspicious-activities.backfill',
+        dryRun,
+        processed: rows.length,
+        written: dryRun ? 0 : written,
+        skipped: dryRun ? 0 : skipped,
+        since,
+        limit,
+        errors: errors.length,
+      },
+    })
+
+    return adminOk({
       dryRun,
       processed: rows.length,
       written: dryRun ? 0 : written,
@@ -109,9 +126,6 @@ export async function POST(req: NextRequest) {
     })
   } catch (err: any) {
     console.error('Backfill suspicious activities error:', err)
-    return NextResponse.json(
-      { error: 'Internal server error', message: err?.message || String(err) },
-      { status: 500 }
-    )
+    return adminError('Internal server error', 500, err?.message || String(err))
   }
 }

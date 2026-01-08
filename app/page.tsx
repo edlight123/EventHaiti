@@ -18,6 +18,9 @@ type Event = Database['public']['Tables']['events']['Row']
 // Revalidate every 2 minutes for public home page
 export const revalidate = 120
 
+// This page reads auth cookies for personalization.
+export const dynamic = 'force-dynamic'
+
 export default async function HomePage({
   searchParams,
 }: {

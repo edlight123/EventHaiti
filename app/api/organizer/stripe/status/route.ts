@@ -4,6 +4,8 @@ import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 
 export const runtime = 'nodejs'
 
+export const dynamic = 'force-dynamic'
+
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured')
