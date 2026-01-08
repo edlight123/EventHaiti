@@ -50,6 +50,7 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction }: Admi
   const { t } = useTranslation('common')
   const [reason, setReason] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isExporting, setIsExporting] = useState<'full' | 'summary' | null>(null)
 
   if (!isOpen || !event) return null
 
@@ -70,6 +71,32 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction }: Admi
     onAction('delete', reason)
     setReason('')
     setShowDeleteConfirm(false)
+  }
+
+  const downloadCsv = async (mode: 'full' | 'summary') => {
+    try {
+      setIsExporting(mode)
+      const res = await fetch(`/api/admin/events/${encodeURIComponent(event.id)}/export?mode=${mode}`, {
+        method: 'GET',
+      })
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        throw new Error(text || `Export failed (${res.status})`)
+      }
+
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `event_${event.id}_${mode}_financials_${new Date().toISOString().split('T')[0]}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e: any) {
+      alert(e?.message || 'Failed to download CSV')
+    } finally {
+      setIsExporting(null)
+    }
   }
 
   return (
@@ -315,6 +342,23 @@ export function AdminEventDetailSheet({ event, isOpen, onClose, onAction }: Admi
                 </button>
               </>
             )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => downloadCsv('full')}
+              disabled={isExporting !== null}
+              className="flex-1 px-4 py-2.5 border border-teal-300 text-teal-700 rounded-lg hover:bg-teal-50 font-medium text-sm disabled:opacity-60"
+            >
+              {isExporting === 'full' ? 'Downloading…' : 'Download Financials CSV'}
+            </button>
+            <button
+              onClick={() => downloadCsv('summary')}
+              disabled={isExporting !== null}
+              className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium text-sm disabled:opacity-60"
+            >
+              {isExporting === 'summary' ? 'Downloading…' : 'Download Summary CSV'}
+            </button>
           </div>
 
           <a

@@ -171,7 +171,10 @@ export default async function AdminBankVerificationsPage({
       const destinationId = (() => {
         if (data?.destinationId) {
           const raw = String(data.destinationId)
-          return raw.startsWith('bank_') ? raw.slice('bank_'.length) : raw
+          // New schema stores the payout destination doc id directly (e.g. 'bank_primary' or a random id).
+          // Older/buggy payloads may store the verification doc id (e.g. 'bank_<destinationId>').
+          // Never strip 'bank_primary' (it is the destination id).
+          return raw.startsWith('bank_') && raw !== 'bank_primary' ? raw.slice('bank_'.length) : raw
         }
         if (docId.startsWith('bank_')) return docId.slice('bank_'.length)
         if (docId === 'bank') return 'bank_primary'

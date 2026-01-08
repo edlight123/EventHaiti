@@ -5,6 +5,7 @@ export type AuditAction =
   | 'event.unpublish'
   | 'event.delete'
   | 'event.restore'
+  | 'event.export_financials'
   | 'admin.backfill'
   | 'admin.search_index.rebuild'
   | 'user.verify'
