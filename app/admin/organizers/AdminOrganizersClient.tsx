@@ -110,12 +110,18 @@ export default function AdminOrganizersClient({
                   <div className="flex items-start justify-between">
                     <div className="min-w-0">
                       <Link
-                        href={`/admin/organizers/${u.id}`}
+                        href={`/admin/users/${u.id}`}
                         className="text-sm font-medium text-teal-600 hover:text-teal-700 truncate block"
                       >
                         {u.full_name || 'No name'}
                       </Link>
                       <div className="text-[13px] text-gray-500 truncate">{u.email}</div>
+                      <Link
+                        href={`/admin/organizers/${u.id}`}
+                        className="mt-1 inline-block text-[13px] font-medium text-purple-700 hover:text-purple-800"
+                      >
+                        {t('users.open_organizer_admin')}
+                      </Link>
                     </div>
                     <div>
                       <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
@@ -163,12 +169,18 @@ export default function AdminOrganizersClient({
                       <td className="px-6 py-4">
                         <div className="min-w-0">
                           <Link
-                            href={`/admin/organizers/${u.id}`}
+                            href={`/admin/users/${u.id}`}
                             className="text-sm font-medium text-teal-600 hover:text-teal-700 truncate block"
                           >
                             {u.full_name || 'No name'}
                           </Link>
                           <div className="text-[13px] text-gray-500 truncate">{u.email}</div>
+                          <Link
+                            href={`/admin/organizers/${u.id}`}
+                            className="mt-1 inline-block text-[13px] font-medium text-purple-700 hover:text-purple-800"
+                          >
+                            {t('users.open_organizer_admin')}
+                          </Link>
                         </div>
                       </td>
                       <td className="px-6 py-4">
