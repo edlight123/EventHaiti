@@ -355,6 +355,30 @@ export async function POST(request: Request) {
       
       console.log(`📊 Total tickets created: ${createdTickets.length} for user ${paymentIntent.metadata.userId}`)
 
+      // Track promo code usage (embedded payments)
+      if (createdTickets.length > 0 && paymentIntent.metadata.promoCodeId && paymentIntent.metadata.originalPrice) {
+        const { data: promoCode } = await supabase
+          .from('promo_codes')
+          .select('*')
+          .eq('id', paymentIntent.metadata.promoCodeId)
+          .single()
+
+        if (promoCode) {
+          const originalPrice = parseFloat(paymentIntent.metadata.originalPrice)
+          const { discountAmount } = calculateDiscount(originalPrice, promoCode)
+          const firstTicket = createdTickets[0]
+          if (firstTicket?.id) {
+            await trackPromoCodeUsage(
+              paymentIntent.metadata.promoCodeId,
+              paymentIntent.metadata.userId,
+              firstTicket.id,
+              discountAmount,
+              supabase
+            )
+          }
+        }
+      }
+
       // Update event earnings for embedded payments as well.
       try {
         const eventGrossCents = Math.round(

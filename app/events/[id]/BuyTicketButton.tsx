@@ -38,6 +38,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null)
   const [selectedTierPrice, setSelectedTierPrice] = useState<number>(0)
   const [selectedTiers, setSelectedTiers] = useState<{ tierId: string; quantity: number; price: number; tierName?: string }[]>([])
+  // Stores the promo code ID (promo_codes.id) once validated.
   const [promoCode, setPromoCode] = useState<string | undefined>()
   const [isMonCashPopupOpen, setIsMonCashPopupOpen] = useState(false)
   const moncashPopupRef = useRef<Window | null>(null)
@@ -418,7 +419,10 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
     }
   }
 
-  const handleTieredPurchase = (selections: { tierId: string; quantity: number; price: number; tierName?: string }[]) => {
+  const handleTieredPurchase = (
+    selections: { tierId: string; quantity: number; price: number; tierName?: string }[],
+    promoCodeId?: string
+  ) => {
     if (!selections || selections.length === 0) return
 
     const totalQuantity = selections.reduce((sum, s) => sum + s.quantity, 0)
@@ -426,6 +430,9 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
 
     // Store all selections for multi-tier support
     setSelectedTiers(selections)
+
+    // Persist promo code (id) so payment APIs can apply the discount.
+    setPromoCode(promoCodeId)
     
     // For backward compatibility, also set the first tier
     const firstSelection = selections[0]
@@ -608,7 +615,7 @@ export default function BuyTicketButton({ eventId, userId, isFree, ticketPrice, 
 
               {promoCode && (
                 <div className="mt-2 text-sm text-green-600">
-                  ✓ Promo code {promoCode} applied
+                  ✓ Promo code applied
                 </div>
               )}
             </div>

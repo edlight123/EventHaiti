@@ -125,6 +125,8 @@ export async function POST(request: Request) {
     // Get tier price if specified
     let finalPrice = event.ticket_price
     let tierName = 'General Admission'
+    // Track the pre-discount price so metadata/originalPrice is accurate.
+    let basePriceBeforePromo = finalPrice
 
     if (tierId) {
       const { data: tier } = await supabase
@@ -164,6 +166,7 @@ export async function POST(request: Request) {
         }
 
         finalPrice = tier.price
+        basePriceBeforePromo = finalPrice
         tierName = tier.name
       }
     }
@@ -250,7 +253,7 @@ export async function POST(request: Request) {
         tierId: tierId || '',
         tierName,
         promoCodeId: promoCodeId || '',
-        originalPrice: event.ticket_price.toString(),
+        originalPrice: basePriceBeforePromo.toString(),
         finalPrice: finalPrice.toString(),
         currency: stripeCurrency,
         originalCurrency: originalCurrency,
