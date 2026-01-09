@@ -137,6 +137,12 @@ export function AdminDashboardClient({
           title={t('dashboard.recent_events')}
           count={eventsCount}
           items={recentEvents.map((e: any) => {
+            const legacyStatus = String(e?.status || '').trim().toLowerCase()
+            const isPublished =
+              e?.isPublished === true ||
+              e?.is_published === true ||
+              legacyStatus === 'published'
+
             // Build location string
             const locationParts = []
             if (e.venueName) locationParts.push(e.venueName)
@@ -155,7 +161,7 @@ export function AdminDashboardClient({
               title: e.title || t('dashboard.untitled_event'),
               subtitle: `${location} • ${price}`,
               timestamp: e.createdAt,
-              badge: e.isPublished ? {
+              badge: isPublished ? {
                 label: t('dashboard.status_published'),
                 variant: 'success' as const
               } : {
