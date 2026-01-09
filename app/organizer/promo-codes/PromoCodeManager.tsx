@@ -157,7 +157,10 @@ export default function PromoCodeManager({
 
       {/* Create Form */}
       {showForm && (
-        <form onSubmit={handleCreate} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
+        <form
+          onSubmit={handleCreate}
+          className="relative z-10 bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6"
+        >
           <h3 className="text-base md:text-lg font-bold text-gray-900 mb-3">New Promo Code</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -183,7 +186,8 @@ export default function PromoCodeManager({
                 required
                 value={eventId}
                 onChange={(e) => setEventId(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500"
+                className="relative z-10 w-full px-4 py-2 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-orange-500"
+                style={{ WebkitAppearance: 'menulist', appearance: 'auto' } as any}
               >
                 <option value="">Select event</option>
                 {events.map(event => (
