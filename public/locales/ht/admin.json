@@ -53,8 +53,8 @@
     "no_events": "Pa gen evènman nan kategori sa a"
   },
   "users": {
-    "title": "Jesyon Itilizatè",
-    "subtitle": "Jere kont itilizatè yo ak pèmisyon",
+    "title": "Òganizatè",
+    "subtitle": "Gade epi jere òganizatè yo sou platfòm nan",
     "total_users": "Total itilizatè",
     "organizers": "Òganizatè",
     "verified_organizers": "Òganizatè verifye",
@@ -81,7 +81,9 @@
       "no_users_found": "Pa gen itilizatè jwenn",
       "promote_to_organizer": "Monte nivo pou òganizatè",
       "admin": "ADMIN",
-      "verified": "Verifye"
+      "verified": "Verifye",
+      "load_more": "Chaje plis",
+      "loading": "Ap chaje..."
     },
     "verify": {
       "title": "Demann verifikasyon",
@@ -106,7 +108,7 @@
     "search_placeholder": "Chèche evènman, itilizatè, kòmand...",
     "verify": "Verifye",
     "events": "Evènman",
-    "users": "Itilizatè"
+    "users": "Òganizatè"
   },
   "stats": {
     "total_events": "Total evènman",

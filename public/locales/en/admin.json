@@ -53,8 +53,8 @@
     "no_events": "No events in this category"
   },
   "users": {
-    "title": "Manage Users",
-    "subtitle": "View and manage all users on the platform",
+    "title": "Organizers",
+    "subtitle": "View and manage organizers on the platform",
     "back_to_dashboard": "← Back to Admin Dashboard",
     "total_users": "Total Users",
     "organizers": "Organizers",
@@ -81,7 +81,9 @@
     "no_users_found": "No users found",
     "promote_to_organizer": "Promote to Organizer",
     "admin": "ADMIN",
-    "verified": "Verified"
+    "verified": "Verified",
+    "load_more": "Load more",
+    "loading": "Loading..."
   },
   "verify": {
     "title": "Verification Requests",
@@ -106,7 +108,7 @@
     "search_placeholder": "Search events, users, orders...",
     "verify": "Verify",
     "events": "Events",
-    "users": "Users"
+    "users": "Organizers"
   },
   "stats": {
     "total_events": "Total Events",

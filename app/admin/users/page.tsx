@@ -5,8 +5,14 @@ import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { revalidatePath } from 'next/cache'
 import { updateUserRole } from '@/lib/firestore/user-profile-server'
-import { getAdminUsers, getUserCounts } from '@/lib/data/users'
+import { getAdminUsers, getUserById, getUserCounts } from '@/lib/data/users'
 import AdminUsersClient from './AdminUsersClient'
+
+type Cursor = { id: string; createdAtMillis: number }
+
+function encodeCursor(cursor: Cursor): string {
+  return Buffer.from(JSON.stringify(cursor), 'utf8').toString('base64url')
+}
 
 export const revalidate = 60 // Cache for 1 minute
 
@@ -24,20 +30,54 @@ async function promoteToOrganizer(formData: FormData) {
   revalidatePath('/admin/users')
 }
 
-export default async function AdminUsersPage() {
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams?: { selected?: string | string[] }
+}) {
   const { user, error } = await requireAdmin()
 
   if (error || !user) {
     redirect('/')
   }
 
+  // If we arrived here from Admin Search, auto-redirect directly to organizer details.
+  const selectedRaw = searchParams?.selected
+  const selectedId = Array.isArray(selectedRaw) ? selectedRaw[0] : selectedRaw
+  if (selectedId && typeof selectedId === 'string' && selectedId.trim().length) {
+    const selectedUser = await getUserById(selectedId.trim())
+    if (selectedUser && (selectedUser.role === 'organizer' || Boolean((selectedUser as any).is_organizer))) {
+      redirect(`/admin/organizers/${selectedId.trim()}`)
+    }
+  }
+
   // Fetch users and counts in parallel using optimized data layer
   const [usersResult, counts] = await Promise.all([
-    getAdminUsers({}, 200), // Get first 200 users with pagination support
+    // This page is intended as the organizers directory.
+    getAdminUsers({ role: 'organizer' }, 200),
     getUserCounts(),
   ])
 
   const allUsers = usersResult.data
+
+  // Build a serializable cursor for client-side pagination.
+  let initialCursor: string | null = null
+  if (usersResult.hasMore && usersResult.lastDoc) {
+    const lastData: any = (usersResult.lastDoc as any).data?.() || {}
+    const createdAt: any = lastData?.created_at
+    const createdAtMillis =
+      typeof createdAt?.toMillis === 'function'
+        ? createdAt.toMillis()
+        : typeof createdAt?.toDate === 'function'
+          ? createdAt.toDate().getTime()
+          : typeof createdAt === 'string'
+            ? Date.parse(createdAt)
+            : Number.NaN
+
+    if (Number.isFinite(createdAtMillis)) {
+      initialCursor = encodeCursor({ id: usersResult.lastDoc.id, createdAtMillis })
+    }
+  }
   
   // Serialize all data to ensure no Firestore objects are passed to client
   const serializedUsers = allUsers.map((u: any) => ({
@@ -68,6 +108,8 @@ export default async function AdminUsersPage() {
       <AdminUsersClient 
         counts={counts}
         usersWithAdminFlag={usersWithAdminFlag}
+        initialHasMore={usersResult.hasMore && Boolean(initialCursor)}
+        initialCursor={initialCursor}
         promoteToOrganizer={promoteToOrganizer}
       />
 

@@ -53,8 +53,8 @@
     "no_events": "Aucun événement dans cette catégorie"
   },
   "users": {
-    "title": "Gestion des utilisateurs",
-    "subtitle": "Voir et gérer tous les utilisateurs sur la plateforme",
+    "title": "Organisateurs",
+    "subtitle": "Voir et gérer les organisateurs sur la plateforme",
     "back_to_dashboard": "← Retour au tableau de bord Admin",
     "total_users": "Total d'utilisateurs",
     "organizers": "Organisateurs",
@@ -81,7 +81,9 @@
     "no_users_found": "Aucun utilisateur trouvé",
     "promote_to_organizer": "Promouvoir en organisateur",
     "admin": "ADMIN",
-    "verified": "Vérifié"
+    "verified": "Vérifié",
+    "load_more": "Charger plus",
+    "loading": "Chargement..."
   },
   "verify": {
     "title": "Demandes de vérification",
@@ -106,7 +108,7 @@
     "search_placeholder": "Rechercher événements, utilisateurs, commandes...",
     "verify": "Vérifier",
     "events": "Événements",
-    "users": "Utilisateurs"
+    "users": "Organisateurs"
   },
   "stats": {
     "total_events": "Total d'événements",

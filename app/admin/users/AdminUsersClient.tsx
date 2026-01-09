@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Link from 'next/link'
 
@@ -10,11 +11,65 @@ type AdminUsersClientProps = {
     verified: number
   }
   usersWithAdminFlag: any[]
+  initialHasMore?: boolean
+  initialCursor?: string | null
   promoteToOrganizer: (formData: FormData) => void
 }
 
-export default function AdminUsersClient({ counts, usersWithAdminFlag, promoteToOrganizer }: AdminUsersClientProps) {
+export default function AdminUsersClient({
+  counts,
+  usersWithAdminFlag,
+  initialHasMore = false,
+  initialCursor = null,
+  promoteToOrganizer,
+}: AdminUsersClientProps) {
   const { t } = useTranslation('admin')
+
+  const [users, setUsers] = useState<any[]>(usersWithAdminFlag)
+  const [hasMore, setHasMore] = useState<boolean>(initialHasMore)
+  const [cursor, setCursor] = useState<string | null>(initialCursor)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+
+  const loadMore = async () => {
+    if (isLoadingMore || !hasMore || !cursor) return
+    setIsLoadingMore(true)
+    try {
+      const url = new URL('/api/admin/organizers', window.location.origin)
+      url.searchParams.set('limit', '200')
+      url.searchParams.set('cursor', cursor)
+
+      const res = await fetch(url.toString(), { method: 'GET' })
+      if (!res.ok) {
+        console.error('Failed to load more organizers:', await res.text())
+        return
+      }
+
+      const data = await res.json()
+      const nextUsers = Array.isArray(data?.users) ? data.users : []
+      const nextCursor = typeof data?.nextCursor === 'string' ? data.nextCursor : null
+      const nextHasMore = Boolean(data?.hasMore)
+
+      setUsers((prev) => {
+        const seen = new Set(prev.map((u: any) => String(u?.id || '')))
+        const out = [...prev]
+        for (const u of nextUsers) {
+          const id = String(u?.id || '')
+          if (!id) continue
+          if (seen.has(id)) continue
+          seen.add(id)
+          out.push(u)
+        }
+        return out
+      })
+
+      setCursor(nextCursor)
+      setHasMore(nextHasMore && Boolean(nextCursor))
+    } catch (err) {
+      console.error('Load more organizers error:', err)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
@@ -50,7 +105,7 @@ export default function AdminUsersClient({ counts, usersWithAdminFlag, promoteTo
       </div>
 
       <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        {usersWithAdminFlag.length === 0 ? (
+        {users.length === 0 ? (
           <div className="p-8 sm:p-12 text-center">
             <p className="text-[13px] sm:text-base text-gray-500">{t('users.no_users_found')}</p>
           </div>
@@ -58,7 +113,7 @@ export default function AdminUsersClient({ counts, usersWithAdminFlag, promoteTo
           <>
             {/* Mobile: stacked cards */}
             <div className="sm:hidden divide-y divide-gray-100">
-              {usersWithAdminFlag.map((u: any) => {
+              {users.map((u: any) => {
                 const shouldBeOrganizer = (u.is_verified && u.is_organizer && u.role !== 'organizer') || (u.is_verified && u.isAdminUser && u.role !== 'organizer')
                 return (
                   <div key={u.id} className="p-4">
@@ -133,7 +188,7 @@ export default function AdminUsersClient({ counts, usersWithAdminFlag, promoteTo
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {usersWithAdminFlag.map((u: any) => {
+                  {users.map((u: any) => {
                     const shouldBeOrganizer = (u.is_verified && u.is_organizer && u.role !== 'organizer') || (u.is_verified && u.isAdminUser && u.role !== 'organizer')
                     return (
                       <tr key={u.id} className="hover:bg-gray-50">
@@ -196,6 +251,21 @@ export default function AdminUsersClient({ counts, usersWithAdminFlag, promoteTo
                 </tbody>
               </table>
             </div>
+
+            {hasMore && cursor && (
+              <div className="p-4 sm:p-6 border-t border-gray-200 flex justify-center">
+                <button
+                  type="button"
+                  onClick={loadMore}
+                  disabled={isLoadingMore}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-gray-300 ${
+                    isLoadingMore ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white hover:bg-gray-50 text-gray-900'
+                  }`}
+                >
+                  {isLoadingMore ? t('users.loading') : t('users.load_more')}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
