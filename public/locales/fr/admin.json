@@ -53,8 +53,8 @@
     "no_events": "Aucun événement dans cette catégorie"
   },
   "users": {
-    "title": "Organisateurs",
-    "subtitle": "Voir et gérer les organisateurs sur la plateforme",
+    "title": "Utilisateurs",
+    "subtitle": "Rechercher et gérer les utilisateurs sur la plateforme",
     "back_to_dashboard": "← Retour au tableau de bord Admin",
     "total_users": "Total d'utilisateurs",
     "organizers": "Organisateurs",
@@ -62,6 +62,12 @@
     "active_users": "Utilisateurs actifs",
     "banned_users": "Utilisateurs bannis",
     "search_users": "Rechercher des utilisateurs...",
+    "search": "Rechercher",
+    "search_hint": "Entrez au moins 2 caractères pour rechercher.",
+    "search_results": "Résultats de recherche",
+    "select_user_hint": "Recherchez un utilisateur pour voir les détails.",
+    "selected_user": "Utilisateur sélectionné",
+    "view_organizer": "Voir l'organisateur",
     "user_id": "ID utilisateur",
     "email": "E-mail",
     "full_name": "Nom complet",
@@ -84,6 +90,11 @@
     "verified": "Vérifié",
     "load_more": "Charger plus",
     "loading": "Chargement..."
+  },
+  "organizers": {
+    "title": "Organisateurs",
+    "subtitle": "Parcourir et gérer les organisateurs sur la plateforme",
+    "no_organizers_found": "Aucun organisateur trouvé"
   },
   "verify": {
     "title": "Demandes de vérification",
@@ -118,7 +129,7 @@
     "search_placeholder": "Rechercher événements, utilisateurs, commandes...",
     "verify": "Vérifier",
     "events": "Événements",
-    "users": "Organisateurs"
+    "users": "Utilisateurs"
   },
   "stats": {
     "total_events": "Total d'événements",

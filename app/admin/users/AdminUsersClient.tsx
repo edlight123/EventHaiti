@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Link from 'next/link'
 
@@ -10,64 +10,63 @@ type AdminUsersClientProps = {
     organizers: number
     verified: number
   }
-  usersWithAdminFlag: any[]
-  initialHasMore?: boolean
-  initialCursor?: string | null
+  selectedUser?: any | null
   promoteToOrganizer: (formData: FormData) => void
 }
 
 export default function AdminUsersClient({
   counts,
-  usersWithAdminFlag,
-  initialHasMore = false,
-  initialCursor = null,
+  selectedUser = null,
   promoteToOrganizer,
 }: AdminUsersClientProps) {
   const { t } = useTranslation('admin')
 
-  const [users, setUsers] = useState<any[]>(usersWithAdminFlag)
-  const [hasMore, setHasMore] = useState<boolean>(initialHasMore)
-  const [cursor, setCursor] = useState<string | null>(initialCursor)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [query, setQuery] = useState('')
+  const [isSearching, setIsSearching] = useState(false)
+  const [results, setResults] = useState<any[]>([])
+  const [searchError, setSearchError] = useState<string | null>(null)
 
-  const loadMore = async () => {
-    if (isLoadingMore || !hasMore || !cursor) return
-    setIsLoadingMore(true)
+  const canPromoteSelected = useMemo(() => {
+    if (!selectedUser) return false
+    if (selectedUser.role === 'organizer') return false
+    return Boolean(selectedUser.is_verified) || Boolean(selectedUser.is_organizer)
+  }, [selectedUser])
+
+  useEffect(() => {
+    setSearchError(null)
+  }, [query])
+
+  const runSearch = async () => {
+    const q = query.trim()
+    if (q.length < 2) {
+      setResults([])
+      return
+    }
+
+    setIsSearching(true)
+    setSearchError(null)
+
     try {
-      const url = new URL('/api/admin/organizers', window.location.origin)
-      url.searchParams.set('limit', '200')
-      url.searchParams.set('cursor', cursor)
+      const res = await fetch('/api/admin/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q }),
+      })
 
-      const res = await fetch(url.toString(), { method: 'GET' })
       if (!res.ok) {
-        console.error('Failed to load more organizers:', await res.text())
-        return
+        const text = await res.text()
+        throw new Error(text || 'Search failed')
       }
 
       const data = await res.json()
-      const nextUsers = Array.isArray(data?.users) ? data.users : []
-      const nextCursor = typeof data?.nextCursor === 'string' ? data.nextCursor : null
-      const nextHasMore = Boolean(data?.hasMore)
-
-      setUsers((prev) => {
-        const seen = new Set(prev.map((u: any) => String(u?.id || '')))
-        const out = [...prev]
-        for (const u of nextUsers) {
-          const id = String(u?.id || '')
-          if (!id) continue
-          if (seen.has(id)) continue
-          seen.add(id)
-          out.push(u)
-        }
-        return out
-      })
-
-      setCursor(nextCursor)
-      setHasMore(nextHasMore && Boolean(nextCursor))
-    } catch (err) {
-      console.error('Load more organizers error:', err)
+      const all = Array.isArray(data?.results) ? data.results : []
+      const usersOnly = all.filter((r: any) => r?.type === 'user')
+      setResults(usersOnly)
+    } catch (err: any) {
+      setSearchError(err?.message || 'Search failed')
+      setResults([])
     } finally {
-      setIsLoadingMore(false)
+      setIsSearching(false)
     }
   }
 
@@ -104,169 +103,87 @@ export default function AdminUsersClient({
         </div>
       </div>
 
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('users.search_users')}
+            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+          />
+          <button
+            type="button"
+            onClick={runSearch}
+            disabled={isSearching || query.trim().length < 2}
+            className="px-4 py-2.5 text-sm font-medium rounded-lg transition-colors bg-teal-600 hover:bg-teal-700 text-white disabled:opacity-50"
+          >
+            {isSearching ? t('users.loading') : t('users.search')}
+          </button>
+        </div>
+        <div className="mt-2 text-xs text-gray-500">{t('users.search_hint')}</div>
+        {searchError && <div className="mt-3 text-sm text-red-600">{searchError}</div>}
+
+        {results.length > 0 && (
+          <div className="mt-4 border-t border-gray-200 pt-4">
+            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+              {t('users.search_results')}
+            </div>
+            <div className="divide-y divide-gray-100">
+              {results.map((r: any) => (
+                <Link
+                  key={`${r.type}_${r.id}`}
+                  href={r.href || `/admin/users?selected=${r.id}`}
+                  className="block py-3 hover:bg-gray-50 rounded-lg px-2"
+                >
+                  <div className="text-sm font-medium text-gray-900">{r.title}</div>
+                  {r.subtitle && <div className="text-[13px] text-gray-500">{r.subtitle}</div>}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        {users.length === 0 ? (
+        {!selectedUser ? (
           <div className="p-8 sm:p-12 text-center">
-            <p className="text-[13px] sm:text-base text-gray-500">{t('users.no_users_found')}</p>
+            <p className="text-[13px] sm:text-base text-gray-500">{t('users.select_user_hint')}</p>
           </div>
         ) : (
-          <>
-            {/* Mobile: stacked cards */}
-            <div className="sm:hidden divide-y divide-gray-100">
-              {users.map((u: any) => {
-                const shouldBeOrganizer = (u.is_verified && u.is_organizer && u.role !== 'organizer') || (u.is_verified && u.isAdminUser && u.role !== 'organizer')
-                return (
-                  <div key={u.id} className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="min-w-0">
-                        {u.role === 'organizer' ? (
-                          <Link href={`/admin/organizers/${u.id}`} className="text-sm font-medium text-teal-600 hover:text-teal-700 truncate block">
-                            {u.full_name || 'No name'}
-                          </Link>
-                        ) : (
-                          <div className="text-sm font-medium text-gray-900 truncate">{u.full_name || 'No name'}</div>
-                        )}
-                        <div className="text-[13px] text-gray-500 truncate">{u.email}</div>
-                        {u.isAdminUser && (
-                          <div className="text-[11px] text-orange-600 font-semibold mt-0.5">{t('users.admin')}</div>
-                        )}
-                      </div>
-                      <div>
-                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          u.role === 'organizer' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {u.role || 'attendee'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <div>
-                        {u.role === 'organizer' || u.is_organizer || u.isAdminUser ? (
-                          u.verification_status === 'approved' ? (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✓ {t('users.verified')}</span>
-                          ) : (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                              {u.verification_status === 'pending' || u.verification_status === 'pending_review' || u.verification_status === 'in_review'
-                                ? 'Pending'
-                                : 'Not Verified'}
-                            </span>
-                          )
-                        ) : (
-                          <span className="text-[13px] text-gray-400">N/A</span>
-                        )}
-                      </div>
-                      <div className="text-[13px] text-gray-500">
-                        {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
-                      </div>
-                    </div>
-                    {shouldBeOrganizer && (
-                      <form action={promoteToOrganizer} className="mt-3">
-                        <input type="hidden" name="userId" value={u.id} />
-                        <button
-                          type="submit"
-                          className="w-full px-3 py-1.5 text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
-                        >
-                          {t('users.promote_to_organizer')}
-                        </button>
-                      </form>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Desktop: table */}
-            <div className="hidden sm:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">User</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Verification</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-                    <th className="px-6 py-3 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {users.map((u: any) => {
-                    const shouldBeOrganizer = (u.is_verified && u.is_organizer && u.role !== 'organizer') || (u.is_verified && u.isAdminUser && u.role !== 'organizer')
-                    return (
-                      <tr key={u.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <div className="min-w-0">
-                            {u.role === 'organizer' ? (
-                              <Link href={`/admin/organizers/${u.id}`} className="text-sm font-medium text-teal-600 hover:text-teal-700 truncate block">
-                                {u.full_name || 'No name'}
-                              </Link>
-                            ) : (
-                              <div className="text-sm font-medium text-gray-900 truncate">{u.full_name || 'No name'}</div>
-                            )}
-                            <div className="text-[13px] text-gray-500 truncate">{u.email}</div>
-                            {u.isAdminUser && (
-                              <div className="text-[11px] text-orange-600 font-semibold mt-0.5">{t('users.admin')}</div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            u.role === 'organizer' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {u.role || 'attendee'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {u.role === 'organizer' || u.is_organizer || u.isAdminUser ? (
-                            u.verification_status === 'approved' ? (
-                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✓ {t('users.verified')}</span>
-                            ) : (
-                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                {u.verification_status === 'pending' || u.verification_status === 'pending_review' || u.verification_status === 'in_review'
-                                  ? 'Pending'
-                                  : 'Not Verified'}
-                              </span>
-                            )
-                          ) : (
-                            <span className="text-[13px] text-gray-400">N/A</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-[13px] text-gray-500 whitespace-nowrap">
-                          {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {shouldBeOrganizer && (
-                            <form action={promoteToOrganizer}>
-                              <input type="hidden" name="userId" value={u.id} />
-                              <button
-                                type="submit"
-                                className="px-3 py-1.5 text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
-                              >
-                                {t('users.promote_to_organizer')}
-                              </button>
-                            </form>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {hasMore && cursor && (
-              <div className="p-4 sm:p-6 border-t border-gray-200 flex justify-center">
-                <button
-                  type="button"
-                  onClick={loadMore}
-                  disabled={isLoadingMore}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors border border-gray-300 ${
-                    isLoadingMore ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white hover:bg-gray-50 text-gray-900'
-                  }`}
-                >
-                  {isLoadingMore ? t('users.loading') : t('users.load_more')}
-                </button>
+          <div className="p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('users.selected_user')}</div>
+                <div className="text-xl font-bold text-gray-900 mt-1 truncate">{selectedUser.full_name || 'No name'}</div>
+                <div className="text-[13px] text-gray-600 truncate">{selectedUser.email}</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                    {selectedUser.role || 'attendee'}
+                  </span>
+                  {selectedUser.role === 'organizer' && (
+                    <Link
+                      href={`/admin/organizers/${selectedUser.id}`}
+                      className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800"
+                    >
+                      {t('users.view_organizer')}
+                    </Link>
+                  )}
+                </div>
               </div>
-            )}
-          </>
+
+              {canPromoteSelected && (
+                <form action={promoteToOrganizer}>
+                  <input type="hidden" name="userId" value={selectedUser.id} />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                  >
+                    {t('users.promote_to_organizer')}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>

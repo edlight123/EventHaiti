@@ -226,6 +226,7 @@ export async function POST(request: NextRequest) {
             .toLowerCase()
 
           if (searchableText.includes(searchTerm)) {
+            const isOrganizer = data.role === 'organizer' || Boolean(data.is_organizer)
             const r: SearchResult = {
               id: doc.id,
               type: 'user',
@@ -234,7 +235,7 @@ export async function POST(request: NextRequest) {
                 data.email && (data.full_name || data.name)
                   ? data.email
                   : data.business_name || undefined,
-              href: `/admin/users?selected=${doc.id}`,
+              href: isOrganizer ? `/admin/organizers/${doc.id}` : `/admin/users?selected=${doc.id}`,
               metadata: {
                 status: data.is_verified ? 'verified' : 'unverified',
               },

@@ -65,8 +65,8 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
       {/* Breadcrumb */}
       <div className="mb-4 sm:mb-6">
-        <Link href="/admin/users" className="text-teal-600 hover:text-teal-700 text-[13px] sm:text-sm font-medium">
-          ← Back to Users
+        <Link href="/admin/organizers" className="text-teal-600 hover:text-teal-700 text-[13px] sm:text-sm font-medium">
+          ← Back to Organizers
         </Link>
       </div>
 

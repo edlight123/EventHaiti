@@ -53,8 +53,8 @@
     "no_events": "No events in this category"
   },
   "users": {
-    "title": "Organizers",
-    "subtitle": "View and manage organizers on the platform",
+    "title": "Users",
+    "subtitle": "Search and manage users on the platform",
     "back_to_dashboard": "← Back to Admin Dashboard",
     "total_users": "Total Users",
     "organizers": "Organizers",
@@ -62,6 +62,12 @@
     "active_users": "Active Users",
     "banned_users": "Banned Users",
     "search_users": "Search users...",
+    "search": "Search",
+    "search_hint": "Enter at least 2 characters to search.",
+    "search_results": "Search Results",
+    "select_user_hint": "Search for a user to view details.",
+    "selected_user": "Selected User",
+    "view_organizer": "View Organizer",
     "user_id": "User ID",
     "email": "Email",
     "full_name": "Full Name",
@@ -84,6 +90,11 @@
     "verified": "Verified",
     "load_more": "Load more",
     "loading": "Loading..."
+  },
+  "organizers": {
+    "title": "Organizers",
+    "subtitle": "Browse and manage organizers on the platform",
+    "no_organizers_found": "No organizers found"
   },
   "verify": {
     "title": "Verification Requests",
@@ -118,7 +129,7 @@
     "search_placeholder": "Search events, users, orders...",
     "verify": "Verify",
     "events": "Events",
-    "users": "Organizers"
+    "users": "Users"
   },
   "stats": {
     "total_events": "Total Events",

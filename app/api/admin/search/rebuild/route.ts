@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
         indexType = 'user'
         title = data.full_name || data.name || data.email || 'Unknown User'
         subtitle = data.email && (data.full_name || data.name) ? data.email : data.business_name || undefined
-        href = `/admin/users?selected=${doc.id}`
+        href = data.role === 'organizer' || Boolean(data.is_organizer) ? `/admin/organizers/${doc.id}` : `/admin/users?selected=${doc.id}`
         metadata = { status: data.is_verified ? 'verified' : 'unverified' }
         tokenSource = [
           doc.id,

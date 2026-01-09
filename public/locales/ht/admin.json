@@ -53,8 +53,8 @@
     "no_events": "Pa gen evènman nan kategori sa a"
   },
   "users": {
-    "title": "Òganizatè",
-    "subtitle": "Gade epi jere òganizatè yo sou platfòm nan",
+    "title": "Itilizatè",
+    "subtitle": "Chèche epi jere itilizatè yo sou platfòm nan",
     "total_users": "Total itilizatè",
     "organizers": "Òganizatè",
     "verified_organizers": "Òganizatè verifye",
@@ -62,6 +62,12 @@
       "banned_users": "Itilizatè bloke",
       "back_to_dashboard": "← Retounen nan tablo Admin",
       "search_users": "Chèche itilizatè...",
+      "search": "Chèche",
+      "search_hint": "Mete omwen 2 karaktè pou chèche.",
+      "search_results": "Rezilta rechèch",
+      "select_user_hint": "Chèche yon itilizatè pou wè detay.",
+      "selected_user": "Itilizatè chwazi",
+      "view_organizer": "Gade Òganizatè",
       "user_id": "ID itilizatè",
       "email": "Imèl",
       "full_name": "Non konplè",
@@ -85,6 +91,11 @@
       "load_more": "Chaje plis",
       "loading": "Ap chaje..."
     },
+  "organizers": {
+    "title": "Òganizatè",
+    "subtitle": "Gade epi jere òganizatè yo sou platfòm nan",
+    "no_organizers_found": "Pa gen òganizatè jwenn"
+  },
     "verify": {
       "title": "Demann verifikasyon",
       "subtitle": "Revize demann verifikasyon òganizatè k ap tann",
@@ -118,7 +129,7 @@
     "search_placeholder": "Chèche evènman, itilizatè, kòmand...",
     "verify": "Verifye",
     "events": "Evènman",
-    "users": "Òganizatè"
+    "users": "Itilizatè"
   },
   "stats": {
     "total_events": "Total evènman",
