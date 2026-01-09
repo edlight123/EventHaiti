@@ -117,27 +117,25 @@ export default async function AdminBankVerificationsPage({
 
   // Fetch bank verifications (bounded) in a way that avoids requiring composite indexes.
   const bankVerifications: BankVerification[] = []
+  let bankVerificationFetchError: string | null = null
 
   let bankVerificationDocs: any[] = []
   try {
-    // Index-safe query: single equality filter only.
-    // We intentionally do not filter by status or order by submittedAt in Firestore,
-    // because those combinations often require composite indexes in collectionGroup queries.
-    let queryRef: any = adminDb.collectionGroup('verificationDocuments').where('type', '==', 'bank')
-    // Cursor support is best-effort: only works when ordering by __name__.
-    queryRef = queryRef.orderBy('__name__', 'desc')
-    if (cursor?.path) {
-      queryRef = queryRef.startAfter(adminDb.doc(cursor.path))
-    }
+    // Index-safe query: single equality filter only, no orderBy.
+    // (Some Firestore projects still require composite indexes when mixing where+orderBy
+    // on collectionGroup queries; keep this as simple as possible.)
+    const queryRef: any = adminDb.collectionGroup('verificationDocuments').where('type', '==', 'bank')
 
+    // Cursor is intentionally disabled in this mode.
     const snap = await queryRef.limit(Math.max(PAGE_SIZE * 10, 200)).get()
     bankVerificationDocs = snap.docs
   } catch (err) {
     console.error('Failed to fetch bank verification docs:', err)
+    bankVerificationFetchError = err instanceof Error ? err.message : 'Unknown error'
     bankVerificationDocs = []
   }
 
-  // Pagination is best-effort when filtering in-memory.
+  // Pagination is disabled when filtering/sorting in-memory.
   const hasNextPage = false
   const nextCursor = null
 
@@ -419,6 +417,16 @@ export default async function AdminBankVerificationsPage({
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {bankVerificationFetchError ? (
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
+            <div className="text-sm font-semibold text-red-900">Failed to load bank verifications</div>
+            <div className="mt-1 text-sm text-red-800 break-words">{bankVerificationFetchError}</div>
+            <div className="mt-2 text-xs text-red-700">
+              This usually means a Firestore index/config mismatch. The page will show empty until it can query verification documents.
+            </div>
+          </div>
+        ) : null}
+
         {/* Pending Verifications */}
         {(statusParam === 'pending' || statusParam === 'all') && pending.length > 0 && (
           <div className="mb-8">
