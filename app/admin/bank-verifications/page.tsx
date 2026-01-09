@@ -131,8 +131,52 @@ export default async function AdminBankVerificationsPage({
     bankVerificationDocs = snap.docs
   } catch (err) {
     console.error('Failed to fetch bank verification docs:', err)
-    bankVerificationFetchError = err instanceof Error ? err.message : 'Unknown error'
-    bankVerificationDocs = []
+    const primaryErrorMessage = err instanceof Error ? err.message : 'Unknown error'
+
+    // Fallback to the older per-organizer scan approach.
+    // This avoids collectionGroup indexing requirements which can cause FAILED_PRECONDITION in some prod setups.
+    try {
+      let organizerIds: string[] = []
+
+      try {
+        const organizersSnap = await adminDb
+          .collection('users')
+          .where('role', '==', 'organizer')
+          .limit(500)
+          .get()
+        organizerIds = organizersSnap.docs.map((d) => d.id)
+      } catch {
+        organizerIds = []
+      }
+
+      if (organizerIds.length === 0) {
+        const organizersSnap = await adminDb.collection('organizers').limit(500).get()
+        organizerIds = organizersSnap.docs.map((d) => d.id)
+      }
+
+      const docs: any[] = []
+      for (const organizerId of organizerIds) {
+        try {
+          const snap = await adminDb
+            .collection('organizers')
+            .doc(organizerId)
+            .collection('verificationDocuments')
+            .where('type', '==', 'bank')
+            .get()
+          docs.push(...snap.docs)
+          if (docs.length >= 2000) break
+        } catch {
+          // Ignore individual organizer failures.
+        }
+      }
+
+      bankVerificationDocs = docs
+      bankVerificationFetchError = null
+    } catch (fallbackErr) {
+      console.error('Failed legacy fallback for bank verification docs:', fallbackErr)
+      bankVerificationFetchError = primaryErrorMessage
+      bankVerificationDocs = []
+    }
   }
 
   // Pagination is disabled when filtering/sorting in-memory.
