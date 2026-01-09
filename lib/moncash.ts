@@ -58,9 +58,12 @@ async function getAccessToken(): Promise<string> {
     return cachedToken.token
   }
 
-  const clientId = process.env.MONCASH_CLIENT_ID
-  const secretKey = process.env.MONCASH_SECRET_KEY
+  const rawClientId = process.env.MONCASH_CLIENT_ID
+  const rawSecretKey = process.env.MONCASH_SECRET_KEY
   const mode = process.env.MONCASH_MODE || 'sandbox'
+
+  const clientId = typeof rawClientId === 'string' ? rawClientId.trim() : rawClientId
+  const secretKey = typeof rawSecretKey === 'string' ? rawSecretKey.trim() : rawSecretKey
 
   console.log('[MonCash] Getting new token:', { mode, clientId: clientId?.substring(0, 8) + '...' })
 
@@ -68,26 +71,80 @@ async function getAccessToken(): Promise<string> {
     throw new Error('MonCash credentials not configured')
   }
 
-  const credentials = Buffer.from(`${clientId}:${secretKey}`).toString('base64')
   const baseUrl = getMonCashBaseUrl()
 
   console.log('[MonCash] Token request URL:', `${baseUrl}/Api/oauth/token`)
 
-  const response = await fetch(`${baseUrl}/Api/oauth/token`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${credentials}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'scope=read,write&grant_type=client_credentials',
-  })
+  const tokenUrl = `${baseUrl}/Api/oauth/token`
+  const credentials = Buffer.from(`${clientId}:${secretKey}`).toString('base64')
 
-  console.log('[MonCash] Token response status:', response.status)
+  const makeBody = (scope: string, includeClientCredentials: boolean): string => {
+    const params = new URLSearchParams()
+    params.set('grant_type', 'client_credentials')
+    if (scope) params.set('scope', scope)
+    if (includeClientCredentials) {
+      params.set('client_id', clientId)
+      params.set('client_secret', secretKey)
+    }
+    return params.toString()
+  }
 
-  if (!response.ok) {
-    const error = await response.text()
-    console.error('[MonCash] Token error response:', error)
-    throw new Error(`Failed to get MonCash token: ${error}`)
+  const tryTokenRequest = async (opts: {
+    auth: 'basic' | 'body'
+    scope: string
+  }): Promise<Response> => {
+    const includeClientCredentials = opts.auth === 'body'
+
+    return fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        ...(opts.auth === 'basic' ? { Authorization: `Basic ${credentials}` } : {}),
+      },
+      body: makeBody(opts.scope, includeClientCredentials),
+    })
+  }
+
+  // MonCash environments vary: some accept Basic auth, others expect client_id/client_secret in the body.
+  // Likewise, scope formatting may be comma- or space-separated. Try a small set of known-good variants.
+  const attempts: Array<{ auth: 'basic' | 'body'; scope: string }> = [
+    { auth: 'basic', scope: 'read,write' },
+    { auth: 'basic', scope: 'read write' },
+    { auth: 'body', scope: 'read,write' },
+    { auth: 'body', scope: 'read write' },
+  ]
+
+  let response: Response | null = null
+  let lastErrorText: string | null = null
+  let lastStatus: number | null = null
+  let lastAttempt: { auth: 'basic' | 'body'; scope: string } | null = null
+
+  for (const attempt of attempts) {
+    lastAttempt = attempt
+    response = await tryTokenRequest(attempt)
+    lastStatus = response.status
+    console.log('[MonCash] Token response status:', response.status)
+
+    if (response.ok) break
+
+    // Only bother trying fallbacks for auth failures; otherwise fail fast.
+    if (response.status !== 401) {
+      lastErrorText = await response.text()
+      break
+    }
+
+    lastErrorText = await response.text()
+  }
+
+  if (!response || !response.ok) {
+    const errorText = lastErrorText ?? (response ? await response.text() : 'Unknown error')
+    console.error('[MonCash] Token error response:', errorText)
+    const attemptInfo = lastAttempt ? `auth=${lastAttempt.auth}, scope=${JSON.stringify(lastAttempt.scope)}` : 'unknown attempt'
+    const clientIdHint = typeof clientId === 'string' ? `${clientId.substring(0, 8)}...` : 'missing'
+    throw new Error(
+      `Failed to get MonCash token (${lastStatus ?? 'no_status'}; ${attemptInfo}; mode=${mode}; clientId=${clientIdHint}): ${errorText}`
+    )
   }
 
   const data: MonCashTokenResponse = await response.json()
