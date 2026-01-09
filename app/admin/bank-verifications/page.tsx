@@ -102,7 +102,7 @@ export default async function AdminBankVerificationsPage({
     redirect('/auth/login?redirect=/admin/bank-verifications')
   }
 
-  const statusParamRaw = String(searchParams?.status || 'pending').toLowerCase()
+  const statusParamRaw = String(searchParams?.status || 'all').toLowerCase()
   const statusParam = (['pending', 'verified', 'failed', 'all'] as const).includes(statusParamRaw as any)
     ? (statusParamRaw as 'pending' | 'verified' | 'failed' | 'all')
     : 'pending'
@@ -115,52 +115,48 @@ export default async function AdminBankVerificationsPage({
     getBankVerificationCount('failed'),
   ])
 
-  // Fetch recent bank verifications (bounded; avoids scanning all organizers).
+  // Fetch bank verifications (bounded) in a way that avoids requiring composite indexes.
   const bankVerifications: BankVerification[] = []
 
   let bankVerificationDocs: any[] = []
   try {
+    // Index-safe query: single equality filter only.
+    // We intentionally do not filter by status or order by submittedAt in Firestore,
+    // because those combinations often require composite indexes in collectionGroup queries.
     let queryRef: any = adminDb.collectionGroup('verificationDocuments').where('type', '==', 'bank')
-    if (statusParam !== 'all') {
-      queryRef = queryRef.where('status', '==', statusParam)
+    // Cursor support is best-effort: only works when ordering by __name__.
+    queryRef = queryRef.orderBy('__name__', 'desc')
+    if (cursor?.path) {
+      queryRef = queryRef.startAfter(adminDb.doc(cursor.path))
     }
 
-    let usesSubmittedAtOrdering = false
-    try {
-      queryRef = queryRef.orderBy('submittedAt', 'desc').orderBy('__name__', 'desc')
-      usesSubmittedAtOrdering = true
-    } catch {
-      queryRef = queryRef.orderBy('__name__', 'desc')
-      usesSubmittedAtOrdering = false
-    }
-
-    if (cursor) {
-      if (usesSubmittedAtOrdering) {
-        queryRef = queryRef.startAfter(cursor.submittedAt, adminDb.doc(cursor.path))
-      } else {
-        queryRef = queryRef.startAfter(adminDb.doc(cursor.path))
-      }
-    }
-
-    const snap = await queryRef.limit(PAGE_SIZE + 1).get()
+    const snap = await queryRef.limit(Math.max(PAGE_SIZE * 10, 200)).get()
     bankVerificationDocs = snap.docs
   } catch (err) {
     console.error('Failed to fetch bank verification docs:', err)
     bankVerificationDocs = []
   }
 
-  const hasNextPage = bankVerificationDocs.length > PAGE_SIZE
-  const pageDocs = hasNextPage ? bankVerificationDocs.slice(0, PAGE_SIZE) : bankVerificationDocs
-  const nextCursor = (() => {
-    if (!hasNextPage) return null
-    const last = pageDocs[pageDocs.length - 1]
-    if (!last) return null
-    const data = (last.data?.() || {}) as any
-    const submittedAt = toISOStringMaybe(data?.submittedAt || data?.submitted_at || data?.createdAt || data?.created_at)
-    const path = String(last?.ref?.path || '')
-    if (!submittedAt || !path) return null
-    return encodeCursor({ submittedAt, path })
-  })()
+  // Pagination is best-effort when filtering in-memory.
+  const hasNextPage = false
+  const nextCursor = null
+
+  // Filter + sort in-memory.
+  const filteredDocs = bankVerificationDocs
+    .filter((doc: any) => {
+      if (statusParam === 'all') return true
+      const data = (doc.data?.() || {}) as any
+      return String(data?.status || 'pending').toLowerCase() === statusParam
+    })
+    .sort((a: any, b: any) => {
+      const aData = (a.data?.() || {}) as any
+      const bData = (b.data?.() || {}) as any
+      const aSubmittedAt = toISOStringMaybe(aData?.submittedAt || aData?.submitted_at || aData?.createdAt || aData?.created_at)
+      const bSubmittedAt = toISOStringMaybe(bData?.submittedAt || bData?.submitted_at || bData?.createdAt || bData?.created_at)
+      return new Date(bSubmittedAt || 0).getTime() - new Date(aSubmittedAt || 0).getTime()
+    })
+
+  const pageDocs = filteredDocs.slice(0, PAGE_SIZE)
 
   const rows = pageDocs
     .map((doc: any) => {
