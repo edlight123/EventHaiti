@@ -144,14 +144,14 @@ export default async function AdminBankVerificationsPage({
           .where('role', '==', 'organizer')
           .limit(500)
           .get()
-        organizerIds = organizersSnap.docs.map((d) => d.id)
+        organizerIds = organizersSnap.docs.map((d: any) => d.id)
       } catch {
         organizerIds = []
       }
 
       if (organizerIds.length === 0) {
         const organizersSnap = await adminDb.collection('organizers').limit(500).get()
-        organizerIds = organizersSnap.docs.map((d) => d.id)
+        organizerIds = organizersSnap.docs.map((d: any) => d.id)
       }
 
       const docs: any[] = []
