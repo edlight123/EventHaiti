@@ -50,8 +50,8 @@ export default async function AdminVerifyPage({
   const requestedStatusRaw = (searchParams?.status || 'pending').toLowerCase()
 
   // Support both legacy and canonical statuses.
-  const pendingStatuses = ['pending_review', 'in_review', 'pending']
-  const supported = new Set(['pending', 'approved', 'rejected', 'changes_requested', 'all'])
+  const pendingStatuses = ['pending_review', 'in_review', 'in_progress', 'pending']
+  const supported = new Set(['pending', 'approved', 'rejected', 'changes_requested', 'in_progress', 'all'])
   const requestedStatus = supported.has(requestedStatusRaw) ? requestedStatusRaw : 'pending'
 
   // Fetch a bounded set of verification requests (avoid scanning the entire collection).
@@ -76,8 +76,7 @@ export default async function AdminVerifyPage({
       }
     }
 
-    const snapshot = await queryRef.limit(50).get()
-    verificationRequests = snapshot.docs.map((doc: any) => {
+    const mapDoc = (doc: any) => {
       const data = doc.data()
       const serialized = serializeFirestoreValue(data)
 
@@ -91,7 +90,59 @@ export default async function AdminVerifyPage({
         user_id: serialized?.user_id ?? serialized?.userId ?? null,
         status: serialized?.status || 'pending',
       }
-    })
+    }
+
+    const snapshot = await queryRef.limit(50).get()
+    const primary = snapshot.docs.map(mapDoc)
+
+    // If pending queue looks suspiciously small, add a bounded fallback query to catch
+    // older/mismatched docs that still have submission timestamps but an unexpected status.
+    if (requestedStatus === 'pending' && primary.length < 10) {
+      const byId = new Map<string, any>(primary.map((r: any) => [String(r.id), r]))
+
+      const isSubmitted = (r: any) => Boolean(r?.submittedAt || r?.submitted_at || r?.createdAt || r?.created_at)
+      const isPendingLike = (r: any) => {
+        const s = String(r?.status || '').toLowerCase()
+        if (pendingStatuses.includes(s)) return true
+        // Treat missing/unknown statuses as pending if it has a submission timestamp.
+        if (!s || s === 'unknown') return isSubmitted(r)
+        return false
+      }
+
+      const tryFallbackOrder = async (field: string) => {
+        const snap = await adminDb.collection('verification_requests').orderBy(field, 'desc').limit(50).get()
+        return snap.docs.map(mapDoc)
+      }
+
+      let fallback: any[] = []
+      try {
+        fallback = await tryFallbackOrder('submittedAt')
+      } catch {
+        try {
+          fallback = await tryFallbackOrder('submitted_at')
+        } catch {
+          try {
+            fallback = await tryFallbackOrder('createdAt')
+          } catch {
+            try {
+              fallback = await tryFallbackOrder('created_at')
+            } catch {
+              fallback = []
+            }
+          }
+        }
+      }
+
+      for (const r of fallback) {
+        if (byId.has(String(r.id))) continue
+        if (!isPendingLike(r)) continue
+        byId.set(String(r.id), r)
+      }
+
+      verificationRequests = Array.from(byId.values()).slice(0, 50)
+    } else {
+      verificationRequests = primary
+    }
   } catch (err) {
     console.error('Error fetching verification requests:', err)
     verificationRequests = []

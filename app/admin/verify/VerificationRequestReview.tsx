@@ -376,9 +376,9 @@ export default function VerificationRequestReview({ request, user }: Props) {
     }
   }
 
-  const handleReject = async () => {
+  const handleRequestChanges = async () => {
     if (!rejectionReason.trim()) {
-      alert('Please provide a reason for rejection')
+      alert('Please provide a reason for the requested changes')
       return
     }
 
@@ -389,19 +389,19 @@ export default function VerificationRequestReview({ request, user }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           requestId: request.id,
-          status: 'rejected',
+          status: 'changes_requested',
           rejectionReason: rejectionReason.trim(),
         }),
       })
 
-      if (!response.ok) throw new Error('Failed to reject')
+      if (!response.ok) throw new Error('Failed to request changes')
 
-      alert('Verification rejected. Organizer has been notified.')
+      alert('Changes requested. Organizer has been notified.')
       setShowRejectModal(false)
       router.refresh()
     } catch (error) {
       console.error('Error rejecting:', error)
-      alert('Failed to reject verification')
+      alert('Failed to request changes')
     } finally {
       setReviewing(false)
     }
@@ -576,9 +576,9 @@ export default function VerificationRequestReview({ request, user }: Props) {
           <button
             onClick={() => setShowRejectModal(true)}
             disabled={reviewing}
-            className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[13px] sm:text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+            className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-[13px] sm:text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
           >
-            ❌ Reject
+            ✍️ Request changes
           </button>
         </div>
       </div>
@@ -617,14 +617,14 @@ export default function VerificationRequestReview({ request, user }: Props) {
       {showRejectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl p-4 sm:p-6 max-w-md w-full">
-            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Reject Verification</h3>
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Request Changes</h3>
             <p className="text-[13px] sm:text-sm text-gray-600 mb-3 sm:mb-4">
-              Please provide a reason for rejecting this verification. The organizer will receive this in an email.
+              Please describe what needs to be fixed. The organizer will receive this in an email and can resubmit.
             </p>
             <textarea
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="e.g., ID card photo is blurry, face not clearly visible, etc."
+              placeholder="e.g., ID photo is blurry; please re-upload a clear front/back."
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent mb-3 sm:mb-4 text-[15px] sm:text-base min-h-[44px]"
               rows={4}
             />
@@ -639,11 +639,11 @@ export default function VerificationRequestReview({ request, user }: Props) {
                 Cancel
               </button>
               <button
-                onClick={handleReject}
+                onClick={handleRequestChanges}
                 disabled={reviewing || !rejectionReason.trim()}
-                className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[13px] sm:text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+                className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-[13px] sm:text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
               >
-                {reviewing ? 'Rejecting...' : 'Confirm Rejection'}
+                {reviewing ? 'Sending...' : 'Send Request'}
               </button>
             </div>
           </div>

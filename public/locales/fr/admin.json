@@ -90,8 +90,10 @@
     "subtitle": "Examiner les demandes de vérification d'organisateur en attente",
     "back_to_dashboard": "← Retour au tableau de bord Admin",
     "pending_requests": "Demandes en attente",
+    "changes_requested": "Modifications demandées",
     "approved": "Approuvées",
     "rejected": "Rejetées",
+    "all": "Toutes",
     "no_pending": "Aucune demande de vérification en attente",
     "all_caught_up": "Tout est à jour ! Aucune demande de vérification à examiner.",
     "organizer_name": "Organisateur",
@@ -102,7 +104,15 @@
     "reject": "Rejeter",
     "view_document": "Voir le document",
     "quick_toggle_title": "Bascule rapide de vérification",
-    "quick_toggle_subtitle": "Gérer manuellement le statut vérifié des organisateurs"
+    "quick_toggle_subtitle": "Gérer manuellement le statut vérifié des organisateurs",
+    "override_search_label": "Rechercher un organisateur",
+    "override_search_placeholder": "Saisissez un nom ou un e-mail…",
+    "override_search_hint": "Entrez au moins 2 caractères pour afficher des résultats.",
+    "override_search_required": "Recherchez pour trouver un organisateur.",
+    "override_no_results": "Aucun organisateur ne correspond à votre recherche.",
+    "override_updating": "Mise à jour…",
+    "override_remove": "Retirer la vérification",
+    "override_verify": "Vérifier"
   },
   "nav": {
     "search_placeholder": "Rechercher événements, utilisateurs, commandes...",

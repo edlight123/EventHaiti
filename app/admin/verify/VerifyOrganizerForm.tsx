@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Organizer {
   id: string
@@ -23,8 +24,19 @@ interface Props {
 }
 
 export default function VerifyOrganizerForm({ organizers }: Props) {
+  const { t } = useTranslation('admin')
   const [updating, setUpdating] = useState<string | null>(null)
   const [localOrganizers, setLocalOrganizers] = useState(organizers)
+  const [query, setQuery] = useState('')
+
+  const normalizedQuery = query.trim().toLowerCase()
+  const shouldShowResults = normalizedQuery.length >= 2
+  const filtered = shouldShowResults
+    ? localOrganizers.filter((o) => {
+        const haystack = `${o.full_name || ''} ${o.email || ''}`.toLowerCase()
+        return haystack.includes(normalizedQuery)
+      })
+    : []
 
   const toggleVerification = async (organizerId: string, currentStatus: boolean) => {
     setUpdating(organizerId)
@@ -63,10 +75,23 @@ export default function VerifyOrganizerForm({ organizers }: Props) {
 
   return (
     <div className="space-y-4">
-      {localOrganizers.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">No organizers found</p>
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">{t('verify.override_search_label')}</label>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('verify.override_search_placeholder')}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent text-[15px] sm:text-base"
+        />
+        <p className="text-[12px] sm:text-sm text-gray-500">{t('verify.override_search_hint')}</p>
+      </div>
+
+      {!shouldShowResults ? (
+        <p className="text-gray-500 text-center py-6">{t('verify.override_search_required')}</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-gray-500 text-center py-6">{t('verify.override_no_results')}</p>
       ) : (
-        localOrganizers.map(organizer => (
+        filtered.map(organizer => (
           <div
             key={organizer.id}
             className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -110,10 +135,10 @@ export default function VerifyOrganizerForm({ organizers }: Props) {
               }`}
             >
               {updating === organizer.id
-                ? 'Updating...'
+                ? t('verify.override_updating')
                 : organizer.verification_status === 'approved'
-                ? 'Remove Verification'
-                : 'Verify'}
+                ? t('verify.override_remove')
+                : t('verify.override_verify')}
             </button>
           </div>
         ))

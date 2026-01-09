@@ -90,8 +90,10 @@
       "subtitle": "Revize demann verifikasyon òganizatè k ap tann",
       "back_to_dashboard": "← Retounen nan tablo Admin",
       "pending_requests": "Demann k ap tann",
+      "changes_requested": "Chanjman mande",
       "approved": "Apwouve",
       "rejected": "Rejte",
+      "all": "Tout",
       "no_pending": "Pa gen demann verifikasyon k ap tann",
       "all_caught_up": "Ou fini! Pa gen okenn demann pou revize.",
       "organizer_name": "Òganizatè",
@@ -102,7 +104,15 @@
       "reject": "Rejte",
       "view_document": "Gade dokiman",
       "quick_toggle_title": "Chanjman rapid verifikasyon",
-      "quick_toggle_subtitle": "Jere manyèlman estati verifye òganizatè yo"
+        "quick_toggle_subtitle": "Jere manyèlman estati verifye òganizatè yo",
+        "override_search_label": "Chèche òganizatè",
+        "override_search_placeholder": "Ekri non oswa imèl…",
+        "override_search_hint": "Mete omwen 2 karaktè pou wè rezilta yo.",
+        "override_search_required": "Chèche pou jwenn yon òganizatè.",
+        "override_no_results": "Pa gen òganizatè ki koresponn ak rechèch la.",
+        "override_updating": "Ap mete ajou…",
+        "override_remove": "Retire verifikasyon",
+        "override_verify": "Verifye"
   },
   "nav": {
     "search_placeholder": "Chèche evènman, itilizatè, kòmand...",

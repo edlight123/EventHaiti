@@ -90,8 +90,10 @@
     "subtitle": "Review pending organizer verification submissions",
     "back_to_dashboard": "← Back to Admin Dashboard",
     "pending_requests": "Pending Requests",
+    "changes_requested": "Changes requested",
     "approved": "Approved",
     "rejected": "Rejected",
+    "all": "All",
     "no_pending": "No pending verification requests",
     "all_caught_up": "All caught up! No verification requests to review.",
     "organizer_name": "Organizer",
@@ -102,7 +104,15 @@
     "reject": "Reject",
     "view_document": "View Document",
     "quick_toggle_title": "Quick Verification Toggle",
-    "quick_toggle_subtitle": "Manually manage verified status for organizers"
+    "quick_toggle_subtitle": "Manually manage verified status for organizers",
+    "override_search_label": "Search organizer",
+    "override_search_placeholder": "Type a name or email…",
+    "override_search_hint": "Enter at least 2 characters to show results.",
+    "override_search_required": "Search to find an organizer.",
+    "override_no_results": "No organizers match your search.",
+    "override_updating": "Updating…",
+    "override_remove": "Remove Verification",
+    "override_verify": "Verify"
   },
   "nav": {
     "search_placeholder": "Search events, users, orders...",

@@ -27,6 +27,14 @@ export async function POST(request: NextRequest) {
 
     const targetUser = userDoc.data() as any
 
+    const role = String(targetUser?.role || '').toLowerCase()
+    const legacyOrganizerDoc = await adminDb.collection('organizers').doc(organizerId).get()
+    const isOrganizer = role === 'organizer' || legacyOrganizerDoc.exists
+
+    if (!isOrganizer) {
+      return adminError('Target user is not an organizer', 400)
+    }
+
     const nowIso = new Date().toISOString()
     const verification_status = isVerified ? 'approved' : 'none'
 
