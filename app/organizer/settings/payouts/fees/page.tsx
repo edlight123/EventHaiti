@@ -1,11 +1,57 @@
-'use client'
-
 import { ChevronRight, Info } from 'lucide-react'
 import Link from 'next/link'
+import { adminAuth, adminDb } from '@/lib/firebase/admin'
+import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
+import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
 
-export default function PayoutFeesPage() {
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+export default async function PayoutFeesPage() {
+  const payoutPath = '/organizer/settings/payouts/fees'
+
+  // Verify authentication
+  const cookieStore = await cookies()
+  const sessionCookie = cookieStore.get('session')?.value
+
+  if (!sessionCookie) {
+    redirect(`/auth/login?redirect=${encodeURIComponent(payoutPath)}`)
+  }
+
+  let authUser
+  try {
+    const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true)
+    authUser = decodedClaims
+  } catch (error) {
+    console.error('Error verifying session:', error)
+    redirect(`/auth/login?redirect=${encodeURIComponent(payoutPath)}`)
+  }
+
+  // Ensure this user is an organizer (attendees should go through the upgrade flow)
+  try {
+    const userDoc = await adminDb.collection('users').doc(authUser.uid).get()
+    const role = userDoc.exists ? userDoc.data()?.role : null
+    if (role !== 'organizer') {
+      redirect(`/organizer?redirect=${encodeURIComponent(payoutPath)}`)
+    }
+  } catch (error) {
+    console.error('Error checking user role:', error)
+    redirect(`/organizer?redirect=${encodeURIComponent(payoutPath)}`)
+  }
+
+  const navbarUser = {
+    id: authUser.uid,
+    email: authUser.email || '',
+    full_name: authUser.name || authUser.email || '',
+    role: 'organizer' as const,
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+      <Navbar user={navbarUser} />
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -184,6 +230,8 @@ export default function PayoutFeesPage() {
           </div>
         </div>
       </div>
+
+      <MobileNavWrapper user={navbarUser} />
     </div>
   )
 }
