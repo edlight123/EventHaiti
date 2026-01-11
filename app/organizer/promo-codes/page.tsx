@@ -36,7 +36,7 @@ export default async function PromoCodesPage({
       .orderBy('created_at', 'desc')
       .get()
     
-    events = eventsSnapshot.docs.map((doc) => ({
+    events = eventsSnapshot.docs.map((doc: any) => ({
       id: doc.id,
       title: doc.data().title,
       start_datetime: doc.data().start_datetime,
