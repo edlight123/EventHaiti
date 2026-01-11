@@ -33,7 +33,7 @@ export default async function PromoCodesPage({
     const eventsSnapshot = await adminDb
       .collection('events')
       .where('organizer_id', '==', user.id)
-      .orderBy('start_datetime', 'desc')
+      .orderBy('created_at', 'desc')
       .get()
     
     events = eventsSnapshot.docs.map((doc) => ({
