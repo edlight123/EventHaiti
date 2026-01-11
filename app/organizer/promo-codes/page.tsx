@@ -5,7 +5,7 @@ import MobileNavWrapper from '@/components/MobileNavWrapper'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import PromoCodeManager from './PromoCodeManager'
-import { adminDb } from '@/lib/firebase-db/admin'
+import { adminDb } from '@/lib/firebase/admin'
 
 export const revalidate = 0
 
