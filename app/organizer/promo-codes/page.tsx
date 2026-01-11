@@ -36,17 +36,16 @@ export default async function PromoCodesPage({
       .orderBy('created_at', 'desc')
       .get()
     
-    events = eventsSnapshot.docs.map((doc: any) => ({
-      id: doc.id,
-      title: doc.data().title,
-      start_datetime: doc.data().start_datetime,
-      organizer_id: doc.data().organizer_id,
-    }))
+    events = eventsSnapshot.docs.map((doc: any) => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        title: data.title,
+      }
+    })
   } catch (error) {
     console.error('Failed to fetch events:', error)
   }
-  
-  console.log('Events fetched for promo codes:', events.length, events)
 
   // Fetch promo codes (no joins with Firebase)
   let promoCodesData: any[] = []
