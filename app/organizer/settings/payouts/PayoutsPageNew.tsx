@@ -1577,7 +1577,11 @@ export default function PayoutsPageNew({
                     <div>
                       <div className="text-sm font-medium text-gray-500 mb-1">Location</div>
                       <div className="text-base text-gray-900">
-                        {formatLocationLabel(config?.accountLocation || config?.bankDetails?.accountLocation)}
+                        {formatLocationLabel(
+                          config?.accountLocation || 
+                          config?.bankDetails?.accountLocation || 
+                          (activeProfile === 'stripe_connect' ? 'united_states' : 'haiti')
+                        )}
                       </div>
                     </div>
 
