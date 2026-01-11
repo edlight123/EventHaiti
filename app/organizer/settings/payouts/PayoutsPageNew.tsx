@@ -162,8 +162,8 @@ export default function PayoutsPageNew({
   const [formData, setFormData] = useState(() => ({
     accountLocation:
       activeProfile === 'stripe_connect'
-        ? (config?.accountLocation || 'united_states')
-        : (config?.accountLocation || config?.bankDetails?.accountLocation || 'haiti'),
+        ? (stripeConfig?.accountLocation || 'united_states')
+        : (haitiConfig?.accountLocation || haitiConfig?.bankDetails?.accountLocation || 'haiti'),
     method: config?.method || (activeProfile === 'stripe_connect' ? 'bank_transfer' : 'bank_transfer'),
     bankName: config?.bankDetails?.bankName || 'unibank',
     customBankName: '',
@@ -200,8 +200,8 @@ export default function PayoutsPageNew({
     setFormData({
       accountLocation:
         activeProfile === 'stripe_connect'
-          ? (config?.accountLocation || 'united_states')
-          : (config?.accountLocation || config?.bankDetails?.accountLocation || 'haiti'),
+          ? (stripeConfig?.accountLocation || 'united_states')
+          : (haitiConfig?.accountLocation || haitiConfig?.bankDetails?.accountLocation || 'haiti'),
       method: config?.method || (activeProfile === 'stripe_connect' ? 'bank_transfer' : 'bank_transfer'),
       bankName: config?.bankDetails?.bankName || 'unibank',
       customBankName: '',
