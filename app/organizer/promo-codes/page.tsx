@@ -34,6 +34,8 @@ export default async function PromoCodesPage({
     .order('start_datetime', { ascending: false })
 
   const events = eventsQuery.data || []
+  
+  console.log('Events fetched for promo codes:', events.length, events)
 
   // Fetch promo codes (no joins with Firebase)
   let promoCodesData: any[] = []
