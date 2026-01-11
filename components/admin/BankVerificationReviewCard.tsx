@@ -69,7 +69,10 @@ export default function BankVerificationReviewCard({ verification }: Props) {
         }),
       })
 
-      if (!response.ok) throw new Error('Failed to approve')
+      const data = await response.json().catch(() => ({} as any))
+      if (!response.ok) {
+        throw new Error(data?.error || data?.message || 'Failed to approve')
+      }
 
       alert('Bank verification approved!')
       window.location.reload()
@@ -98,7 +101,10 @@ export default function BankVerificationReviewCard({ verification }: Props) {
         }),
       })
 
-      if (!response.ok) throw new Error('Failed to reject')
+      const data = await response.json().catch(() => ({} as any))
+      if (!response.ok) {
+        throw new Error(data?.error || data?.message || 'Failed to reject')
+      }
 
       alert('Bank verification rejected')
       window.location.reload()

@@ -11,6 +11,14 @@ export async function POST(request: NextRequest) {
       return adminError('Not authenticated', 401)
     }
 
+    if (typeof (adminDb as any)?.collection !== 'function' || typeof (adminDb as any)?.runTransaction !== 'function') {
+      return adminError(
+        'Firestore admin client not initialized',
+        500,
+        'Missing Firebase Admin credentials/config in this environment.'
+      )
+    }
+
     const { organizerId, decision, reason, destinationId } = await request.json()
 
     if (!organizerId || !decision) {
@@ -23,48 +31,78 @@ export async function POST(request: NextRequest) {
 
     const newStatus = decision === 'approve' ? 'verified' : 'failed'
 
-    const resolvedDestinationId = destinationId ? String(destinationId) : ''
-    const docId = (() => {
-      const normalized = resolvedDestinationId.trim()
-      // Legacy primary bank verification used doc id "bank".
-      if (!normalized || normalized === 'bank' || normalized === 'bank_primary' || normalized === 'primary') {
-        return 'bank'
+    const resolvedDestinationId = destinationId ? String(destinationId).trim() : ''
+
+    // New schema uses verification doc id: bank_<destinationId>
+    // Legacy primary used doc id: bank
+    // Many deployments have BOTH patterns in the wild (especially for bank_primary),
+    // so resolve by checking which document exists.
+    const candidateDocIds = (() => {
+      const ids: string[] = []
+      if (!resolvedDestinationId) {
+        ids.push('bank')
+        return Array.from(new Set(ids))
       }
-      // Some callers may already provide the full verification doc id.
-      if (normalized.startsWith('bank_')) return normalized
-      return `bank_${normalized}`
+
+      if (resolvedDestinationId.startsWith('bank_')) {
+        ids.push(resolvedDestinationId)
+      } else {
+        ids.push(`bank_${resolvedDestinationId}`)
+      }
+
+      const normalized = resolvedDestinationId.toLowerCase()
+      if (normalized === 'bank_primary' || normalized === 'primary' || normalized === 'bank') {
+        ids.push('bank')
+      }
+
+      return Array.from(new Set(ids))
     })()
 
-    const verificationRef = adminDb
+    const verificationDocsRef = adminDb
       .collection('organizers')
       .doc(organizerId)
       .collection('verificationDocuments')
-      .doc(docId)
 
     const txResult = await adminDb.runTransaction(async (tx: any) => {
-      const snap = await tx.get(verificationRef)
-      if (!snap.exists) return { notFound: true }
+      let snap: any = null
+      let resolvedDocId: string | null = null
+
+      for (const candidate of candidateDocIds) {
+        const candidateRef = verificationDocsRef.doc(candidate)
+        const candidateSnap = await tx.get(candidateRef)
+        if (candidateSnap.exists) {
+          snap = candidateSnap
+          resolvedDocId = candidate
+          break
+        }
+      }
+
+      if (!snap || !snap.exists || !resolvedDocId) {
+        return { notFound: true, attemptedDocIds: candidateDocIds }
+      }
 
       const before = snap.data() as any
       const beforeStatus = String(before?.status || 'pending')
 
       if (beforeStatus === newStatus) {
-        return { idempotent: true, beforeStatus, afterStatus: beforeStatus }
+        return { idempotent: true, beforeStatus, afterStatus: beforeStatus, docId: resolvedDocId }
       }
 
-      tx.update(verificationRef, {
+      tx.update(verificationDocsRef.doc(resolvedDocId), {
         status: newStatus,
         reviewedAt: new Date().toISOString(),
         reviewedBy: user.id,
         rejectionReason: decision === 'reject' ? reason : null,
       })
 
-      return { idempotent: false, beforeStatus, afterStatus: newStatus }
+      return { idempotent: false, beforeStatus, afterStatus: newStatus, docId: resolvedDocId }
     })
 
     if ((txResult as any)?.notFound) {
       return adminError('Bank verification not found', 404)
     }
+
+    const updatedDocId = String((txResult as any)?.docId || '')
 
     const idempotent = Boolean((txResult as any)?.idempotent)
 
@@ -74,11 +112,11 @@ export async function POST(request: NextRequest) {
         adminId: user.id,
         adminEmail: user.email || 'unknown',
         resourceType: 'bank_verification',
-        resourceId: `${organizerId}:${docId}`,
+        resourceId: `${organizerId}:${updatedDocId || resolvedDestinationId || 'bank'}`,
         details: {
           organizerId,
           destinationId,
-          verificationDocId: docId,
+          verificationDocId: updatedDocId,
           decision,
           reason: decision === 'reject' ? reason : null,
           beforeStatus: (txResult as any)?.beforeStatus,
