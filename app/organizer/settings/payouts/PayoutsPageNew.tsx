@@ -107,7 +107,10 @@ export default function PayoutsPageNew({
     return primaryProfile
   })
 
-  const [showAdditionalProfiles, setShowAdditionalProfiles] = useState(false)
+  const [showAdditionalProfiles, setShowAdditionalProfiles] = useState(() => {
+    // Show both profiles by default if both are configured
+    return Boolean(haitiConfig && stripeConfig)
+  })
 
   const config = activeProfile === 'haiti' ? haitiConfig : stripeConfig
 
