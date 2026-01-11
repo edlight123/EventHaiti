@@ -7,6 +7,7 @@ import MobileNavWrapper from '@/components/MobileNavWrapper'
 import BankVerificationReviewCard from '@/components/admin/BankVerificationReviewCard'
 import { getDecryptedBankDestination } from '@/lib/firestore/payout-destinations'
 import { AdminAccessDenied } from '@/components/admin/AdminAccessDenied'
+import { FieldPath } from 'firebase-admin/firestore'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -70,27 +71,20 @@ function decodeCursor(raw: string | undefined): { submittedAt: string; path: str
   }
 }
 
-async function getBankVerificationCount(status: 'pending' | 'verified' | 'failed'): Promise<number | null> {
-  try {
-    const q: any = adminDb
-      .collectionGroup('verificationDocuments')
-      .where('type', '==', 'bank')
-      .where('status', '==', status)
+function isBankVerificationDoc(doc: any, data: any): boolean {
+  const id = String(doc?.id || '')
+  if (id === 'bank' || id === 'bank_primary') return true
+  if (id.startsWith('bank_')) return true
+  // Newer schema includes explicit type.
+  if (String(data?.type || '').toLowerCase() === 'bank') return true
+  return false
+}
 
-    // Firestore aggregate count (preferred).
-    if (typeof (q as any).count === 'function') {
-      const agg = await (q as any).count().get()
-      const data = agg?.data?.()
-      const count = Number(data?.count)
-      return Number.isFinite(count) ? count : null
-    }
-
-    // Fallback (avoid scanning; best-effort sample only).
-    const snap = await q.limit(1000).get()
-    return snap.size
-  } catch {
-    return null
-  }
+function normalizeStatus(raw: unknown): 'pending' | 'verified' | 'failed' {
+  const value = String(raw || 'pending').toLowerCase().trim()
+  if (value === 'verified' || value === 'approved') return 'verified'
+  if (value === 'failed' || value === 'rejected' || value === 'declined') return 'failed'
+  return 'pending'
 }
 
 export default async function AdminBankVerificationsPage({
@@ -116,22 +110,19 @@ export default async function AdminBankVerificationsPage({
 
   const cursor = decodeCursor(searchParams?.cursor)
 
-  const [pendingCount, verifiedCount, failedCount] = await Promise.all([
-    getBankVerificationCount('pending'),
-    getBankVerificationCount('verified'),
-    getBankVerificationCount('failed'),
-  ])
-
   // Fetch bank verifications (bounded) in a way that avoids requiring composite indexes.
   const bankVerifications: BankVerification[] = []
   let bankVerificationFetchError: string | null = null
 
   let bankVerificationDocs: any[] = []
   try {
-    // Index-safe query: single equality filter only, no orderBy.
-    // (Some Firestore projects still require composite indexes when mixing where+orderBy
-    // on collectionGroup queries; keep this as simple as possible.)
-    const queryRef: any = adminDb.collectionGroup('verificationDocuments').where('type', '==', 'bank')
+    // Legacy-safe query: many older docs don't include `type: 'bank'`.
+    // Query by doc id prefix instead (bank / bank_*).
+    // Avoid orderBy to reduce chances of type-mismatch errors across historical docs.
+    const queryRef: any = adminDb
+      .collectionGroup('verificationDocuments')
+      .where(FieldPath.documentId(), '>=', 'bank')
+      .where(FieldPath.documentId(), '<=', 'bank\uf8ff')
 
     // Cursor is intentionally disabled in this mode.
     const snap = await queryRef.limit(Math.max(PAGE_SIZE * 10, 200)).get()
@@ -168,9 +159,11 @@ export default async function AdminBankVerificationsPage({
             .collection('organizers')
             .doc(organizerId)
             .collection('verificationDocuments')
-            .where('type', '==', 'bank')
             .get()
-          docs.push(...snap.docs)
+          for (const d of snap.docs) {
+            const data = (d.data?.() || {}) as any
+            if (isBankVerificationDoc(d, data)) docs.push(d)
+          }
           if (docs.length >= 2000) break
         } catch {
           // Ignore individual organizer failures.
@@ -193,9 +186,10 @@ export default async function AdminBankVerificationsPage({
   // Filter + sort in-memory.
   const filteredDocs = bankVerificationDocs
     .filter((doc: any) => {
-      if (statusParam === 'all') return true
       const data = (doc.data?.() || {}) as any
-      return String(data?.status || 'pending').toLowerCase() === statusParam
+      if (!isBankVerificationDoc(doc, data)) return false
+      if (statusParam === 'all') return true
+      return normalizeStatus(data?.status) === statusParam
     })
     .sort((a: any, b: any) => {
       const aData = (a.data?.() || {}) as any
@@ -222,14 +216,13 @@ export default async function AdminBankVerificationsPage({
           return raw.startsWith('bank_') && raw !== 'bank_primary' ? raw.slice('bank_'.length) : raw
         }
         if (docId.startsWith('bank_')) return docId.slice('bank_'.length)
-        if (docId === 'bank') return 'bank_primary'
+        if (docId === 'bank' || docId === 'bank_primary') return 'bank_primary'
         return ''
       })()
 
       if (!organizerId || !destinationId) return null
 
-      const statusRaw = String(data?.status || 'pending').toLowerCase()
-      const normalizedStatus = statusRaw === 'verified' || statusRaw === 'failed' ? statusRaw : 'pending'
+      const normalizedStatus = normalizeStatus(data?.status)
 
       return {
         organizerId,
@@ -397,6 +390,12 @@ export default async function AdminBankVerificationsPage({
   const pending = bankVerifications.filter(v => v.verificationDoc.status === 'pending')
   const verified = bankVerifications.filter(v => v.verificationDoc.status === 'verified')
   const failed = bankVerifications.filter(v => v.verificationDoc.status === 'failed')
+
+  // Stats: computed from loaded data (legacy-safe). If you have many thousands of docs,
+  // these counts reflect the current loaded window rather than the entire dataset.
+  const pendingCount = pending.length
+  const verifiedCount = verified.length
+  const failedCount = failed.length
 
     return (
       <div className="min-h-screen bg-gray-50 pb-mobile-nav">
