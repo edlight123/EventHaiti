@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { getPayoutHistory } from '@/lib/firestore/payout'
 import { serializeData } from '@/lib/utils/serialize'
+import Navbar from '@/components/Navbar'
+import MobileNavWrapper from '@/components/MobileNavWrapper'
 
 interface PayoutHistoryItem {
   id: string
@@ -262,5 +264,18 @@ export default async function PayoutHistoryPage() {
     method: payout.method || 'bank_transfer'
   }))
 
-  return <PayoutHistoryClient payouts={transformedPayouts} />
+  const navbarUser = {
+    id: authUser.uid,
+    email: authUser.email || '',
+    full_name: authUser.name || authUser.email || '',
+    role: 'organizer' as const,
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+      <Navbar user={navbarUser} />
+      <PayoutHistoryClient payouts={transformedPayouts} />
+      <MobileNavWrapper user={navbarUser} />
+    </div>
+  )
 }

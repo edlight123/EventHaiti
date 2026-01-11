@@ -186,8 +186,7 @@ export default function PromoCodeManager({
                 required
                 value={eventId}
                 onChange={(e) => setEventId(e.target.value)}
-                className="relative z-10 w-full px-4 py-2 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-orange-500"
-                style={{ WebkitAppearance: 'menulist', appearance: 'auto' } as any}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">Select event</option>
                 {events.map(event => (
