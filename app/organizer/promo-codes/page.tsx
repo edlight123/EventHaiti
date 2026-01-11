@@ -5,6 +5,7 @@ import MobileNavWrapper from '@/components/MobileNavWrapper'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import PromoCodeManager from './PromoCodeManager'
+import { adminDb } from '@/lib/firebase-db/admin'
 
 export const revalidate = 0
 
@@ -26,14 +27,24 @@ export default async function PromoCodesPage({
   const supabase = await createClient()
   const params = await searchParams
 
-  // Fetch organizer's events only
-  const eventsQuery = await supabase
-    .from('events')
-    .select('id,title,start_datetime,organizer_id')
-    .eq('organizer_id', user.id)
-    .order('start_datetime', { ascending: false })
-
-  const events = eventsQuery.data || []
+  // Fetch organizer's events from Firebase
+  let events: any[] = []
+  try {
+    const eventsSnapshot = await adminDb
+      .collection('events')
+      .where('organizer_id', '==', user.id)
+      .orderBy('start_datetime', 'desc')
+      .get()
+    
+    events = eventsSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      title: doc.data().title,
+      start_datetime: doc.data().start_datetime,
+      organizer_id: doc.data().organizer_id,
+    }))
+  } catch (error) {
+    console.error('Failed to fetch events:', error)
+  }
   
   console.log('Events fetched for promo codes:', events.length, events)
 

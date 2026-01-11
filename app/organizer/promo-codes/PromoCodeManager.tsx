@@ -31,8 +31,6 @@ export default function PromoCodeManager({
   promoCodes: PromoCode[]
   organizerId: string
 }) {
-  console.log('PromoCodeManager received events:', events)
-  
   const [promoCodes, setPromoCodes] = useState(initialPromoCodes)
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
