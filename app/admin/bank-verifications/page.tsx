@@ -1,4 +1,4 @@
-import { requireAdmin } from '@/lib/auth'
+import { getCurrentUser, requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
 import BankVerificationReviewCard from '@/components/admin/BankVerificationReviewCard'
 import { getDecryptedBankDestination } from '@/lib/firestore/payout-destinations'
+import { AdminAccessDenied } from '@/components/admin/AdminAccessDenied'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -97,10 +98,16 @@ export default async function AdminBankVerificationsPage({
 }: {
   searchParams?: { status?: string; cursor?: string }
 }) {
-  const { user, error } = await requireAdmin()
-  if (error || !user) {
-    redirect('/auth/login?redirect=/admin/bank-verifications')
-  }
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      redirect('/auth/login?redirect=/admin/bank-verifications')
+    }
+
+    const { error } = await requireAdmin()
+    if (error) {
+      return <AdminAccessDenied userEmail={user.email} />
+    }
 
   const statusParamRaw = String(searchParams?.status || 'all').toLowerCase()
   const statusParam = (['pending', 'verified', 'failed', 'all'] as const).includes(statusParamRaw as any)
@@ -391,9 +398,9 @@ export default async function AdminBankVerificationsPage({
   const verified = bankVerifications.filter(v => v.verificationDoc.status === 'verified')
   const failed = bankVerifications.filter(v => v.verificationDoc.status === 'failed')
 
-  return (
-    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={user} isAdmin={true} />
+    return (
+      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
+        <Navbar user={user} isAdmin={true} />
 
       {/* Header */}
       <div className="bg-gradient-to-br from-purple-600 to-purple-700 border-b border-purple-800">
@@ -546,7 +553,36 @@ export default async function AdminBankVerificationsPage({
         )}
       </div>
 
-      <MobileNavWrapper user={user} isAdmin={true} />
-    </div>
-  )
+        <MobileNavWrapper user={user} isAdmin={true} />
+      </div>
+    )
+  } catch (error) {
+    console.error('Admin bank verifications fatal error:', error)
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-gray-200 p-8 text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Bank Verifications</h1>
+          <p className="text-gray-600 mb-6">
+            There was an error loading bank verification requests. This may be a configuration or Firestore index issue.
+          </p>
+          <div className="bg-gray-50 rounded-lg p-4 mb-6">
+            <p className="text-xs text-gray-500 break-words">
+              Error: {error instanceof Error ? error.message : 'Unknown error'}
+            </p>
+          </div>
+          <a
+            href="/admin"
+            className="inline-block bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            Back to Admin
+          </a>
+        </div>
+      </div>
+    )
+  }
 }

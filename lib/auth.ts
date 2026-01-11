@@ -5,6 +5,10 @@ import { isDemoMode } from '@/lib/demo'
 import { cookies } from 'next/headers'
 import { isAdmin as isAdminEmail } from '@/lib/admin'
 
+function hasFirestoreAdmin(db: any): db is { collection: (path: string) => any } {
+  return Boolean(db && typeof db.collection === 'function')
+}
+
 async function getDemoUser() {
   if (!isDemoMode()) return null
   
@@ -45,8 +49,19 @@ export async function getCurrentUser() {
     return null
   }
 
+  if (!hasFirestoreAdmin(adminDb)) {
+    console.error('[auth] Firebase Admin Firestore not initialized')
+    return null
+  }
+
   // Get user profile from Firestore
-  const userDoc = await adminDb.collection('users').doc(user.id).get()
+  let userDoc: any
+  try {
+    userDoc = await adminDb.collection('users').doc(user.id).get()
+  } catch (e) {
+    console.error('[auth] Failed to fetch user profile from Firestore', e)
+    return null
+  }
   
   if (!userDoc.exists) {
     return null
