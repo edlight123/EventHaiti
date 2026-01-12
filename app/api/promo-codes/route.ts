@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/firebase-db/server'
+import { adminDb } from '@/lib/firebase/admin'
 import {
   getPromoExpiresAt,
   getPromoStartAt,
@@ -34,17 +35,21 @@ export async function POST(req: NextRequest) {
 
     const supabase = await createClient()
 
-    // Verify event belongs to user
-    const { data: event, error: eventError } = await supabase
-      .from('events')
-      .select('organizer_id')
-      .eq('id', eventId)
-      .single()
-
-    if (eventError || !event || event.organizer_id !== user.id) {
+    // Verify event belongs to user (events are in Firebase)
+    const eventDoc = await adminDb.collection('events').doc(eventId).get()
+    
+    if (!eventDoc.exists) {
       return NextResponse.json(
-        { error: 'Event not found or unauthorized' },
+        { error: 'Event not found' },
         { status: 404 }
+      )
+    }
+    
+    const eventData = eventDoc.data()
+    if (eventData?.organizer_id !== user.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
       )
     }
 
