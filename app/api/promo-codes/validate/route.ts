@@ -13,6 +13,8 @@ export async function POST(request: Request) {
 
     const { code, eventId } = await request.json()
 
+    console.log('Validating promo code:', { code, eventId })
+
     if (!code) {
       return NextResponse.json({ error: 'Promo code is required' }, { status: 400 })
     }
@@ -31,8 +33,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid promo code' }, { status: 404 })
     }
 
+    console.log('Found promo code:', { id: promoCode.id, code: promoCode.code, event_id: promoCode.event_id, comparing_with: eventId })
+
     // Check if event-specific
     if (promoCode.event_id && promoCode.event_id !== eventId) {
+      console.log('Event ID mismatch!', { stored: promoCode.event_id, received: eventId })
       return NextResponse.json({ error: 'This promo code is not valid for this event' }, { status: 400 })
     }
 
