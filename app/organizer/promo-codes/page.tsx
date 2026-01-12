@@ -71,6 +71,8 @@ export default async function PromoCodesPage({
         )
       )
 
+      console.log('Query results from chunks:', results.map((r, i) => ({ chunk: i, dataLength: r.data?.length || 0, error: r.error })))
+
       const userPromoCodes = results.flatMap((r) => r.data || [])
       console.log('Fetched promo codes:', userPromoCodes.length, userPromoCodes)
 
