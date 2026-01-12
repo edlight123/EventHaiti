@@ -315,7 +315,7 @@ export default function EventbriteStyleTicketSelector({
             {promoValidation?.valid && promoValidation.promoCode && (
               <div className="flex justify-between text-sm text-green-600">
                 <span>
-                  {t('events.discount')} ({promoValidation.promoCode.code})
+                  {t('common.promo_discount')} ({promoValidation.promoCode.code})
                 </span>
                 <span>
                   -{promoValidation.promoCode.discountType === 'percentage' 

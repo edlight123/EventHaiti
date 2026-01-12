@@ -47,10 +47,25 @@ export async function trackPromoCodeUsage(
   discountApplied: number,
   supabase: any
 ): Promise<void> {
+  // Insert usage record
   await supabase.from('promo_code_usage').insert({
     promo_code_id: promoCodeId,
     user_id: userId,
     ticket_id: ticketId,
     discount_applied: discountApplied,
   })
+  
+  // Increment uses_count in promo_codes table
+  const { data: promoCode } = await supabase
+    .from('promo_codes')
+    .select('uses_count')
+    .eq('id', promoCodeId)
+    .single()
+  
+  if (promoCode) {
+    await supabase
+      .from('promo_codes')
+      .update({ uses_count: (promoCode.uses_count || 0) + 1 })
+      .eq('id', promoCodeId)
+  }
 }
