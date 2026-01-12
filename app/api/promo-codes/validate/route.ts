@@ -21,11 +21,12 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
 
-    // Find promo code
+    // Find promo code for the specific event
     const { data: promoCode, error: promoError } = await supabase
       .from('promo_codes')
       .select('*')
       .eq('code', code.toUpperCase())
+      .eq('event_id', eventId)
       .eq('is_active', true)
       .single()
 
@@ -33,13 +34,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid promo code' }, { status: 404 })
     }
 
-    console.log('Found promo code:', { id: promoCode.id, code: promoCode.code, event_id: promoCode.event_id, comparing_with: eventId })
-
-    // Check if event-specific
-    if (promoCode.event_id && promoCode.event_id !== eventId) {
-      console.log('Event ID mismatch!', { stored: promoCode.event_id, received: eventId })
-      return NextResponse.json({ error: 'This promo code is not valid for this event' }, { status: 400 })
-    }
+    console.log('Found promo code:', { id: promoCode.id, code: promoCode.code, event_id: promoCode.event_id })
 
     // Check validity period
     const now = new Date()
