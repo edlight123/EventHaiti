@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { createClient } from '@/lib/firebase-db/server'
+import { createClient as createSupabaseClient } from '@/lib/supabase/server'
 import { adminDb } from '@/lib/firebase/admin'
 import {
   getPromoExpiresAt,
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
+    const supabase = await createSupabaseClient()
 
     // Verify event belongs to user (events are in Firebase)
     const eventDoc = await adminDb.collection('events').doc(eventId).get()
@@ -136,7 +136,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const supabase = await createClient()
+    const supabase = await createSupabaseClient()
 
     // Verify promo belongs to one of the organizer's events
     const { data: promo, error: promoError } = await supabase
@@ -192,7 +192,7 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
+    const supabase = await createSupabaseClient()
 
     const { data: promoCode, error } = await supabase
       .from('promo_codes')
@@ -289,7 +289,7 @@ export async function DELETE(req: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
+    const supabase = await createSupabaseClient()
 
     // Verify promo belongs to user's event
     const { data: promo } = await supabase

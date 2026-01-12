@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/firebase-db/server'
+import { createClient as createSupabaseClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
@@ -24,7 +24,7 @@ export default async function PromoCodesPage({
     redirect('/organizer?redirect=/organizer/promo-codes')
   }
 
-  const supabase = await createClient()
+  const supabase = await createSupabaseClient()
   const params = await searchParams
 
   // Fetch organizer's events from Firebase
