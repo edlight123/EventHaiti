@@ -1,4 +1,4 @@
-import { createClient as createSupabaseClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 import MobileNavWrapper from '@/components/MobileNavWrapper'
@@ -24,7 +24,7 @@ export default async function PromoCodesPage({
     redirect('/organizer?redirect=/organizer/promo-codes')
   }
 
-  const supabase = await createSupabaseClient()
+  const supabase = await createClient()
   const params = await searchParams
 
   // Fetch organizer's events from Firebase
@@ -55,10 +55,10 @@ export default async function PromoCodesPage({
     console.log('Fetching promo codes for event IDs:', eventIds.length, eventIds.slice(0, 5))
     
     if (eventIds.length > 0) {
-      // Supabase `in()` can get unwieldy with huge lists; chunk defensively.
+      // Firebase `in()` supports max 30 values; chunk into groups of 30
       const chunks: string[][] = []
-      for (let i = 0; i < eventIds.length; i += 500) {
-        chunks.push(eventIds.slice(i, i + 500))
+      for (let i = 0; i < eventIds.length; i += 30) {
+        chunks.push(eventIds.slice(i, i + 30))
       }
 
       const results = await Promise.all(
