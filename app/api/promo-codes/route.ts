@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     const expiresAt = validUntil || null
 
-    const { error: insertError } = await supabase.from('promo_codes').insert({
+    const promoData = {
       id: promoId,
       event_id: eventId,
       code: code.toUpperCase(),
@@ -92,16 +92,21 @@ export async function POST(req: NextRequest) {
       valid_from: validFrom || null,
       valid_until: validUntil || null,
       created_at: new Date().toISOString(),
-    })
+    }
+
+    console.log('Creating promo code with data:', promoData)
+
+    const { error: insertError } = await supabase.from('promo_codes').insert(promoData)
 
     if (insertError) {
       console.error('Error creating promo code:', insertError)
       return NextResponse.json(
-        { error: 'Failed to create promo code' },
+        { error: 'Failed to create promo code', details: insertError.message },
         { status: 500 }
       )
     }
 
+    console.log('Promo code created successfully:', promoId)
     return NextResponse.json({ success: true, promoId })
   } catch (error) {
     console.error('Error in POST /api/promo-codes:', error)

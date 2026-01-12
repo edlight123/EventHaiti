@@ -52,6 +52,8 @@ export default async function PromoCodesPage({
   
   try {
     const eventIds = events.map((e: any) => e.id).filter(Boolean)
+    console.log('Fetching promo codes for event IDs:', eventIds.length, eventIds.slice(0, 5))
+    
     if (eventIds.length > 0) {
       // Supabase `in()` can get unwieldy with huge lists; chunk defensively.
       const chunks: string[][] = []
@@ -70,6 +72,7 @@ export default async function PromoCodesPage({
       )
 
       const userPromoCodes = results.flatMap((r) => r.data || [])
+      console.log('Fetched promo codes:', userPromoCodes.length, userPromoCodes)
 
       // Get event titles separately
       const eventsMap = new Map()
