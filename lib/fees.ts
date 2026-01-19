@@ -18,6 +18,21 @@ export function calculatePlatformFee(grossAmount: number): number {
 }
 
 /**
+ * Calculate platform fee with dynamic percentage based on location
+ * 
+ * @param grossAmount - Total ticket sales in cents
+ * @param feePercentage - Dynamic fee percentage (e.g., 0.10 for 10%)
+ * @returns Platform fee in cents
+ */
+export function calculatePlatformFeeWithPercentage(
+  grossAmount: number,
+  feePercentage: number
+): number {
+  const feeAmount = Math.round(grossAmount * feePercentage)
+  return Math.max(feeAmount, FEE_CONFIG.PLATFORM_FEE_MIN)
+}
+
+/**
  * Calculate Stripe processing fee
  * Formula: 2.9% + $0.30 per transaction
  * 
@@ -37,6 +52,29 @@ export function calculateStripeFee(grossAmount: number): number {
  */
 export function calculateFees(grossAmount: number): FeeCalculation {
   const platformFee = calculatePlatformFee(grossAmount)
+  const processingFee = calculateStripeFee(grossAmount)
+  const netAmount = grossAmount - platformFee - processingFee
+
+  return {
+    grossAmount,
+    platformFee,
+    processingFee,
+    netAmount,
+  }
+}
+
+/**
+ * Calculate all fees and net amount with custom fee percentage
+ * 
+ * @param grossAmount - Total ticket sales in cents
+ * @param feePercentage - Dynamic platform fee percentage
+ * @returns Complete fee breakdown
+ */
+export function calculateFeesWithPercentage(
+  grossAmount: number,
+  feePercentage: number
+): FeeCalculation {
+  const platformFee = calculatePlatformFeeWithPercentage(grossAmount, feePercentage)
   const processingFee = calculateStripeFee(grossAmount)
   const netAmount = grossAmount - platformFee - processingFee
 
@@ -93,6 +131,22 @@ export function meetsMinimumPayout(amount: number): boolean {
 export function calculateSettlementDate(eventEndDate: Date): Date {
   const settlementDate = new Date(eventEndDate)
   settlementDate.setDate(settlementDate.getDate() + FEE_CONFIG.SETTLEMENT_HOLD_DAYS)
+  return settlementDate
+}
+
+/**
+ * Calculate settlement ready date with custom hold days
+ * 
+ * @param eventEndDate - Event end date/time
+ * @param holdDays - Number of days to hold
+ * @returns Settlement ready date
+ */
+export function calculateSettlementDateWithHoldDays(
+  eventEndDate: Date,
+  holdDays: number
+): Date {
+  const settlementDate = new Date(eventEndDate)
+  settlementDate.setDate(settlementDate.getDate() + holdDays)
   return settlementDate
 }
 

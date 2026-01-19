@@ -5,8 +5,10 @@
  */
 
 import { adminDb } from '@/lib/firebase/admin'
-import { calculateFees, calculateSettlementDate, isSettlementReady } from '@/lib/fees'
+import { calculateFees, calculateSettlementDate, isSettlementReady, calculatePlatformFeeWithPercentage, calculateSettlementDateWithHoldDays } from '@/lib/fees'
 import type { EventEarnings, SettlementStatus, EarningsSummary } from '@/types/earnings'
+import { getEventLocation } from '@/types/platform-settings'
+import { getPlatformSettings } from '@/lib/admin/platform-settings'
 
 type PaymentMethod = 'stripe' | 'stripe_connect' | 'moncash' | 'moncash_button' | 'natcash' | 'sogepay' | 'unknown'
 
@@ -40,6 +42,7 @@ function calculateEventCurrencyFees(options: {
   paymentMethod: PaymentMethod
   chargedAmountCents?: number | null
   fxRate?: number | null
+  platformFeePercentage?: number
 }): { grossAmount: number; platformFee: number; processingFee: number; netAmount: number } {
   const grossEventCents = Math.max(0, Math.round(options.grossEventCents || 0))
   if (grossEventCents <= 0) {
@@ -47,8 +50,10 @@ function calculateEventCurrencyFees(options: {
   }
 
   // Platform fee is always calculated on organizer-facing gross (event currency).
-  const platformSide = calculateFees(grossEventCents)
-  const platformFee = platformSide.platformFee
+  // Use dynamic fee percentage if provided, otherwise use default from calculateFees
+  const platformFee = options.platformFeePercentage !== undefined
+    ? calculatePlatformFeeWithPercentage(grossEventCents, options.platformFeePercentage)
+    : calculateFees(grossEventCents).platformFee
 
   // Processing fee depends on the payment rail.
   // Stripe fees are in charged/settlement currency, so convert them back to event currency when needed.
@@ -104,6 +109,20 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
   if (!eventDoc.exists) return null
 
   const event = eventDoc.data() || {}
+  
+  // Get event location to determine which fees to use
+  const eventCountry = String(event.country || 'HT')
+  const eventLocation = getEventLocation(eventCountry)
+  
+  // Fetch dynamic platform settings
+  const platformSettings = await getPlatformSettings()
+  const platformFeePercentage = eventLocation === 'haiti'
+    ? platformSettings.haiti.platformFeePercentage
+    : platformSettings.usCanada.platformFeePercentage
+  const settlementHoldDays = eventLocation === 'haiti'
+    ? platformSettings.haiti.settlementHoldDays
+    : platformSettings.usCanada.settlementHoldDays
+  
   // Settlement hold is applied after the event ends.
   const eventEndDate =
     toDateOrNull(event.end_datetime || event.endDateTime) ||
@@ -199,6 +218,7 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
       paymentMethod: group.paymentMethod,
       chargedAmountCents: group.chargedAmountCents,
       fxRate: group.fxRate,
+      platformFeePercentage, // Pass dynamic platform fee
     })
     grossSales += fees.grossAmount
     platformFee += fees.platformFee
@@ -206,7 +226,7 @@ async function deriveEventEarningsFromTickets(eventId: string): Promise<EventEar
     netAmount += fees.netAmount
   }
 
-  const settlementReadyDate = calculateSettlementDate(eventEndDate).toISOString()
+  const settlementReadyDate = calculateSettlementDateWithHoldDays(eventEndDate, settlementHoldDays).toISOString()
   const settlementStatus: SettlementStatus = isSettlementReady(settlementReadyDate) ? 'ready' : 'pending'
   const availableToWithdraw = settlementStatus === 'ready' ? Math.max(0, netAmount) : 0
 
@@ -497,6 +517,18 @@ export async function addTicketToEarnings(
 ): Promise<void> {
   const { ref, data } = await getOrCreateEventEarnings(eventId)
 
+  // Get event to determine location and dynamic settings
+  const eventDoc = await adminDb.collection('events').doc(eventId).get()
+  const event = eventDoc.exists ? eventDoc.data() : null
+  const eventCountry = event ? String(event.country || 'HT') : 'HT'
+  const eventLocation = getEventLocation(eventCountry)
+  
+  // Fetch dynamic platform settings
+  const platformSettings = await getPlatformSettings()
+  const platformFeePercentage = eventLocation === 'haiti'
+    ? platformSettings.haiti.platformFeePercentage
+    : platformSettings.usCanada.platformFeePercentage
+
   const paymentMethod = normalizePaymentMethod(options?.paymentMethod)
   const fxRate = options?.fxRate != null ? Number(options.fxRate) : null
   const chargedAmountCents = options?.chargedAmountCents
@@ -506,6 +538,7 @@ export async function addTicketToEarnings(
     paymentMethod,
     chargedAmountCents,
     fxRate,
+    platformFeePercentage, // Pass dynamic platform fee
   })
 
   // Update earnings

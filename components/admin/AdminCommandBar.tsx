@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Search, Bell, Calendar, Users, ShieldCheck, CreditCard, Loader2, MapPin, DollarSign, User } from 'lucide-react'
+import { Search, Bell, Calendar, Users, ShieldCheck, CreditCard, Loader2, MapPin, DollarSign, User, Settings } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -211,6 +211,13 @@ export function AdminCommandBar({ pendingVerifications, pendingBankVerifications
             >
               <Users className="w-4 h-4" />
               {t('nav.users')}
+            </Link>
+            <Link
+              href="/admin/settings"
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              Settings
             </Link>
           </div>
 
