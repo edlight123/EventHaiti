@@ -1,5 +1,10 @@
 import { redirect } from 'next/navigation'
 
+export const metadata = {
+  title: 'Verifications | Admin | EventHaiti',
+  description: 'Redirecting to organizer verification management',
+}
+
 export const dynamic = 'force-dynamic'
 
 export default function AdminVerificationsRedirect({

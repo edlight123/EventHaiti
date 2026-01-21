@@ -1,4 +1,5 @@
 import { getAdminUsers, getUserCounts } from '@/lib/data/users'
+import { AdminBreadcrumbs } from '@/components/admin/AdminBreadcrumbs'
 import AdminOrganizersClient from './AdminOrganizersClient'
 
 type Cursor = { id: string; createdAtMillis: number }
@@ -52,11 +53,18 @@ export default async function AdminOrganizersPage() {
   }))
 
   return (
-    <AdminOrganizersClient
-      counts={counts}
-      initialUsers={serializedUsers}
-      initialHasMore={usersResult.hasMore && Boolean(initialCursor)}
-      initialCursor={initialCursor}
-    />
+    <div className="p-6 space-y-6">
+      <AdminBreadcrumbs 
+        items={[
+          { label: 'Organizers', href: '/admin/organizers' }
+        ]} 
+      />
+      <AdminOrganizersClient
+        counts={counts}
+        initialUsers={serializedUsers}
+        initialHasMore={usersResult.hasMore && Boolean(initialCursor)}
+        initialCursor={initialCursor}
+      />
+    </div>
   )
 }

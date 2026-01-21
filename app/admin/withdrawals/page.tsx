@@ -1,11 +1,11 @@
 import { redirect } from 'next/navigation'
 
-export const dynamic = 'force-dynamic'
-
 export const metadata = {
-  title: 'Withdrawal Management - EventHaiti Admin',
-  description: 'Review and process organizer withdrawal requests'
+  title: 'Withdrawal Management | Admin | EventHaiti',
+  description: 'Redirecting to consolidated payout operations - withdrawal history',
 }
+
+export const dynamic = 'force-dynamic'
 
 export default function AdminWithdrawalsPage() {
   redirect('/admin/disbursements#withdrawals')
