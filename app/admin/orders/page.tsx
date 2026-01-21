@@ -1,12 +1,7 @@
-import { requireAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 
 export const revalidate = 0
-
 export const dynamic = 'force-dynamic'
 
 function serializeFirestoreValue(value: any): any {
@@ -39,11 +34,6 @@ export default async function AdminOrdersPage({
 }: {
   searchParams?: { selected?: string }
 }) {
-  const { user, error } = await requireAdmin()
-  if (error || !user) {
-    redirect('/auth/login?redirect=/admin/orders')
-  }
-
   const selected = searchParams?.selected ? String(searchParams.selected) : ''
 
   // Load a small, recent window of ticket docs (admin search currently labels these as "orders").
@@ -83,31 +73,28 @@ export default async function AdminOrdersPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={user} isAdmin={true} />
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
+      <div className="mb-4 sm:mb-6">
+        <Link href="/admin" className="text-teal-600 hover:text-teal-700 text-[13px] sm:text-sm font-medium">
+          ← Back to Admin Dashboard
+        </Link>
+      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
-        <div className="mb-4 sm:mb-6">
-          <Link href="/admin" className="text-teal-600 hover:text-teal-700 text-[13px] sm:text-sm font-medium">
-            ← Back to Admin Dashboard
-          </Link>
-        </div>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Orders</h1>
+        <p className="text-[13px] sm:text-base text-gray-600 mt-1 sm:mt-2">
+          Read-only view of recent ticket documents (used by Admin Search).
+        </p>
+      </div>
 
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Orders</h1>
-          <p className="text-[13px] sm:text-base text-gray-600 mt-1 sm:mt-2">
-            Read-only view of recent ticket documents (used by Admin Search).
-          </p>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-200">
+            <h2 className="font-semibold text-gray-900">Recent Orders</h2>
+            <p className="text-xs text-gray-500">Showing up to 25 recent tickets</p>
+          </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-200">
-              <h2 className="font-semibold text-gray-900">Recent Orders</h2>
-              <p className="text-xs text-gray-500">Showing up to 25 recent tickets</p>
-            </div>
-
-            {recentTickets.length === 0 ? (
+          {recentTickets.length === 0 ? (
               <div className="p-6 text-sm text-gray-500">No recent tickets found.</div>
             ) : (
               <div className="divide-y divide-gray-100">
@@ -164,8 +151,5 @@ export default async function AdminOrdersPage({
           </div>
         </div>
       </div>
-
-      <MobileNavWrapper user={user} isAdmin={true} />
-    </div>
   )
 }

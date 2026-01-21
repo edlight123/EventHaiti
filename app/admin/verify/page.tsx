@@ -1,12 +1,7 @@
-import { requireAdmin } from '@/lib/auth'
-import { redirect } from 'next/navigation'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 import AdminVerifyClient from './AdminVerifyClient'
 import { adminDb } from '@/lib/firebase/admin'
 
 export const revalidate = 0
-
 export const dynamic = 'force-dynamic'
 
 function serializeFirestoreValue(value: any): any {
@@ -41,12 +36,6 @@ export default async function AdminVerifyPage({
 }: {
   searchParams?: { status?: string }
 }) {
-  const { user, error } = await requireAdmin()
-
-  if (error || !user) {
-    redirect('/')
-  }
-
   const requestedStatusRaw = (searchParams?.status || 'pending').toLowerCase()
 
   // Support both legacy and canonical statuses.
@@ -214,15 +203,9 @@ export default async function AdminVerifyPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={user} isAdmin={true} />
-      
-      <AdminVerifyClient 
-        requestsWithUsers={requestsWithUsers}
-        organizers={organizers}
-      />
-      
-      <MobileNavWrapper user={user} isAdmin={true} />
-    </div>
+    <AdminVerifyClient 
+      requestsWithUsers={requestsWithUsers}
+      organizers={organizers}
+    />
   )
 }
