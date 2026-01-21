@@ -5,6 +5,9 @@ import { AdminDashboardHeader } from '@/components/admin/AdminDashboardHeader'
 import { AdminKpiGrid } from '@/components/admin/AdminKpiGrid'
 import { WorkQueueCard } from '@/components/admin/WorkQueueCard'
 import { RecentActivityTimeline } from '@/components/admin/RecentActivityTimeline'
+import { AdminDashboardQuickActions } from '@/components/admin/AdminDashboardQuickActions'
+import { RealTimeMetrics } from '@/components/admin/RealTimeMetrics'
+import { AdminActivityFeed } from '@/components/admin/AdminActivityFeed'
 import { ShieldCheck, AlertCircle, Calendar, BarChart3, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 
@@ -42,8 +45,15 @@ export function AdminDashboardClient({
       {/* Header */}
       <AdminDashboardHeader />
 
-      {/* KPI Grid */}
-      <AdminKpiGrid
+      {/* Enhanced Quick Actions */}
+      <AdminDashboardQuickActions
+        pendingVerifications={pendingCount}
+        pendingBankVerifications={pendingBankCount}
+        urgentTasks={pendingCount + pendingBankCount}
+      />
+
+      {/* Real-time Metrics */}
+      <RealTimeMetrics
         usersCount={usersCount}
         eventsCount={eventsCount}
         tickets7d={tickets7d}
@@ -52,62 +62,6 @@ export function AdminDashboardClient({
         refundsAmount7d={refundsAmount7d}
         pendingCount={pendingCount}
       />
-
-      {/* Quick Actions */}
-      <div className="mb-6 sm:mb-8 flex flex-wrap gap-4">
-        <Link
-          href="/admin/analytics"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-3 rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-        >
-          <BarChart3 className="w-5 h-5" />
-          <span className="font-semibold">{t('disbursements.view_revenue_analytics')}</span>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </Link>
-        
-        <Link
-          href="/admin/disbursements"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-          <span className="font-semibold">Payout Operations</span>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </Link>
-        
-        <Link
-          href="/admin/organizers"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-          <span className="font-semibold">Manage Organizers</span>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </Link>
-
-        <Link
-          href="/admin/bank-verifications"
-          className="relative inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-6 py-3 rounded-xl hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-        >
-          <CreditCard className="w-5 h-5" />
-          <span className="font-semibold">Bank Verifications</span>
-          {pendingBankCount > 0 && (
-            <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-              {pendingBankCount > 9 ? '9+' : pendingBankCount}
-            </span>
-          )}
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </Link>
-      </div>
 
       {/* Work Queues */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
@@ -178,10 +132,10 @@ export function AdminDashboardClient({
         />
       </div>
 
-      {/* Additional Info */}
+      {/* Enhanced Activity and Notes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Recent Activity Timeline */}
-        <RecentActivityTimeline activities={recentActivities} />
+        {/* Enhanced Activity Feed */}
+        <AdminActivityFeed recentActivities={recentActivities} />
 
         {/* Notes Card */}
         <div className="bg-blue-50 rounded-xl border border-blue-200 p-4 sm:p-6">
