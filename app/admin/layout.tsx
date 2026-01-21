@@ -47,6 +47,7 @@ export default async function AdminLayout({
           <AdminSidebar 
             pendingVerifications={pendingCount}
             pendingBankVerifications={pendingBankCount}
+            userEmail={user.email}
           />
           
           {/* Main Content */}

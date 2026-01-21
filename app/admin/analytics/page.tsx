@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { AdminRevenueAnalytics } from '@/components/admin/AdminRevenueAnalytics'
+import { AdminBreadcrumbs } from '@/components/admin/AdminBreadcrumbs'
 
 export const revalidate = 120
 export const dynamic = 'force-dynamic'
@@ -7,12 +8,8 @@ export const dynamic = 'force-dynamic'
 export default async function AdminAnalyticsPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
-      <div className="mb-4 sm:mb-6">
-        <Link href="/admin" className="text-teal-600 hover:text-teal-700 text-sm font-medium">
-          ← Back to Admin Dashboard
-        </Link>
-      </div>
-
+      <AdminBreadcrumbs items={[{ label: 'Analytics' }]} />
+      
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Analytics</h1>
         <p className="text-sm text-gray-600 mt-2">Platform insights and performance metrics</p>

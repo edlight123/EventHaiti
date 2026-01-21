@@ -1,4 +1,5 @@
 import { PlatformSettingsForm } from './PlatformSettingsForm'
+import { AdminBreadcrumbs } from '@/components/admin/AdminBreadcrumbs'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -7,6 +8,8 @@ export default async function AdminSettingsPage() {
   return (
     <div className="py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
+        <AdminBreadcrumbs items={[{ label: 'Platform Settings' }]} />
+        
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">

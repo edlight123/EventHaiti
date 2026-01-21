@@ -15,7 +15,10 @@ import {
   Settings, 
   Lock,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Code,
+  Database,
+  TestTube
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -34,9 +37,16 @@ interface NavGroup {
 interface AdminSidebarProps {
   pendingVerifications?: number
   pendingBankVerifications?: number
+  userEmail?: string
 }
 
-export function AdminSidebar({ pendingVerifications = 0, pendingBankVerifications = 0 }: AdminSidebarProps) {
+const DEV_EMAILS = [
+  'edward.laguerre+dev@gmail.com',
+  'edwardlaguerre7@gmail.com',
+  // Add more dev emails as needed
+]
+
+export function AdminSidebar({ pendingVerifications = 0, pendingBankVerifications = 0, userEmail }: AdminSidebarProps) {
   const pathname = usePathname()
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['overview', 'users', 'financial', 'content']))
 
@@ -51,6 +61,8 @@ export function AdminSidebar({ pendingVerifications = 0, pendingBankVerification
       return next
     })
   }
+
+  const isDeveloper = userEmail && DEV_EMAILS.includes(userEmail)
 
   const navGroups: NavGroup[] = [
     {
@@ -71,7 +83,7 @@ export function AdminSidebar({ pendingVerifications = 0, pendingBankVerification
     {
       label: 'Financial Operations',
       items: [
-        { label: 'Payouts & Disbursements', href: '/admin/disbursements', icon: DollarSign },
+        { label: 'Payout Operations', href: '/admin/disbursements', icon: DollarSign },
         { label: 'Bank Verifications', href: '/admin/bank-verifications', icon: CreditCard, badge: pendingBankVerifications },
       ]
     },
@@ -90,6 +102,18 @@ export function AdminSidebar({ pendingVerifications = 0, pendingBankVerification
       ]
     },
   ]
+
+  // Add dev tools section if user is a developer
+  if (isDeveloper) {
+    navGroups.push({
+      label: 'Dev Tools',
+      items: [
+        { label: 'Database Debug', href: '/admin/dev/debug-db', icon: Database },
+        { label: 'Test Data', href: '/admin/dev/create-test-data', icon: TestTube },
+        { label: 'Seed Events', href: '/admin/dev/seed-events', icon: Code },
+      ]
+    })
+  }
 
   const isActive = (href: string) => {
     if (href === '/admin') {
