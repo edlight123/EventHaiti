@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useAdminActivities } from '@/lib/realtime/AdminRealtimeProvider'
 import { 
   Activity,
   User,
@@ -53,111 +54,56 @@ export function AdminActivityFeed({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('compact')
 
-  // Transform the incoming data into our AdminActivity format
-  useEffect(() => {
-    const transformedActivities: AdminActivity[] = [
-      // Mock recent activities - in real implementation, these would come from the API
-      {
-        id: '1',
-        type: 'verification',
-        title: 'New organizer verification',
-        description: 'John Doe submitted identity verification documents',
-        timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-        actor: {
-          name: 'John Doe',
-          email: 'john@example.com',
-          role: 'organizer'
-        },
-        link: '/admin/verify',
-        metadata: {
-          severity: 'medium'
-        }
-      },
-      {
-        id: '2', 
-        type: 'payment',
-        title: 'Payout request approved',
-        description: 'Approved payout of 15,000 HTG for Event ABC',
-        timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-        actor: {
-          name: 'Admin User',
-          role: 'admin'
-        },
-        metadata: {
-          amount: 15000,
-          currency: 'HTG',
-          eventId: 'abc123'
-        },
-        link: '/admin/disbursements'
-      },
-      {
-        id: '3',
-        type: 'event',
-        title: 'Event published',
-        description: 'Music Festival 2024 was published and is now live',
-        timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-        actor: {
-          name: 'Marie Laurent',
-          email: 'marie@events.com',
-          role: 'organizer'
-        },
-        link: '/admin/events'
-      },
-      {
-        id: '4',
-        type: 'security',
-        title: 'Suspicious login attempt',
-        description: 'Multiple failed login attempts detected from IP 192.168.1.100',
-        timestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-        metadata: {
-          severity: 'high'
-        },
-        link: '/admin/security'
-      },
-      {
-        id: '5',
-        type: 'user_action',
-        title: 'User account deactivated',
-        description: 'User account for spam violations was deactivated',
-        timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-        actor: {
-          name: 'Admin User',
-          role: 'admin'
-        },
-        link: '/admin/users'
-      },
-      {
-        id: '6',
-        type: 'system',
-        title: 'Daily backup completed',
-        description: 'Automated database backup completed successfully',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        metadata: {
-          severity: 'low'
-        }
-      }
-    ]
+  // Use real-time activities from the provider
+  const { activities: realtimeActivities, isConnected } = useAdminActivities()
 
-    // Add any real activities from props
+  // Transform and merge real-time activities with prop activities
+  useEffect(() => {
+    const transformedActivities: AdminActivity[] = []
+
+    // Add real-time activities first (prioritize them)
+    if (realtimeActivities && realtimeActivities.length > 0) {
+      realtimeActivities.forEach(activity => {
+        transformedActivities.push({
+          id: activity.id,
+          type: activity.type,
+          title: activity.title,
+          description: activity.description,
+          timestamp: activity.timestamp,
+          actor: activity.actor,
+          metadata: activity.metadata
+        })
+      })
+    }
+
+    // Add any prop activities that aren't duplicates
     recentActivities.forEach((activity, index) => {
       if (activity && typeof activity === 'object') {
-        transformedActivities.push({
-          id: `real-${index}`,
-          type: 'event',
-          title: activity.action || 'Activity',
-          description: activity.details || 'Recent platform activity',
-          timestamp: activity.timestamp || new Date().toISOString(),
-          actor: activity.actor ? {
-            name: activity.actor.name || 'Unknown',
-            email: activity.actor.email,
-            role: activity.actor.role || 'user'
-          } : undefined
-        })
+        const isDuplicate = transformedActivities.some(a => a.id === `prop-${index}`)
+        if (!isDuplicate) {
+          transformedActivities.push({
+            id: `prop-${index}`,
+            type: 'event',
+            title: activity.action || 'Activity',
+            description: activity.details || 'Recent platform activity',
+            timestamp: activity.timestamp || new Date().toISOString(),
+            actor: activity.actor ? {
+              name: activity.actor.name || 'Unknown',
+              email: activity.actor.email,
+              role: activity.actor.role || 'user'
+            } : undefined
+          })
+        }
       }
     })
 
+    // Sort by timestamp (most recent first) and limit
+    transformedActivities.sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    )
+
     setActivities(transformedActivities.slice(0, maxItems))
-  }, [recentActivities, maxItems])
+  }, [realtimeActivities, recentActivities, maxItems])
 
   useEffect(() => {
     if (filter === 'all') {

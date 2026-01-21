@@ -8,6 +8,7 @@ import { RecentActivityTimeline } from '@/components/admin/RecentActivityTimelin
 import { AdminDashboardQuickActions } from '@/components/admin/AdminDashboardQuickActions'
 import { RealTimeMetrics } from '@/components/admin/RealTimeMetrics'
 import { AdminActivityFeed } from '@/components/admin/AdminActivityFeed'
+import { RealtimeConnectionStatus } from '@/components/admin/RealtimeConnectionStatus'
 import { ShieldCheck, AlertCircle, Calendar, BarChart3, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 
@@ -42,8 +43,11 @@ export function AdminDashboardClient({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-      {/* Header */}
-      <AdminDashboardHeader />
+      {/* Header with Connection Status */}
+      <div className="flex items-start justify-between mb-6 sm:mb-8">
+        <AdminDashboardHeader />
+        <RealtimeConnectionStatus />
+      </div>
 
       {/* Enhanced Quick Actions */}
       <AdminDashboardQuickActions

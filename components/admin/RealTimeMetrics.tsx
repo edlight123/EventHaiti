@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useAdminMetrics, useSystemStatus } from '@/lib/realtime/AdminRealtimeProvider'
 import { 
   TrendingUp, 
   TrendingDown,
@@ -39,25 +40,35 @@ interface RealTimeMetricsProps {
 }
 
 export function RealTimeMetrics({
-  usersCount,
-  eventsCount,
-  tickets7d,
-  gmv7d,
-  refunds7d = 0,
+  usersCount: initialUsersCount,
+  eventsCount: initialEventsCount,
+  tickets7d: initialTickets7d,
+  gmv7d: initialGmv7d,
+  refunds7d: initialRefunds7d = 0,
   refundsAmount7d = 0,
-  pendingCount = 0
+  pendingCount: initialPendingCount = 0
 }: RealTimeMetricsProps) {
   const [lastUpdated, setLastUpdated] = useState(new Date())
   const [isRefreshing, setIsRefreshing] = useState(false)
+  
+  // Use real-time data from the provider
+  const { metrics: realtimeMetrics, isConnected } = useAdminMetrics()
+  const { systemStatus } = useSystemStatus()
 
-  // Simulate real-time updates (in a real app, this would be WebSocket or polling)
+  // Use real-time data if available, otherwise fall back to initial props
+  const usersCount = realtimeMetrics?.usersCount ?? initialUsersCount
+  const eventsCount = realtimeMetrics?.eventsCount ?? initialEventsCount
+  const tickets7d = realtimeMetrics?.tickets7d ?? initialTickets7d
+  const gmv7d = realtimeMetrics?.gmv7d ?? initialGmv7d
+  const refunds7d = realtimeMetrics?.refunds7d ?? initialRefunds7d
+  const pendingCount = realtimeMetrics?.pendingCount ?? initialPendingCount
+
+  // Update timestamp when real-time data changes
   useEffect(() => {
-    const interval = setInterval(() => {
-      setLastUpdated(new Date())
-    }, 30000) // Update every 30 seconds
-
-    return () => clearInterval(interval)
-  }, [])
+    if (realtimeMetrics?.timestamp) {
+      setLastUpdated(new Date(realtimeMetrics.timestamp))
+    }
+  }, [realtimeMetrics])
 
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) {
@@ -242,21 +253,27 @@ export function RealTimeMetrics({
       <div className="mt-6 flex items-center justify-between bg-gray-50 rounded-lg p-4">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-sm text-gray-600">System Online</span>
+            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+            <span className="text-sm text-gray-600">
+              {isConnected ? 'System Online' : 'Disconnected'}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-            <span className="text-sm text-gray-600">Payment Processing</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-            <span className="text-sm text-gray-600">Analytics Engine</span>
-          </div>
+          {systemStatus?.services && (
+            <>
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${systemStatus.services.payments ? 'bg-blue-500' : 'bg-red-500'}`}></div>
+                <span className="text-sm text-gray-600">Payment Processing</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${systemStatus.services.analytics ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
+                <span className="text-sm text-gray-600">Analytics Engine</span>
+              </div>
+            </>
+          )}
         </div>
         
         <div className="text-xs text-gray-500">
-          All systems operational
+          {isConnected ? 'All systems operational' : 'Connection issue detected'}
         </div>
       </div>
     </div>

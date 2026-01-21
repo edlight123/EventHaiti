@@ -6,6 +6,7 @@ import { AdminCommandBar } from '@/components/admin/AdminCommandBar'
 import { AdminAccessDenied } from '@/components/admin/AdminAccessDenied'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { getPlatformCounts } from '@/lib/firestore/admin'
+import { AdminRealtimeProvider } from '@/lib/realtime/AdminRealtimeProvider'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -33,32 +34,34 @@ export default async function AdminLayout({
     const pendingBankCount = (platformCounts as any).pendingBankVerifications || 0
 
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar user={user} isAdmin={true} />
-        
-        {/* Command Bar - Global Search & Quick Actions */}
-        <AdminCommandBar 
-          pendingVerifications={pendingCount} 
-          pendingBankVerifications={pendingBankCount} 
-        />
-        
-        <div className="flex">
-          {/* Sidebar - Desktop Only */}
-          <AdminSidebar 
-            pendingVerifications={pendingCount}
-            pendingBankVerifications={pendingBankCount}
-            userEmail={user.email}
+      <AdminRealtimeProvider>
+        <div className="min-h-screen bg-gray-50">
+          <Navbar user={user} isAdmin={true} />
+          
+          {/* Command Bar - Global Search & Quick Actions */}
+          <AdminCommandBar 
+            pendingVerifications={pendingCount} 
+            pendingBankVerifications={pendingBankCount} 
           />
           
-          {/* Main Content */}
-          <main className="flex-1 pb-mobile-nav">
-            {children}
-          </main>
+          <div className="flex">
+            {/* Sidebar - Desktop Only */}
+            <AdminSidebar 
+              pendingVerifications={pendingCount}
+              pendingBankVerifications={pendingBankCount}
+              userEmail={user.email}
+            />
+            
+            {/* Main Content */}
+            <main className="flex-1 pb-mobile-nav">
+              {children}
+            </main>
+          </div>
+          
+          {/* Mobile Bottom Navigation */}
+          <MobileNavWrapper user={user} isAdmin={true} />
         </div>
-        
-        {/* Mobile Bottom Navigation */}
-        <MobileNavWrapper user={user} isAdmin={true} />
-      </div>
+      </AdminRealtimeProvider>
     )
   } catch (error) {
     console.error('Admin layout error:', error)
