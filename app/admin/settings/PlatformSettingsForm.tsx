@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { PlatformSettings } from '@/types/platform-settings'
+import { AlertTriangle, Info, TrendingUp, Clock, DollarSign, X } from 'lucide-react'
 
 export function PlatformSettingsForm() {
   const [settings, setSettings] = useState<PlatformSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   // Form state
   const [haitiPlatformFee, setHaitiPlatformFee] = useState('')
@@ -47,46 +49,54 @@ export function PlatformSettingsForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate first
+    const haitiPlatformFeeNum = parseFloat(haitiPlatformFee)
+    const haitiSettlementDaysNum = parseInt(haitiSettlementDays)
+    const usCanadaPlatformFeeNum = parseFloat(usCanadaPlatformFee)
+    const usCanadaSettlementDaysNum = parseInt(usCanadaSettlementDays)
+    const minimumPayoutNum = parseFloat(minimumPayout)
+
+    if (isNaN(haitiPlatformFeeNum) || haitiPlatformFeeNum < 0 || haitiPlatformFeeNum > 100) {
+      setMessage({ type: 'error', text: 'Haiti platform fee must be between 0 and 100%' })
+      return
+    }
+
+    if (isNaN(haitiSettlementDaysNum) || haitiSettlementDaysNum < 0) {
+      setMessage({ type: 'error', text: 'Haiti settlement days must be >= 0' })
+      return
+    }
+
+    if (isNaN(usCanadaPlatformFeeNum) || usCanadaPlatformFeeNum < 0 || usCanadaPlatformFeeNum > 100) {
+      setMessage({ type: 'error', text: 'US/Canada platform fee must be between 0 and 100%' })
+      return
+    }
+
+    if (isNaN(usCanadaSettlementDaysNum) || usCanadaSettlementDaysNum < 0) {
+      setMessage({ type: 'error', text: 'US/Canada settlement days must be >= 0' })
+      return
+    }
+
+    if (isNaN(minimumPayoutNum) || minimumPayoutNum < 0) {
+      setMessage({ type: 'error', text: 'Minimum payout amount must be >= 0' })
+      return
+    }
+
+    // Show confirmation modal
+    setShowConfirmModal(true)
+  }
+
+  const confirmSave = async () => {
     setSaving(true)
     setMessage(null)
+    setShowConfirmModal(false)
 
     try {
-      // Validate inputs
       const haitiPlatformFeeNum = parseFloat(haitiPlatformFee)
       const haitiSettlementDaysNum = parseInt(haitiSettlementDays)
       const usCanadaPlatformFeeNum = parseFloat(usCanadaPlatformFee)
       const usCanadaSettlementDaysNum = parseInt(usCanadaSettlementDays)
       const minimumPayoutNum = parseFloat(minimumPayout)
-
-      if (isNaN(haitiPlatformFeeNum) || haitiPlatformFeeNum < 0 || haitiPlatformFeeNum > 100) {
-        setMessage({ type: 'error', text: 'Haiti platform fee must be between 0 and 100%' })
-        setSaving(false)
-        return
-      }
-
-      if (isNaN(haitiSettlementDaysNum) || haitiSettlementDaysNum < 0) {
-        setMessage({ type: 'error', text: 'Haiti settlement days must be >= 0' })
-        setSaving(false)
-        return
-      }
-
-      if (isNaN(usCanadaPlatformFeeNum) || usCanadaPlatformFeeNum < 0 || usCanadaPlatformFeeNum > 100) {
-        setMessage({ type: 'error', text: 'US/Canada platform fee must be between 0 and 100%' })
-        setSaving(false)
-        return
-      }
-
-      if (isNaN(usCanadaSettlementDaysNum) || usCanadaSettlementDaysNum < 0) {
-        setMessage({ type: 'error', text: 'US/Canada settlement days must be >= 0' })
-        setSaving(false)
-        return
-      }
-
-      if (isNaN(minimumPayoutNum) || minimumPayoutNum < 0) {
-        setMessage({ type: 'error', text: 'Minimum payout amount must be >= 0' })
-        setSaving(false)
-        return
-      }
 
       // Send update request
       const response = await fetch('/api/admin/settings', {
@@ -123,6 +133,37 @@ export function PlatformSettingsForm() {
     }
   }
 
+  // Calculate preview for $100 ticket
+  const calculatePreview = (region: 'haiti' | 'usCanada') => {
+    const ticketPrice = 10000 // $100 in cents
+    const feePercent = region === 'haiti' ? parseFloat(haitiPlatformFee) : parseFloat(usCanadaPlatformFee)
+    
+    if (isNaN(feePercent)) return null
+    
+    const platformFee = Math.round(ticketPrice * (feePercent / 100))
+    const processingFee = Math.round(ticketPrice * 0.029) + 30 // Stripe fees
+    const netAmount = ticketPrice - platformFee - processingFee
+    
+    return {
+      gross: (ticketPrice / 100).toFixed(2),
+      platformFee: (platformFee / 100).toFixed(2),
+      processingFee: (processingFee / 100).toFixed(2),
+      net: (netAmount / 100).toFixed(2),
+      netPercent: ((netAmount / ticketPrice) * 100).toFixed(1)
+    }
+  }
+
+  const haitiPreview = calculatePreview('haiti')
+  const usCanadaPreview = calculatePreview('usCanada')
+
+  const hasChanges = settings && (
+    (parseFloat(haitiPlatformFee) !== settings.haiti.platformFeePercentage * 100) ||
+    (parseInt(haitiSettlementDays) !== settings.haiti.settlementHoldDays) ||
+    (parseFloat(usCanadaPlatformFee) !== settings.usCanada.platformFeePercentage * 100) ||
+    (parseInt(usCanadaSettlementDays) !== settings.usCanada.settlementHoldDays) ||
+    (parseFloat(minimumPayout) !== settings.minimumPayoutAmount / 100)
+  )
+
   if (loading) {
     return (
       <div className="bg-white shadow rounded-lg p-6">
@@ -136,251 +177,438 @@ export function PlatformSettingsForm() {
   }
 
   return (
-    <div className="bg-white shadow rounded-lg">
-      <form onSubmit={handleSubmit} className="p-6 space-y-8">
-        {/* Message Banner */}
-        {message && (
-          <div
-            className={`rounded-lg p-4 ${
-              message.type === 'success'
-                ? 'bg-green-50 border border-green-200 text-green-800'
-                : 'bg-red-50 border border-red-200 text-red-800'
-            }`}
-          >
-            {message.text}
-          </div>
-        )}
+    <>
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Confirm Settings Update
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  These changes will affect all future transactions. Are you sure you want to update the platform settings?
+                </p>
+                
+                {/* Show changes */}
+                <div className="bg-gray-50 rounded-lg p-3 mb-4 text-xs space-y-2">
+                  {settings && parseFloat(haitiPlatformFee) !== settings.haiti.platformFeePercentage * 100 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Haiti Fee:</span>
+                      <span className="font-semibold">
+                        {(settings.haiti.platformFeePercentage * 100).toFixed(2)}% → {parseFloat(haitiPlatformFee).toFixed(2)}%
+                      </span>
+                    </div>
+                  )}
+                  {settings && parseInt(haitiSettlementDays) !== settings.haiti.settlementHoldDays && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Haiti Settlement:</span>
+                      <span className="font-semibold">
+                        {settings.haiti.settlementHoldDays} days → {parseInt(haitiSettlementDays)} days
+                      </span>
+                    </div>
+                  )}
+                  {settings && parseFloat(usCanadaPlatformFee) !== settings.usCanada.platformFeePercentage * 100 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">US/Canada Fee:</span>
+                      <span className="font-semibold">
+                        {(settings.usCanada.platformFeePercentage * 100).toFixed(2)}% → {parseFloat(usCanadaPlatformFee).toFixed(2)}%
+                      </span>
+                    </div>
+                  )}
+                  {settings && parseInt(usCanadaSettlementDays) !== settings.usCanada.settlementHoldDays && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">US/Canada Settlement:</span>
+                      <span className="font-semibold">
+                        {settings.usCanada.settlementHoldDays} days → {parseInt(usCanadaSettlementDays)} days
+                      </span>
+                    </div>
+                  )}
+                </div>
 
-        {/* Haiti Settings */}
-        <div className="space-y-4">
-          <div className="border-b border-gray-200 pb-3">
-            <h2 className="text-xl font-semibold text-gray-900">🇭🇹 Haiti Events</h2>
-            <p className="mt-1 text-sm text-gray-600">
-              Settings for events taking place in Haiti
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="haitiPlatformFee" className="block text-sm font-medium text-gray-700 mb-2">
-                Platform Fee (%)
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  id="haitiPlatformFee"
-                  value={haitiPlatformFee}
-                  onChange={(e) => setHaitiPlatformFee(e.target.value)}
-                  step="0.01"
-                  min="0"
-                  max="100"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
-                  required
-                />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <span className="text-gray-500 sm:text-sm">%</span>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowConfirmModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmSave}
+                    disabled={saving}
+                    className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium disabled:opacity-50"
+                  >
+                    {saving ? 'Saving...' : 'Confirm'}
+                  </button>
                 </div>
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Example: 5.00 for 5% fee
-              </p>
-            </div>
-
-            <div>
-              <label htmlFor="haitiSettlementDays" className="block text-sm font-medium text-gray-700 mb-2">
-                Settlement Hold Days
-              </label>
-              <input
-                type="number"
-                id="haitiSettlementDays"
-                value={haitiSettlementDays}
-                onChange={(e) => setHaitiSettlementDays(e.target.value)}
-                min="0"
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
-                required
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Days after event before funds are available
-              </p>
             </div>
           </div>
         </div>
+      )}
 
-        {/* US/Canada Settings */}
-        <div className="space-y-4">
-          <div className="border-b border-gray-200 pb-3">
-            <h2 className="text-xl font-semibold text-gray-900">🇺🇸🇨🇦 US & Canada Events</h2>
-            <p className="mt-1 text-sm text-gray-600">
-              Settings for events taking place in the United States or Canada
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="usCanadaPlatformFee" className="block text-sm font-medium text-gray-700 mb-2">
-                Platform Fee (%)
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  id="usCanadaPlatformFee"
-                  value={usCanadaPlatformFee}
-                  onChange={(e) => setUsCanadaPlatformFee(e.target.value)}
-                  step="0.01"
-                  min="0"
-                  max="100"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
-                  required
-                />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <span className="text-gray-500 sm:text-sm">%</span>
-                </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Form - Left Column */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Info Banner */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex gap-3">
+              <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-blue-900">
+                <p className="font-medium mb-1">Important Information</p>
+                <p className="text-blue-800">
+                  These settings apply to all future transactions. Changes take effect immediately and will be applied to new ticket sales and earnings calculations.
+                </p>
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Example: 10.00 for 10% fee
-              </p>
-            </div>
-
-            <div>
-              <label htmlFor="usCanadaSettlementDays" className="block text-sm font-medium text-gray-700 mb-2">
-                Settlement Hold Days
-              </label>
-              <input
-                type="number"
-                id="usCanadaSettlementDays"
-                value={usCanadaSettlementDays}
-                onChange={(e) => setUsCanadaSettlementDays(e.target.value)}
-                min="0"
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
-                required
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Days after event before funds are available
-              </p>
             </div>
           </div>
-        </div>
 
-        {/* Global Settings */}
-        <div className="space-y-4">
-          <div className="border-b border-gray-200 pb-3">
-            <h2 className="text-xl font-semibold text-gray-900">🌍 Global Settings</h2>
-            <p className="mt-1 text-sm text-gray-600">
-              Settings that apply to all events
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="minimumPayout" className="block text-sm font-medium text-gray-700 mb-2">
-                Minimum Payout Amount
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="text-gray-500 sm:text-sm">$</span>
-                </div>
-                <input
-                  type="number"
-                  id="minimumPayout"
-                  value={minimumPayout}
-                  onChange={(e) => setMinimumPayout(e.target.value)}
-                  step="0.01"
-                  min="0"
-                  className="block w-full pl-7 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
-                  required
-                />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Message Banner */}
+            {message && (
+              <div
+                className={`rounded-lg p-4 ${
+                  message.type === 'success'
+                    ? 'bg-green-50 border border-green-200 text-green-800'
+                    : 'bg-red-50 border border-red-200 text-red-800'
+                }`}
+              >
+                {message.text}
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Minimum amount required for withdrawal (in USD)
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Submit Button */}
-        <div className="flex justify-end pt-6 border-t border-gray-200">
-          <button
-            type="submit"
-            disabled={saving}
-            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {saving ? (
-              <>
-                <svg
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Saving...
-              </>
-            ) : (
-              'Save Settings'
             )}
-          </button>
+
+            {/* Haiti Settings Card */}
+            <div className="bg-white shadow rounded-lg border border-gray-200">
+              <div className="p-6 space-y-4">
+                <div className="flex items-center gap-3 border-b border-gray-200 pb-4">
+                  <div className="text-3xl">🇭🇹</div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">Haiti Events</h2>
+                    <p className="text-sm text-gray-600">
+                      Settings for events in Haiti
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="haitiPlatformFee" className="block text-sm font-medium text-gray-700 mb-2">
+                      Platform Fee (%)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        id="haitiPlatformFee"
+                        value={haitiPlatformFee}
+                        onChange={(e) => setHaitiPlatformFee(e.target.value)}
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
+                        required
+                      />
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 sm:text-sm">%</span>
+                      </div>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Commission taken from each sale
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="haitiSettlementDays" className="block text-sm font-medium text-gray-700 mb-2">
+                      Settlement Hold Days
+                    </label>
+                    <input
+                      type="number"
+                      id="haitiSettlementDays"
+                      value={haitiSettlementDays}
+                      onChange={(e) => setHaitiSettlementDays(e.target.value)}
+                      min="0"
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
+                      required
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Days before funds can be withdrawn
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* US/Canada Settings Card */}
+            <div className="bg-white shadow rounded-lg border border-gray-200">
+              <div className="p-6 space-y-4">
+                <div className="flex items-center gap-3 border-b border-gray-200 pb-4">
+                  <div className="text-3xl">🇺🇸🇨🇦</div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">US & Canada Events</h2>
+                    <p className="text-sm text-gray-600">
+                      Settings for events in United States or Canada
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="usCanadaPlatformFee" className="block text-sm font-medium text-gray-700 mb-2">
+                      Platform Fee (%)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        id="usCanadaPlatformFee"
+                        value={usCanadaPlatformFee}
+                        onChange={(e) => setUsCanadaPlatformFee(e.target.value)}
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
+                        required
+                      />
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 sm:text-sm">%</span>
+                      </div>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Commission taken from each sale
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="usCanadaSettlementDays" className="block text-sm font-medium text-gray-700 mb-2">
+                      Settlement Hold Days
+                    </label>
+                    <input
+                      type="number"
+                      id="usCanadaSettlementDays"
+                      value={usCanadaSettlementDays}
+                      onChange={(e) => setUsCanadaSettlementDays(e.target.value)}
+                      min="0"
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
+                      required
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Days before funds can be withdrawn
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Global Settings Card */}
+            <div className="bg-white shadow rounded-lg border border-gray-200">
+              <div className="p-6 space-y-4">
+                <div className="flex items-center gap-3 border-b border-gray-200 pb-4">
+                  <div className="text-3xl">🌍</div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">Global Settings</h2>
+                    <p className="text-sm text-gray-600">
+                      Settings that apply to all events
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="minimumPayout" className="block text-sm font-medium text-gray-700 mb-2">
+                      Minimum Payout Amount
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 sm:text-sm">$</span>
+                      </div>
+                      <input
+                        type="number"
+                        id="minimumPayout"
+                        value={minimumPayout}
+                        onChange={(e) => setMinimumPayout(e.target.value)}
+                        step="0.01"
+                        min="0"
+                        className="block w-full pl-7 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
+                        required
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Minimum required for withdrawal (USD)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex items-center justify-between pt-4">
+              <p className="text-sm text-gray-500">
+                {hasChanges ? (
+                  <span className="text-yellow-600 font-medium">● Unsaved changes</span>
+                ) : (
+                  <span className="text-gray-400">No changes</span>
+                )}
+              </p>
+              <button
+                type="submit"
+                disabled={saving || !hasChanges}
+                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <>
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : (
+                  'Save Settings'
+                )}
+              </button>
+            </div>
+          </form>
         </div>
 
-        {/* Current Settings Display */}
-        {settings && (
-          <div className="mt-8 bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Current Settings Summary</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-              <div>
-                <p className="text-gray-500">Haiti Fee</p>
-                <p className="font-semibold text-gray-900">
-                  {(settings.haiti.platformFeePercentage * 100).toFixed(2)}%
-                </p>
+        {/* Preview Panel - Right Column */}
+        <div className="lg:col-span-1 space-y-6">
+          {/* Live Preview Card */}
+          <div className="bg-gradient-to-br from-teal-50 to-blue-50 border border-teal-200 rounded-lg p-6 sticky top-6">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="w-5 h-5 text-teal-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Live Preview</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">
+              Example: $100 ticket sale breakdown
+            </p>
+
+            {/* Haiti Preview */}
+            <div className="bg-white rounded-lg p-4 mb-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xl">🇭🇹</span>
+                <p className="font-semibold text-gray-900">Haiti Event</p>
               </div>
-              <div>
-                <p className="text-gray-500">Haiti Settlement</p>
-                <p className="font-semibold text-gray-900">
-                  {settings.haiti.settlementHoldDays} days
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-500">US/Canada Fee</p>
-                <p className="font-semibold text-gray-900">
-                  {(settings.usCanada.platformFeePercentage * 100).toFixed(2)}%
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-500">US/Canada Settlement</p>
-                <p className="font-semibold text-gray-900">
-                  {settings.usCanada.settlementHoldDays} days
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-500">Min Payout</p>
-                <p className="font-semibold text-gray-900">
-                  ${(settings.minimumPayoutAmount / 100).toFixed(2)}
-                </p>
-              </div>
-              {settings.updatedBy && (
-                <div>
-                  <p className="text-gray-500">Last Updated By</p>
-                  <p className="font-semibold text-gray-900 truncate">
-                    {settings.updatedBy}
-                  </p>
+              {haitiPreview ? (
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Ticket Price</span>
+                    <span className="font-semibold">${haitiPreview.gross}</span>
+                  </div>
+                  <div className="flex justify-between text-red-600">
+                    <span>Platform Fee</span>
+                    <span>-${haitiPreview.platformFee}</span>
+                  </div>
+                  <div className="flex justify-between text-red-600">
+                    <span>Processing Fee</span>
+                    <span>-${haitiPreview.processingFee}</span>
+                  </div>
+                  <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-green-600">
+                    <span>Organizer Earns</span>
+                    <span>${haitiPreview.net} ({haitiPreview.netPercent}%)</span>
+                  </div>
                 </div>
+              ) : (
+                <p className="text-sm text-gray-400">Enter fee to preview</p>
+              )}
+            </div>
+
+            {/* US/Canada Preview */}
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xl">🇺🇸🇨🇦</span>
+                <p className="font-semibold text-gray-900">US/Canada Event</p>
+              </div>
+              {usCanadaPreview ? (
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Ticket Price</span>
+                    <span className="font-semibold">${usCanadaPreview.gross}</span>
+                  </div>
+                  <div className="flex justify-between text-red-600">
+                    <span>Platform Fee</span>
+                    <span>-${usCanadaPreview.platformFee}</span>
+                  </div>
+                  <div className="flex justify-between text-red-600">
+                    <span>Processing Fee</span>
+                    <span>-${usCanadaPreview.processingFee}</span>
+                  </div>
+                  <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-green-600">
+                    <span>Organizer Earns</span>
+                    <span>${usCanadaPreview.net} ({usCanadaPreview.netPercent}%)</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400">Enter fee to preview</p>
               )}
             </div>
           </div>
-        )}
-      </form>
-    </div>
+
+          {/* Current Settings Summary */}
+          {settings && (
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Clock className="w-5 h-5 text-gray-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Current Settings</h3>
+              </div>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="text-gray-500 text-xs mb-1">🇭🇹 Haiti</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Fee</span>
+                    <span className="font-semibold">{(settings.haiti.platformFeePercentage * 100).toFixed(2)}%</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Settlement</span>
+                    <span className="font-semibold">{settings.haiti.settlementHoldDays} days</span>
+                  </div>
+                </div>
+                <div className="border-t border-gray-200 pt-3">
+                  <p className="text-gray-500 text-xs mb-1">🇺🇸🇨🇦 US/Canada</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Fee</span>
+                    <span className="font-semibold">{(settings.usCanada.platformFeePercentage * 100).toFixed(2)}%</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Settlement</span>
+                    <span className="font-semibold">{settings.usCanada.settlementHoldDays} days</span>
+                  </div>
+                </div>
+                <div className="border-t border-gray-200 pt-3">
+                  <p className="text-gray-500 text-xs mb-1">🌍 Global</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Min Payout</span>
+                    <span className="font-semibold">${(settings.minimumPayoutAmount / 100).toFixed(2)}</span>
+                  </div>
+                </div>
+                {settings.updatedBy && (
+                  <div className="border-t border-gray-200 pt-3 text-xs text-gray-500">
+                    Last updated by: {settings.updatedBy}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   )
 }
+

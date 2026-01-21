@@ -1,7 +1,3 @@
-import { requireAdmin } from '@/lib/auth'
-import { redirect } from 'next/navigation'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { getAdminUsers, getUserCounts } from '@/lib/data/users'
 import AdminOrganizersClient from './AdminOrganizersClient'
 
@@ -15,12 +11,6 @@ export const revalidate = 60
 export const dynamic = 'force-dynamic'
 
 export default async function AdminOrganizersPage() {
-  const { user, error } = await requireAdmin()
-
-  if (error || !user) {
-    redirect('/')
-  }
-
   const [usersResult, counts] = await Promise.all([
     getAdminUsers({ role: 'organizer' }, 200),
     getUserCounts(),
@@ -62,17 +52,11 @@ export default async function AdminOrganizersPage() {
   }))
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={user} isAdmin={true} />
-
-      <AdminOrganizersClient
-        counts={counts}
-        initialUsers={serializedUsers}
-        initialHasMore={usersResult.hasMore && Boolean(initialCursor)}
-        initialCursor={initialCursor}
-      />
-
-      <MobileNavWrapper user={user} isAdmin={true} />
-    </div>
+    <AdminOrganizersClient
+      counts={counts}
+      initialUsers={serializedUsers}
+      initialHasMore={usersResult.hasMore && Boolean(initialCursor)}
+      initialCursor={initialCursor}
+    />
   )
 }
