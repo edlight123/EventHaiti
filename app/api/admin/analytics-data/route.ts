@@ -27,29 +27,29 @@ export async function GET(request: Request) {
     switch (type) {
       case 'user-growth':
         const userGrowth = await getUserGrowthMetrics(days)
-        return adminOk(userGrowth)
+        return adminOk({ data: userGrowth })
 
       case 'top-events':
         const limit = parseInt(searchParams.get('limit') || '10')
         const topEvents = await getTopPerformingEvents(limit)
-        return adminOk(topEvents)
+        return adminOk({ data: topEvents })
 
       case 'categories':
         const categories = await getCategoryPopularity(days)
-        return adminOk(categories)
+        return adminOk({ data: categories })
 
       case 'conversion':
         const conversion = await getConversionFunnelMetrics(days)
-        return adminOk(conversion)
+        return adminOk({ data: conversion })
 
       case 'organizers':
         const orgLimit = parseInt(searchParams.get('limit') || '10')
         const organizers = await getOrganizerRankings(orgLimit)
-        return adminOk(organizers)
+        return adminOk({ data: organizers })
 
       case 'geographic':
         const geographic = await getGeographicDistribution()
-        return adminOk(geographic)
+        return adminOk({ data: geographic })
 
       case 'overview':
         // Return all key metrics in one call

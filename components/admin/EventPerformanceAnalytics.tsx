@@ -29,9 +29,11 @@ export function EventPerformanceAnalytics() {
     Promise.all([
       fetch('/api/admin/analytics-data?type=top-events&limit=10').then(r => r.json()),
       fetch('/api/admin/analytics-data?type=categories&days=30').then(r => r.json())
-    ]).then(([events, cats]) => {
-      setTopEvents(events)
-      setCategories(cats)
+    ]).then(([eventsRes, catsRes]) => {
+      const events = eventsRes.data || eventsRes
+      const cats = catsRes.data || catsRes
+      setTopEvents(Array.isArray(events) ? events : [])
+      setCategories(Array.isArray(cats) ? cats : [])
       setLoading(false)
     }).catch(err => {
       console.error('Failed to load event data:', err)

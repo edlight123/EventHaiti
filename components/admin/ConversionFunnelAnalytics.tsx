@@ -20,7 +20,8 @@ export function ConversionFunnelAnalytics() {
     fetch('/api/admin/analytics-data?type=conversion&days=30')
       .then(r => r.json())
       .then(result => {
-        setData(result)
+        const conversionData = result.data || result
+        setData(conversionData)
         setLoading(false)
       })
       .catch(err => {

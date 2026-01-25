@@ -34,7 +34,14 @@ export function UserGrowthAnalytics({ days = 30 }: Props) {
     try {
       const res = await fetch(`/api/admin/analytics-data?type=user-growth&days=${period}`)
       const result = await res.json()
-      setData(result)
+      // Access data from wrapped response
+      const userData = result.data || result
+      setData({
+        dailySignups: Array.isArray(userData.dailySignups) ? userData.dailySignups : [],
+        totalUsers: userData.totalUsers || 0,
+        organizerCount: userData.organizerCount || 0,
+        attendeeCount: userData.attendeeCount || 0
+      })
     } catch (err) {
       console.error('Failed to load user growth data:', err)
     } finally {

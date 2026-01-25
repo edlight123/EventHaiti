@@ -22,8 +22,9 @@ export function OrganizerRankingsAnalytics() {
   useEffect(() => {
     fetch('/api/admin/analytics-data?type=organizers&limit=10')
       .then(r => r.json())
-      .then(data => {
-        setOrganizers(data)
+      .then(result => {
+        const organizersData = result.data || result
+        setOrganizers(Array.isArray(organizersData) ? organizersData : [])
         setLoading(false)
       })
       .catch(err => {
