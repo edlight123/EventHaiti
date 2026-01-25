@@ -41,6 +41,12 @@ async function fetchSuspiciousActivitiesFromFirestore(params: {
   limit: number
 }): Promise<null | { activities: any[]; unreviewedCount: number; total: number }> {
   try {
+    // Check if adminDb is properly initialized
+    if (!adminDb || !adminDb.collection) {
+      console.warn('adminDb not initialized, skipping Firestore query')
+      return null
+    }
+
     const baseSnap = await adminDb
       .collection('suspicious_activities')
       .orderBy('detected_at', 'desc')
@@ -124,13 +130,19 @@ async function fetchSuspiciousActivitiesFromFirestore(params: {
         .count()
         .get()
       unreviewedCount = Number(countSnap.data().count || 0)
-    } catch {
-      const unreviewedSnap = await adminDb
-        .collection('suspicious_activities')
-        .where('reviewed', '==', false)
-        .limit(500)
-        .get()
-      unreviewedCount = unreviewedSnap.size
+    } catch (countErr) {
+      console.warn('Count aggregation failed, using fallback method:', countErr)
+      try {
+        const unreviewedSnap = await adminDb
+          .collection('suspicious_activities')
+          .where('reviewed', '==', false)
+          .limit(500)
+          .get()
+        unreviewedCount = unreviewedSnap.size
+      } catch (fallbackErr) {
+        console.warn('Fallback count also failed:', fallbackErr)
+        unreviewedCount = 0
+      }
     }
 
     return {
@@ -162,12 +174,17 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50')
 
     // Firestore-first (migration path). If Firestore is empty/unavailable, fall back to legacy DB.
-    const firestoreResult = await fetchSuspiciousActivitiesFromFirestore({
-      reviewed,
-      severity,
-      activityType,
-      limit,
-    })
+    let firestoreResult = null
+    try {
+      firestoreResult = await fetchSuspiciousActivitiesFromFirestore({
+        reviewed,
+        severity,
+        activityType,
+        limit,
+      })
+    } catch (fsErr) {
+      console.warn('Firestore query failed, falling back to legacy DB:', fsErr)
+    }
 
     if (firestoreResult && firestoreResult.total > 0) {
       return adminOk({
@@ -200,8 +217,13 @@ export async function GET(req: NextRequest) {
     const { data: activities, error: queryError } = await query
 
     if (queryError) {
-      console.error('Error fetching suspicious activities:', queryError)
-      return adminError('Failed to fetch activities', 500)
+      console.error('Error fetching suspicious activities from legacy DB:', queryError)
+      // Return empty result instead of 500 if both Firestore and legacy fail
+      return adminOk({
+        activities: [],
+        unreviewedCount: 0,
+        total: 0,
+      })
     }
 
     // Get count of unreviewed activities
@@ -211,9 +233,9 @@ export async function GET(req: NextRequest) {
       .eq('reviewed', false)
 
     return adminOk({
-      activities,
+      activities: activities || [],
       unreviewedCount: unreviewedActivities?.length || 0,
-      total: activities.length,
+      total: activities?.length || 0,
     })
   } catch (err) {
     console.error('Error in suspicious activities endpoint:', err)
@@ -238,9 +260,16 @@ export async function PATCH(req: NextRequest) {
     }
 
     // If the activity exists in Firestore, update it there (migration path).
-    const firestoreRef = adminDb.collection('suspicious_activities').doc(activityId)
-    const firestoreSnap = await firestoreRef.get()
-    const hasFirestore = firestoreSnap.exists
+    let hasFirestore = false
+    try {
+      if (adminDb && adminDb.collection) {
+        const firestoreRef = adminDb.collection('suspicious_activities').doc(activityId)
+        const firestoreSnap = await firestoreRef.get()
+        hasFirestore = firestoreSnap.exists
+      }
+    } catch (fsErr) {
+      console.warn('Failed to check Firestore for suspicious activity:', fsErr)
+    }
 
     const supabase = await createClient()
 
@@ -256,6 +285,7 @@ export async function PATCH(req: NextRequest) {
 
     if (hasFirestore) {
       try {
+        const firestoreRef = adminDb.collection('suspicious_activities').doc(activityId)
         await firestoreRef.update({
           reviewed: true,
           reviewed_by: user.id,
