@@ -48,7 +48,7 @@ const DEV_EMAILS = [
 
 export function AdminSidebar({ pendingVerifications = 0, pendingBankVerifications = 0, userEmail }: AdminSidebarProps) {
   const pathname = usePathname()
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['overview', 'users', 'financial', 'content']))
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['overview', 'user-management', 'financial-operations', 'content', 'platform', 'dev-tools']))
 
   const toggleGroup = (groupLabel: string) => {
     setExpandedGroups(prev => {
