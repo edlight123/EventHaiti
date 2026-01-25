@@ -12,11 +12,6 @@ const nextConfig = {
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['lucide-react', 'date-fns', '@supabase/supabase-js'],
-    // Enable client-side router cache even with dynamic pages
-    staleTimes: {
-      dynamic: 30, // Cache dynamic routes for 30 seconds on client
-      static: 180,
-    },
   },
   
   // Add headers for better caching and performance
