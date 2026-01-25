@@ -5,11 +5,10 @@ import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { AdminCommandBar } from '@/components/admin/AdminCommandBar'
 import { AdminAccessDenied } from '@/components/admin/AdminAccessDenied'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
-import { getPlatformCounts } from '@/lib/firestore/admin'
 import { AdminRealtimeProvider } from '@/lib/realtime/AdminRealtimeProvider'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+// Allow some caching to avoid full page reloads
+export const revalidate = 30
 
 export default async function AdminLayout({
   children,
@@ -28,29 +27,17 @@ export default async function AdminLayout({
       return <AdminAccessDenied userEmail={user.email} />
     }
 
-    // Fetch pending counts for badges
-    const platformCounts = await getPlatformCounts()
-    const pendingCount = platformCounts.pendingVerifications || 0
-    const pendingBankCount = (platformCounts as any).pendingBankVerifications || 0
-
     return (
       <AdminRealtimeProvider>
         <div className="min-h-screen bg-gray-50">
           <Navbar user={user} isAdmin={true} />
           
           {/* Command Bar - Global Search & Quick Actions */}
-          <AdminCommandBar 
-            pendingVerifications={pendingCount} 
-            pendingBankVerifications={pendingBankCount} 
-          />
+          <AdminCommandBar />
           
           <div className="flex">
-            {/* Sidebar - Desktop Only */}
-            <AdminSidebar 
-              pendingVerifications={pendingCount}
-              pendingBankVerifications={pendingBankCount}
-              userEmail={user.email}
-            />
+            {/* Sidebar - Desktop Only - fetches its own badge data */}
+            <AdminSidebar userEmail={user.email} />
             
             {/* Main Content */}
             <main className="flex-1 pb-mobile-nav">

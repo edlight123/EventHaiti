@@ -20,7 +20,7 @@ import {
   Database,
   TestTube
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface NavItem {
   label: string
@@ -35,8 +35,6 @@ interface NavGroup {
 }
 
 interface AdminSidebarProps {
-  pendingVerifications?: number
-  pendingBankVerifications?: number
   userEmail?: string
 }
 
@@ -46,9 +44,32 @@ const DEV_EMAILS = [
   // Add more dev emails as needed
 ]
 
-export function AdminSidebar({ pendingVerifications = 0, pendingBankVerifications = 0, userEmail }: AdminSidebarProps) {
+export function AdminSidebar({ userEmail }: AdminSidebarProps) {
   const pathname = usePathname()
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['overview', 'user-management', 'financial-operations', 'content', 'platform', 'dev-tools']))
+  const [pendingVerifications, setPendingVerifications] = useState(0)
+  const [pendingBankVerifications, setPendingBankVerifications] = useState(0)
+
+  // Fetch badge counts client-side
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const res = await fetch('/api/admin/platform-counts')
+        if (res.ok) {
+          const data = await res.json()
+          setPendingVerifications(data.pendingVerifications || 0)
+          setPendingBankVerifications(data.pendingBankVerifications || 0)
+        }
+      } catch (err) {
+        console.error('Failed to fetch platform counts:', err)
+      }
+    }
+
+    fetchCounts()
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchCounts, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   const toggleGroup = (groupLabel: string) => {
     setExpandedGroups(prev => {

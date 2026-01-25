@@ -7,8 +7,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 interface AdminCommandBarProps {
-  pendingVerifications: number
-  pendingBankVerifications?: number
+  // Props removed - will fetch client-side
 }
 
 interface SearchResult {
@@ -25,9 +24,32 @@ interface SearchResult {
   }
 }
 
-export function AdminCommandBar({ pendingVerifications, pendingBankVerifications = 0 }: AdminCommandBarProps) {
+export function AdminCommandBar({}: AdminCommandBarProps) {
   const { t } = useTranslation('admin')
   const router = useRouter()
+  const [pendingVerifications, setPendingVerifications] = useState(0)
+  const [pendingBankVerifications, setPendingBankVerifications] = useState(0)
+
+  // Fetch badge counts client-side
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const res = await fetch('/api/admin/platform-counts')
+        if (res.ok) {
+          const data = await res.json()
+          setPendingVerifications(data.pendingVerifications || 0)
+          setPendingBankVerifications(data.pendingBankVerifications || 0)
+        }
+      } catch (err) {
+        console.error('Failed to fetch platform counts:', err)
+      }
+    }
+
+    fetchCounts()
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchCounts, 30000)
+    return () => clearInterval(interval)
+  }, [])
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
@@ -230,18 +252,6 @@ export function AdminCommandBar({ pendingVerifications, pendingBankVerifications
               <Bell className="w-4 h-4" />
               <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
                 {pendingVerifications > 9 ? '9+' : pendingVerifications}
-              </span>
-            </Link>
-          )}
-
-          {pendingBankVerifications > 0 && (
-            <Link
-              href="/admin/bank-verifications"
-              className="relative flex items-center gap-2 px-3 py-2 bg-yellow-50 text-yellow-800 rounded-lg hover:bg-yellow-100 transition-colors"
-            >
-              <CreditCard className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                {pendingBankVerifications > 9 ? '9+' : pendingBankVerifications}
               </span>
             </Link>
           )}
