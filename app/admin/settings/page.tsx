@@ -1,8 +1,7 @@
 import { PlatformSettingsForm } from './PlatformSettingsForm'
 import { AdminBreadcrumbs } from '@/components/admin/AdminBreadcrumbs'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const revalidate = 30
 
 export default async function AdminSettingsPage() {
   return (

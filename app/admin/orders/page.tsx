@@ -1,8 +1,7 @@
 import { adminDb } from '@/lib/firebase/admin'
 import Link from 'next/link'
 
-export const revalidate = 0
-export const dynamic = 'force-dynamic'
+export const revalidate = 30
 
 function serializeFirestoreValue(value: any): any {
   if (value == null) return value

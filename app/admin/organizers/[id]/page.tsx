@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { adminDb } from '@/lib/firebase/admin'
 import OrganizerDetailsClient from './OrganizerDetailsClient'
 
-export const dynamic = 'force-dynamic'
 
 function serializeFirestoreValue(value: any): any {
   if (value === null || value === undefined) return value

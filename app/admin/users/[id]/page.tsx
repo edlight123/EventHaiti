@@ -5,7 +5,6 @@ import AdminUserDetailsClient from './AdminUserDetailsClient'
 import { updateUserRole } from '@/lib/firestore/user-profile-server'
 import { revalidatePath } from 'next/cache'
 
-export const dynamic = 'force-dynamic'
 
 function serializeFirestoreValue(value: any): any {
   if (value === null || value === undefined) return value

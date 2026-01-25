@@ -1,8 +1,7 @@
 import { AdminBreadcrumbs } from '@/components/admin/AdminBreadcrumbs'
 import SeedEventsClient from './SeedEventsClient'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const revalidate = 30
 
 export default function SeedEventsPage() {
   return (

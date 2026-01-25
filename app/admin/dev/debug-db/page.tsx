@@ -1,7 +1,6 @@
 import { AdminBreadcrumbs } from '@/components/admin/AdminBreadcrumbs'
 import DebugDBClient from './DebugDBClient'
 
-export const dynamic = 'force-dynamic'
 
 export default function DebugDBPage() {
   return (

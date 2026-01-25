@@ -5,7 +5,6 @@ export const metadata = {
   description: 'Redirecting to consolidated payout operations - withdrawal history',
 }
 
-export const dynamic = 'force-dynamic'
 
 export default function AdminWithdrawalsPage() {
   redirect('/admin/disbursements#withdrawals')

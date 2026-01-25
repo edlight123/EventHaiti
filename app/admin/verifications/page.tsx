@@ -5,7 +5,6 @@ export const metadata = {
   description: 'Redirecting to organizer verification management',
 }
 
-export const dynamic = 'force-dynamic'
 
 export default function AdminVerificationsRedirect({
   searchParams,

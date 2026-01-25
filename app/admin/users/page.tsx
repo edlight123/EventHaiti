@@ -3,7 +3,6 @@ import { AdminBreadcrumbs } from '@/components/admin/AdminBreadcrumbs'
 import AdminUsersClient from './AdminUsersClient'
 
 export const revalidate = 60
-export const dynamic = 'force-dynamic'
 
 export default async function AdminUsersPage() {
   const counts = await getUserCounts()

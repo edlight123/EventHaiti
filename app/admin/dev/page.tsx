@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { AdminBreadcrumbs } from '@/components/admin/AdminBreadcrumbs'
 import { Database, TestTube, Code } from 'lucide-react'
 
-export const dynamic = 'force-dynamic'
 
 export default function DevToolsPage() {
   const tools = [

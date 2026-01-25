@@ -4,8 +4,7 @@ import BankVerificationReviewCard from '@/components/admin/BankVerificationRevie
 import { getDecryptedBankDestination } from '@/lib/firestore/payout-destinations'
 import { FieldPath } from 'firebase-admin/firestore'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const revalidate = 30
 
 const PAGE_SIZE = 50
 

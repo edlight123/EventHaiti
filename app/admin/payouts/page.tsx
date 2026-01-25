@@ -5,7 +5,6 @@ export const metadata = {
   description: 'Redirecting to consolidated payout operations',
 }
 
-export const dynamic = 'force-dynamic'
 
 export default async function AdminPayoutsPage() {
   // Redirect to the consolidated payout operations page

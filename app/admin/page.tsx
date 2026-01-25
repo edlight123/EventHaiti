@@ -7,8 +7,7 @@ import {
 import { getRecentAdminActivities } from '@/lib/admin/audit-log'
 import { AdminDashboardClient } from './AdminDashboardClient'
 
-export const revalidate = 0
-export const dynamic = 'force-dynamic'
+export const revalidate = 30
 
 export default async function AdminDashboard() {
   // Fetch platform statistics using Firestore

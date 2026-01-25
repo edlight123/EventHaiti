@@ -1,7 +1,6 @@
 import { AdminBreadcrumbs } from '@/components/admin/AdminBreadcrumbs'
 import CreateTestDataClient from './CreateTestDataClient'
 
-export const dynamic = 'force-dynamic'
 
 export default function CreateTestDataPage() {
   return (

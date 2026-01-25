@@ -8,7 +8,6 @@ import { AdminBreadcrumbs } from '@/components/admin/AdminBreadcrumbs'
 import { AdminAnalyticsTabs } from '@/components/admin/AdminAnalyticsTabs'
 
 export const revalidate = 120
-export const dynamic = 'force-dynamic'
 
 export default async function AdminAnalyticsPage() {
   return (
