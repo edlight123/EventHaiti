@@ -69,6 +69,22 @@ async function getOrganizerDetails(organizerId: string) {
       .get()
     const payoutConfig = payoutConfigDoc.exists ? serializeFirestoreValue(payoutConfigDoc.data()) : null
 
+    // Get all payout destinations (multiple bank accounts)
+    const destinationsSnapshot = await adminDb
+      .collection('organizers')
+      .doc(organizerId)
+      .collection('payoutDestinations')
+      .get()
+    
+    const payoutDestinations: any[] = []
+    destinationsSnapshot.docs.forEach((doc: any) => {
+      const data = serializeFirestoreValue(doc.data())
+      payoutDestinations.push({
+        id: doc.id,
+        ...data
+      })
+    })
+
     // Get verification request
     const verificationRequestDoc = await adminDb
       .collection('verification_requests')
@@ -76,7 +92,7 @@ async function getOrganizerDetails(organizerId: string) {
       .get()
     const verificationRequest = verificationRequestDoc.exists ? serializeFirestoreValue(verificationRequestDoc.data()) : null
 
-    // Get verification documents
+    // Get verification documents - only top-level docs (identity, bank, phone)
     const verificationDocsSnapshot = await adminDb
       .collection('organizers')
       .doc(organizerId)
@@ -85,15 +101,19 @@ async function getOrganizerDetails(organizerId: string) {
     
     const verificationDocs: any[] = []
     verificationDocsSnapshot.docs.forEach((doc: any) => {
-      const data = serializeFirestoreValue(doc.data())
-      // Ensure type is always a string, not an object
-      if (data && typeof data.type === 'object') {
-        data.type = JSON.stringify(data.type)
+      const docId = doc.id
+      // Only include main verification types, skip nested bank verification docs
+      if (['identity', 'bank', 'phone'].includes(docId)) {
+        const data = serializeFirestoreValue(doc.data())
+        // Ensure type is always a string, not an object
+        if (data && typeof data.type === 'object') {
+          data.type = JSON.stringify(data.type)
+        }
+        verificationDocs.push({
+          id: docId,
+          ...data
+        })
       }
-      verificationDocs.push({
-        id: doc.id,
-        ...data
-      })
     })
 
     // Get organizer's events count
@@ -126,6 +146,7 @@ async function getOrganizerDetails(organizerId: string) {
       user: userData,
       organizer: organizerData,
       payoutConfig,
+      payoutDestinations,
       verificationRequest,
       verificationDocs,
       stats: {

@@ -19,6 +19,7 @@ type OrganizerDetailsProps = {
     user: any
     organizer: any
     payoutConfig: any
+    payoutDestinations?: any[]
     verificationRequest: any
     verificationDocs: any[]
     stats: {
@@ -34,7 +35,7 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
   const [isUpdating, setIsUpdating] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
-  const { id, user, organizer, payoutConfig, verificationRequest, verificationDocs, stats } = organizerDetails
+  const { id, user, organizer, payoutConfig, payoutDestinations, verificationRequest, verificationDocs, stats } = organizerDetails
 
   const handleToggleStatus = async (action: 'ban' | 'unban' | 'disable_posting' | 'enable_posting') => {
     if (!confirm(`Are you sure you want to ${action.replace('_', ' ')} this organizer?`)) {
@@ -264,10 +265,81 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
             Bank Account & Payouts
           </h2>
           
-          {payoutConfig ? (
+          {(payoutConfig || (payoutDestinations && payoutDestinations.length > 0)) ? (
             <div className="space-y-4">
-              {/* Bank Details */}
-              {payoutConfig.bankDetails ? (
+              {/* All Payout Destinations (Multiple Bank Accounts) */}
+              {payoutDestinations && payoutDestinations.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-gray-700">
+                    Payout Destinations ({payoutDestinations.length})
+                  </p>
+                  {payoutDestinations.map((dest, index) => (
+                    <div key={dest.id || index} className="p-4 bg-gray-50 rounded-lg border-l-4 border-teal-500">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                            dest.type === 'bank' ? 'bg-blue-100 text-blue-800' :
+                            dest.type === 'mobile_money' ? 'bg-purple-100 text-purple-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {safeString(dest.type || 'bank').replace(/_/g, ' ')}
+                          </span>
+                          {dest.isDefault && (
+                            <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                              Default
+                            </span>
+                          )}
+                          {dest.status && (
+                            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                              dest.status === 'active' || dest.status === 'verified' ? 'bg-green-100 text-green-800' :
+                              dest.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {safeString(dest.status)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <dl className="space-y-1 text-sm">
+                        {dest.accountName && (
+                          <div className="flex justify-between">
+                            <dt className="text-gray-500">Account Name</dt>
+                            <dd className="text-gray-900 font-medium">{safeString(dest.accountName)}</dd>
+                          </div>
+                        )}
+                        {dest.bankName && (
+                          <div className="flex justify-between">
+                            <dt className="text-gray-500">Bank</dt>
+                            <dd className="text-gray-900">{safeString(dest.bankName)}</dd>
+                          </div>
+                        )}
+                        {dest.accountNumber && (
+                          <div className="flex justify-between">
+                            <dt className="text-gray-500">Account #</dt>
+                            <dd className="text-gray-900 font-mono">{safeString(dest.accountNumber)}</dd>
+                          </div>
+                        )}
+                        {dest.provider && (
+                          <div className="flex justify-between">
+                            <dt className="text-gray-500">Provider</dt>
+                            <dd className="text-gray-900">{safeString(dest.provider)}</dd>
+                          </div>
+                        )}
+                        {dest.phoneNumber && (
+                          <div className="flex justify-between">
+                            <dt className="text-gray-500">Phone</dt>
+                            <dd className="text-gray-900 font-mono">{safeString(dest.phoneNumber)}</dd>
+                          </div>
+                        )}
+                      </dl>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Legacy Bank Details from payoutConfig */}
+              {payoutConfig?.bankDetails && !payoutDestinations?.length && (
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
@@ -302,10 +374,6 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
                       <dd className="text-gray-900">{safeString(payoutConfig.accountLocation || payoutConfig.bankDetails?.accountLocation, 'N/A')}</dd>
                     </div>
                   </dl>
-                </div>
-              ) : (
-                <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500 text-sm">
-                  No bank account details configured
                 </div>
               )}
 
@@ -439,9 +507,13 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
               <div>
                 <dt className="text-sm font-medium text-gray-500">Submitted</dt>
                 <dd className="text-sm text-gray-900">
-                  {typeof verificationRequest.submitted_at === 'string' && verificationRequest.submitted_at 
-                    ? new Date(verificationRequest.submitted_at).toLocaleString()
-                    : 'Unknown'}
+                  {(() => {
+                    const dateStr = verificationRequest.submitted_at || verificationRequest.createdAt
+                    if (typeof dateStr === 'string' && dateStr) {
+                      return new Date(dateStr).toLocaleString()
+                    }
+                    return 'Unknown'
+                  })()}
                 </dd>
               </div>
               
