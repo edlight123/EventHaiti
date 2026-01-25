@@ -266,57 +266,125 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
           
           {payoutConfig ? (
             <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      {safeString(payoutConfig.accountHolderName, 'N/A')}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">Account Holder</p>
+              {/* Bank Details */}
+              {payoutConfig.bankDetails ? (
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        {safeString(payoutConfig.bankDetails?.accountName, 'N/A')}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Account Holder</p>
+                    </div>
                   </div>
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                    safeString(payoutConfig.verificationStatus) === 'verified' 
-                      ? 'bg-green-100 text-green-800' 
-                      : safeString(payoutConfig.verificationStatus) === 'pending'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {safeString(payoutConfig.verificationStatus, 'unverified')}
-                  </span>
-                </div>
-                
-                <dl className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <dt className="text-gray-500">Bank</dt>
-                    <dd className="text-gray-900 font-medium">{safeString(payoutConfig.bankName, 'N/A')}</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-gray-500">Account Number</dt>
-                    <dd className="text-gray-900 font-mono">
-                      {typeof payoutConfig.accountNumber === 'string' && payoutConfig.accountNumber 
-                        ? `****${payoutConfig.accountNumber.slice(-4)}` 
-                        : 'N/A'}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-gray-500">Currency</dt>
-                    <dd className="text-gray-900">{safeString(payoutConfig.currency, 'N/A')}</dd>
-                  </div>
-                  {payoutConfig.verifiedAt && typeof payoutConfig.verifiedAt === 'string' && (
+                  
+                  <dl className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <dt className="text-gray-500">Verified At</dt>
-                      <dd className="text-gray-900 text-xs">
-                        {new Date(payoutConfig.verifiedAt).toLocaleDateString()}
+                      <dt className="text-gray-500">Bank</dt>
+                      <dd className="text-gray-900 font-medium">{safeString(payoutConfig.bankDetails?.bankName, 'N/A')}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">Account Number</dt>
+                      <dd className="text-gray-900 font-mono">
+                        {typeof payoutConfig.bankDetails?.accountNumber === 'string' && payoutConfig.bankDetails.accountNumber 
+                          ? payoutConfig.bankDetails.accountNumber
+                          : 'N/A'}
                       </dd>
                     </div>
-                  )}
-                </dl>
+                    {payoutConfig.bankDetails?.routingNumber && (
+                      <div className="flex justify-between">
+                        <dt className="text-gray-500">Routing Number</dt>
+                        <dd className="text-gray-900 font-mono">{safeString(payoutConfig.bankDetails.routingNumber)}</dd>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">Location</dt>
+                      <dd className="text-gray-900">{safeString(payoutConfig.accountLocation || payoutConfig.bankDetails?.accountLocation, 'N/A')}</dd>
+                    </div>
+                  </dl>
+                </div>
+              ) : (
+                <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500 text-sm">
+                  No bank account details configured
+                </div>
+              )}
+
+              {/* Verification Status */}
+              {payoutConfig.verificationStatus && typeof payoutConfig.verificationStatus === 'object' && (
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm font-medium text-gray-900 mb-3">Verification Status</p>
+                  <div className="flex flex-wrap gap-2">
+                    {['identity', 'bank', 'phone'].map((type) => {
+                      const status = payoutConfig.verificationStatus?.[type]
+                      if (!status) return null
+                      return (
+                        <span
+                          key={type}
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                            status === 'verified' ? 'bg-green-100 text-green-800' :
+                            status === 'failed' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}
+                        >
+                          {type}: {status}
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Payout Status */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-medium text-gray-900">Payout Status</p>
+                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                    payoutConfig.status === 'active' ? 'bg-green-100 text-green-800' :
+                    payoutConfig.status === 'pending_verification' ? 'bg-yellow-100 text-yellow-800' :
+                    payoutConfig.status === 'on_hold' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {safeString(payoutConfig.status, 'not_setup').replace(/_/g, ' ')}
+                  </span>
+                </div>
+                {payoutConfig.method && (
+                  <p className="text-xs text-gray-500 mt-1">Method: {safeString(payoutConfig.method).replace(/_/g, ' ')}</p>
+                )}
+                {payoutConfig.payoutProvider && (
+                  <p className="text-xs text-gray-500">Provider: {safeString(payoutConfig.payoutProvider).replace(/_/g, ' ')}</p>
+                )}
               </div>
 
-              {payoutConfig.notes && typeof payoutConfig.notes === 'string' && (
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <p className="text-xs font-medium text-blue-900 mb-1">Admin Notes</p>
-                  <p className="text-sm text-blue-800">{payoutConfig.notes}</p>
+              {/* Mobile Money Details */}
+              {payoutConfig.mobileMoneyDetails && (
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm font-medium text-gray-900 mb-2">Mobile Money</p>
+                  <dl className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">Provider</dt>
+                      <dd className="text-gray-900">{safeString(payoutConfig.mobileMoneyDetails.provider)}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">Phone</dt>
+                      <dd className="text-gray-900 font-mono">{safeString(payoutConfig.mobileMoneyDetails.phoneNumber)}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">Account Name</dt>
+                      <dd className="text-gray-900">{safeString(payoutConfig.mobileMoneyDetails.accountName)}</dd>
+                    </div>
+                  </dl>
+                </div>
+              )}
+
+              {/* Timestamps */}
+              {(payoutConfig.createdAt || payoutConfig.updatedAt) && (
+                <div className="text-xs text-gray-500 space-y-1">
+                  {payoutConfig.createdAt && typeof payoutConfig.createdAt === 'string' && (
+                    <p>Created: {new Date(payoutConfig.createdAt).toLocaleString()}</p>
+                  )}
+                  {payoutConfig.updatedAt && typeof payoutConfig.updatedAt === 'string' && (
+                    <p>Updated: {new Date(payoutConfig.updatedAt).toLocaleString()}</p>
+                  )}
                 </div>
               )}
             </div>
@@ -325,7 +393,7 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
               <svg className="w-12 h-12 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <p className="text-sm text-gray-500">No bank account configured</p>
+              <p className="text-sm text-gray-500">No payout configuration</p>
             </div>
           )}
         </div>
@@ -405,45 +473,93 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Verification Documents
+              Verification Documents ({verificationDocs.length})
             </h2>
             
             <div className="space-y-3">
-              {verificationDocs.map((doc) => (
-                <div key={doc.id} className="p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {typeof doc.type === 'string' ? doc.type : doc.id}
-                      </p>
-                      {doc.uploadedAt && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}
-                        </p>
-                      )}
-                      {doc.status && (
-                        <span className={`inline-block mt-1 px-2 py-0.5 text-xs font-semibold rounded-full ${
-                          doc.status === 'verified' || doc.status === 'approved' ? 'bg-green-100 text-green-800' :
-                          doc.status === 'rejected' || doc.status === 'failed' ? 'bg-red-100 text-red-800' :
+              {verificationDocs.map((doc) => {
+                const docType = doc.id || 'unknown'
+                const docTypeLabel = docType.charAt(0).toUpperCase() + docType.slice(1)
+                const status = typeof doc.status === 'string' ? doc.status : 'pending'
+                
+                return (
+                  <div key={doc.id} className="p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          docType === 'identity' ? 'bg-blue-100' :
+                          docType === 'bank' ? 'bg-green-100' :
+                          docType === 'phone' ? 'bg-purple-100' :
+                          'bg-gray-100'
+                        }`}>
+                          {docType === 'identity' && (
+                            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                            </svg>
+                          )}
+                          {docType === 'bank' && (
+                            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            </svg>
+                          )}
+                          {docType === 'phone' && (
+                            <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                          )}
+                          {!['identity', 'bank', 'phone'].includes(docType) && (
+                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{docTypeLabel} Verification</p>
+                          {doc.submittedAt && typeof doc.submittedAt === 'string' && (
+                            <p className="text-xs text-gray-500">
+                              Submitted {new Date(doc.submittedAt).toLocaleDateString()}
+                            </p>
+                          )}
+                          {doc.uploadedAt && typeof doc.uploadedAt === 'string' && !doc.submittedAt && (
+                            <p className="text-xs text-gray-500">
+                              Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          status === 'verified' || status === 'approved' ? 'bg-green-100 text-green-800' :
+                          status === 'rejected' || status === 'failed' ? 'bg-red-100 text-red-800' :
                           'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {doc.status}
+                          {status}
                         </span>
-                      )}
+                        {(doc.url || doc.documentPath) && (
+                          <button 
+                            onClick={async () => {
+                              if (doc.url) {
+                                window.open(doc.url, '_blank')
+                              } else if (doc.documentPath) {
+                                try {
+                                  const res = await fetch(`/api/admin/verification-image?path=${encodeURIComponent(doc.documentPath)}`)
+                                  const data = await res.json()
+                                  if (data?.url) window.open(data.url, '_blank')
+                                } catch (e) {
+                                  console.error('Failed to open document:', e)
+                                }
+                              }
+                            }}
+                            className="text-xs text-teal-600 hover:text-teal-700 font-medium"
+                          >
+                            View
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    {doc.url && (
-                      <a 
-                        href={doc.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-xs text-teal-600 hover:text-teal-700 font-medium"
-                      >
-                        View
-                      </a>
-                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
