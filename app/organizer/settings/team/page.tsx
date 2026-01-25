@@ -3,8 +3,6 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, CalendarDays, ShieldCheck, Users } from 'lucide-react'
 import { createClient } from '@/lib/firebase-db/server'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 import EventStaffHub from './EventStaffHub'
 
 export const revalidate = 0
@@ -57,9 +55,7 @@ export default async function TeamSettingsPage({
   const events = await getOrganizerEvents(user.id)
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={user} />
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="bg-gray-50">      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link
           href="/organizer/settings"
           className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6 transition-colors"
@@ -147,9 +143,6 @@ export default async function TeamSettingsPage({
             </div>
           </div>
         </div>
-      </div>
-
-      <MobileNavWrapper user={user} />
-    </div>
+      </div>    </div>
   )
 }

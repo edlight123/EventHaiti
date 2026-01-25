@@ -4,9 +4,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { getEventEarnings, getEventTierSalesBreakdown } from '@/lib/earnings'
 import { calculateFees } from '@/lib/fees'
 import EventEarningsView from './EventEarningsView'
-import Navbar from '@/components/Navbar'
 import { isAdmin } from '@/lib/admin'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 
 export const revalidate = 30
 
@@ -68,17 +66,12 @@ export default async function EventEarningsPage({
   const serializedEarnings = serializeData(earnings)
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
-      
+    <div className="bg-gray-50">      
       <EventEarningsView
         event={serializedEvent}
         earnings={serializedEarnings}
         organizerId={user.id}
         tierBreakdown={tierBreakdown}
-      />
-      
-      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
-    </div>
+      />    </div>
   )
 }

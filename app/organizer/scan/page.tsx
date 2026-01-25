@@ -1,6 +1,4 @@
 import { requireAuth } from '@/lib/auth'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 import ScanPageHeader from '@/components/organizer/scan/ScanPageHeader'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/firebase-db/server'
@@ -60,8 +58,7 @@ export default async function ScanTicketPage() {
   const events = [...todayEvents, ...otherEvents]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-brand-50 pb-mobile-nav">
-      <Navbar user={user} />
+    <div className="bg-gradient-to-br from-purple-50 via-white to-brand-50">
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         <div className="mb-6 md:mb-8 text-center">
@@ -73,8 +70,6 @@ export default async function ScanTicketPage() {
 
         <EventSelector events={events} organizerId={user.id} />
       </div>
-
-      <MobileNavWrapper user={user} />
     </div>
   )
 }

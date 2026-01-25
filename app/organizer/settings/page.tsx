@@ -1,8 +1,6 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 import SettingsContent from '@/components/organizer/settings/SettingsContent'
 import { redirect } from 'next/navigation'
 
@@ -57,9 +55,7 @@ export default async function OrganizerSettingsHubPage() {
   const defaultLocation = organizerData?.default_city || 'Not set'
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={user} />
-
+    <div className="bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
         <SettingsContent
           isVerified={isVerified}
@@ -68,9 +64,6 @@ export default async function OrganizerSettingsHubPage() {
           defaultLocation={defaultLocation}
           payoutStatusText={payoutStatus}
         />
-      </div>
-
-      <MobileNavWrapper user={user} />
-    </div>
+      </div>    </div>
   )
 }

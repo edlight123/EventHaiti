@@ -7,8 +7,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 import Link from 'next/link'
 import VerificationStatusHero from '@/components/organizer/verification/VerificationStatusHero'
 import VerificationStepper from '@/components/organizer/verification/VerificationStepper'
@@ -254,7 +252,7 @@ export default function VerifyOrganizerPage() {
 
   if (authLoading || loading || restarting) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-600">
@@ -267,7 +265,7 @@ export default function VerifyOrganizerPage() {
 
   if (error && !request) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white border border-red-200 rounded-lg p-6 max-w-md">
           <h2 className="text-lg font-bold text-red-900 mb-2">Error Loading Verification</h2>
           <p className="text-sm text-red-700 mb-4">{error}</p>
@@ -293,9 +291,7 @@ export default function VerifyOrganizerPage() {
   const canSubmit = canSubmitForReview(requestForUI)
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={user} />
-
+    <div className="bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         {/* Header */}
         <div className="mb-6">
@@ -484,9 +480,6 @@ export default function VerifyOrganizerPage() {
             isReadOnly={isReadOnly}
           />
         )}
-      </div>
-
-      <MobileNavWrapper user={user} />
-    </div>
+      </div>    </div>
   )
 }

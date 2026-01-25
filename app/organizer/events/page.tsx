@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 import OrganizerEventsTopBar from '@/components/organizer/events-manager/OrganizerEventsTopBar'
 import OrganizerEventsTabs, { type EventTabType } from '@/components/organizer/events-manager/OrganizerEventsTabs'
 import OrganizerEventsFiltersModal, { type EventFilters } from '@/components/organizer/events-manager/OrganizerEventsFiltersModal'
@@ -253,8 +251,7 @@ export default function OrganizerEventsPage() {
   // Show loading state during auth or initial fetch
   if (authLoading || (loading && events.length === 0)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-mobile-nav">
-        <Navbar user={navbarUser} />
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100">
         <OrganizerEventsTopBar
           searchQuery=""
           onSearchChange={() => {}}
@@ -275,7 +272,6 @@ export default function OrganizerEventsPage() {
             ))}
           </div>
         </div>
-        <MobileNavWrapper user={navbarUser} />
       </div>
     )
   }
@@ -288,9 +284,7 @@ export default function OrganizerEventsPage() {
   const hasSearchOrFilters = Boolean(searchQuery || activeFiltersCount > 0)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-mobile-nav">
-      <Navbar user={navbarUser} />
-
+    <div className="bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Top Bar */}
       <OrganizerEventsTopBar
         searchQuery={searchQuery}
@@ -368,8 +362,6 @@ export default function OrganizerEventsPage() {
         availableCities={availableCities}
         availableCategories={availableCategories}
       />
-
-      <MobileNavWrapper user={navbarUser} />
     </div>
   )
 }

@@ -4,8 +4,6 @@ import { cookies } from 'next/headers'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { serializeData } from '@/lib/utils/serialize'
 import { normalizeCountryCode } from '@/lib/payment-provider'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 import PayoutsPageNew from './PayoutsPageNew'
 
 export const dynamic = 'force-dynamic'
@@ -71,9 +69,7 @@ export default async function PayoutsSettingsPage({
   const serializedStripeConfig = serializeData(stripeConfig) || undefined
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={navbarUser} />
-
+    <div className="bg-gray-50">
       <PayoutsPageNew
         haitiConfig={serializedHaitiConfig}
         stripeConfig={serializedStripeConfig}
@@ -81,9 +77,6 @@ export default async function PayoutsSettingsPage({
         organizerId={authUser.uid}
         organizerDefaultCountry={organizerDefaultCountry}
         initialActiveProfile={stripeParam ? 'stripe_connect' : undefined}
-      />
-      
-      <MobileNavWrapper user={navbarUser} />
-    </div>
+      />    </div>
   )
 }

@@ -1,8 +1,6 @@
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { redirect, notFound } from 'next/navigation'
 import { cookies } from 'next/headers'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 import Link from 'next/link'
 import { AttendeesManager } from './AttendeesManager'
 import { loadTicketDocsForEvent } from '@/lib/tickets/loadTicketsForEvent'
@@ -56,16 +54,12 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
   // Verify organizer
   if (event.organizer_id !== authUser.uid) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar user={{ id: authUser.uid, email: authUser.email || '', full_name: authUser.name || '', role: 'attendee' }} />
-        <div className="flex items-center justify-center py-16 px-4">
+      <div className="bg-gray-50">        <div className="flex items-center justify-center py-16 px-4">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-3">Unauthorized</h2>
             <p className="text-sm text-gray-600">You don&apos;t have permission to manage this event&apos;s attendees.</p>
           </div>
-        </div>
-        <MobileNavWrapper user={{ id: authUser.uid, email: authUser.email || '', role: 'attendee' }} />
-      </div>
+        </div>      </div>
     )
   }
 
@@ -133,9 +127,7 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={navbarUser} />
-
+    <div className="bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
         {/* Header */}
         <div className="mb-6">
@@ -170,9 +162,6 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
           eventTitle={event.title}
           tickets={tickets}
         />
-      </div>
-
-      <MobileNavWrapper user={navbarUser} />
-    </div>
+      </div>    </div>
   )
 }

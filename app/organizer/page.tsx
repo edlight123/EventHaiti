@@ -1,8 +1,6 @@
 import { getCurrentUser } from '@/lib/auth'
 import { isAdmin } from '@/lib/admin'
 import { redirect } from 'next/navigation'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { getOrganizerStats, getNextEvent } from '@/lib/firestore/organizer'
 import { normalizeCurrency } from '@/lib/money'
 import {
@@ -41,15 +39,7 @@ export default async function OrganizerDashboard({
   if (user.role !== 'organizer') {
     const redirectTo = sanitizeRedirectTarget(searchParams?.redirect)
 
-    return (
-      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-        <Navbar user={user} isAdmin={isAdmin(user?.email)} />
-
-        <OrganizerUpgradePrompt redirectTo={redirectTo} />
-
-        <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
-      </div>
-    )
+    return <OrganizerUpgradePrompt redirectTo={redirectTo} />
   }
 
   // Fetch organizer data
@@ -217,22 +207,16 @@ export default async function OrganizerDashboard({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
-
-      <OrganizerDashboardClient
-        nextEvent={serializedNextEvent}
-        alerts={alerts}
-        hasPayoutSetup={hasPayoutSetup}
-        payoutWidgetStatus={payoutWidgetStatus}
-        pendingBalance={balanceData.pending}
-        payoutCurrency={balanceData.currency}
-        salesData={salesData}
-        events={serializedEvents}
-        eventStatsById={eventStatsById}
-      />
-
-      <MobileNavWrapper user={user} isAdmin={isAdmin(user?.email)} />
-    </div>
+    <OrganizerDashboardClient
+      nextEvent={serializedNextEvent}
+      alerts={alerts}
+      hasPayoutSetup={hasPayoutSetup}
+      payoutWidgetStatus={payoutWidgetStatus}
+      pendingBalance={balanceData.pending}
+      payoutCurrency={balanceData.currency}
+      salesData={salesData}
+      events={serializedEvents}
+      eventStatsById={eventStatsById}
+    />
   )
 }

@@ -1,13 +1,11 @@
 import { createClient } from '@/lib/firebase-db/server'
 import { getCurrentUser } from '@/lib/auth'
-import Navbar from '@/components/Navbar'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import SalesChart from '@/components/charts/SalesChart'
 import CategoryChart from '@/components/charts/CategoryChart'
 import { TrendingUp, DollarSign, Ticket, Calendar, ArrowLeft } from 'lucide-react'
 import Badge from '@/components/ui/Badge'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { revalidatePath } from 'next/cache'
 import { formatMoneyFromCents, normalizeCurrency } from '@/lib/money'
 
@@ -171,8 +169,7 @@ export default async function AnalyticsPage() {
 
   return (
     
-      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-        <Navbar user={user} />
+      <div className="bg-gray-50">
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8 flex items-center justify-between">
@@ -338,7 +335,6 @@ export default async function AnalyticsPage() {
         </div>
       </div>
       
-      <MobileNavWrapper user={user} />
     </div>
     
   )

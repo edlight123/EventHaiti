@@ -4,8 +4,6 @@ import { cookies } from 'next/headers'
 import { adminDb } from '@/lib/firebase/admin'
 import { getOrganizerEarningsSummary } from '@/lib/earnings'
 import EarningsView from './EarningsView'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 
 export const metadata = {
   title: 'Earnings | EventHaiti',
@@ -46,9 +44,7 @@ export default async function EarningsPage() {
     }
 
     return (
-      <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-        <Navbar user={navbarUser} />
-
+      <div className="bg-gray-50">
         <div className="bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
@@ -85,10 +81,7 @@ export default async function EarningsPage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <EarningsView summary={summary} organizerId={organizerId} />
-        </div>
-
-        <MobileNavWrapper user={navbarUser} />
-      </div>
+        </div>      </div>
     )
   } catch (error) {
     console.error('Error loading earnings:', error)

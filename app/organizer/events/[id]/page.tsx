@@ -1,7 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { adminDb } from '@/lib/firebase/admin'
-import Navbar from '@/components/Navbar'
 import { isAdmin } from '@/lib/admin'
 import { EventCommandCenter } from './EventCommandCenter'
 import { normalizeCurrency } from '@/lib/money'
@@ -127,9 +126,7 @@ export default async function EventCommandCenterPage({ params }: { params: Promi
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar user={user} isAdmin={isAdmin(user?.email)} />
-      <EventCommandCenter 
+    <div className="bg-gray-50">      <EventCommandCenter 
         event={event} 
         stats={stats}
         tickets={tickets}

@@ -3,8 +3,6 @@ import Link from 'next/link'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -49,9 +47,7 @@ export default async function PayoutFeesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={navbarUser} />
-
+    <div className="bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -229,9 +225,6 @@ export default async function PayoutFeesPage() {
             </Link>
           </div>
         </div>
-      </div>
-
-      <MobileNavWrapper user={navbarUser} />
-    </div>
+      </div>    </div>
   )
 }
