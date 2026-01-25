@@ -302,34 +302,46 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
                       </div>
                       
                       <dl className="space-y-1 text-sm">
-                        {dest.accountName && (
+                        {(dest.accountName || dest.bankDetails?.accountName) && (
                           <div className="flex justify-between">
                             <dt className="text-gray-500">Account Name</dt>
-                            <dd className="text-gray-900 font-medium">{safeString(dest.accountName)}</dd>
+                            <dd className="text-gray-900 font-medium">{safeString(dest.accountName || dest.bankDetails?.accountName)}</dd>
                           </div>
                         )}
-                        {dest.bankName && (
+                        {(dest.bankName || dest.bankDetails?.bankName) && (
                           <div className="flex justify-between">
                             <dt className="text-gray-500">Bank</dt>
-                            <dd className="text-gray-900">{safeString(dest.bankName)}</dd>
+                            <dd className="text-gray-900">{safeString(dest.bankName || dest.bankDetails?.bankName)}</dd>
                           </div>
                         )}
-                        {dest.accountNumber && (
+                        {(dest.accountNumber || dest.bankDetails?.accountNumber) && (
                           <div className="flex justify-between">
                             <dt className="text-gray-500">Account #</dt>
-                            <dd className="text-gray-900 font-mono">{safeString(dest.accountNumber)}</dd>
+                            <dd className="text-gray-900 font-mono">{safeString(dest.accountNumber || dest.bankDetails?.accountNumber)}</dd>
                           </div>
                         )}
-                        {dest.provider && (
+                        {(dest.routingNumber || dest.bankDetails?.routingNumber) && (
+                          <div className="flex justify-between">
+                            <dt className="text-gray-500">Routing #</dt>
+                            <dd className="text-gray-900 font-mono">{safeString(dest.routingNumber || dest.bankDetails?.routingNumber)}</dd>
+                          </div>
+                        )}
+                        {(dest.accountLocation || dest.bankDetails?.accountLocation) && (
+                          <div className="flex justify-between">
+                            <dt className="text-gray-500">Location</dt>
+                            <dd className="text-gray-900">{safeString(dest.accountLocation || dest.bankDetails?.accountLocation)}</dd>
+                          </div>
+                        )}
+                        {(dest.provider || dest.mobileMoneyDetails?.provider) && (
                           <div className="flex justify-between">
                             <dt className="text-gray-500">Provider</dt>
-                            <dd className="text-gray-900">{safeString(dest.provider)}</dd>
+                            <dd className="text-gray-900">{safeString(dest.provider || dest.mobileMoneyDetails?.provider)}</dd>
                           </div>
                         )}
-                        {dest.phoneNumber && (
+                        {(dest.phoneNumber || dest.mobileMoneyDetails?.phoneNumber) && (
                           <div className="flex justify-between">
                             <dt className="text-gray-500">Phone</dt>
-                            <dd className="text-gray-900 font-mono">{safeString(dest.phoneNumber)}</dd>
+                            <dd className="text-gray-900 font-mono">{safeString(dest.phoneNumber || dest.mobileMoneyDetails?.phoneNumber)}</dd>
                           </div>
                         )}
                       </dl>
