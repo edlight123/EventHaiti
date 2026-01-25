@@ -7,8 +7,8 @@ import { AdminAccessDenied } from '@/components/admin/AdminAccessDenied'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { AdminRealtimeProvider } from '@/lib/realtime/AdminRealtimeProvider'
 
-// Allow some caching to avoid full page reloads
-export const revalidate = 30
+// Force dynamic rendering for all admin pages (requires authentication)
+export const dynamic = 'force-dynamic'
 
 export default async function AdminLayout({
   children,
