@@ -1,0 +1,175 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { Users, TrendingUp, UserPlus, Briefcase } from 'lucide-react'
+
+interface UserGrowthData {
+  dailySignups: Array<{
+    date: string
+    attendees: number
+    organizers: number
+    total: number
+  }>
+  totalUsers: number
+  organizerCount: number
+  attendeeCount: number
+}
+
+interface Props {
+  days?: number
+}
+
+export function UserGrowthAnalytics({ days = 30 }: Props) {
+  const [data, setData] = useState<UserGrowthData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [selectedDays, setSelectedDays] = useState(days)
+
+  useEffect(() => {
+    fetchData(selectedDays)
+  }, [selectedDays])
+
+  const fetchData = async (period: number) => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/admin/analytics-data?type=user-growth&days=${period}`)
+      const result = await res.json()
+      setData(result)
+    } catch (err) {
+      console.error('Failed to load user growth data:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="text-center py-12 text-gray-500">
+        Failed to load user growth data
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Period Selector */}
+      <div className="flex gap-2">
+        {[7, 14, 30, 60, 90].map((period) => (
+          <button
+            key={period}
+            onClick={() => setSelectedDays(period)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              selectedDays === period
+                ? 'bg-teal-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {period} days
+          </button>
+        ))}
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+              <Users className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-blue-700">Total Users</div>
+              <div className="text-2xl font-bold text-blue-900">{data.totalUsers.toLocaleString()}</div>
+            </div>
+          </div>
+          <div className="text-xs text-blue-600">Last {selectedDays} days</div>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
+              <UserPlus className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-purple-700">Attendees</div>
+              <div className="text-2xl font-bold text-purple-900">{data.attendeeCount.toLocaleString()}</div>
+            </div>
+          </div>
+          <div className="text-xs text-purple-600">
+            {((data.attendeeCount / data.totalUsers) * 100).toFixed(1)}% of total
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
+              <Briefcase className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-orange-700">Organizers</div>
+              <div className="text-2xl font-bold text-orange-900">{data.organizerCount.toLocaleString()}</div>
+            </div>
+          </div>
+          <div className="text-xs text-orange-600">
+            {((data.organizerCount / data.totalUsers) * 100).toFixed(1)}% of total
+          </div>
+        </div>
+      </div>
+
+      {/* Growth Chart */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Daily Signups</h3>
+        {data.dailySignups.length > 0 ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={data.dailySignups}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="date" 
+                tick={{ fontSize: 12 }}
+                tickFormatter={(value) => {
+                  const date = new Date(value)
+                  return `${date.getMonth() + 1}/${date.getDate()}`
+                }}
+              />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip 
+                labelFormatter={(value) => new Date(value).toLocaleDateString()}
+              />
+              <Legend />
+              <Line 
+                type="monotone" 
+                dataKey="total" 
+                stroke="#14b8a6" 
+                strokeWidth={2}
+                name="Total"
+              />
+              <Line 
+                type="monotone" 
+                dataKey="attendees" 
+                stroke="#8b5cf6" 
+                strokeWidth={2}
+                name="Attendees"
+              />
+              <Line 
+                type="monotone" 
+                dataKey="organizers" 
+                stroke="#f97316" 
+                strokeWidth={2}
+                name="Organizers"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="text-center py-12 text-gray-500">No signup data available for this period</div>
+        )}
+      </div>
+    </div>
+  )
+}

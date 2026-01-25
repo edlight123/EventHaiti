@@ -71,24 +71,44 @@ interface GrowthData {
   ticketsGrowth30d: number
 }
 
-export function AdminRevenueAnalytics() {
+interface Props {
+  showFilters?: boolean
+}
+
+export function AdminRevenueAnalytics({ showFilters = false }: Props) {
   const [revenue, setRevenue] = useState<RevenueData | null>(null)
   const [growth, setGrowth] = useState<GrowthData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [dateRange, setDateRange] = useState<'all' | '7d' | '30d' | '90d'>('all')
 
   useEffect(() => {
-    fetch('/api/admin/revenue-analytics?type=platform')
-      .then(res => res.json())
-      .then(data => {
-        setRevenue(data.revenue)
-        setGrowth(data.growth)
-        setLoading(false)
-      })
-      .catch(err => {
-        console.error('Failed to load revenue analytics:', err)
-        setLoading(false)
-      })
-  }, [])
+    fetchData()
+  }, [dateRange])
+
+  const fetchData = async () => {
+    setLoading(true)
+    try {
+      let url = '/api/admin/revenue-analytics?type=platform'
+      
+      if (dateRange !== 'all') {
+        const days = parseInt(dateRange)
+        const endDate = new Date()
+        const startDate = new Date()
+        startDate.setDate(startDate.getDate() - days)
+        
+        url += `&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
+      }
+      
+      const res = await fetch(url)
+      const data = await res.json()
+      setRevenue(data.revenue)
+      setGrowth(data.growth)
+      setLoading(false)
+    } catch (err) {
+      console.error('Failed to load revenue analytics:', err)
+      setLoading(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -119,6 +139,30 @@ export function AdminRevenueAnalytics() {
 
   return (
     <div className="space-y-6">
+      {/* Date Range Filter */}
+      {showFilters && (
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { value: 'all', label: 'All Time' },
+            { value: '7d', label: 'Last 7 Days' },
+            { value: '30d', label: 'Last 30 Days' },
+            { value: '90d', label: 'Last 90 Days' }
+          ].map((option) => (
+            <button
+              key={option.value}
+              onClick={() => setDateRange(option.value as any)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                dateRange === option.value
+                  ? 'bg-teal-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Total Revenue Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl p-6 border border-teal-200">
