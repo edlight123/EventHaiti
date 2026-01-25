@@ -402,11 +402,22 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
                 <div key={doc.id} className="p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{doc.type || doc.id}</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {typeof doc.type === 'string' ? doc.type : doc.id}
+                      </p>
                       {doc.uploadedAt && (
                         <p className="text-xs text-gray-500 mt-1">
                           Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}
                         </p>
+                      )}
+                      {doc.status && (
+                        <span className={`inline-block mt-1 px-2 py-0.5 text-xs font-semibold rounded-full ${
+                          doc.status === 'verified' || doc.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          doc.status === 'rejected' || doc.status === 'failed' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {doc.status}
+                        </span>
                       )}
                     </div>
                     {doc.url && (
