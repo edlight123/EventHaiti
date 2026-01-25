@@ -4,6 +4,15 @@ import { useTranslation } from 'react-i18next'
 import Link from 'next/link'
 import { useState } from 'react'
 
+// Helper to safely render any value - prevents React error #31 for objects
+function safeString(value: any, fallback: string = ''): string {
+  if (value === null || value === undefined) return fallback
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value)
+}
+
 type OrganizerDetailsProps = {
   organizerDetails: {
     id: string
@@ -261,37 +270,39 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">
-                      {payoutConfig.accountHolderName || 'N/A'}
+                      {safeString(payoutConfig.accountHolderName, 'N/A')}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">Account Holder</p>
                   </div>
                   <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                    payoutConfig.verificationStatus === 'verified' 
+                    safeString(payoutConfig.verificationStatus) === 'verified' 
                       ? 'bg-green-100 text-green-800' 
-                      : payoutConfig.verificationStatus === 'pending'
+                      : safeString(payoutConfig.verificationStatus) === 'pending'
                       ? 'bg-yellow-100 text-yellow-800'
                       : 'bg-gray-100 text-gray-800'
                   }`}>
-                    {payoutConfig.verificationStatus || 'unverified'}
+                    {safeString(payoutConfig.verificationStatus, 'unverified')}
                   </span>
                 </div>
                 
                 <dl className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Bank</dt>
-                    <dd className="text-gray-900 font-medium">{payoutConfig.bankName || 'N/A'}</dd>
+                    <dd className="text-gray-900 font-medium">{safeString(payoutConfig.bankName, 'N/A')}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Account Number</dt>
                     <dd className="text-gray-900 font-mono">
-                      {payoutConfig.accountNumber ? `****${payoutConfig.accountNumber.slice(-4)}` : 'N/A'}
+                      {typeof payoutConfig.accountNumber === 'string' && payoutConfig.accountNumber 
+                        ? `****${payoutConfig.accountNumber.slice(-4)}` 
+                        : 'N/A'}
                     </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Currency</dt>
-                    <dd className="text-gray-900">{payoutConfig.currency || 'N/A'}</dd>
+                    <dd className="text-gray-900">{safeString(payoutConfig.currency, 'N/A')}</dd>
                   </div>
-                  {payoutConfig.verifiedAt && (
+                  {payoutConfig.verifiedAt && typeof payoutConfig.verifiedAt === 'string' && (
                     <div className="flex justify-between">
                       <dt className="text-gray-500">Verified At</dt>
                       <dd className="text-gray-900 text-xs">
@@ -302,7 +313,7 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
                 </dl>
               </div>
 
-              {payoutConfig.notes && (
+              {payoutConfig.notes && typeof payoutConfig.notes === 'string' && (
                 <div className="p-3 bg-blue-50 rounded-lg">
                   <p className="text-xs font-medium text-blue-900 mb-1">Admin Notes</p>
                   <p className="text-sm text-blue-800">{payoutConfig.notes}</p>
@@ -334,23 +345,23 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
                 <dt className="text-sm font-medium text-gray-500">Status</dt>
                 <dd className="text-sm mt-1">
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                    verificationRequest.status === 'approved' ? 'bg-green-100 text-green-800' :
-                    verificationRequest.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                    safeString(verificationRequest.status) === 'approved' ? 'bg-green-100 text-green-800' :
+                    safeString(verificationRequest.status) === 'rejected' ? 'bg-red-100 text-red-800' :
                     'bg-yellow-100 text-yellow-800'
                   }`}>
-                    {verificationRequest.status}
+                    {safeString(verificationRequest.status, 'pending')}
                   </span>
                 </dd>
               </div>
               
-              {verificationRequest.business_name && (
+              {verificationRequest.business_name && typeof verificationRequest.business_name === 'string' && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Business Name</dt>
                   <dd className="text-sm text-gray-900">{verificationRequest.business_name}</dd>
                 </div>
               )}
               
-              {verificationRequest.business_type && (
+              {verificationRequest.business_type && typeof verificationRequest.business_type === 'string' && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Business Type</dt>
                   <dd className="text-sm text-gray-900">{verificationRequest.business_type}</dd>
@@ -360,13 +371,13 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
               <div>
                 <dt className="text-sm font-medium text-gray-500">Submitted</dt>
                 <dd className="text-sm text-gray-900">
-                  {verificationRequest.submitted_at 
+                  {typeof verificationRequest.submitted_at === 'string' && verificationRequest.submitted_at 
                     ? new Date(verificationRequest.submitted_at).toLocaleString()
                     : 'Unknown'}
                 </dd>
               </div>
               
-              {verificationRequest.reviewed_at && (
+              {verificationRequest.reviewed_at && typeof verificationRequest.reviewed_at === 'string' && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Reviewed</dt>
                   <dd className="text-sm text-gray-900">
@@ -375,7 +386,7 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
                 </div>
               )}
               
-              {verificationRequest.rejection_reason && (
+              {verificationRequest.rejection_reason && typeof verificationRequest.rejection_reason === 'string' && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Rejection Reason</dt>
                   <dd className="text-sm text-red-800 bg-red-50 p-2 rounded">
