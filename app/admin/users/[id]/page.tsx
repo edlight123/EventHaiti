@@ -1,7 +1,5 @@
 import { requireAdmin } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 import { adminDb } from '@/lib/firebase/admin'
 import AdminUserDetailsClient from './AdminUserDetailsClient'
 import { updateUserRole } from '@/lib/firestore/user-profile-server'
@@ -189,16 +187,10 @@ export default async function AdminUserDetailsPage({ params }: { params: { id: s
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={user} isAdmin={true} />
-
-      <AdminUserDetailsClient
-        details={details}
-        showPromoteToOrganizer={showPromoteToOrganizer}
-        promoteToOrganizer={promoteToOrganizer}
-      />
-
-      <MobileNavWrapper user={user} isAdmin={true} />
-    </div>
+    <AdminUserDetailsClient
+      details={details}
+      showPromoteToOrganizer={showPromoteToOrganizer}
+      promoteToOrganizer={promoteToOrganizer}
+    />
   )
 }

@@ -1,8 +1,6 @@
 import { requireAdmin } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { adminDb } from '@/lib/firebase/admin'
-import Navbar from '@/components/Navbar'
-import MobileNavWrapper from '@/components/MobileNavWrapper'
 import OrganizerDetailsClient from './OrganizerDetailsClient'
 
 export const dynamic = 'force-dynamic'
@@ -152,12 +150,6 @@ export default async function OrganizerDetailPage({ params }: { params: { id: st
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-mobile-nav">
-      <Navbar user={user} isAdmin={true} />
-      
-      <OrganizerDetailsClient organizerDetails={organizerDetails} />
-      
-      <MobileNavWrapper user={user} />
-    </div>
+    <OrganizerDetailsClient organizerDetails={organizerDetails} />
   )
 }
