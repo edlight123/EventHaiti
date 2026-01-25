@@ -85,9 +85,14 @@ async function getOrganizerDetails(organizerId: string) {
     
     const verificationDocs: any[] = []
     verificationDocsSnapshot.docs.forEach((doc: any) => {
+      const data = serializeFirestoreValue(doc.data())
+      // Ensure type is always a string, not an object
+      if (data && typeof data.type === 'object') {
+        data.type = JSON.stringify(data.type)
+      }
       verificationDocs.push({
         id: doc.id,
-        ...serializeFirestoreValue(doc.data())
+        ...data
       })
     })
 
