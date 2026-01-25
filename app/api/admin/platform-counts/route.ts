@@ -15,9 +15,9 @@ export async function GET() {
     const counts = await getPlatformCounts()
     
     return NextResponse.json({
+      ...counts,
       pendingVerifications: counts.pendingVerifications || 0,
-      pendingBankVerifications: (counts as any).pendingBankVerifications || 0,
-      ...counts
+      pendingBankVerifications: (counts as any).pendingBankVerifications || 0
     })
   } catch (error: any) {
     console.error('Platform counts error:', error)
