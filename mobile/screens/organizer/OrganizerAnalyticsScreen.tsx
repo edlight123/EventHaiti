@@ -140,14 +140,15 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
       });
       setTopEvents(eventStats.slice(0, 5));
 
-      // Generate chart data for last 7 days
+      // Chart data: show zeros until real daily aggregation is implemented
+      // TODO: Implement daily sales aggregation in Firestore for accurate chart data
       const chart: ChartData[] = [];
       for (let i = 6; i >= 0; i--) {
         const date = subDays(new Date(), i);
         chart.push({
           date: format(date, 'MMM dd'),
-          sales: Math.floor(Math.random() * 10), // Placeholder - would need real data
-          revenue: Math.floor(Math.random() * 500),
+          sales: 0,
+          revenue: 0,
         });
       }
       setChartData(chart);
