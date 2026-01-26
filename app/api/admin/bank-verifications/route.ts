@@ -30,8 +30,17 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams
-    const statusFilter = searchParams.get('status') || 'pending'
+    const statusFilterRaw = searchParams.get('status') || 'pending'
     const cursor = searchParams.get('cursor')
+
+    // Map UI status to document status
+    // UI: pending, approved, rejected -> Doc: pending, verified, failed
+    const statusMap: Record<string, string> = {
+      pending: 'pending',
+      approved: 'verified',
+      rejected: 'failed',
+    }
+    const statusFilter = statusMap[statusFilterRaw] || statusFilterRaw
 
     // Parse cursor if provided
     let cursorData: { submittedAt: string; path: string } | null = null
@@ -44,9 +53,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Query bank verifications
+    // Query bank verifications only (filter by type === 'bank')
     let query = adminDb
       .collectionGroup('verificationDocuments')
+      .where('type', '==', 'bank')
       .where('status', '==', statusFilter)
       .orderBy('submittedAt', 'desc')
       .limit(PAGE_SIZE + 1)
@@ -67,8 +77,11 @@ export async function GET(request: NextRequest) {
       docs.map(async (doc: any) => {
         const data = doc.data()
         const pathParts = doc.ref.path.split('/')
-        const destinationId = pathParts[pathParts.length - 3]
+        // Path: organizers/{organizerId}/verificationDocuments/bank_{destinationId}
         const organizerId = pathParts[1]
+        // Document ID is 'bank_{destinationId}', extract the destinationId from data or doc ID
+        const docId = doc.id // e.g., 'bank_bank_primary'
+        const destinationId = data.destinationId || docId.replace(/^bank_/, '')
 
         try {
           // Get organizer info
