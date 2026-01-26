@@ -2,7 +2,7 @@
 
 import { useTranslation } from 'react-i18next'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 // Helper to safely render any value - prevents React error #31 for objects
 function safeString(value: any, fallback: string = ''): string {
@@ -52,14 +52,6 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   const { id, user, organizer, payoutConfig, payoutDestinations, verificationRequest, verificationDocs, stats } = organizerDetails
-
-  // Debug logging for data structure
-  useEffect(() => {
-    console.log('=== Organizer Details Debug ===')
-    console.log('Payout Destinations:', JSON.stringify(payoutDestinations, null, 2))
-    console.log('Payout Config:', JSON.stringify(payoutConfig, null, 2))
-    console.log('Verification Docs:', JSON.stringify(verificationDocs, null, 2))
-  }, [payoutDestinations, payoutConfig, verificationDocs])
 
   const handleToggleStatus = async (action: 'ban' | 'unban' | 'disable_posting' | 'enable_posting') => {
     if (!confirm(`Are you sure you want to ${action.replace('_', ' ')} this organizer?`)) {
@@ -308,9 +300,9 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
                           }`}>
                             {safeString(dest.type || 'bank').replace(/_/g, ' ')}
                           </span>
-                          {dest.isDefault && (
+                          {(dest.isPrimary || dest.isDefault) && (
                             <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                              Default
+                              Primary
                             </span>
                           )}
                           {dest.status && (
@@ -335,13 +327,15 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
                         {(dest.bankName || dest.bankDetails?.bankName) && (
                           <div className="flex justify-between">
                             <dt className="text-gray-500">Bank</dt>
-                            <dd className="text-gray-900">{safeString(dest.bankName || dest.bankDetails?.bankName)}</dd>
+                            <dd className="text-gray-900 capitalize">{safeString(dest.bankName || dest.bankDetails?.bankName)}</dd>
                           </div>
                         )}
-                        {(dest.accountNumber || dest.bankDetails?.accountNumber) && (
+                        {(dest.accountNumberLast4 || dest.accountNumber || dest.bankDetails?.accountNumberLast4 || dest.bankDetails?.accountNumber) && (
                           <div className="flex justify-between">
                             <dt className="text-gray-500">Account #</dt>
-                            <dd className="text-gray-900 font-mono">{safeString(dest.accountNumber || dest.bankDetails?.accountNumber)}</dd>
+                            <dd className="text-gray-900 font-mono">
+                              ****{safeString(dest.accountNumberLast4 || dest.bankDetails?.accountNumberLast4 || dest.accountNumber || dest.bankDetails?.accountNumber)}
+                            </dd>
                           </div>
                         )}
                         {(dest.routingNumber || dest.bankDetails?.routingNumber) && (
@@ -353,7 +347,7 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
                         {(dest.accountLocation || dest.bankDetails?.accountLocation) && (
                           <div className="flex justify-between">
                             <dt className="text-gray-500">Location</dt>
-                            <dd className="text-gray-900">{safeString(dest.accountLocation || dest.bankDetails?.accountLocation)}</dd>
+                            <dd className="text-gray-900 capitalize">{safeString(dest.accountLocation || dest.bankDetails?.accountLocation)}</dd>
                           </div>
                         )}
                         {(dest.provider || dest.mobileMoneyDetails?.provider) && (
