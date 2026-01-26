@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import BankVerificationReviewCard from '@/components/admin/BankVerificationReviewCard'
 import Link from 'next/link'
 
@@ -34,16 +34,12 @@ export default function BankVerificationsClient() {
   const [cursor, setCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
 
-  useEffect(() => {
-    fetchVerifications()
-  }, [statusFilter])
-
-  const fetchVerifications = async (loadMore = false) => {
+  const fetchVerifications = useCallback(async (loadMore = false, currentCursor: string | null = null) => {
     try {
       setLoading(true)
       const params = new URLSearchParams({ status: statusFilter })
-      if (loadMore && cursor) {
-        params.append('cursor', cursor)
+      if (loadMore && currentCursor) {
+        params.append('cursor', currentCursor)
       }
 
       const response = await fetch(`/api/admin/bank-verifications?${params}`)
@@ -62,7 +58,11 @@ export default function BankVerificationsClient() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [statusFilter])
+
+  useEffect(() => {
+    fetchVerifications()
+  }, [fetchVerifications])
 
   const handleStatusChange = (newStatus: string) => {
     setStatusFilter(newStatus)
@@ -147,7 +147,7 @@ export default function BankVerificationsClient() {
       {hasMore && (
         <div className="mt-6 text-center">
           <button
-            onClick={() => fetchVerifications(true)}
+            onClick={() => fetchVerifications(true, cursor)}
             disabled={loading}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >

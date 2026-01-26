@@ -214,6 +214,9 @@ export default function PayoutsPageNew({
       provider: config?.mobileMoneyDetails?.provider || 'moncash',
       phoneNumber: '',
     })
+    // Note: stripeConfig and haitiConfig are intentionally excluded to prevent infinite loops
+    // as they're derived from activeProfile which is already in dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProfile, config])
 
   useEffect(() => {

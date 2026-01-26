@@ -68,7 +68,7 @@ export async function POST(_request: NextRequest) {
       }
     }
 
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+    const verificationCode = crypto.randomInt(100000, 1000000).toString()
     const salt = crypto.randomBytes(16).toString('hex')
     const codeHash = hashCode(salt, verificationCode)
 

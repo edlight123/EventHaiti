@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { requireAuth } from '@/lib/auth'
 import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
+import crypto from 'crypto'
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,8 +24,8 @@ export async function POST(request: NextRequest) {
 
     const phoneNumber = haitiProfile.mobileMoneyDetails.phoneNumber
 
-    // Generate 6-digit verification code
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+    // Generate 6-digit verification code using crypto for security
+    const verificationCode = crypto.randomInt(100000, 1000000).toString()
 
     // Store verification code
     await adminDb

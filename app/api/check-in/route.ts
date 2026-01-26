@@ -10,7 +10,6 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    console.log('Check-in request:', body)
     const { ticketId, eventId } = body
 
     if (!ticketId || !eventId) {
@@ -20,49 +19,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('Looking for ticket with QR code:', ticketId, 'for event:', eventId)
-
     const supabase = await createClient()
 
-    // Get all tickets and find by QR code
-    const allTicketsQuery = await supabase
+    // Query ticket directly by QR code and event ID
+    const { data: ticket, error: ticketError } = await supabase
       .from('tickets')
       .select('*')
-    
-    const allTickets = allTicketsQuery.data
+      .eq('qr_code_data', ticketId)
+      .eq('event_id', eventId)
+      .single()
 
-    console.log('Total tickets found:', allTickets?.length)
+    if (ticketError || !ticket) {
+      // Try finding by ticket ID as fallback (some QR codes use ticket ID directly)
+      const { data: ticketById } = await supabase
+        .from('tickets')
+        .select('*')
+        .eq('id', ticketId)
+        .eq('event_id', eventId)
+        .single()
 
-    const ticket = allTickets?.find((t: any) => t.qr_code_data === ticketId)
-
-    if (!ticket) {
-      console.log('Ticket not found with QR code:', ticketId)
-      return NextResponse.json(
-        { error: 'Ticket not found' },
-        { status: 404 }
-      )
+      if (!ticketById) {
+        return NextResponse.json(
+          { error: 'Ticket not found' },
+          { status: 404 }
+        )
+      }
+      
+      // Use the ticket found by ID
+      Object.assign(ticket || {}, ticketById)
     }
 
-    console.log('Found ticket:', ticket.id, 'for event:', ticket.event_id)
-
-    // Verify ticket belongs to this event
-    if (ticket.event_id !== eventId) {
-      return NextResponse.json(
-        { error: 'Ticket does not belong to this event' },
-        { status: 400 }
-      )
-    }
+    const foundTicket = ticket!
 
     // Get event to verify organizer
-    const allEventsQuery = await supabase
+    const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('*')
-    
-    const allEvents = allEventsQuery.data
+      .select('id, organizer_id, title')
+      .eq('id', eventId)
+      .single()
 
-    const event = allEvents?.find((e: any) => e.id === eventId)
-
-    if (!event) {
+    if (eventError || !event) {
       return NextResponse.json(
         { error: 'Event not found' },
         { status: 404 }
@@ -78,56 +74,62 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if already checked in
-    if (ticket.checked_in_at) {
+    if (foundTicket.checked_in_at) {
       return NextResponse.json(
         { 
-          error: `Already checked in at ${new Date(ticket.checked_in_at).toLocaleString()}`,
-          attendee: ticket.attendee_name || 'Unknown'
+          error: `Already checked in at ${new Date(foundTicket.checked_in_at).toLocaleString()}`,
+          attendee: foundTicket.attendee_name || 'Unknown'
         },
         { status: 400 }
       )
     }
 
-    // Get attendee info
-    const allUsersQuery = await supabase
-      .from('users')
-      .select('*')
-    
-    const allUsers = allUsersQuery.data
+    // Get attendee info if we have an attendee_id
+    let attendeeName = foundTicket.attendee_name || 'Unknown'
+    if (foundTicket.attendee_id) {
+      const { data: attendee } = await supabase
+        .from('users')
+        .select('name, email, full_name')
+        .eq('id', foundTicket.attendee_id)
+        .single()
 
-    const attendee = allUsers?.find((u: any) => u.id === ticket.attendee_id)
+      if (attendee) {
+        attendeeName = attendee.full_name || attendee.name || attendee.email || 'Unknown'
+      }
+    }
 
     // Update ticket with check-in time
-    // First get all tickets, find the one to update, then update it
-    const allTicketsForUpdateQuery = await supabase
+    const checkedInAt = new Date().toISOString()
+    const { error: updateError } = await supabase
       .from('tickets')
-      .select('*')
-    
-    const allTicketsForUpdate = allTicketsForUpdateQuery.data
-    const ticketToUpdate = allTicketsForUpdate?.find((t: any) => t.id === ticket.id)
-    
-    if (ticketToUpdate) {
-      ticketToUpdate.checked_in_at = new Date().toISOString()
-      
-      await supabase
-        .from('tickets')
-        .update(ticketToUpdate)
+      .update({ 
+        checked_in_at: checkedInAt,
+        checked_in: true,
+        checked_in_by: user.id
+      })
+      .eq('id', foundTicket.id)
+
+    if (updateError) {
+      console.error('Failed to update ticket:', updateError)
+      return NextResponse.json(
+        { error: 'Failed to check in ticket' },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({
       success: true,
-      attendee: attendee?.name || attendee?.email || 'Unknown',
+      attendee: attendeeName,
       ticket: {
-        id: ticket.id,
-        status: ticket.status,
-        checked_in_at: new Date().toISOString()
+        id: foundTicket.id,
+        status: foundTicket.status,
+        checked_in_at: checkedInAt
       }
     })
   } catch (error: any) {
     console.error('Check-in error:', error)
-    console.error('Error stack:', error.stack)
     return NextResponse.json(
-      { error: `Internal server error: ${error.message}` },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

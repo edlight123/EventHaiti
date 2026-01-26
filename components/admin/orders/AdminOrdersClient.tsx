@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { formatCurrency, type Currency } from '@/lib/currency'
 import {
   Search,
@@ -226,11 +227,11 @@ export function AdminOrdersClient() {
   useEffect(() => {
     fetchOrders(1)
     fetchSummary()
-  }, [])
+  }, [fetchOrders, fetchSummary])
 
   useEffect(() => {
     fetchOrders(1)
-  }, [filters.status, filters.paymentMethod, filters.currency, filters.sortBy, filters.startDate, filters.endDate])
+  }, [fetchOrders])
 
   const handleSearch = () => {
     fetchOrders(1)
@@ -837,9 +838,11 @@ export function AdminOrdersClient() {
                 <div className="text-center">
                   <div className="text-sm font-medium text-gray-700 mb-2">QR Code</div>
                   <div className="inline-block p-4 bg-white border border-gray-200 rounded-lg">
-                    <img
-                      src={selectedOrder.qr_code || selectedOrder.qrCode}
+                    <Image
+                      src={selectedOrder.qr_code ?? selectedOrder.qrCode ?? ''}
                       alt="Ticket QR Code"
+                      width={128}
+                      height={128}
                       className="w-32 h-32"
                     />
                   </div>

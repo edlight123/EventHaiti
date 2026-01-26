@@ -108,15 +108,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate unique transfer token
-    const transferToken = `transfer_${Date.now()}_${Math.random().toString(36).substring(7)}`
+    // Generate unique transfer token using crypto for security
+    const transferToken = `transfer_${crypto.randomUUID()}`
     
     // Set 24-hour expiry
     const expiresAt = new Date()
     expiresAt.setHours(expiresAt.getHours() + 24)
 
     // Create transfer request - use Firestore directly
-    const transferId = `transfer_${Date.now()}_${Math.random().toString(36).substring(7)}`
+    const transferId = `transfer_${crypto.randomUUID()}`
     const transferData = {
       id: transferId,
       ticket_id: ticketId,

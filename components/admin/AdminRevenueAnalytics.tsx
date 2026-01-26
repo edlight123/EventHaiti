@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { formatCurrency } from '@/lib/currency'
 import { 
   TrendingUp, 
@@ -81,11 +81,7 @@ export function AdminRevenueAnalytics({ showFilters = false }: Props) {
   const [loading, setLoading] = useState(true)
   const [dateRange, setDateRange] = useState<'all' | '7d' | '30d' | '90d'>('all')
 
-  useEffect(() => {
-    fetchData()
-  }, [dateRange])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     try {
       let url = '/api/admin/revenue-analytics?type=platform'
@@ -108,7 +104,11 @@ export function AdminRevenueAnalytics({ showFilters = false }: Props) {
       console.error('Failed to load revenue analytics:', err)
       setLoading(false)
     }
-  }
+  }, [dateRange])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   if (loading) {
     return (
