@@ -133,13 +133,30 @@ async function getOrganizerDetails(organizerId: string) {
       .get()
     const publishedEventsCount = publishedEventsSnapshot.data().count
 
-    // Get ticket sales count
-    const ticketsSnapshot = await adminDb
-      .collection('tickets')
+    // Get ticket sales count - tickets are linked to events, not directly to organizers
+    // First get all event IDs for this organizer
+    const eventsForTicketsSnapshot = await adminDb
+      .collection('events')
       .where('organizer_id', '==', organizerId)
-      .count()
+      .select() // Only get IDs, no data needed
       .get()
-    const ticketsCount = ticketsSnapshot.data().count
+    
+    let ticketsCount = 0
+    const eventIds = eventsForTicketsSnapshot.docs.map((doc: any) => doc.id)
+    
+    if (eventIds.length > 0) {
+      // Process in batches of 10 (Firestore 'in' query limit)
+      for (let i = 0; i < eventIds.length; i += 10) {
+        const batch = eventIds.slice(i, i + 10)
+        const ticketsBatchSnapshot = await adminDb
+          .collection('tickets')
+          .where('event_id', 'in', batch)
+          .where('status', '==', 'confirmed')
+          .count()
+          .get()
+        ticketsCount += ticketsBatchSnapshot.data().count
+      }
+    }
 
     return {
       id: organizerId,
