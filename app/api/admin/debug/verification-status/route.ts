@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     // Count by status
     const statusCounts: Record<string, number> = {}
-    requests.forEach(r => {
+    requests.forEach((r: { status: string }) => {
       statusCounts[r.status] = (statusCounts[r.status] || 0) + 1
     })
 
