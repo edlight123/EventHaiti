@@ -21,7 +21,7 @@ export default function AdminVerifyClient({ requestsWithUsers, organizers }: Adm
   const searchParams = useSearchParams()
 
   const requestedStatusRaw = (searchParams.get('status') || 'pending').toLowerCase()
-  const supported = new Set(['pending', 'changes_requested', 'approved', 'all'])
+  const supported = new Set(['pending', 'changes_requested', 'rejected', 'approved', 'all'])
   const requestedStatus = supported.has(requestedStatusRaw) ? requestedStatusRaw : 'pending'
 
   const [searchQuery, setSearchQuery] = useState('')

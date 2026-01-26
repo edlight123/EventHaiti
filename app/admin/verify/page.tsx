@@ -1,7 +1,8 @@
 import AdminVerifyClient from './AdminVerifyClient'
 import { adminDb } from '@/lib/firebase/admin'
 
-export const revalidate = 30
+export const revalidate = 0
+export const dynamic = 'force-dynamic'
 
 function serializeFirestoreValue(value: any): any {
   if (value == null) return value
