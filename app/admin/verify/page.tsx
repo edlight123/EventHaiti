@@ -46,25 +46,6 @@ export default async function AdminVerifyPage({
   // Fetch a bounded set of verification requests (avoid scanning the entire collection).
   let verificationRequests: any[] = []
   try {
-    let queryRef: any = adminDb.collection('verification_requests')
-
-    if (requestedStatus === 'pending') {
-      queryRef = queryRef.where('status', 'in', pendingStatuses)
-    } else if (requestedStatus !== 'all') {
-      queryRef = queryRef.where('status', '==', requestedStatus)
-    }
-
-    // Prefer a stable ordering (fall back if the field doesn't exist)
-    try {
-      queryRef = queryRef.orderBy('submitted_at', 'desc')
-    } catch {
-      try {
-        queryRef = queryRef.orderBy('created_at', 'desc')
-      } catch {
-        // no-op
-      }
-    }
-
     const mapDoc = (doc: any) => {
       const data = doc.data()
       const serialized = serializeFirestoreValue(data)
@@ -84,8 +65,61 @@ export default async function AdminVerifyPage({
       }
     }
 
-    const snapshot = await queryRef.limit(50).get()
+    // Build query based on requested status
+    let snapshot: any
+    
+    if (requestedStatus === 'pending') {
+      // Try with submitted_at ordering first
+      try {
+        snapshot = await adminDb.collection('verification_requests')
+          .where('status', 'in', pendingStatuses)
+          .orderBy('submitted_at', 'desc')
+          .limit(50)
+          .get()
+      } catch (e1) {
+        console.log('[verify/page] Failed with submitted_at order, trying without order:', e1)
+        // Fallback: query without ordering if index doesn't exist
+        snapshot = await adminDb.collection('verification_requests')
+          .where('status', 'in', pendingStatuses)
+          .limit(50)
+          .get()
+      }
+    } else if (requestedStatus !== 'all') {
+      try {
+        snapshot = await adminDb.collection('verification_requests')
+          .where('status', '==', requestedStatus)
+          .orderBy('submitted_at', 'desc')
+          .limit(50)
+          .get()
+      } catch (e2) {
+        snapshot = await adminDb.collection('verification_requests')
+          .where('status', '==', requestedStatus)
+          .limit(50)
+          .get()
+      }
+    } else {
+      // 'all' status - just get recent ones
+      try {
+        snapshot = await adminDb.collection('verification_requests')
+          .orderBy('submitted_at', 'desc')
+          .limit(50)
+          .get()
+      } catch (e3) {
+        snapshot = await adminDb.collection('verification_requests')
+          .limit(50)
+          .get()
+      }
+    }
+
     const primary = snapshot.docs.map(mapDoc)
+    
+    // Log what we got for debugging
+    console.log(`[verify/page] Fetched ${primary.length} requests for status='${requestedStatus}'`)
+    const statusBreakdown = primary.reduce((acc: any, r: any) => {
+      acc[r.status] = (acc[r.status] || 0) + 1
+      return acc
+    }, {})
+    console.log(`[verify/page] Status breakdown:`, statusBreakdown)
 
     // If pending queue looks suspiciously small, add a bounded fallback query to catch
     // older/mismatched docs that still have submission timestamps but an unexpected status.

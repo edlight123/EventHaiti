@@ -21,22 +21,27 @@ export async function POST(request: NextRequest) {
 
     const { requestId, status, rejectionReason } = await request.json()
 
+    console.log(`[review-verification] Received: requestId=${requestId}, status=${status}`)
+
     if (!requestId || !status || !['approved', 'rejected', 'changes_requested'].includes(status)) {
       return adminError('Invalid request data', 400)
     }
 
     // Map the legacy UI "rejected" action to the newer, resubmittable state.
     const normalizedStatus = status === 'rejected' ? 'changes_requested' : status
+    console.log(`[review-verification] Normalized status: ${normalizedStatus}`)
 
     // Get verification request
     const verificationRef = adminDb.collection('verification_requests').doc(requestId)
     const verificationDoc = await verificationRef.get()
 
     if (!verificationDoc.exists) {
+      console.log(`[review-verification] Request ${requestId} not found`)
       return adminError('Verification request not found', 404)
     }
 
     const verificationRequest = verificationDoc.data()
+    console.log(`[review-verification] Current status in DB: ${verificationRequest?.status}`)
 
     // Update verification request using Firebase Admin SDK
     await verificationRef.update({
@@ -53,7 +58,14 @@ export async function POST(request: NextRequest) {
       rejection_reason: normalizedStatus !== 'approved' ? (rejectionReason || null) : null,
     })
 
-    console.log(`Updated verification request ${requestId} to status: ${normalizedStatus}`)
+    // Verify the update was successful by reading back
+    const updatedDoc = await verificationRef.get()
+    const updatedStatus = updatedDoc.data()?.status
+    console.log(`[review-verification] Updated request ${requestId}: status is now '${updatedStatus}'`)
+
+    if (updatedStatus !== normalizedStatus) {
+      console.error(`[review-verification] WARNING: Status mismatch! Expected '${normalizedStatus}' but got '${updatedStatus}'`)
+    }
 
     // Update user verification status
     // Handle both old format (user_id) and new format (userId or document ID)
