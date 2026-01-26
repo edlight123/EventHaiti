@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { getDecryptedBankDestination } from '@/lib/firestore/payout-destinations'
-import { FieldPath } from 'firebase-admin/firestore'
 import { requireAdmin } from '@/lib/auth'
 
 const PAGE_SIZE = 50
@@ -88,7 +87,22 @@ export async function GET(request: NextRequest) {
           const organizerDoc = await adminDb.collection('users').doc(organizerId).get()
           const organizerData = organizerDoc.data()
 
-          // Get destination info
+          // Get destination info (including isPrimary)
+          const destinationDoc = await adminDb
+            .collection('organizers')
+            .doc(organizerId)
+            .collection('payoutDestinations')
+            .doc(destinationId)
+            .get()
+
+          if (!destinationDoc.exists) {
+            return null
+          }
+
+          const destinationData = destinationDoc.data() as any
+          const isPrimary = Boolean(destinationData?.isPrimary)
+
+          // Get decrypted bank details
           let destination
           try {
             destination = await getDecryptedBankDestination({ organizerId, destinationId })
@@ -102,10 +116,10 @@ export async function GET(request: NextRequest) {
 
           return {
             organizerId,
-            organizerName: organizerData?.displayName || 'Unknown',
+            organizerName: organizerData?.displayName || organizerData?.full_name || 'Unknown',
             organizerEmail: organizerData?.email || '',
             destinationId,
-            isPrimary: false, // We don't have this info in BankDestinationDetails
+            isPrimary,
             bankDetails: {
               accountName: destination.accountHolder || '',
               accountNumber: destination.accountNumber
