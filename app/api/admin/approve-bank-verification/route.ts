@@ -37,19 +37,26 @@ export async function POST(request: NextRequest) {
     // Legacy primary used doc id: bank
     // Many deployments have BOTH patterns in the wild (especially for bank_primary),
     // so resolve by checking which document exists.
+    // Document IDs are formatted as: bank_<destinationId>
+    // e.g., destinationId="bank_primary" -> docId="bank_bank_primary"
     const candidateDocIds = (() => {
       const ids: string[] = []
       if (!resolvedDestinationId) {
         ids.push('bank')
-        return Array.from(new Set(ids))
+        return ids
       }
 
-      if (resolvedDestinationId.startsWith('bank_')) {
+      // Primary candidate: bank_<destinationId>
+      // Even if destinationId already has "bank_" prefix, the doc ID will be "bank_bank_primary"
+      ids.push(`bank_${resolvedDestinationId}`)
+
+      // If destinationId doesn't have bank_ prefix, also try it as-is
+      // (for cases where the full doc ID was passed)
+      if (!resolvedDestinationId.startsWith('bank_')) {
         ids.push(resolvedDestinationId)
-      } else {
-        ids.push(`bank_${resolvedDestinationId}`)
       }
 
+      // Legacy fallback: the old 'bank' document (only for primary bank)
       const normalized = resolvedDestinationId.toLowerCase()
       if (normalized === 'bank_primary' || normalized === 'primary' || normalized === 'bank') {
         ids.push('bank')
