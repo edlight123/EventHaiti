@@ -2,7 +2,7 @@
 
 import { useTranslation } from 'react-i18next'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // Helper to safely render any value - prevents React error #31 for objects
 function safeString(value: any, fallback: string = ''): string {
@@ -11,6 +11,22 @@ function safeString(value: any, fallback: string = ''): string {
   if (typeof value === 'number' || typeof value === 'boolean') return String(value)
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
+}
+
+// Safe date formatting to avoid hydration mismatches
+function formatDate(dateStr: any, includeTime: boolean = true): string {
+  if (!dateStr) return 'Unknown'
+  try {
+    const date = new Date(dateStr)
+    if (isNaN(date.getTime())) return 'Unknown'
+    // Use ISO format for consistency between server and client
+    if (includeTime) {
+      return date.toISOString().replace('T', ' ').slice(0, 19)
+    }
+    return date.toISOString().slice(0, 10)
+  } catch {
+    return 'Unknown'
+  }
 }
 
 type OrganizerDetailsProps = {
@@ -36,6 +52,14 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   const { id, user, organizer, payoutConfig, payoutDestinations, verificationRequest, verificationDocs, stats } = organizerDetails
+
+  // Debug logging for data structure
+  useEffect(() => {
+    console.log('=== Organizer Details Debug ===')
+    console.log('Payout Destinations:', JSON.stringify(payoutDestinations, null, 2))
+    console.log('Payout Config:', JSON.stringify(payoutConfig, null, 2))
+    console.log('Verification Docs:', JSON.stringify(verificationDocs, null, 2))
+  }, [payoutDestinations, payoutConfig, verificationDocs])
 
   const handleToggleStatus = async (action: 'ban' | 'unban' | 'disable_posting' | 'enable_posting') => {
     if (!confirm(`Are you sure you want to ${action.replace('_', ' ')} this organizer?`)) {
@@ -244,13 +268,13 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
             <div>
               <dt className="text-sm font-medium text-gray-500">Joined</dt>
               <dd className="text-sm text-gray-900">
-                {user.created_at ? new Date(user.created_at).toLocaleString() : 'Unknown'}
+                {formatDate(user.created_at)}
               </dd>
             </div>
             <div>
               <dt className="text-sm font-medium text-gray-500">Last Updated</dt>
               <dd className="text-sm text-gray-900">
-                {user.updated_at ? new Date(user.updated_at).toLocaleString() : 'Unknown'}
+                {formatDate(user.updated_at)}
               </dd>
             </div>
           </dl>
@@ -459,11 +483,11 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
               {/* Timestamps */}
               {(payoutConfig.createdAt || payoutConfig.updatedAt) && (
                 <div className="text-xs text-gray-500 space-y-1">
-                  {payoutConfig.createdAt && typeof payoutConfig.createdAt === 'string' && (
-                    <p>Created: {new Date(payoutConfig.createdAt).toLocaleString()}</p>
+                  {payoutConfig.createdAt && (
+                    <p>Created: {formatDate(payoutConfig.createdAt)}</p>
                   )}
-                  {payoutConfig.updatedAt && typeof payoutConfig.updatedAt === 'string' && (
-                    <p>Updated: {new Date(payoutConfig.updatedAt).toLocaleString()}</p>
+                  {payoutConfig.updatedAt && (
+                    <p>Updated: {formatDate(payoutConfig.updatedAt)}</p>
                   )}
                 </div>
               )}
@@ -519,21 +543,15 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
               <div>
                 <dt className="text-sm font-medium text-gray-500">Submitted</dt>
                 <dd className="text-sm text-gray-900">
-                  {(() => {
-                    const dateStr = verificationRequest.submitted_at || verificationRequest.createdAt
-                    if (typeof dateStr === 'string' && dateStr) {
-                      return new Date(dateStr).toLocaleString()
-                    }
-                    return 'Unknown'
-                  })()}
+                  {formatDate(verificationRequest.submitted_at || verificationRequest.createdAt)}
                 </dd>
               </div>
               
-              {verificationRequest.reviewed_at && typeof verificationRequest.reviewed_at === 'string' && (
+              {verificationRequest.reviewed_at && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Reviewed</dt>
                   <dd className="text-sm text-gray-900">
-                    {new Date(verificationRequest.reviewed_at).toLocaleString()}
+                    {formatDate(verificationRequest.reviewed_at)}
                   </dd>
                 </div>
               )}
@@ -599,14 +617,14 @@ export default function OrganizerDetailsClient({ organizerDetails }: OrganizerDe
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-900">{docTypeLabel} Verification</p>
-                          {doc.submittedAt && typeof doc.submittedAt === 'string' && (
+                          {doc.submittedAt && (
                             <p className="text-xs text-gray-500">
-                              Submitted {new Date(doc.submittedAt).toLocaleDateString()}
+                              Submitted {formatDate(doc.submittedAt, false)}
                             </p>
                           )}
-                          {doc.uploadedAt && typeof doc.uploadedAt === 'string' && !doc.submittedAt && (
+                          {doc.uploadedAt && !doc.submittedAt && (
                             <p className="text-xs text-gray-500">
-                              Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}
+                              Uploaded {formatDate(doc.uploadedAt, false)}
                             </p>
                           )}
                         </div>
