@@ -12,42 +12,51 @@ export async function GET(request: NextRequest) {
       return adminError(error || 'Unauthorized', 401)
     }
 
-    // Get all bank verification documents using collectionGroup
-    const snapshot = await adminDb
-      .collectionGroup('verificationDocuments')
-      .where('type', '==', 'bank')
-      .get()
-
-    const requests = snapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
-      const data = doc.data()
-      const pathParts = doc.ref.path.split('/')
-      const organizerId = pathParts[1] // organizers/{organizerId}/verificationDocuments/{docId}
+    // Get all organizers first, then fetch their verificationDocuments
+    // This avoids the collection group query that requires an index
+    const organizersSnap = await adminDb.collection('organizers').limit(100).get()
+    
+    const allDocs: any[] = []
+    
+    for (const orgDoc of organizersSnap.docs) {
+      const organizerId = orgDoc.id
+      const verDocsSnap = await adminDb
+        .collection('organizers')
+        .doc(organizerId)
+        .collection('verificationDocuments')
+        .get()
       
-      return {
-        docPath: doc.ref.path,
-        docId: doc.id,
-        organizerId,
-        status: data.status || 'NO_STATUS',
-        type: data.type,
-        destinationId: data.destinationId,
-        submittedAt: data.submittedAt?.toDate?.()?.toISOString() || data.submittedAt || null,
-        reviewedAt: data.reviewedAt?.toDate?.()?.toISOString() || data.reviewedAt || null,
-        reviewedBy: data.reviewedBy || null,
-        rejectionReason: data.rejectionReason || null,
+      for (const doc of verDocsSnap.docs) {
+        const data = doc.data()
+        // Only include bank verifications
+        if (data.type === 'bank') {
+          allDocs.push({
+            docPath: doc.ref.path,
+            docId: doc.id,
+            organizerId,
+            status: data.status || 'NO_STATUS',
+            type: data.type,
+            destinationId: data.destinationId,
+            submittedAt: data.submittedAt?.toDate?.()?.toISOString() || data.submittedAt || null,
+            reviewedAt: data.reviewedAt?.toDate?.()?.toISOString() || data.reviewedAt || null,
+            reviewedBy: data.reviewedBy || null,
+            rejectionReason: data.rejectionReason || null,
+          })
+        }
       }
-    })
+    }
 
     // Count by status
     const statusCounts: Record<string, number> = {}
-    requests.forEach((r: { status: string }) => {
+    allDocs.forEach((r: { status: string }) => {
       statusCounts[r.status] = (statusCounts[r.status] || 0) + 1
     })
 
     return adminOk({
-      total: requests.length,
+      total: allDocs.length,
       statusCounts,
       note: 'Bank verifications use status: pending, verified (approved), failed (rejected)',
-      requests,
+      requests: allDocs,
     })
   } catch (e: any) {
     console.error('Debug bank verification status error:', e)
