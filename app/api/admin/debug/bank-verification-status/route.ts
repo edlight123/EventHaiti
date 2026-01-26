@@ -1,0 +1,106 @@
+import { NextRequest } from 'next/server'
+import { requireAdmin } from '@/lib/auth'
+import { adminDb } from '@/lib/firebase/admin'
+import { adminError, adminOk } from '@/lib/api/admin-response'
+
+export const dynamic = 'force-dynamic'
+
+export async function GET(request: NextRequest) {
+  try {
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', 401)
+    }
+
+    // Get all bank verification documents using collectionGroup
+    const snapshot = await adminDb
+      .collectionGroup('verificationDocuments')
+      .where('type', '==', 'bank')
+      .get()
+
+    const requests = snapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+      const data = doc.data()
+      const pathParts = doc.ref.path.split('/')
+      const organizerId = pathParts[1] // organizers/{organizerId}/verificationDocuments/{docId}
+      
+      return {
+        docPath: doc.ref.path,
+        docId: doc.id,
+        organizerId,
+        status: data.status || 'NO_STATUS',
+        type: data.type,
+        destinationId: data.destinationId,
+        submittedAt: data.submittedAt?.toDate?.()?.toISOString() || data.submittedAt || null,
+        reviewedAt: data.reviewedAt?.toDate?.()?.toISOString() || data.reviewedAt || null,
+        reviewedBy: data.reviewedBy || null,
+        rejectionReason: data.rejectionReason || null,
+      }
+    })
+
+    // Count by status
+    const statusCounts: Record<string, number> = {}
+    requests.forEach((r: { status: string }) => {
+      statusCounts[r.status] = (statusCounts[r.status] || 0) + 1
+    })
+
+    return adminOk({
+      total: requests.length,
+      statusCounts,
+      note: 'Bank verifications use status: pending, verified (approved), failed (rejected)',
+      requests,
+    })
+  } catch (e: any) {
+    console.error('Debug bank verification status error:', e)
+    return adminError('Failed to fetch', 500, e?.message)
+  }
+}
+
+// Manually update a bank verification status for testing
+export async function POST(request: NextRequest) {
+  try {
+    const { user, error } = await requireAdmin()
+    if (error || !user) {
+      return adminError(error || 'Unauthorized', 401)
+    }
+
+    const { docPath, newStatus } = await request.json()
+
+    if (!docPath || !newStatus) {
+      return adminError('Missing docPath or newStatus', 400)
+    }
+
+    // Validate status
+    if (!['pending', 'verified', 'failed'].includes(newStatus)) {
+      return adminError('Invalid status. Use: pending, verified, or failed', 400)
+    }
+
+    const ref = adminDb.doc(docPath)
+    const doc = await ref.get()
+
+    if (!doc.exists) {
+      return adminError('Document not found', 404)
+    }
+
+    const beforeStatus = doc.data()?.status
+
+    await ref.update({
+      status: newStatus,
+      reviewedAt: new Date().toISOString(),
+      reviewedBy: user.id,
+    })
+
+    // Read back to confirm
+    const afterDoc = await ref.get()
+    const afterStatus = afterDoc.data()?.status
+
+    return adminOk({
+      docPath,
+      beforeStatus,
+      afterStatus,
+      success: afterStatus === newStatus,
+    })
+  } catch (e: any) {
+    console.error('Debug bank verification update error:', e)
+    return adminError('Failed to update', 500, e?.message)
+  }
+}
