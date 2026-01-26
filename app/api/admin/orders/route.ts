@@ -114,7 +114,7 @@ export async function GET(request: Request) {
     }
 
     // Fetch event names for display
-    const eventIds = [...new Set(orders.map((o: any) => o.event_id || o.eventId).filter(Boolean))]
+    const eventIds = Array.from(new Set(orders.map((o: any) => o.event_id || o.eventId).filter(Boolean))) as string[]
     const eventNames: Record<string, string> = {}
 
     if (eventIds.length > 0) {

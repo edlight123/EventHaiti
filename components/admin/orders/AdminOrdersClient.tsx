@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { formatCurrency } from '@/lib/currency'
+import { formatCurrency, type Currency } from '@/lib/currency'
 import {
   Search,
   Filter,
@@ -626,7 +626,7 @@ export function AdminOrdersClient() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="text-sm font-medium text-gray-900">
-                            {formatCurrency(price, currency)}
+                            {formatCurrency(price, currency as Currency)}
                           </div>
                         </td>
                         <td className="px-4 py-3">
@@ -680,7 +680,7 @@ export function AdminOrdersClient() {
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <div className="text-gray-600">{name || email || 'Unknown'}</div>
-                      <div className="font-medium text-gray-900">{formatCurrency(price, currency)}</div>
+                      <div className="font-medium text-gray-900">{formatCurrency(price, currency as Currency)}</div>
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <PaymentMethodBadge method={paymentMethod} />
@@ -797,7 +797,7 @@ export function AdminOrdersClient() {
                     <span className="text-lg font-semibold text-gray-900">
                       {formatCurrency(
                         selectedOrder.price_paid || selectedOrder.pricePaid || 0,
-                        selectedOrder.currency || 'USD'
+                        (selectedOrder.currency || 'USD') as Currency
                       )}
                     </span>
                   </div>
