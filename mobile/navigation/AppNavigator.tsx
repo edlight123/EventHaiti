@@ -56,6 +56,12 @@ import StripeConnectWebViewScreen from '../screens/StripeConnectWebViewScreen';
 import InAppWebViewScreen from '../screens/InAppWebViewScreen';
 import { useI18n } from '../contexts/I18nContext';
 
+// New Feature Screens
+import RefundRequestScreen from '../screens/RefundRequestScreen';
+import ReviewScreen from '../screens/ReviewScreen';
+import OrganizerAnalyticsScreen from '../screens/organizer/OrganizerAnalyticsScreen';
+import OrganizerRefundsScreen from '../screens/organizer/OrganizerRefundsScreen';
+
 // Verification Screens
 import OrganizerVerificationScreen from '../screens/verification/OrganizerVerificationScreen';
 import OrganizerInfoFormScreen from '../screens/verification/OrganizerInfoFormScreen';
@@ -88,6 +94,11 @@ export type RootStackParamList = {
   EventAttendees: { eventId: string };
   SendEventUpdate: { eventId: string; eventTitle: string };
   EditEvent: { eventId: string };
+  // New screens
+  RefundRequest: { ticketId: string };
+  Review: { ticketId: string; eventId: string; eventTitle: string };
+  OrganizerAnalytics: undefined;
+  OrganizerRefunds: undefined;
 };
 
 export type AuthStackParamList = {
@@ -487,6 +498,10 @@ export default function AppNavigator() {
             <Stack.Screen name="EventAttendees" component={EventAttendeesScreen} options={{ headerShown: false }} />
             <Stack.Screen name="SendEventUpdate" component={SendEventUpdateScreen} options={{ headerShown: false }} />
             <Stack.Screen name="EditEvent" component={CreateEventFlowRefactored} options={{ headerShown: false }} />
+            <Stack.Screen name="RefundRequest" component={RefundRequestScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Review" component={ReviewScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="OrganizerAnalytics" component={OrganizerAnalyticsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="OrganizerRefunds" component={OrganizerRefundsScreen} options={{ headerShown: false }} />
           </>
         )}
       </Stack.Navigator>

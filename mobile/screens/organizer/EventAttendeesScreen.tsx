@@ -17,6 +17,7 @@ import { COLORS } from '../../config/brand';
 import { db } from '../../config/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useI18n } from '../../contexts/I18nContext';
+import ExportAttendeesButton from '../../components/ExportAttendeesButton';
 
 type RouteParams = {
   EventAttendees: {
@@ -198,11 +199,16 @@ export default function EventAttendeesScreen() {
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('organizerAttendees.headerTitle')}</Text>
-        <View style={styles.headerStats}>
-          <Text style={styles.headerStatsText}>
-            {checkedInCount}/{attendees.length} {t('organizerAttendees.headerCheckedInSuffix')}
-          </Text>
+        <View style={styles.headerActions}>
+          <ExportAttendeesButton eventId={eventId} attendees={attendees} />
         </View>
+      </View>
+      
+      {/* Stats Bar */}
+      <View style={styles.statsBar}>
+        <Text style={styles.statsBarText}>
+          {checkedInCount}/{attendees.length} {t('organizerAttendees.headerCheckedInSuffix')}
+        </Text>
       </View>
 
       {/* Search */}
@@ -340,6 +346,23 @@ const styles = StyleSheet.create({
   },
   headerStatsText: {
     fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statsBar: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.primaryLight,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  statsBarText: {
+    fontSize: 14,
     fontWeight: '600',
     color: COLORS.primary,
   },

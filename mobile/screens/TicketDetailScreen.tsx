@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Platform } from 'react-native';
-import { Calendar, MapPin, User as UserIcon, Ticket as TicketIcon, Send } from 'lucide-react-native';
+import { Calendar, MapPin, User as UserIcon, Ticket as TicketIcon, Send, Star, RotateCcw } from 'lucide-react-native';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { COLORS } from '../config/brand';
@@ -9,10 +9,12 @@ import QRCode from 'react-native-qrcode-svg';
 import TransferTicketModal from '../components/TransferTicketModal';
 import AddToWalletButton from '../components/AddToWalletButton';
 import { useI18n } from '../contexts/I18nContext';
+import { useNavigation } from '@react-navigation/native';
 
 export default function TicketDetailScreen({ route }: any) {
   const { ticketId } = route.params;
   const { t } = useI18n();
+  const navigation = useNavigation<any>();
   const [ticket, setTicket] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -307,7 +309,67 @@ export default function TicketDetailScreen({ route }: any) {
             </View>
           )}
 
+          {/* Action Buttons */}
+          <View style={styles.actionButtonsSection}>
+            {/* Request Refund Button - Only show for upcoming events */}
+            {!isExpired && (ticket.status === 'confirmed' || ticket.status === 'active') && 
+             !ticket.refund_status && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate('RefundRequest', { ticketId: ticket.id })}
+              >
+                <View style={[styles.actionButtonIcon, { backgroundColor: COLORS.error + '15' }]}>
+                  <RotateCcw size={20} color={COLORS.error} />
+                </View>
+                <View style={styles.actionButtonText}>
+                  <Text style={styles.actionButtonTitle}>{t('ticketDetail.actions.requestRefund') || 'Request Refund'}</Text>
+                  <Text style={styles.actionButtonSubtitle}>{t('ticketDetail.actions.refundSubtitle') || 'Get your money back'}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
 
+            {/* Refund Status Badge */}
+            {ticket.refund_status && ticket.refund_status !== 'none' && (
+              <View style={[styles.refundStatusBadge, 
+                ticket.refund_status === 'requested' && styles.refundStatusPending,
+                ticket.refund_status === 'approved' && styles.refundStatusApproved,
+                ticket.refund_status === 'denied' && styles.refundStatusDenied,
+              ]}>
+                <RotateCcw size={16} color={
+                  ticket.refund_status === 'approved' ? COLORS.success :
+                  ticket.refund_status === 'denied' ? COLORS.error : '#B45309'
+                } />
+                <Text style={[styles.refundStatusText,
+                  ticket.refund_status === 'approved' && { color: COLORS.success },
+                  ticket.refund_status === 'denied' && { color: COLORS.error },
+                ]}>
+                  {ticket.refund_status === 'requested' ? (t('ticketDetail.refund.pending') || 'Refund Pending') :
+                   ticket.refund_status === 'approved' ? (t('ticketDetail.refund.approved') || 'Refund Approved') :
+                   (t('ticketDetail.refund.denied') || 'Refund Denied')}
+                </Text>
+              </View>
+            )}
+
+            {/* Leave Review Button - Only show for past events */}
+            {isExpired && (ticket.status === 'used' || ticket.status === 'confirmed') && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate('Review', { 
+                  ticketId: ticket.id, 
+                  eventId: ticket.event_id,
+                  eventTitle: ticket.event_title 
+                })}
+              >
+                <View style={[styles.actionButtonIcon, { backgroundColor: '#FFB800' + '20' }]}>
+                  <Star size={20} color="#FFB800" />
+                </View>
+                <View style={styles.actionButtonText}>
+                  <Text style={styles.actionButtonTitle}>{t('ticketDetail.actions.leaveReview') || 'Leave a Review'}</Text>
+                  <Text style={styles.actionButtonSubtitle}>{t('ticketDetail.actions.reviewSubtitle') || 'Share your experience'}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+          </View>
 
           {/* Footer Note */}
           <View style={styles.footer}>
@@ -629,5 +691,61 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 16,
     color: COLORS.textSecondary,
+  },
+  actionButtonsSection: {
+    marginBottom: 24,
+    gap: 12,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  actionButtonIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  actionButtonText: {
+    flex: 1,
+  },
+  actionButtonTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  actionButtonSubtitle: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  refundStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  refundStatusPending: {
+    backgroundColor: '#FEF3C7',
+  },
+  refundStatusApproved: {
+    backgroundColor: '#D1FAE5',
+  },
+  refundStatusDenied: {
+    backgroundColor: '#FEE2E2',
+  },
+  refundStatusText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#B45309',
   },
 });

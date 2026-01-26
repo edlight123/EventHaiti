@@ -44,6 +44,9 @@ import PaymentModal from '../components/PaymentModal';
 import TieredTicketSelector from '../components/TieredTicketSelector';
 import { getCategoryLabel } from '../lib/categories';
 import FreeTicketModal from '../components/FreeTicketModal';
+import AddToCalendarButton from '../components/AddToCalendarButton';
+import JoinWaitlistButton from '../components/JoinWaitlistButton';
+import FollowButton from '../components/FollowButton';
 
 const { width } = Dimensions.get('window');
 
@@ -444,6 +447,31 @@ export default function EventDetailScreen({ route, navigation }: any) {
             )}
           </View>
 
+          {/* Quick Actions - Calendar & Waitlist */}
+          <View style={styles.quickActionsRow}>
+            <AddToCalendarButton 
+              event={{
+                id: eventId,
+                title: event.title,
+                description: event.description,
+                start_datetime: event.start_datetime,
+                end_datetime: event.end_datetime,
+                venue_name: event.venue_name,
+                address: event.address,
+                city: event.city,
+              }}
+              style={styles.quickActionButton}
+            />
+            {isSoldOut && (
+              <JoinWaitlistButton
+                eventId={eventId}
+                eventTitle={event.title}
+                isSoldOut={isSoldOut}
+                style={styles.quickActionButton}
+              />
+            )}
+          </View>
+
           {/* About Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('eventDetail.sections.about')}</Text>
@@ -467,32 +495,37 @@ export default function EventDetailScreen({ route, navigation }: any) {
           {/* Hosted By Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('eventDetail.sections.hostedBy')}</Text>
-            <TouchableOpacity 
-              style={styles.hostedByCard}
-              onPress={navigateToOrganizerProfile}
-              activeOpacity={0.7}
-            >
-              <View style={styles.hostedByAvatar}>
-                <Text style={styles.hostedByAvatarText}>
-                  {(event.users?.full_name || event.organizer_name || 'E')[0].toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.hostedByInfo}>
-                <Text style={styles.hostedByName}>
-                  {event.users?.full_name || event.organizer_name || t('eventDetail.organizerFallback')}
-                </Text>
-                {(event.users?.is_verified || event.is_verified) && (
-                  <View style={styles.verifiedBadgeInline}>
-                    <Shield size={12} color="#3B82F6" />
-                    <Text style={styles.verifiedTextInline}>{t('eventDetail.verified')}</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.viewProfileButton}>
-                <Text style={styles.viewProfileText}>{t('eventDetail.viewProfile')}</Text>
-                <ChevronRight size={16} color={COLORS.primary} />
-              </View>
-            </TouchableOpacity>
+            <View style={styles.hostedByCard}>
+              <TouchableOpacity 
+                style={styles.hostedByMain}
+                onPress={navigateToOrganizerProfile}
+                activeOpacity={0.7}
+              >
+                <View style={styles.hostedByAvatar}>
+                  <Text style={styles.hostedByAvatarText}>
+                    {(event.users?.full_name || event.organizer_name || 'E')[0].toUpperCase()}
+                  </Text>
+                </View>
+                <View style={styles.hostedByInfo}>
+                  <Text style={styles.hostedByName}>
+                    {event.users?.full_name || event.organizer_name || t('eventDetail.organizerFallback')}
+                  </Text>
+                  {(event.users?.is_verified || event.is_verified) && (
+                    <View style={styles.verifiedBadgeInline}>
+                      <Shield size={12} color="#3B82F6" />
+                      <Text style={styles.verifiedTextInline}>{t('eventDetail.verified')}</Text>
+                    </View>
+                  )}
+                </View>
+                <ChevronRight size={16} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+              {event.organizer_id && (
+                <FollowButton 
+                  organizerId={event.organizer_id} 
+                  style={styles.followButtonInCard}
+                />
+              )}
+            </View>
           </View>
 
           {/* Venue Details Section */}
@@ -975,6 +1008,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.primary,
     fontWeight: '600',
+  },
+  hostedByMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  followButtonInCard: {
+    marginLeft: 12,
+  },
+  quickActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  quickActionButton: {
+    flex: 1,
   },
 
   // Venue Details

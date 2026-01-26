@@ -1,0 +1,285 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Modal,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS } from '../config/brand';
+import { useAuth } from '../contexts/AuthContext';
+import { useI18n } from '../contexts/I18nContext';
+import { backendFetch } from '../lib/api/backend';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../config/firebase';
+
+interface JoinWaitlistButtonProps {
+  eventId: string;
+  eventTitle: string;
+  isSoldOut: boolean;
+  style?: any;
+  onJoined?: (position: number) => void;
+}
+
+export default function JoinWaitlistButton({ 
+  eventId, 
+  eventTitle, 
+  isSoldOut, 
+  style,
+  onJoined 
+}: JoinWaitlistButtonProps) {
+  const { user } = useAuth();
+  const { t } = useI18n();
+  const [isOnWaitlist, setIsOnWaitlist] = useState(false);
+  const [position, setPosition] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [joining, setJoining] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+
+  useEffect(() => {
+    checkWaitlistStatus();
+  }, [user?.uid, eventId]);
+
+  const checkWaitlistStatus = async () => {
+    if (!user?.uid || !eventId) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const waitlistQuery = query(
+        collection(db, 'event_waitlist'),
+        where('user_id', '==', user.uid),
+        where('event_id', '==', eventId)
+      );
+      const snapshot = await getDocs(waitlistQuery);
+      
+      if (!snapshot.empty) {
+        const data = snapshot.docs[0].data();
+        setIsOnWaitlist(true);
+        setPosition(data.position || null);
+      }
+    } catch (error) {
+      console.error('Error checking waitlist status:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleJoinWaitlist = async () => {
+    if (!user) {
+      Alert.alert(
+        t('auth.loginRequiredTitle') || 'Login Required',
+        t('waitlist.loginBody') || 'Please log in to join the waitlist'
+      );
+      return;
+    }
+
+    setJoining(true);
+    try {
+      const response = await backendFetch('/api/waitlist/join', {
+        method: 'POST',
+        body: JSON.stringify({ eventId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to join waitlist');
+      }
+
+      setIsOnWaitlist(true);
+      setPosition(data.position);
+      onJoined?.(data.position);
+
+      Alert.alert(
+        t('common.success'),
+        `${t('waitlist.joined') || "You've been added to the waitlist!"}\n${t('waitlist.position') || 'Your position'}: #${data.position}`,
+      );
+    } catch (error: any) {
+      console.error('Error joining waitlist:', error);
+      Alert.alert(t('common.error'), error.message || 'Failed to join waitlist');
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  // Only show for sold-out events
+  if (!isSoldOut) {
+    return null;
+  }
+
+  if (loading) {
+    return (
+      <TouchableOpacity style={[styles.button, styles.loadingButton, style]} disabled>
+        <ActivityIndicator size="small" color={COLORS.primary} />
+      </TouchableOpacity>
+    );
+  }
+
+  if (isOnWaitlist) {
+    return (
+      <>
+        <TouchableOpacity
+          style={[styles.button, styles.onWaitlistButton, style]}
+          onPress={() => setShowInfoModal(true)}
+        >
+          <Ionicons name="hourglass-outline" size={18} color={COLORS.primary} />
+          <Text style={styles.onWaitlistText}>
+            {t('waitlist.onWaitlist') || 'On Waitlist'} #{position}
+          </Text>
+          <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
+        </TouchableOpacity>
+
+        <Modal
+          visible={showInfoModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowInfoModal(false)}
+        >
+          <TouchableOpacity 
+            style={styles.modalOverlay} 
+            activeOpacity={1}
+            onPress={() => setShowInfoModal(false)}
+          >
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Ionicons name="hourglass" size={32} color={COLORS.primary} />
+                <Text style={styles.modalTitle}>{t('waitlist.yourPosition') || 'Your Position'}</Text>
+              </View>
+
+              <View style={styles.positionBadge}>
+                <Text style={styles.positionNumber}>#{position}</Text>
+              </View>
+
+              <Text style={styles.modalText}>
+                {t('waitlist.infoText') || "You'll be notified by email if tickets become available. Keep an eye on your inbox!"}
+              </Text>
+
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowInfoModal(false)}
+              >
+                <Text style={styles.closeButtonText}>{t('common.gotIt') || 'Got it'}</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      </>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      style={[styles.button, styles.joinButton, style]}
+      onPress={handleJoinWaitlist}
+      disabled={joining}
+    >
+      {joining ? (
+        <ActivityIndicator size="small" color="#FFF" />
+      ) : (
+        <>
+          <Ionicons name="notifications-outline" size={18} color="#FFF" />
+          <Text style={styles.joinButtonText}>
+            {t('waitlist.joinWaitlist') || 'Join Waitlist'}
+          </Text>
+        </>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    gap: 8,
+  },
+  loadingButton: {
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  joinButton: {
+    backgroundColor: COLORS.secondary,
+  },
+  joinButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+  onWaitlistButton: {
+    backgroundColor: COLORS.primary + '15',
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  onWaitlistText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.primary,
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 320,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginTop: 12,
+  },
+  positionBadge: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  positionNumber: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#FFF',
+  },
+  modalText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  closeButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 10,
+  },
+  closeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+});

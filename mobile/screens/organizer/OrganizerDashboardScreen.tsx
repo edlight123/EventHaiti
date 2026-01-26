@@ -186,6 +186,41 @@ export default function OrganizerDashboardScreen() {
           </View>
         </View>
       </View>
+
+      {/* Quick Actions */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t('organizerDashboard.quickActions') || 'Quick Actions'}</Text>
+        <View style={styles.quickActionsGrid}>
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={() => navigation.navigate('OrganizerAnalytics')}
+          >
+            <Ionicons name="bar-chart-outline" size={24} color={COLORS.primary} />
+            <Text style={styles.quickActionText}>{t('organizerDashboard.analytics') || 'Analytics'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={() => navigation.navigate('OrganizerRefunds')}
+          >
+            <Ionicons name="refresh-outline" size={24} color={COLORS.primary} />
+            <Text style={styles.quickActionText}>{t('organizerDashboard.refunds') || 'Refunds'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={() => navigation.navigate('OrganizerPayoutSettings')}
+          >
+            <Ionicons name="wallet-outline" size={24} color={COLORS.primary} />
+            <Text style={styles.quickActionText}>{t('organizerDashboard.payouts') || 'Payouts'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={() => navigation.navigate('CreateEvent')}
+          >
+            <Ionicons name="add-circle-outline" size={24} color={COLORS.primary} />
+            <Text style={styles.quickActionText}>{t('organizerDashboard.createEvent') || 'Create'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
       </ScrollView>
     </View>
   );
@@ -342,5 +377,31 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 4,
     textAlign: 'center',
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -6,
+  },
+  quickActionButton: {
+    width: '48%',
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 16,
+    margin: '1%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  quickActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginLeft: 8,
   },
 });
