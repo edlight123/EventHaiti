@@ -3,6 +3,8 @@ import { adminDb } from '@/lib/firebase/admin'
 import { getDecryptedBankDestination } from '@/lib/firestore/payout-destinations'
 import { requireAdmin } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 const PAGE_SIZE = 50
 
 function toISOStringMaybe(value: any): string {
