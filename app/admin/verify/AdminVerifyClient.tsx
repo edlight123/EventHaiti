@@ -33,6 +33,8 @@ export default function AdminVerifyClient({ requestsWithUsers, organizers }: Adm
   const filteredRequests = useMemo(() => {
     const isPendingLike = (status: string) => {
       const s = (status || '').toLowerCase()
+      // Explicitly exclude non-pending statuses
+      if (s === 'changes_requested' || s === 'rejected' || s === 'approved') return false
       return s === 'pending' || s === 'pending_review' || s === 'in_review' || s === 'in_progress'
     }
 

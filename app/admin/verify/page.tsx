@@ -72,12 +72,15 @@ export default async function AdminVerifyPage({
       const normalizedUserId =
         serialized?.userId || serialized?.user_id || serialized?.userID || serialized?.uid || doc.id
 
+      // Preserve the actual status from DB - don't default to 'pending'
+      const actualStatus = serialized?.status || 'unknown'
+
       return {
         id: doc.id,
         ...serialized,
         userId: normalizedUserId,
         user_id: serialized?.user_id ?? serialized?.userId ?? null,
-        status: serialized?.status || 'pending',
+        status: actualStatus,
       }
     }
 
@@ -89,12 +92,12 @@ export default async function AdminVerifyPage({
     if (requestedStatus === 'pending' && primary.length < 10) {
       const byId = new Map<string, any>(primary.map((r: any) => [String(r.id), r]))
 
-      const isSubmitted = (r: any) => Boolean(r?.submittedAt || r?.submitted_at || r?.createdAt || r?.created_at)
       const isPendingLike = (r: any) => {
         const s = String(r?.status || '').toLowerCase()
+        // Only include items with explicit pending-like statuses
+        // Do NOT include items with changes_requested, rejected, or approved
+        if (s === 'changes_requested' || s === 'rejected' || s === 'approved') return false
         if (pendingStatuses.includes(s)) return true
-        // Treat missing/unknown statuses as pending if it has a submission timestamp.
-        if (!s || s === 'unknown') return isSubmitted(r)
         return false
       }
 
