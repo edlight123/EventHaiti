@@ -54,7 +54,8 @@ export default async function HomePage({
     events = DEMO_EVENTS as any[]
   } else {
     // Fetch events using optimized data layer with caching (30s revalidation)
-    events = await getDiscoverEvents(filters, 100)
+    // Reduced from 100 to 50 - homepage only displays ~30 events max
+    events = await getDiscoverEvents(filters, 50)
   }
 
   // Apply filters and sorting using new filter system

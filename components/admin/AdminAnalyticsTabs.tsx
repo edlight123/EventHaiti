@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   DollarSign, 
   TrendingUp, 
@@ -34,6 +34,19 @@ const tabs: Tab[] = [
 
 export function AdminAnalyticsTabs() {
   const [activeTab, setActiveTab] = useState<TabId>('overview')
+  // Track which tabs have been visited to avoid re-mounting components
+  const [visitedTabs, setVisitedTabs] = useState<Set<TabId>>(() => new Set<TabId>(['overview']))
+  
+  // Mark tab as visited when it becomes active
+  useEffect(() => {
+    if (!visitedTabs.has(activeTab)) {
+      setVisitedTabs(prev => {
+        const newSet = new Set<TabId>(Array.from(prev))
+        newSet.add(activeTab)
+        return newSet
+      })
+    }
+  }, [activeTab, visitedTabs])
 
   return (
     <div className="space-y-6">
@@ -62,79 +75,97 @@ export function AdminAnalyticsTabs() {
         </nav>
       </div>
 
-      {/* Tab Content */}
+      {/* Tab Content - Only render tabs that have been visited (lazy loading) */}
       <div className="min-h-[500px]">
-        {activeTab === 'overview' && (
-          <div className="space-y-8">
-            {/* Quick Stats Overview */}
+        {/* Overview Tab */}
+        <div className={activeTab === 'overview' ? '' : 'hidden'}>
+          {visitedTabs.has('overview') && (
+            <div className="space-y-8">
+              {/* Quick Stats Overview */}
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Overview</h2>
+                <AdminRevenueAnalytics showFilters={false} />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* User Growth Summary */}
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent User Growth</h2>
+                  <UserGrowthAnalytics days={7} />
+                </div>
+
+                {/* Top Events */}
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Top Events</h2>
+                  <EventPerformanceAnalytics />
+                </div>
+              </div>
+
+              {/* Conversion & Organizers */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Conversion Funnel</h2>
+                  <ConversionFunnelAnalytics />
+                </div>
+                
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Top Organizers</h2>
+                  <OrganizerRankingsAnalytics />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Revenue Tab - Only mount when first visited */}
+        <div className={activeTab === 'revenue' ? '' : 'hidden'}>
+          {visitedTabs.has('revenue') && (
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Overview</h2>
-              <AdminRevenueAnalytics showFilters={false} />
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Revenue Analytics (Multi-Currency)</h2>
+              <AdminRevenueAnalytics showFilters={true} />
             </div>
+          )}
+        </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* User Growth Summary */}
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent User Growth</h2>
-                <UserGrowthAnalytics days={7} />
-              </div>
-
-              {/* Top Events */}
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Top Events</h2>
-                <EventPerformanceAnalytics />
-              </div>
+        {/* Users Tab - Only mount when first visited */}
+        <div className={activeTab === 'users' ? '' : 'hidden'}>
+          {visitedTabs.has('users') && (
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">User Growth Metrics</h2>
+              <UserGrowthAnalytics days={30} />
             </div>
+          )}
+        </div>
 
-            {/* Conversion & Organizers */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Conversion Funnel</h2>
-                <ConversionFunnelAnalytics />
-              </div>
-              
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Top Organizers</h2>
-                <OrganizerRankingsAnalytics />
-              </div>
+        {/* Events Tab - Only mount when first visited */}
+        <div className={activeTab === 'events' ? '' : 'hidden'}>
+          {visitedTabs.has('events') && (
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Event Performance</h2>
+              <EventPerformanceAnalytics />
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {activeTab === 'revenue' && (
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Revenue Analytics (Multi-Currency)</h2>
-            <AdminRevenueAnalytics showFilters={true} />
-          </div>
-        )}
+        {/* Conversion Tab - Only mount when first visited */}
+        <div className={activeTab === 'conversion' ? '' : 'hidden'}>
+          {visitedTabs.has('conversion') && (
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Conversion Funnel Analysis</h2>
+              <ConversionFunnelAnalytics />
+            </div>
+          )}
+        </div>
 
-        {activeTab === 'users' && (
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">User Growth Metrics</h2>
-            <UserGrowthAnalytics days={30} />
-          </div>
-        )}
-
-        {activeTab === 'events' && (
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Event Performance</h2>
-            <EventPerformanceAnalytics />
-          </div>
-        )}
-
-        {activeTab === 'conversion' && (
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Conversion Funnel Analysis</h2>
-            <ConversionFunnelAnalytics />
-          </div>
-        )}
-
-        {activeTab === 'organizers' && (
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Organizer Performance Rankings</h2>
-            <OrganizerRankingsAnalytics />
-          </div>
-        )}
+        {/* Organizers Tab - Only mount when first visited */}
+        <div className={activeTab === 'organizers' ? '' : 'hidden'}>
+          {visitedTabs.has('organizers') && (
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Organizer Performance Rankings</h2>
+              <OrganizerRankingsAnalytics />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

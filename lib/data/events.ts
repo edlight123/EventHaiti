@@ -238,8 +238,9 @@ export async function getDiscoverEvents(
       // NOTE: We intentionally avoid a default Firestore inequality filter on `start_datetime`.
       // In this project, historical data may have mixed Firestore field types (Timestamp vs string),
       // and Firestore queries are type-sensitive; a `>= Date` constraint can return zero docs.
-      // Instead, fetch a larger window of recent events (newest first), then filter in memory.
-      const fetchLimit = Math.max(pageSize * 5, 200)
+      // Instead, fetch a reasonable window of recent events (newest first), then filter in memory.
+      // Reduced from 200 to 50 for better performance - homepage only needs ~20-30 events
+      const fetchLimit = Math.min(Math.max(pageSize * 2, 50), 100)
 
       const buildBaseQuery = (mode: 'is_published' | 'status') => {
         let queryRef = adminDb.collection('events').orderBy('start_datetime', 'asc')
