@@ -95,15 +95,25 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         notFound()
       }
 
-      // Get the organizer data
-      const organizerDoc = await adminDb.collection('users').doc(eventData.organizer_id).get()
+      // Fetch organizer and ticket tiers in parallel
+      const [organizerDoc, tiersSnapshot] = await Promise.all([
+        adminDb.collection('users').doc(eventData.organizer_id).get(),
+        adminDb.collection('ticket_tiers').where('event_id', '==', id).get().catch(() => ({ docs: [] }))
+      ])
+      
       const organizerData = organizerDoc.exists ? organizerDoc.data() : null
-
       console.log('Organizer query result:', { organizerData, organizerId: eventData.organizer_id })
+
+      // Calculate total capacity from tiers
+      const totalFromTiers = tiersSnapshot.docs.reduce((sum: number, doc: any) => {
+        const data = doc.data()
+        return sum + (data.total_quantity || data.quantity || 0)
+      }, 0)
 
       // Combine event and organizer data
       event = {
         ...eventData,
+        total_tickets: totalFromTiers || eventData.total_tickets || 0,
         users: organizerData ? {
           full_name: organizerData.full_name || 'Event Organizer',
           is_verified: organizerData.is_verified ?? false
@@ -111,24 +121,6 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           full_name: 'Event Organizer',
           is_verified: false
         }
-      }
-      
-      // Fetch ticket tiers to calculate accurate total capacity
-      try {
-        const tiersSnapshot = await adminDb.collection('ticket_tiers')
-          .where('event_id', '==', id)
-          .get()
-        
-        const totalFromTiers = tiersSnapshot.docs.reduce((sum: number, doc: any) => {
-          const data = doc.data()
-          return sum + (data.total_quantity || data.quantity || 0)
-        }, 0)
-        
-        event.total_tickets = totalFromTiers || event.total_tickets || 0
-      } catch (tierError) {
-        console.error('Error fetching ticket tiers:', tierError)
-        // Use the event's total_tickets if tier fetch fails
-        event.total_tickets = event.total_tickets || 0
       }
     } catch (error) {
       console.error('Error fetching event:', error)
@@ -145,17 +137,59 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   const isTrending = (event.tickets_sold || 0) > 10
   const selloutSoon = !isSoldOut && remainingTickets < 10
 
-  // Fetch reviews for this event
+  // Fetch reviews, related events, and user status in parallel
   let reviews: any[] = []
+  let relatedEvents: any[] = []
+  let isFollowing = false
+  let isFavorite = false
+  
   if (!isDemoMode()) {
-    const reviewsSnapshot = await adminDb.collection('reviews')
-      .where('event_id', '==', id)
-      .get()
+    const now = new Date()
     
-    reviews = await Promise.all(reviewsSnapshot.docs.map(async (reviewDoc: any) => {
+    // Start all independent queries in parallel
+    const [reviewsSnapshot, relatedSnapshot, followingResult, favoriteResult] = await Promise.all([
+      adminDb.collection('reviews').where('event_id', '==', id).get(),
+      adminDb.collection('events')
+        .where('category', '==', event.category)
+        .where('is_published', '==', true)
+        .where('start_datetime', '>=', now)
+        .limit(4)
+        .get(),
+      user && event.organizer_id ? checkIsFollowing(user.id, event.organizer_id) : Promise.resolve(false),
+      user ? checkIsFavorite(user.id, id) : Promise.resolve(false)
+    ])
+    
+    isFollowing = followingResult
+    isFavorite = favoriteResult
+    
+    // Batch fetch all user IDs needed for reviews
+    const reviewUserIds = Array.from(new Set(reviewsSnapshot.docs.map((doc: any) => doc.data().user_id)))
+    const reviewUsersMap = new Map<string, any>()
+    
+    if (reviewUserIds.length > 0) {
+      // Firestore 'in' queries support up to 30 items
+      const userChunks = []
+      for (let i = 0; i < reviewUserIds.length; i += 30) {
+        userChunks.push(reviewUserIds.slice(i, i + 30))
+      }
+      
+      const userSnapshots = await Promise.all(
+        userChunks.map(chunk => 
+          adminDb.collection('users').where('__name__', 'in', chunk).get()
+        )
+      )
+      
+      userSnapshots.forEach(snapshot => {
+        snapshot.docs.forEach((doc: any) => {
+          reviewUsersMap.set(doc.id, doc.data())
+        })
+      })
+    }
+    
+    // Map reviews with pre-fetched user data
+    reviews = reviewsSnapshot.docs.map((reviewDoc: any) => {
       const reviewData = reviewDoc.data()
-      const userDoc = await adminDb.collection('users').doc(reviewData.user_id).get()
-      const userData = userDoc.exists ? userDoc.data() : null
+      const userData = reviewUsersMap.get(reviewData.user_id)
       
       return {
         id: reviewDoc.id,
@@ -166,73 +200,64 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           full_name: userData?.full_name || 'Anonymous'
         }
       }
-    }))
-  }
-  
-  // Fetch related events (same category, exclude current event)
-  let relatedEvents: any[] = []
-  if (!isDemoMode()) {
-    const now = new Date()
-    const relatedSnapshot = await adminDb.collection('events')
-      .where('category', '==', event.category)
-      .where('is_published', '==', true)
-      .where('start_datetime', '>=', now)
-      .limit(4) // Get 4 to exclude current if needed
-      .get()
+    })
     
-    relatedEvents = await Promise.all(
-      relatedSnapshot.docs
-        .filter((doc: any) => doc.id !== id) // Exclude current event
-        .slice(0, 3) // Limit to 3
-        .map(async (doc: any) => {
-          const data = doc.data()
-          const organizerDoc = await adminDb.collection('users').doc(data.organizer_id).get()
-          const organizerData = organizerDoc.exists ? organizerDoc.data() : null
-          
-          return {
-            id: doc.id,
-            title: data.title,
-            description: data.description,
-            category: data.category,
-            venue_name: data.venue_name,
-            city: data.city,
-            commune: data.commune,
-            address: data.address,
-            start_datetime: data.start_datetime?.toDate?.()?.toISOString() || data.start_datetime,
-            end_datetime: data.end_datetime?.toDate?.()?.toISOString() || data.end_datetime,
-            ticket_price: data.ticket_price,
-            total_tickets: data.total_tickets,
-            tickets_sold: data.tickets_sold,
-            banner_image_url: data.banner_image_url || data.image_url,
-            image_url: data.image_url,
-            currency: data.currency || 'HTG',
-            organizer_id: data.organizer_id,
-            is_published: data.is_published,
-            users: organizerData ? {
-              full_name: organizerData.full_name || 'Event Organizer',
-              is_verified: organizerData.is_verified ?? false
-            } : {
-              full_name: 'Event Organizer',
-              is_verified: false
-            }
-          }
-        })
-    )
+    // Process related events - batch fetch organizers
+    const filteredRelated = relatedSnapshot.docs
+      .filter((doc: any) => doc.id !== id)
+      .slice(0, 3)
+    
+    const organizerIds = Array.from(new Set(filteredRelated.map((doc: any) => doc.data().organizer_id)))
+    const organizersMap = new Map<string, any>()
+    
+    if (organizerIds.length > 0) {
+      const organizerSnapshots = await Promise.all(
+        organizerIds.map(orgId => adminDb.collection('users').doc(orgId).get())
+      )
+      
+      organizerSnapshots.forEach((doc: any) => {
+        if (doc.exists) {
+          organizersMap.set(doc.id, doc.data())
+        }
+      })
+    }
+    
+    // Map related events with pre-fetched organizer data
+    relatedEvents = filteredRelated.map((doc: any) => {
+      const data = doc.data()
+      const organizerData = organizersMap.get(data.organizer_id)
+      
+      return {
+        id: doc.id,
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        venue_name: data.venue_name,
+        city: data.city,
+        commune: data.commune,
+        address: data.address,
+        start_datetime: data.start_datetime?.toDate?.()?.toISOString() || data.start_datetime,
+        end_datetime: data.end_datetime?.toDate?.()?.toISOString() || data.end_datetime,
+        ticket_price: data.ticket_price,
+        total_tickets: data.total_tickets,
+        tickets_sold: data.tickets_sold,
+        banner_image_url: data.banner_image_url || data.image_url,
+        image_url: data.image_url,
+        currency: data.currency || 'HTG',
+        organizer_id: data.organizer_id,
+        is_published: data.is_published,
+        users: organizerData ? {
+          full_name: organizerData.full_name || 'Event Organizer',
+          is_verified: organizerData.is_verified ?? false
+        } : {
+          full_name: 'Event Organizer',
+          is_verified: false
+        }
+      }
+    })
   } else {
     // Use demo events for related section
     relatedEvents = DEMO_EVENTS.filter(e => e.category === event.category && e.id !== id).slice(0, 3)
-  }
-
-  // Check if user is following this organizer
-  let isFollowing = false
-  if (!isDemoMode() && user && event.organizer_id) {
-    isFollowing = await checkIsFollowing(user.id, event.organizer_id)
-  }
-
-  // Check if user has favorited this event
-  let isFavorite = false
-  if (!isDemoMode() && user) {
-    isFavorite = await checkIsFavorite(user.id, id)
   }
 
   // Serialize all data before passing to client component

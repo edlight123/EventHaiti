@@ -72,52 +72,66 @@ export default async function AttendeesPage({ params }: { params: Promise<{ id: 
     ticketDocs = []
   }
 
-  const tickets = await Promise.all(
-    ticketDocs.map(async (doc: any) => {
-      const ticketData = doc.data()
-      
-      // Fetch attendee user data
-      let attendee = null
-      if (ticketData.attendee_id) {
-        try {
-          const userDoc = await adminDb.collection('users').doc(ticketData.attendee_id).get()
-          if (userDoc.exists) {
-            const userData = userDoc.data()
-            // Only include primitive fields from user data
-            attendee = {
-              id: userDoc.id,
-              email: userData.email || '',
-              full_name: userData.full_name || '',
-              phone_number: userData.phone_number || ''
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching attendee:', error)
-        }
-      }
-
-      // Explicitly map only the fields we need, ensuring all are serializable
-      return {
-        id: doc.id,
-        event_id: ticketData.event_id || ticketData.eventId || '',
-        attendee_id: ticketData.attendee_id || '',
-        status: ticketData.status || 'confirmed',
-        ticket_type: ticketData.ticket_type || 'General Admission',
-        ticket_tier_id: ticketData.ticket_tier_id || '',
-        price_paid: ticketData.price_paid || 0,
-        currency: ticketData.currency || null,
-        quantity: ticketData.quantity || 1,
-        checked_in: ticketData.checked_in || false,
-        qr_code: ticketData.qr_code || ticketData.qr_code_data || '',
-        qr_code_data: ticketData.qr_code_data || ticketData.qr_code || '',
-        attendee,
-        purchased_at: ticketData.purchased_at?.toDate?.()?.toISOString() || ticketData.purchased_at || new Date().toISOString(),
-        checked_in_at: ticketData.checked_in_at?.toDate?.()?.toISOString() || ticketData.checked_in_at || null,
-        created_at: ticketData.created_at?.toDate?.()?.toISOString() || ticketData.created_at || new Date().toISOString(),
-        updated_at: ticketData.updated_at?.toDate?.()?.toISOString() || ticketData.updated_at || new Date().toISOString(),
-      }
+  // Batch fetch all attendee users (instead of N+1 queries)
+  const attendeeIds = Array.from(new Set(
+    ticketDocs
+      .map((doc: any) => doc.data().attendee_id)
+      .filter((id: string) => id)
+  ))
+  
+  const attendeesMap = new Map<string, any>()
+  
+  if (attendeeIds.length > 0) {
+    // Firestore 'in' queries support up to 30 items, so chunk if needed
+    const chunks = []
+    for (let i = 0; i < attendeeIds.length; i += 30) {
+      chunks.push(attendeeIds.slice(i, i + 30))
+    }
+    
+    const userSnapshots = await Promise.all(
+      chunks.map(chunk => 
+        adminDb.collection('users').where('__name__', 'in', chunk).get()
+      )
+    )
+    
+    userSnapshots.forEach(snapshot => {
+      snapshot.docs.forEach((doc: any) => {
+        const userData = doc.data()
+        attendeesMap.set(doc.id, {
+          id: doc.id,
+          email: userData.email || '',
+          full_name: userData.full_name || '',
+          phone_number: userData.phone_number || ''
+        })
+      })
     })
-  )
+  }
+
+  // Map tickets with pre-fetched attendee data (no more N+1)
+  const tickets = ticketDocs.map((doc: any) => {
+    const ticketData = doc.data()
+    const attendee = ticketData.attendee_id ? attendeesMap.get(ticketData.attendee_id) || null : null
+
+    return {
+      id: doc.id,
+      event_id: ticketData.event_id || ticketData.eventId || '',
+      attendee_id: ticketData.attendee_id || '',
+      status: ticketData.status || 'confirmed',
+      ticket_type: ticketData.ticket_type || 'General Admission',
+      ticket_tier_id: ticketData.ticket_tier_id || '',
+      price_paid: ticketData.price_paid || 0,
+      currency: ticketData.currency || null,
+      quantity: ticketData.quantity || 1,
+      checked_in: ticketData.checked_in || false,
+      qr_code: ticketData.qr_code || ticketData.qr_code_data || '',
+      qr_code_data: ticketData.qr_code_data || ticketData.qr_code || '',
+      attendee,
+      purchased_at: ticketData.purchased_at?.toDate?.()?.toISOString() || ticketData.purchased_at || new Date().toISOString(),
+      checked_in_at: ticketData.checked_in_at?.toDate?.()?.toISOString() || ticketData.checked_in_at || null,
+      created_at: ticketData.created_at?.toDate?.()?.toISOString() || ticketData.created_at || new Date().toISOString(),
+      updated_at: ticketData.updated_at?.toDate?.()?.toISOString() || ticketData.updated_at || new Date().toISOString(),
+    }
+  })
 
   const navbarUser = {
     id: authUser.uid,
