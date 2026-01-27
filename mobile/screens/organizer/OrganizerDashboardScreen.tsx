@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, CommonActions } from '@react-navigation/native';
 import { COLORS } from '../../config/brand';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
@@ -164,26 +164,42 @@ export default function OrganizerDashboardScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t('organizerDashboard.thisWeek')}</Text>
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={() => navigation.navigate('OrganizerAnalytics')}
+            activeOpacity={0.7}
+          >
             <Ionicons name="ticket-outline" size={32} color={COLORS.primary} />
             <Text style={styles.statCardValue}>{stats?.ticketsSold || 0}</Text>
             <Text style={styles.statCardLabel}>{t('organizerDashboard.ticketsSold')}</Text>
-          </View>
-          <View style={styles.statCard}>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={() => navigation.getParent()?.navigate('MyEvents')}
+            activeOpacity={0.7}
+          >
             <Ionicons name="checkmark-circle-outline" size={32} color={COLORS.success} />
             <Text style={styles.statCardValue}>{stats?.upcomingEvents || 0}</Text>
             <Text style={styles.statCardLabel}>{t('organizerDashboard.upcomingEvents')}</Text>
-          </View>
-          <View style={styles.statCard}>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={() => navigation.navigate('OrganizerAnalytics')}
+            activeOpacity={0.7}
+          >
             <Ionicons name="cash-outline" size={32} color={COLORS.primary} />
             <Text style={styles.statCardValue}>${(stats?.revenue || 0).toFixed(2)}</Text>
             <Text style={styles.statCardLabel}>{t('organizerDashboard.revenue')}</Text>
-          </View>
-          <View style={styles.statCard}>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={() => navigation.getParent()?.navigate('MyEvents')}
+            activeOpacity={0.7}
+          >
             <Ionicons name="document-text-outline" size={32} color={COLORS.textSecondary} />
             <Text style={styles.statCardValue}>{stats?.draftEvents || 0}</Text>
             <Text style={styles.statCardLabel}>{t('organizerDashboard.drafts')}</Text>
-          </View>
+          </TouchableOpacity>
         </View>
       </View>
 

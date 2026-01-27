@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 import { COLORS } from '../../config/brand';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
@@ -63,9 +65,6 @@ export default function OrganizerRefundsScreen({ navigation }: any) {
 
   const loadFromFirebase = async () => {
     try {
-      const { collection, query, where, getDocs, orderBy } = await import('firebase/firestore');
-      const { db } = await import('../../config/firebase');
-
       // Get organizer's events
       const eventsQuery = query(
         collection(db, 'events'),

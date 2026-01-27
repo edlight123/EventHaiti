@@ -11,11 +11,13 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 import { COLORS } from '../../config/brand';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { backendFetch } from '../../lib/api/backend';
-import { format, subDays } from 'date-fns';
+import { format, subDays, startOfDay } from 'date-fns';
 
 const { width } = Dimensions.get('window');
 
@@ -30,6 +32,12 @@ interface EventStats {
   title: string;
   ticketCount: number;
   revenueCents: number;
+  currency: string;
+}
+
+interface RevenueByBurrency {
+  USD: number;
+  HTG: number;
 }
 
 export default function OrganizerAnalyticsScreen({ navigation }: any) {
@@ -45,6 +53,7 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
     totalRevenue: 0,
     currency: 'USD',
   });
+  const [revenueByBurrency, setRevenueByBurrency] = useState<RevenueByBurrency>({ USD: 0, HTG: 0 });
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [topEvents, setTopEvents] = useState<EventStats[]>([]);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'all'>('7d');
@@ -86,8 +95,15 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
 
   const loadFromFirebase = async () => {
     try {
-      const { collection, query, where, getDocs, orderBy } = await import('firebase/firestore');
-      const { db } = await import('../../config/firebase');
+      // Calculate the cutoff date based on time range
+      const now = new Date();
+      let cutoffDate: Date | null = null;
+      if (timeRange === '7d') {
+        cutoffDate = startOfDay(subDays(now, 7));
+      } else if (timeRange === '30d') {
+        cutoffDate = startOfDay(subDays(now, 30));
+      }
+      // 'all' means no cutoff
 
       // Get organizer events
       const eventsQuery = query(
@@ -99,56 +115,114 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
 
       // Get tickets for these events
       let totalTickets = 0;
-      let totalRevenueCents = 0;
+      const revenueByBurrency: RevenueByBurrency = { USD: 0, HTG: 0 };
       const eventStats: EventStats[] = [];
+      const dailySales: Record<string, { sales: number; revenue: number }> = {};
+
+      // Initialize daily sales for chart
+      const daysToShow = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 30;
+      for (let i = daysToShow - 1; i >= 0; i--) {
+        const date = subDays(now, i);
+        const dateKey = format(date, 'yyyy-MM-dd');
+        dailySales[dateKey] = { sales: 0, revenue: 0 };
+      }
 
       for (const event of events) {
+        const eventData = event as any;
+        const eventCurrency = eventData.currency || 'USD';
+        
         const ticketsQuery = query(
           collection(db, 'tickets'),
           where('event_id', '==', event.id)
         );
         const ticketsSnapshot = await getDocs(ticketsQuery);
-        const ticketCount = ticketsSnapshot.size;
-        let eventRevenue = 0;
+        
+        let eventTicketCount = 0;
+        let eventRevenueCents = 0;
 
         ticketsSnapshot.docs.forEach(doc => {
           const data = doc.data();
-          eventRevenue += (data.price_paid || 0) * 100;
+          
+          // Get the purchase date
+          let purchaseDate: Date | null = null;
+          if (data.purchased_at) {
+            if (data.purchased_at.toDate) {
+              purchaseDate = data.purchased_at.toDate();
+            } else if (typeof data.purchased_at === 'string') {
+              purchaseDate = new Date(data.purchased_at);
+            }
+          } else if (data.created_at) {
+            if (data.created_at.toDate) {
+              purchaseDate = data.created_at.toDate();
+            } else if (typeof data.created_at === 'string') {
+              purchaseDate = new Date(data.created_at);
+            }
+          }
+
+          // Filter by time range
+          if (cutoffDate && purchaseDate && purchaseDate < cutoffDate) {
+            return; // Skip tickets outside the time range
+          }
+
+          const pricePaidCents = Math.round((data.price_paid || 0) * 100);
+          eventTicketCount++;
+          eventRevenueCents += pricePaidCents;
+          totalTickets++;
+
+          // Track revenue by currency
+          if (eventCurrency === 'HTG') {
+            revenueByBurrency.HTG += pricePaidCents;
+          } else {
+            revenueByBurrency.USD += pricePaidCents;
+          }
+
+          // Track daily sales for chart
+          if (purchaseDate) {
+            const dateKey = format(purchaseDate, 'yyyy-MM-dd');
+            if (dailySales[dateKey]) {
+              dailySales[dateKey].sales++;
+              dailySales[dateKey].revenue += pricePaidCents / 100;
+            }
+          }
         });
 
-        totalTickets += ticketCount;
-        totalRevenueCents += eventRevenue;
-
-        if (ticketCount > 0) {
+        if (eventTicketCount > 0) {
           eventStats.push({
             id: event.id,
-            title: (event as any).title || 'Unknown Event',
-            ticketCount,
-            revenueCents: eventRevenue,
+            title: eventData.title || 'Unknown Event',
+            ticketCount: eventTicketCount,
+            revenueCents: eventRevenueCents,
+            currency: eventCurrency,
           });
         }
       }
 
       eventStats.sort((a, b) => b.ticketCount - a.ticketCount);
 
+      // Determine primary currency (the one with more revenue)
+      const primaryCurrency = revenueByBurrency.USD >= revenueByBurrency.HTG ? 'USD' : 'HTG';
+      const totalRevenueCents = revenueByBurrency[primaryCurrency];
+
       setStats({
         totalEvents: events.length,
         publishedEvents: events.filter((e: any) => e.is_published).length,
         totalTicketsSold: totalTickets,
         totalRevenue: totalRevenueCents / 100,
-        currency: 'USD',
+        currency: primaryCurrency,
       });
+      setRevenueByBurrency(revenueByBurrency);
       setTopEvents(eventStats.slice(0, 5));
 
-      // Chart data: show zeros until real daily aggregation is implemented
-      // TODO: Implement daily sales aggregation in Firestore for accurate chart data
+      // Build chart data
       const chart: ChartData[] = [];
-      for (let i = 6; i >= 0; i--) {
-        const date = subDays(new Date(), i);
+      const sortedDates = Object.keys(dailySales).sort();
+      // Show last 7 days for chart regardless of filter
+      const chartDates = sortedDates.slice(-7);
+      for (const dateKey of chartDates) {
         chart.push({
-          date: format(date, 'MMM dd'),
-          sales: 0,
-          revenue: 0,
+          date: format(new Date(dateKey), 'MMM dd'),
+          sales: dailySales[dateKey]?.sales || 0,
+          revenue: dailySales[dateKey]?.revenue || 0,
         });
       }
       setChartData(chart);
@@ -162,8 +236,24 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
     loadData();
   };
 
-  const formatMoney = (amount: number) => {
-    return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatMoney = (amount: number, currency: string = 'USD') => {
+    const symbol = currency === 'HTG' ? 'G' : '$';
+    return `${symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  // Format revenue display showing both currencies if both exist
+  const formatTotalRevenue = () => {
+    const parts: string[] = [];
+    if (revenueByBurrency.USD > 0) {
+      parts.push(formatMoney(revenueByBurrency.USD / 100, 'USD'));
+    }
+    if (revenueByBurrency.HTG > 0) {
+      parts.push(formatMoney(revenueByBurrency.HTG / 100, 'HTG'));
+    }
+    if (parts.length === 0) {
+      return formatMoney(0, stats.currency);
+    }
+    return parts.join(' + ');
   };
 
   // Simple bar chart rendering
@@ -217,26 +307,42 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
 
         {/* Stats Cards */}
         <View style={styles.statsGrid}>
-          <View style={[styles.statCard, styles.statCardPrimary]}>
+          <TouchableOpacity 
+            style={[styles.statCard, styles.statCardPrimary]}
+            onPress={() => navigation.navigate('OrganizerPayoutSettings')}
+            activeOpacity={0.7}
+          >
             <Ionicons name="cash-outline" size={24} color="#FFF" />
-            <Text style={styles.statValue}>{formatMoney(stats.totalRevenue)}</Text>
+            <Text style={styles.statValue}>{formatTotalRevenue()}</Text>
             <Text style={styles.statLabel}>{t('analytics.totalRevenue') || 'Total Revenue'}</Text>
-          </View>
-          <View style={styles.statCard}>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
             <Ionicons name="ticket-outline" size={24} color={COLORS.primary} />
             <Text style={[styles.statValue, { color: COLORS.text }]}>{stats.totalTicketsSold}</Text>
             <Text style={[styles.statLabel, { color: COLORS.textSecondary }]}>{t('analytics.ticketsSold') || 'Tickets Sold'}</Text>
-          </View>
-          <View style={styles.statCard}>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
             <Ionicons name="calendar-outline" size={24} color={COLORS.primary} />
             <Text style={[styles.statValue, { color: COLORS.text }]}>{stats.totalEvents}</Text>
             <Text style={[styles.statLabel, { color: COLORS.textSecondary }]}>{t('analytics.totalEvents') || 'Total Events'}</Text>
-          </View>
-          <View style={styles.statCard}>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
             <Ionicons name="eye-outline" size={24} color={COLORS.primary} />
             <Text style={[styles.statValue, { color: COLORS.text }]}>{stats.publishedEvents}</Text>
             <Text style={[styles.statLabel, { color: COLORS.textSecondary }]}>{t('analytics.published') || 'Published'}</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Sales Chart */}
@@ -280,7 +386,7 @@ export default function OrganizerAnalyticsScreen({ navigation }: any) {
                 <View style={styles.eventInfo}>
                   <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>
                   <Text style={styles.eventStats}>
-                    {event.ticketCount} {t('analytics.tickets') || 'tickets'} • {formatMoney(event.revenueCents / 100)}
+                    {event.ticketCount} {t('analytics.tickets') || 'tickets'} • {formatMoney(event.revenueCents / 100, event.currency)}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
