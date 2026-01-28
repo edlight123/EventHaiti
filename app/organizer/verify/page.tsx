@@ -11,6 +11,8 @@ import Link from 'next/link'
 import VerificationStatusHero from '@/components/organizer/verification/VerificationStatusHero'
 import VerificationStepper from '@/components/organizer/verification/VerificationStepper'
 import ReviewSubmitPanel from '@/components/organizer/verification/ReviewSubmitPanel'
+import VerificationWelcome from '@/components/organizer/verification/VerificationWelcome'
+import VerificationWizard from '@/components/organizer/verification/VerificationWizard'
 import OrganizerInfoForm from '@/components/organizer/verification/forms/OrganizerInfoForm'
 import GovernmentIDForm from '@/components/organizer/verification/forms/GovernmentIDForm'
 import SelfieForm from '@/components/organizer/verification/forms/SelfieForm'
@@ -27,7 +29,7 @@ import {
 } from '@/lib/verification'
 import { useOrganizerClientGuard } from '@/lib/hooks/useOrganizerClientGuard'
 
-type ViewMode = 'overview' | 'organizerInfo' | 'governmentId' | 'selfie' | 'businessDetails' | 'review'
+type ViewMode = 'welcome' | 'wizard' | 'overview' | 'organizerInfo' | 'governmentId' | 'selfie' | 'businessDetails' | 'review'
 
 export default function VerifyOrganizerPage() {
   const router = useRouter()
@@ -40,7 +42,7 @@ export default function VerifyOrganizerPage() {
   const [loading, setLoading] = useState(true)
   const [restarting, setRestarting] = useState(false)
   const [request, setRequest] = useState<VerificationRequest | null>(null)
-  const [viewMode, setViewMode] = useState<ViewMode>('overview')
+  const [viewMode, setViewMode] = useState<ViewMode>('welcome')
   const [error, setError] = useState('')
   const [userVerification, setUserVerification] = useState<{ is_verified?: boolean; verification_status?: string } | null>(null)
 
@@ -105,7 +107,27 @@ export default function VerifyOrganizerPage() {
           }
         }
 
-        if (!cancelled) setRequest(verificationRequest)
+        if (!cancelled) {
+          setRequest(verificationRequest)
+          
+          // Determine initial view mode based on progress
+          const completionPct = calculateCompletionPercentage(verificationRequest)
+          const isReadOnly = ['pending', 'pending_review', 'in_review', 'approved', 'rejected'].includes(verificationRequest.status)
+          
+          if (isReadOnly) {
+            // Show overview for submitted/approved/rejected
+            setViewMode('overview')
+          } else if (verificationRequest.status === 'not_started' && completionPct === 0) {
+            // Fresh user - show welcome screen
+            setViewMode('welcome')
+          } else if (completionPct < 100) {
+            // In progress - show wizard
+            setViewMode('wizard')
+          } else {
+            // Complete but not submitted - show overview
+            setViewMode('overview')
+          }
+        }
       } catch (err: any) {
         console.error('Error loading verification:', err)
         if (!cancelled) setError(err.message || 'Failed to load verification data')
@@ -203,6 +225,19 @@ export default function VerifyOrganizerPage() {
     setViewMode('overview')
   }
 
+  // Handle wizard step completion
+  const handleWizardStepComplete = async (stepId: string, data?: Record<string, any>) => {
+    if (!user || !request) return
+
+    await updateVerificationStep(user.id, stepId as keyof VerificationRequest['steps'], {
+      status: 'complete',
+      fields: data || {},
+      missingFields: []
+    })
+
+    await reloadRequest()
+  }
+
   const handleSubmit = async () => {
     if (!user || !request) return
 
@@ -289,6 +324,28 @@ export default function VerifyOrganizerPage() {
   const completionPercentage = statusForUI === 'approved' ? 100 : calculateCompletionPercentage(requestForUI)
   const isReadOnly = ['pending', 'in_review', 'approved', 'rejected'].includes(statusForUI)
   const canSubmit = canSubmitForReview(requestForUI)
+
+  // Welcome screen for new users
+  if (viewMode === 'welcome') {
+    return (
+      <VerificationWelcome 
+        onStart={() => setViewMode('wizard')} 
+      />
+    )
+  }
+
+  // Wizard view for users in progress
+  if (viewMode === 'wizard') {
+    return (
+      <VerificationWizard
+        request={requestForUI}
+        userId={user.id}
+        onStepComplete={handleWizardStepComplete}
+        onComplete={() => setViewMode('review')}
+        onExit={() => setViewMode('overview')}
+      />
+    )
+  }
 
   return (
     <div className="bg-gray-50">

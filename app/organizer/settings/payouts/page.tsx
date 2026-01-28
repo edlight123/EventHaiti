@@ -5,6 +5,7 @@ import { getPayoutProfile } from '@/lib/firestore/payout-profiles'
 import { serializeData } from '@/lib/utils/serialize'
 import { normalizeCountryCode } from '@/lib/payment-provider'
 import PayoutsPageNew from './PayoutsPageNew'
+import PayoutsPageWrapper from '@/components/organizer/payouts/PayoutsPageWrapper'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -12,9 +13,11 @@ export const revalidate = 0
 export default async function PayoutsSettingsPage({
   searchParams,
 }: {
-  searchParams?: { stripe?: string }
+  searchParams?: { stripe?: string; view?: string; edit?: string }
 }) {
   const stripeParam = typeof searchParams?.stripe === 'string' ? searchParams.stripe : undefined
+  const viewParam = typeof searchParams?.view === 'string' ? searchParams.view : undefined
+  const editParam = typeof searchParams?.edit === 'string' ? searchParams.edit : undefined
   const payoutPath = `/organizer/settings/payouts${stripeParam ? `?stripe=${encodeURIComponent(stripeParam)}` : ''}`
 
   // Verify authentication
@@ -57,26 +60,35 @@ export default async function PayoutsSettingsPage({
     getPayoutProfile(authUser.uid, 'stripe_connect'),
   ])
 
-  const navbarUser = {
-    id: authUser.uid,
-    email: authUser.email || '',
-    full_name: authUser.name || authUser.email || '',
-    role: 'organizer' as const,
-  }
-
   // Serialize data
   const serializedHaitiConfig = serializeData(haitiConfig) || undefined
   const serializedStripeConfig = serializeData(stripeConfig) || undefined
 
+  // Show advanced view (original complex page) if requested or editing
+  if (viewParam === 'advanced' || editParam) {
+    return (
+      <div className="bg-gray-50">
+        <PayoutsPageNew
+          haitiConfig={serializedHaitiConfig}
+          stripeConfig={serializedStripeConfig}
+          showEarningsAndPayouts={false}
+          organizerId={authUser.uid}
+          organizerDefaultCountry={organizerDefaultCountry}
+          initialActiveProfile={stripeParam ? 'stripe_connect' : editParam === 'stripe_connect' ? 'stripe_connect' : undefined}
+        />
+      </div>
+    )
+  }
+
+  // Show the new simplified wrapper by default
   return (
-    <div className="bg-gray-50">
-      <PayoutsPageNew
-        haitiConfig={serializedHaitiConfig}
-        stripeConfig={serializedStripeConfig}
-        showEarningsAndPayouts={false}
-        organizerId={authUser.uid}
-        organizerDefaultCountry={organizerDefaultCountry}
-        initialActiveProfile={stripeParam ? 'stripe_connect' : undefined}
-      />    </div>
+    <PayoutsPageWrapper
+      haitiConfig={serializedHaitiConfig}
+      stripeConfig={serializedStripeConfig}
+      organizerId={authUser.uid}
+      organizerDefaultCountry={organizerDefaultCountry}
+      initialActiveProfile={stripeParam ? 'stripe_connect' : undefined}
+      showEarningsAndPayouts={false}
+    />
   )
 }
