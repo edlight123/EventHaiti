@@ -8,7 +8,11 @@ import { FilterChipsRow } from './FilterChipsRow'
 import { EventFilters, DEFAULT_FILTERS } from '@/lib/filters/types'
 import { parseFiltersFromURL, serializeFilters, resetFilters, countActiveFilters } from '@/lib/filters/utils'
 
-export default function FilterManager() {
+interface FilterManagerProps {
+  userCountry?: string
+}
+
+export default function FilterManager({ userCountry = 'HT' }: FilterManagerProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -118,6 +122,7 @@ export default function FilterManager() {
         onApply={handleApplyFilters}
         onReset={handleResetFilters}
         onDraftChange={setDraftFilters}
+        userCountry={userCountry}
       />
     </>
   )

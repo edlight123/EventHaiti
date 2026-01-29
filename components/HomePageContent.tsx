@@ -8,7 +8,7 @@ import { Suspense } from 'react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { LOCATION_CONFIG } from '@/lib/filters/config'
 import Link from 'next/link'
-import { MapPin, Settings } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 
 interface HomePageContentProps {
   hasActiveFilters: boolean
@@ -36,10 +36,10 @@ function NoEventsInCountry({ countryName, userCountry }: { countryName: string; 
         Check back soon or explore events in a different location.
       </p>
       <Link
-        href="/settings"
+        href="/profile"
         className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-200 font-semibold"
       >
-        <Settings className="w-5 h-5" />
+        <MapPin className="w-5 h-5" />
         Change your location
       </Link>
     </div>

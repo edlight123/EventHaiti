@@ -77,8 +77,16 @@ export default async function HomePage({
 
   events = events.filter(notEnded)
   
-  // ONLY show events from user's country (no other countries)
-  events = events.filter(e => e.country === userCountry)
+  // Filter events by user's country
+  // If there are events in user's country, show ONLY those
+  // Otherwise, show all events (with user's country prioritized)
+  const eventsInUserCountry = events.filter(e => e.country === userCountry)
+  
+  if (eventsInUserCountry.length > 0) {
+    // User's country has events - show only those
+    events = eventsInUserCountry
+  }
+  // If no events in user's country, show all events (no country filter)
   
   // Prioritize events by user's city first, then rest of country
   const eventsInUserCity = userCity ? events.filter(e => e.city === userCity) : []
@@ -183,7 +191,7 @@ export default async function HomePage({
       {/* Search/Filter Bar (always visible below hero) */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-3 md:py-4">
-          <FilterManager />
+          <FilterManager userCountry={userCountry} />
         </div>
       </div>
 
