@@ -77,16 +77,9 @@ export default async function HomePage({
 
   events = events.filter(notEnded)
   
-  // Filter events by user's country
-  // If there are events in user's country, show ONLY those
-  // Otherwise, show all events (with user's country prioritized)
-  const eventsInUserCountry = events.filter(e => e.country === userCountry)
-  
-  if (eventsInUserCountry.length > 0) {
-    // User's country has events - show only those
-    events = eventsInUserCountry
-  }
-  // If no events in user's country, show all events (no country filter)
+  // STRICT country filtering - ONLY show events from user's country
+  // Never mix events from different countries
+  events = events.filter(e => e.country === userCountry)
   
   // Prioritize events by user's city first, then rest of country
   const eventsInUserCity = userCity ? events.filter(e => e.city === userCity) : []

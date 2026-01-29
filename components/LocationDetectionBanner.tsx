@@ -83,18 +83,23 @@ export function LocationDetectionBanner({
     setIsAccepting(true)
     
     try {
-      // Save to profile if logged in
+      // Determine the subarea (state/region) from raw detection
+      const detectedSubarea = location.raw?.region || ''
+      
+      // Save to profile if logged in - include country, city, AND subarea
       if (userId) {
         await updateUserProfile(userId, {
           defaultCountry: location.mapped.countryCode,
           defaultCity: location.mapped.city || '',
+          defaultSubarea: detectedSubarea,
         })
       }
       
       // Save to localStorage for anonymous users
       localStorage.setItem('detected-location', JSON.stringify({
         countryCode: location.mapped.countryCode,
-        city: location.mapped.city
+        city: location.mapped.city,
+        subarea: detectedSubarea
       }))
       
       // Mark as accepted

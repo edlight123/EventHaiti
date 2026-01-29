@@ -89,16 +89,9 @@ export default async function DiscoverPage({
 
   filteredEvents = filteredEvents.filter(notEnded)
   
-  // Filter events by user's country
-  // If there are events in user's country, show ONLY those
-  // Otherwise, show all events (with user's country prioritized)
-  const eventsInUserCountry = filteredEvents.filter(e => e.country === userCountry)
-  
-  if (eventsInUserCountry.length > 0) {
-    // User's country has events - show only those
-    filteredEvents = eventsInUserCountry
-  }
-  // If no events in user's country, show all events (no country filter)
+  // STRICT country filtering - ONLY show events from user's country
+  // Never mix events from different countries
+  filteredEvents = filteredEvents.filter(e => e.country === userCountry)
   
   // Apply search filter
   const searchQuery = params.search as string | undefined
