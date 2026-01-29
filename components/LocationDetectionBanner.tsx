@@ -167,7 +167,7 @@ export function LocationDetectionBanner({
               </div>
               
               <p className="text-gray-900 font-medium mb-0.5">
-                It looks like you're in
+                It looks like you&apos;re in
               </p>
               <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">
                 {location.displayName}
