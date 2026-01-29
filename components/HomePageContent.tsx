@@ -7,6 +7,8 @@ import CategoryGrid from '@/components/CategoryGrid'
 import { Suspense } from 'react'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import { LOCATION_CONFIG } from '@/lib/filters/config'
+import Link from 'next/link'
+import { MapPin, Settings } from 'lucide-react'
 
 interface HomePageContentProps {
   hasActiveFilters: boolean
@@ -15,6 +17,33 @@ interface HomePageContentProps {
   upcomingThisWeek: any[]
   countryEvents?: any[]
   userCountry?: string
+}
+
+// Empty state component when no events in user's country
+function NoEventsInCountry({ countryName, userCountry }: { countryName: string; userCountry: string }) {
+  return (
+    <div className="text-center py-16 sm:py-20 bg-white rounded-3xl shadow-soft">
+      <div className="relative inline-block mb-6">
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-brand-100 to-brand-200 flex items-center justify-center">
+          <MapPin className="w-10 h-10 text-brand-600" />
+        </div>
+      </div>
+      <h3 className="text-2xl font-bold text-gray-900 mb-3">
+        No events in {countryName} yet
+      </h3>
+      <p className="text-gray-600 mb-8 max-w-md mx-auto px-4">
+        We don&apos;t have any upcoming events in {countryName} right now. 
+        Check back soon or explore events in a different location.
+      </p>
+      <Link
+        href="/settings"
+        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-200 font-semibold"
+      >
+        <Settings className="w-5 h-5" />
+        Change your location
+      </Link>
+    </div>
+  )
 }
 
 export default function HomePageContent({
@@ -225,11 +254,7 @@ export default function HomePageContent({
             </div>
           </Suspense>
         ) : (
-          <div className="text-center py-20 bg-white rounded-3xl shadow-soft">
-            <div className="text-7xl mb-6">📭</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">{t('events.no_events')}</h3>
-            <p className="text-gray-600">{t('common.try_different_search')}</p>
-          </div>
+          <NoEventsInCountry countryName={countryName} userCountry={userCountry} />
         )}
         
         {events.length > 12 && (

@@ -89,6 +89,9 @@ export default async function DiscoverPage({
 
   filteredEvents = filteredEvents.filter(notEnded)
   
+  // ONLY show events from user's country (no other countries)
+  filteredEvents = filteredEvents.filter(event => event.country === userCountry)
+  
   // Apply search filter
   const searchQuery = params.search as string | undefined
   if (searchQuery && searchQuery.trim()) {

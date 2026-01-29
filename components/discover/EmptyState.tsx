@@ -3,23 +3,41 @@
 import React from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
+import Link from 'next/link'
+import { MapPin, Settings } from 'lucide-react'
 
 interface EmptyStateProps {
   hasFilters: boolean
+  countryName?: string
 }
 
-export function EmptyState({ hasFilters }: EmptyStateProps) {
+export function EmptyState({ hasFilters, countryName = 'your area' }: EmptyStateProps) {
   const router = useRouter()
   const { t } = useTranslation('common')
 
   if (!hasFilters) {
+    // No events in user's country at all
     return (
-      <div className="text-center py-20 bg-white rounded-3xl shadow-sm">
-        <div className="text-7xl mb-6">📭</div>
+      <div className="text-center py-16 sm:py-20 bg-white rounded-3xl shadow-sm">
+        <div className="relative inline-block mb-6">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-brand-100 to-brand-200 flex items-center justify-center">
+            <MapPin className="w-10 h-10 text-brand-600" />
+          </div>
+        </div>
         <h3 className="text-2xl font-bold text-gray-900 mb-3">
-          {t('common.no_events_available')}
+          No events in {countryName} yet
         </h3>
-        <p className="text-gray-600">{t('common.check_back_soon')}</p>
+        <p className="text-gray-600 mb-8 max-w-md mx-auto px-4">
+          We don&apos;t have any upcoming events in {countryName} right now. 
+          Check back soon or explore events in a different location.
+        </p>
+        <Link
+          href="/settings"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-200 font-semibold"
+        >
+          <Settings className="w-5 h-5" />
+          Change your location
+        </Link>
       </div>
     )
   }

@@ -30,12 +30,12 @@ export default async function HomePage({
   const user = await getCurrentUser()
   const params = await searchParams
   
-  // Get user's default country for prioritization
+  // Get user's default country for filtering
   let userCountry = 'HT' // Default to Haiti
   let userCity = ''
-  if (user?.uid) {
+  if (user?.id) {
     try {
-      const profile = await getUserProfileAdmin(user.uid)
+      const profile = await getUserProfileAdmin(user.id)
       userCountry = profile?.defaultCountry || 'HT'
       userCity = profile?.defaultCity || ''
     } catch (error) {
@@ -77,10 +77,13 @@ export default async function HomePage({
 
   events = events.filter(notEnded)
   
-  // Prioritize events from user's country
-  const eventsInUserCountry = events.filter(e => e.country === userCountry)
-  const eventsInOtherCountries = events.filter(e => e.country !== userCountry)
-  const prioritizedEvents = [...eventsInUserCountry, ...eventsInOtherCountries]
+  // ONLY show events from user's country (no other countries)
+  events = events.filter(e => e.country === userCountry)
+  
+  // Prioritize events by user's city first, then rest of country
+  const eventsInUserCity = userCity ? events.filter(e => e.city === userCity) : []
+  const eventsInOtherCities = userCity ? events.filter(e => e.city !== userCity) : events
+  const prioritizedEvents = [...eventsInUserCity, ...eventsInOtherCities]
   
   // Organize events into sections
   
@@ -115,7 +118,7 @@ export default async function HomePage({
       return start.getTime() <= thisWeekEnd.getTime()
     })
     .slice(0, 6)
-  const countryEvents = eventsInUserCountry.filter(notEnded).slice(0, 6)
+  const countryEvents = prioritizedEvents.slice(0, 6)
   
   // Check if we have any active filters
   const hasActiveFilters = filters.date !== 'any' || 
@@ -151,7 +154,7 @@ export default async function HomePage({
       
       {/* Location Detection Banner */}
       <LocationBannerWrapper 
-        userId={user?.uid}
+        userId={user?.id}
         currentCountry={userCountry}
         currentCity={userCity}
       />

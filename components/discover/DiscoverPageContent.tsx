@@ -138,7 +138,7 @@ export function DiscoverPageContent({
            nearYouEvents.length === 0 && 
            budgetEvents.length === 0 && 
            onlineEvents.length === 0 && (
-            <EmptyState hasFilters={false} />
+            <EmptyState hasFilters={false} countryName={countryName} />
           )}
         </>
       ) : (
@@ -153,7 +153,7 @@ export function DiscoverPageContent({
               events={filteredEvents}
             />
           ) : (
-            <EmptyState hasFilters={true} />
+            <EmptyState hasFilters={true} countryName={countryName} />
           )}
         </>
       )}
