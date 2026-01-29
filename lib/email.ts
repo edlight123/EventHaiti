@@ -7,6 +7,84 @@ type EmailParams = {
   html: string
 }
 
+// Premium brand colors
+const BRAND = {
+  primary: '#f97316',
+  primaryDark: '#ea580c',
+  secondary: '#8b5cf6',
+  accent: '#ec4899',
+  success: '#10b981',
+  warning: '#f59e0b',
+  error: '#ef4444',
+  dark: '#0f172a',
+  gray: '#64748b',
+  lightGray: '#f1f5f9',
+  white: '#ffffff',
+}
+
+// Shared email styles
+const emailStyles = {
+  fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+  monoFont: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
+}
+
+// Premium footer component
+function getEmailFooter() {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eventhaiti.com'
+  return `
+    <tr>
+      <td style="padding: 32px 40px; background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); border-top: 1px solid #e2e8f0;">
+        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td align="center">
+              <div style="margin-bottom: 16px;">
+                <a href="${appUrl}" style="text-decoration: none;">
+                  <span style="font-size: 20px; font-weight: 800; background: linear-gradient(135deg, #f97316 0%, #ec4899 50%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">EventHaiti</span>
+                </a>
+              </div>
+              <div style="margin-bottom: 20px;">
+                <a href="${appUrl}/discover" style="display: inline-block; margin: 0 8px; color: #64748b; text-decoration: none; font-size: 13px; font-weight: 500;">Discover</a>
+                <span style="color: #cbd5e1;">•</span>
+                <a href="${appUrl}/tickets" style="display: inline-block; margin: 0 8px; color: #64748b; text-decoration: none; font-size: 13px; font-weight: 500;">My Tickets</a>
+                <span style="color: #cbd5e1;">•</span>
+                <a href="${appUrl}/support" style="display: inline-block; margin: 0 8px; color: #64748b; text-decoration: none; font-size: 13px; font-weight: 500;">Help</a>
+              </div>
+              <div style="margin-bottom: 16px;">
+                <a href="https://instagram.com/eventhaiti" style="display: inline-block; margin: 0 6px; width: 32px; height: 32px; background-color: #e2e8f0; border-radius: 8px; text-align: center; line-height: 32px; text-decoration: none; color: #64748b; font-size: 14px;">📷</a>
+                <a href="https://facebook.com/eventhaiti" style="display: inline-block; margin: 0 6px; width: 32px; height: 32px; background-color: #e2e8f0; border-radius: 8px; text-align: center; line-height: 32px; text-decoration: none; color: #64748b; font-size: 14px;">📘</a>
+                <a href="https://twitter.com/eventhaiti" style="display: inline-block; margin: 0 6px; width: 32px; height: 32px; background-color: #e2e8f0; border-radius: 8px; text-align: center; line-height: 32px; text-decoration: none; color: #64748b; font-size: 14px;">🐦</a>
+              </div>
+              <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.6;">
+                © ${new Date().getFullYear()} EventHaiti. All rights reserved.<br>
+                <a href="${appUrl}/privacy" style="color: #94a3b8; text-decoration: underline;">Privacy Policy</a> · <a href="${appUrl}/terms" style="color: #94a3b8; text-decoration: underline;">Terms of Service</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  `
+}
+
+// Premium button component
+function getButton(text: string, url: string, color: string = BRAND.primary, fullWidth: boolean = false) {
+  return `
+    <a href="${url}" style="display: inline-block; ${fullWidth ? 'width: 100%; text-align: center;' : ''} padding: 14px 28px; background: linear-gradient(135deg, ${color} 0%, ${adjustColor(color, -15)} 100%); color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; letter-spacing: 0.3px; box-shadow: 0 4px 14px ${color}40; transition: all 0.2s;">
+      ${text}
+    </a>
+  `
+}
+
+// Helper to darken/lighten colors
+function adjustColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace('#', ''), 16)
+  const amt = Math.round(2.55 * percent)
+  const R = (num >> 16) + amt
+  const G = (num >> 8 & 0x00FF) + amt
+  const B = (num & 0x0000FF) + amt
+  return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1)
+}
+
 export async function sendEmail({ to, subject, html }: EmailParams) {
   // Check API key configuration
   const apiKey = process.env.RESEND_API_KEY
@@ -67,9 +145,15 @@ export function getTicketConfirmationEmail(params: {
   eventVenue: string
   ticketId: string
   qrCodeDataURL?: string
+  ticketTier?: string
+  ticketPrice?: number
+  currency?: string
 }) {
   const ticketCode = String(params.ticketId || '').slice(0, 12).toUpperCase()
-  const ticketsUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://eventhaiti.com'}/tickets`
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eventhaiti.com'
+  const ticketsUrl = `${appUrl}/tickets`
+  const tier = params.ticketTier || 'General Admission'
+  const price = params.ticketPrice ? `${params.currency || 'HTG'} ${params.ticketPrice.toLocaleString()}` : 'Free'
 
   return `
     <!DOCTYPE html>
@@ -77,118 +161,139 @@ export function getTicketConfirmationEmail(params: {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="color-scheme" content="light">
+        <meta name="supported-color-schemes" content="light">
         <title>Your EventHaiti Ticket</title>
       </head>
-      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0b1220;">
+      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
         <table role="presentation" style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td align="center" style="padding: 36px 12px;">
-              <table role="presentation" style="width: 640px; max-width: 100%; background-color: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);">
+            <td align="center" style="padding: 48px 16px;">
+              
+              <!-- Preheader text (hidden) -->
+              <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
+                Your ticket for ${params.eventTitle} is confirmed! Show this QR code at entry.
+              </div>
+              
+              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+                
+                <!-- Premium Header with Gradient -->
                 <tr>
-                  <td style="padding: 28px 28px 18px; background: linear-gradient(135deg, #f97316 0%, #ec4899 55%, #8b5cf6 100%);">
-                    <table role="presentation" style="width: 100%; border-collapse: collapse;">
-                      <tr>
-                        <td align="left">
-                          <div style="font-size: 18px; font-weight: 800; color: #ffffff; letter-spacing: 0.2px;">EventHaiti</div>
-                          <div style="margin-top: 6px; font-size: 13px; color: rgba(255, 255, 255, 0.92);">Ticket confirmed</div>
-                        </td>
-                        <td align="right" style="font-size: 12px; color: rgba(255, 255, 255, 0.85);">
-                          <span style="display: inline-block; padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.16);">${ticketCode}</span>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style="padding: 26px 28px 8px;">
-                    <div style="font-size: 20px; font-weight: 800; color: #111827;">Hi ${params.attendeeName},</div>
-                    <div style="margin-top: 8px; font-size: 15px; line-height: 1.7; color: #4b5563;">
-                      Your ticket is confirmed for <strong style="color: #111827;">${params.eventTitle}</strong>.
-                      Present the QR code below at the entrance.
+                  <td style="padding: 0;">
+                    <div style="background: linear-gradient(135deg, #f97316 0%, #ec4899 50%, #8b5cf6 100%); padding: 40px 40px 100px; position: relative;">
+                      <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                          <td>
+                            <div style="font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">EventHaiti</div>
+                          </td>
+                          <td align="right">
+                            <div style="display: inline-block; padding: 8px 14px; background: rgba(255, 255, 255, 0.2); border-radius: 20px; backdrop-filter: blur(10px);">
+                              <span style="font-size: 12px; font-weight: 600; color: #ffffff; letter-spacing: 0.5px;">✓ CONFIRMED</span>
+                            </div>
+                          </td>
+                        </tr>
+                      </table>
                     </div>
                   </td>
                 </tr>
-
+                
+                <!-- Ticket Card (overlapping header) -->
                 <tr>
-                  <td style="padding: 18px 28px 0;">
-                    <table role="presentation" style="width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden;">
-                      <tr>
-                        <td style="padding: 16px 16px 8px; background-color: #f9fafb;">
-                          <div style="font-size: 11px; color: #6b7280; letter-spacing: 0.6px; text-transform: uppercase;">Event</div>
-                          <div style="margin-top: 4px; font-size: 16px; font-weight: 700; color: #111827;">${params.eventTitle}</div>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 14px 16px; border-top: 1px solid #e5e7eb; background-color: #ffffff;">
-                          <div style="font-size: 11px; color: #6b7280; letter-spacing: 0.6px; text-transform: uppercase;">Date & Time</div>
-                          <div style="margin-top: 4px; font-size: 15px; color: #111827;">${params.eventDate}</div>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 14px 16px; border-top: 1px solid #e5e7eb; background-color: #ffffff;">
-                          <div style="font-size: 11px; color: #6b7280; letter-spacing: 0.6px; text-transform: uppercase;">Location</div>
-                          <div style="margin-top: 4px; font-size: 15px; color: #111827;">${params.eventVenue}</div>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style="padding: 18px 28px 0;">
-                    <table role="presentation" style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden;">
-                      <tr>
-                        <td style="padding: 18px; background-color: #ffffff;" align="center">
-                          <div style="font-size: 12px; color: #6b7280;">Scan at entry</div>
-                          <div style="height: 12px;"></div>
-                          ${params.qrCodeDataURL ? `
-                            <img src="${params.qrCodeDataURL}" alt="Ticket QR Code" style="width: 220px; height: 220px; display: block; border-radius: 14px; border: 1px solid #e5e7eb; background: #ffffff;">
-                          ` : ''}
-                          <div style="height: 12px;"></div>
-                          <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 14px; color: #111827; letter-spacing: 0.6px;">${ticketCode}</div>
-                          <div style="margin-top: 6px; font-size: 12px; color: #9ca3af;">If the image is blocked, show this code to staff.</div>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style="padding: 18px 28px 0;">
-                    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden;">
-                      <tr>
-                        <td style="padding: 14px 16px;">
-                          <div style="font-size: 13px; color: #111827; font-weight: 700;">Entry tips</div>
-                          <div style="margin-top: 8px; font-size: 13px; line-height: 1.7; color: #4b5563;">
-                            • Arrive 15–30 minutes early<br>
-                            • Bring a valid ID if requested<br>
-                            • Save this email or take a screenshot
+                  <td style="padding: 0 32px;">
+                    <div style="margin-top: -70px; background: #ffffff; border-radius: 20px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; overflow: hidden;">
+                      
+                      <!-- Event Info Section -->
+                      <div style="padding: 28px 28px 20px;">
+                        <div style="font-size: 11px; font-weight: 700; color: #f97316; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 8px;">YOUR EVENT</div>
+                        <div style="font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1.3; margin-bottom: 16px;">${params.eventTitle}</div>
+                        
+                        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                          <tr>
+                            <td style="padding: 12px 0; border-top: 1px solid #f1f5f9;">
+                              <div style="display: flex; align-items: center;">
+                                <span style="font-size: 18px; margin-right: 10px;">📅</span>
+                                <div>
+                                  <div style="font-size: 11px; color: #64748b; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">Date & Time</div>
+                                  <div style="font-size: 15px; color: #0f172a; font-weight: 600; margin-top: 2px;">${params.eventDate}</div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 12px 0; border-top: 1px solid #f1f5f9;">
+                              <div style="display: flex; align-items: center;">
+                                <span style="font-size: 18px; margin-right: 10px;">📍</span>
+                                <div>
+                                  <div style="font-size: 11px; color: #64748b; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">Location</div>
+                                  <div style="font-size: 15px; color: #0f172a; font-weight: 600; margin-top: 2px;">${params.eventVenue}</div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 12px 0; border-top: 1px solid #f1f5f9;">
+                              <div style="display: flex; align-items: center;">
+                                <span style="font-size: 18px; margin-right: 10px;">🎫</span>
+                                <div>
+                                  <div style="font-size: 11px; color: #64748b; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">Ticket Type</div>
+                                  <div style="font-size: 15px; color: #0f172a; font-weight: 600; margin-top: 2px;">${tier} · ${price}</div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        </table>
+                      </div>
+                      
+                      <!-- Dashed Divider -->
+                      <div style="position: relative; height: 24px; background: linear-gradient(90deg, #f1f5f9 50%, transparent 50%); background-size: 12px 2px; background-position: center; background-repeat: repeat-x;">
+                        <div style="position: absolute; left: -12px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background: #ffffff; border-radius: 50%;"></div>
+                        <div style="position: absolute; right: -12px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background: #ffffff; border-radius: 50%;"></div>
+                      </div>
+                      
+                      <!-- QR Code Section -->
+                      <div style="padding: 20px 28px 28px; text-align: center; background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);">
+                        <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px;">Scan at Entry</div>
+                        ${params.qrCodeDataURL ? `
+                          <div style="display: inline-block; padding: 16px; background: #ffffff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);">
+                            <img src="${params.qrCodeDataURL}" alt="Ticket QR Code" style="width: 180px; height: 180px; display: block;">
                           </div>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td align="center" style="padding: 22px 28px 8px;">
-                    <a href="${ticketsUrl}" style="display: inline-block; padding: 12px 18px; background-color: #111827; color: #ffffff; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 14px;">View my tickets</a>
-                    <div style="height: 10px;"></div>
-                    <div style="font-size: 12px; color: #9ca3af;">Questions? Reply to this email or contact the organizer.</div>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style="padding: 18px 28px 24px; background-color: #ffffff;">
-                    <div style="height: 1px; background-color: #f3f4f6; width: 100%;"></div>
-                    <div style="margin-top: 14px; text-align: center; font-size: 12px; color: #9ca3af;">
-                      EventHaiti • Discover events in Haiti
-                      <br>
-                      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://eventhaiti.com'}" style="color: #6b7280; text-decoration: none;">eventhaiti.com</a>
+                        ` : `
+                          <div style="display: inline-block; padding: 40px; background: #f1f5f9; border-radius: 16px;">
+                            <span style="font-size: 48px;">🎫</span>
+                          </div>
+                        `}
+                        <div style="margin-top: 16px; font-family: ${emailStyles.monoFont}; font-size: 16px; font-weight: 700; color: #0f172a; letter-spacing: 2px;">${ticketCode}</div>
+                        <div style="margin-top: 6px; font-size: 12px; color: #94a3b8;">Show this code if QR won't scan</div>
+                      </div>
                     </div>
                   </td>
                 </tr>
+                
+                <!-- Greeting & Tips -->
+                <tr>
+                  <td style="padding: 32px 40px;">
+                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Hi ${params.attendeeName}! 👋</div>
+                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
+                      You're all set for <strong style="color: #0f172a;">${params.eventTitle}</strong>. We can't wait to see you there!
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 14px; padding: 20px; border-left: 4px solid #f59e0b;">
+                      <div style="font-size: 13px; font-weight: 700; color: #92400e; margin-bottom: 10px;">💡 Entry Tips</div>
+                      <ul style="margin: 0; padding-left: 18px; font-size: 14px; color: #78350f; line-height: 1.8;">
+                        <li>Arrive 15–30 minutes early</li>
+                        <li>Have your QR code ready (screenshot this email)</li>
+                        <li>Bring a valid ID if requested</li>
+                      </ul>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 28px;">
+                      ${getButton('View My Tickets', ticketsUrl, '#0f172a')}
+                    </div>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                ${getEmailFooter()}
               </table>
             </td>
           </tr>
@@ -204,40 +309,71 @@ export function getEventCreatedEmail(params: {
   eventDate: string
   eventId: string
 }) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eventhaiti.com'
+  const manageUrl = `${appUrl}/organizer/events/${params.eventId}`
+  
   return `
     <!DOCTYPE html>
     <html>
       <head>
         <meta charset="utf-8">
-        <title>Event Created Successfully</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Event Published Successfully</title>
       </head>
-      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6;">
+      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
         <table role="presentation" style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td align="center" style="padding: 40px 0;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden;">
+            <td align="center" style="padding: 48px 16px;">
+              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+                
+                <!-- Header with Celebration -->
                 <tr>
-                  <td style="background: linear-gradient(135deg, #f97316 0%, #ec4899 100%); padding: 40px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px;">EventHaiti</h1>
-                    <p style="margin: 8px 0 0; color: rgba(255, 255, 255, 0.9);">Event Published! 🎊</p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding: 40px;">
-                    <h2 style="margin: 0 0 16px; color: #111827;">Félicitations ${params.organizerName}!</h2>
-                    <p style="margin: 0 0 24px; color: #6b7280; line-height: 1.6;">
-                      Your event <strong>${params.eventTitle}</strong> is now live on EventHaiti!
-                    </p>
-                    <p style="margin: 0 0 24px; color: #6b7280;">
-                      Event Date: <strong>${params.eventDate}</strong>
-                    </p>
-                    <div style="text-align: center; margin: 32px 0;">
-                      <a href="${process.env.NEXT_PUBLIC_APP_URL}/organizer/events/${params.eventId}" style="display: inline-block; padding: 14px 32px; background-color: #f97316; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                        Manage Your Event
-                      </a>
+                  <td style="padding: 0;">
+                    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%); padding: 50px 40px; text-align: center;">
+                      <div style="font-size: 64px; line-height: 1;">🎊</div>
+                      <div style="margin-top: 20px; font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">Your Event is Live!</div>
+                      <div style="margin-top: 8px; font-size: 14px; color: rgba(255, 255, 255, 0.85);">EventHaiti</div>
                     </div>
                   </td>
                 </tr>
+                
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 40px;">
+                    <div style="font-size: 24px; font-weight: 800; color: #0f172a; margin-bottom: 12px;">
+                      Félicitations, ${params.organizerName}! 🎉
+                    </div>
+                    <div style="font-size: 16px; color: #64748b; line-height: 1.7; margin-bottom: 28px;">
+                      Your event has been published and is now visible to thousands of potential attendees on EventHaiti.
+                    </div>
+                    
+                    <!-- Event Card -->
+                    <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0;">
+                      <div style="font-size: 11px; font-weight: 700; color: #10b981; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 8px;">NOW LIVE</div>
+                      <div style="font-size: 20px; font-weight: 800; color: #0f172a; line-height: 1.3; margin-bottom: 16px;">${params.eventTitle}</div>
+                      <div style="display: flex; align-items: center; color: #64748b; font-size: 14px;">
+                        <span style="margin-right: 8px;">📅</span>
+                        <span>${params.eventDate}</span>
+                      </div>
+                    </div>
+                    
+                    <!-- Tips Section -->
+                    <div style="margin-top: 28px; padding: 20px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 14px; border-left: 4px solid #3b82f6;">
+                      <div style="font-size: 14px; font-weight: 700; color: #1e40af; margin-bottom: 12px;">🚀 Next Steps</div>
+                      <ul style="margin: 0; padding-left: 18px; font-size: 14px; color: #1e3a8a; line-height: 1.9;">
+                        <li>Share your event link on social media</li>
+                        <li>Invite your audience via email or WhatsApp</li>
+                        <li>Monitor ticket sales from your dashboard</li>
+                      </ul>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 32px;">
+                      ${getButton('Manage Your Event', manageUrl, '#0f172a')}
+                    </div>
+                  </td>
+                </tr>
+                
+                ${getEmailFooter()}
               </table>
             </td>
           </tr>
@@ -255,58 +391,69 @@ export function getRefundRequestEmail(params: {
   ticketId: string
   amount: number
 }) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eventhaiti.com'
+  
   return `
     <!DOCTYPE html>
     <html>
-      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6;">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Refund Request</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
         <table role="presentation" style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td align="center" style="padding: 40px 0;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <td align="center" style="padding: 48px 16px;">
+              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+                
+                <!-- Header -->
                 <tr>
-                  <td style="background: linear-gradient(135deg, #f97316 0%, #ec4899 100%); padding: 40px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">Refund Request</h1>
+                  <td style="padding: 0;">
+                    <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 40px; text-align: center;">
+                      <div style="display: inline-block; padding: 10px 18px; background: rgba(0, 0, 0, 0.15); border-radius: 30px; margin-bottom: 16px;">
+                        <span style="font-size: 13px; font-weight: 600; color: #ffffff; letter-spacing: 0.5px;">⚠️ ACTION REQUIRED</span>
+                      </div>
+                      <div style="font-size: 22px; font-weight: 800; color: #ffffff;">Refund Request Received</div>
+                    </div>
                   </td>
                 </tr>
+                
+                <!-- Content -->
                 <tr>
                   <td style="padding: 40px;">
-                    <h2 style="margin: 0 0 16px; color: #111827; font-size: 24px;">Hi ${params.organizerName},</h2>
-                    <p style="margin: 0 0 24px; color: #6b7280; font-size: 16px; line-height: 1.6;">
-                      An attendee has requested a refund for <strong style="color: #111827;">${params.eventTitle}</strong>.
-                    </p>
-                    
-                    <table role="presentation" style="width: 100%; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; margin: 24px 0;">
-                      <tr>
-                        <td style="padding: 16px; background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-                          <p style="margin: 0; color: #6b7280; font-size: 12px;">Attendee Email</p>
-                          <p style="margin: 4px 0 0; color: #111827; font-size: 16px;">${params.attendeeEmail}</p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 16px; background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-                          <p style="margin: 0; color: #6b7280; font-size: 12px;">Refund Amount</p>
-                          <p style="margin: 4px 0 0; color: #111827; font-size: 16px; font-weight: 600;">$${params.amount.toFixed(2)}</p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 16px; background-color: #f9fafb;">
-                          <p style="margin: 0; color: #6b7280; font-size: 12px;">Reason</p>
-                          <p style="margin: 4px 0 0; color: #111827; font-size: 16px;">${params.reason}</p>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <div style="text-align: center; margin-top: 32px;">
-                      <a href="${process.env.NEXT_PUBLIC_APP_URL}/organizer/events" style="display: inline-block; padding: 14px 32px; background-color: #f97316; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                        Review Refund Request
-                      </a>
+                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Hi ${params.organizerName},</div>
+                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 28px;">
+                      An attendee has requested a refund for your event <strong style="color: #0f172a;">${params.eventTitle}</strong>. Please review the details below.
                     </div>
-
-                    <p style="margin: 24px 0 0; color: #9ca3af; font-size: 14px; text-align: center;">
+                    
+                    <!-- Request Details Card -->
+                    <div style="background: #f8fafc; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
+                      <div style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
+                        <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">Attendee</div>
+                        <div style="font-size: 16px; color: #0f172a; font-weight: 600; margin-top: 6px;">${params.attendeeEmail}</div>
+                      </div>
+                      <div style="padding: 20px; border-bottom: 1px solid #e2e8f0; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
+                        <div style="font-size: 11px; font-weight: 700; color: #92400e; letter-spacing: 1px; text-transform: uppercase;">Refund Amount</div>
+                        <div style="font-size: 28px; color: #78350f; font-weight: 800; margin-top: 6px;">$${params.amount.toFixed(2)}</div>
+                      </div>
+                      <div style="padding: 20px;">
+                        <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">Reason Given</div>
+                        <div style="font-size: 15px; color: #0f172a; margin-top: 6px; line-height: 1.6;">${params.reason}</div>
+                      </div>
+                    </div>
+                    
+                    <div style="font-family: ${emailStyles.monoFont}; font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px;">
                       Ticket ID: ${params.ticketId}
-                    </p>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 28px;">
+                      ${getButton('Review Request', `${appUrl}/organizer/events`, '#f59e0b')}
+                    </div>
                   </td>
                 </tr>
+                
+                ${getEmailFooter()}
               </table>
             </td>
           </tr>
@@ -324,52 +471,77 @@ export function getRefundProcessedEmail(params: {
   ticketId: string
 }) {
   const isApproved = params.status === 'approved'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eventhaiti.com'
   
   return `
     <!DOCTYPE html>
     <html>
-      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6;">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Refund ${isApproved ? 'Approved' : 'Update'}</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
         <table role="presentation" style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td align="center" style="padding: 40px 0;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <td align="center" style="padding: 48px 16px;">
+              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+                
+                <!-- Header -->
                 <tr>
-                  <td style="background: ${isApproved ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'}; padding: 40px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">
-                      Refund ${isApproved ? 'Approved' : 'Denied'}
-                    </h1>
+                  <td style="padding: 0;">
+                    <div style="background: ${isApproved ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #64748b 0%, #475569 100%)'}; padding: 50px 40px; text-align: center;">
+                      <div style="font-size: 56px; line-height: 1;">${isApproved ? '✅' : '📋'}</div>
+                      <div style="margin-top: 20px; font-size: 22px; font-weight: 800; color: #ffffff;">
+                        Refund ${isApproved ? 'Approved' : 'Denied'}
+                      </div>
+                    </div>
                   </td>
                 </tr>
+                
+                <!-- Content -->
                 <tr>
                   <td style="padding: 40px;">
-                    <h2 style="margin: 0 0 16px; color: #111827; font-size: 24px;">Hi ${params.attendeeName},</h2>
-                    <p style="margin: 0 0 24px; color: #6b7280; font-size: 16px; line-height: 1.6;">
-                      Your refund request for <strong style="color: #111827;">${params.eventTitle}</strong> has been ${isApproved ? 'approved' : 'denied'}.
-                    </p>
+                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Hi ${params.attendeeName},</div>
+                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 28px;">
+                      Your refund request for <strong style="color: #0f172a;">${params.eventTitle}</strong> has been reviewed.
+                    </div>
                     
                     ${isApproved ? `
-                      <table role="presentation" style="width: 100%; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; margin: 24px 0;">
-                        <tr>
-                          <td style="padding: 16px; background-color: #f9fafb;">
-                            <p style="margin: 0; color: #6b7280; font-size: 12px;">Refund Amount</p>
-                            <p style="margin: 4px 0 0; color: #10b981; font-size: 24px; font-weight: 700;">$${params.refundAmount.toFixed(2)}</p>
-                          </td>
-                        </tr>
-                      </table>
-                      <p style="margin: 24px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-                        The refund will be processed to your original payment method within 5-10 business days.
-                      </p>
+                      <!-- Approved Amount Card -->
+                      <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 16px; padding: 28px; text-align: center; border: 1px solid #a7f3d0;">
+                        <div style="font-size: 11px; font-weight: 700; color: #059669; letter-spacing: 1.2px; text-transform: uppercase;">Refund Amount</div>
+                        <div style="font-size: 42px; font-weight: 800; color: #047857; margin-top: 8px;">$${params.refundAmount.toFixed(2)}</div>
+                        <div style="font-size: 13px; color: #10b981; margin-top: 8px;">Processing to your original payment method</div>
+                      </div>
+                      
+                      <div style="margin-top: 24px; padding: 20px; background: #f8fafc; border-radius: 14px;">
+                        <div style="font-size: 14px; font-weight: 600; color: #0f172a; margin-bottom: 10px;">⏱️ What happens next?</div>
+                        <div style="font-size: 14px; color: #64748b; line-height: 1.8;">
+                          Your refund will appear on your statement within <strong>5-10 business days</strong>, depending on your bank or payment provider.
+                        </div>
+                      </div>
                     ` : `
-                      <p style="margin: 24px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-                        Unfortunately, the organizer was unable to approve your refund request. Please contact the organizer directly for more information.
-                      </p>
+                      <!-- Denied Card -->
+                      <div style="background: #f8fafc; border-radius: 16px; padding: 24px; border-left: 4px solid #64748b;">
+                        <div style="font-size: 15px; color: #475569; line-height: 1.7;">
+                          Unfortunately, the organizer was unable to approve your refund request for this event. 
+                          If you have questions, please contact the organizer directly.
+                        </div>
+                      </div>
+                      
+                      <div style="text-align: center; margin-top: 28px;">
+                        ${getButton('Browse Other Events', appUrl, '#0f172a')}
+                      </div>
                     `}
-
-                    <p style="margin: 24px 0 0; color: #9ca3af; font-size: 14px; text-align: center;">
-                      Ticket ID: ${params.ticketId}
-                    </p>
+                    
+                    <div style="font-family: ${emailStyles.monoFont}; font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px;">
+                      Reference: ${params.ticketId}
+                    </div>
                   </td>
                 </tr>
+                
+                ${getEmailFooter()}
               </table>
             </td>
           </tr>
@@ -385,56 +557,74 @@ export function getWaitlistNotificationEmail(params: {
   quantity: number
   eventId: string
 }) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eventhaiti.com'
+  const eventUrl = `${appUrl}/events/${params.eventId}`
+  
   return `
     <!DOCTYPE html>
     <html>
-      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6;">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Tickets Now Available!</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
         <table role="presentation" style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td align="center" style="padding: 40px 0;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <td align="center" style="padding: 48px 16px;">
+              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+                
+                <!-- Exciting Header -->
                 <tr>
-                  <td style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); padding: 40px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">Tickets Available! 🎟️</h1>
+                  <td style="padding: 0;">
+                    <div style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #4f46e5 100%); padding: 50px 40px; text-align: center;">
+                      <div style="font-size: 56px; line-height: 1;">🎟️</div>
+                      <div style="margin-top: 20px; font-size: 22px; font-weight: 800; color: #ffffff;">Tickets Available!</div>
+                      <div style="margin-top: 8px; font-size: 14px; color: rgba(255, 255, 255, 0.85);">You're off the waitlist</div>
+                    </div>
                   </td>
                 </tr>
+                
+                <!-- Content -->
                 <tr>
                   <td style="padding: 40px;">
-                    <h2 style="margin: 0 0 16px; color: #111827; font-size: 24px;">Great News!</h2>
-                    <p style="margin: 0 0 24px; color: #6b7280; font-size: 16px; line-height: 1.6;">
-                      Tickets are now available for <strong style="color: #111827;">${params.eventTitle}</strong>!
-                    </p>
-                    
-                    <table role="presentation" style="width: 100%; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; margin: 24px 0;">
-                      <tr>
-                        <td style="padding: 16px; background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-                          <p style="margin: 0; color: #6b7280; font-size: 12px;">Event</p>
-                          <p style="margin: 4px 0 0; color: #111827; font-size: 16px; font-weight: 600;">${params.eventTitle}</p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 16px; background-color: #f9fafb;">
-                          <p style="margin: 0; color: #6b7280; font-size: 12px;">Date</p>
-                          <p style="margin: 4px 0 0; color: #111827; font-size: 16px;">${new Date(params.eventDate).toLocaleString()}</p>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <p style="margin: 24px 0; color: #6b7280; font-size: 14px; line-height: 1.6; text-align: center;">
-                      You requested ${params.quantity} ticket${params.quantity > 1 ? 's' : ''}. Grab ${params.quantity > 1 ? 'them' : 'it'} before ${params.quantity > 1 ? "they're" : "it's"} gone!
-                    </p>
-
-                    <div style="text-align: center; margin-top: 32px;">
-                      <a href="${process.env.NEXT_PUBLIC_APP_URL}/events/${params.eventId}" style="display: inline-block; padding: 14px 32px; background-color: #8b5cf6; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                        Buy Tickets Now
-                      </a>
+                    <div style="font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 12px; text-align: center;">
+                      Great News! 🎉
                     </div>
-
-                    <p style="margin: 24px 0 0; color: #9ca3af; font-size: 12px; text-align: center;">
-                      This is a limited time offer. Tickets are available on a first-come, first-served basis.
-                    </p>
+                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 28px; text-align: center;">
+                      Tickets are now available for the event you were waiting for!
+                    </div>
+                    
+                    <!-- Event Card -->
+                    <div style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border-radius: 16px; padding: 24px; border: 1px solid #e9d5ff;">
+                      <div style="font-size: 11px; font-weight: 700; color: #8b5cf6; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 10px;">🔥 HOT EVENT</div>
+                      <div style="font-size: 20px; font-weight: 800; color: #0f172a; line-height: 1.3; margin-bottom: 16px;">${params.eventTitle}</div>
+                      <div style="padding-top: 16px; border-top: 1px solid #e9d5ff;">
+                        <div style="display: flex; align-items: center; color: #7c3aed; font-size: 14px; font-weight: 600;">
+                          <span style="margin-right: 8px;">📅</span>
+                          <span>${new Date(params.eventDate).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Urgency Notice -->
+                    <div style="margin-top: 24px; padding: 16px 20px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; text-align: center;">
+                      <div style="font-size: 14px; color: #92400e;">
+                        ⏰ <strong>Don't wait!</strong> You requested <strong>${params.quantity}</strong> ticket${params.quantity > 1 ? 's' : ''} - grab ${params.quantity > 1 ? 'them' : 'it'} before ${params.quantity > 1 ? "they're" : "it's"} gone!
+                      </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 28px;">
+                      ${getButton('Get My Tickets Now', eventUrl, '#8b5cf6')}
+                    </div>
+                    
+                    <div style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px;">
+                      Tickets are available on a first-come, first-served basis.
+                    </div>
                   </td>
                 </tr>
+                
+                ${getEmailFooter()}
               </table>
             </td>
           </tr>
@@ -453,69 +643,88 @@ export function getTicketTransferRequestEmail(params: {
   transferToken: string
   expiresAt: string
 }) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eventhaiti.com'
+  const acceptUrl = `${appUrl}/tickets/transfer/${params.transferToken}`
+  const declineUrl = `${appUrl}/tickets/transfer/${params.transferToken}?action=reject`
+  
   return `
     <!DOCTYPE html>
     <html>
-      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6;">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Someone Sent You a Ticket!</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
         <table role="presentation" style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td align="center" style="padding: 40px 0;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <td align="center" style="padding: 48px 16px;">
+              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+                
+                <!-- Header -->
                 <tr>
-                  <td style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); padding: 40px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">Ticket Transfer 🎟️</h1>
+                  <td style="padding: 0;">
+                    <div style="background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%); padding: 50px 40px; text-align: center;">
+                      <div style="font-size: 56px; line-height: 1;">🎁</div>
+                      <div style="margin-top: 20px; font-size: 22px; font-weight: 800; color: #ffffff;">You've Received a Ticket!</div>
+                    </div>
                   </td>
                 </tr>
+                
+                <!-- Content -->
                 <tr>
                   <td style="padding: 40px;">
-                    <h2 style="margin: 0 0 16px; color: #111827; font-size: 24px;">You've Received a Ticket!</h2>
-                    <p style="margin: 0 0 24px; color: #6b7280; font-size: 16px; line-height: 1.6;">
-                      <strong style="color: #111827;">${params.senderName}</strong> (${params.senderEmail}) wants to transfer you a ticket for <strong style="color: #111827;">${params.eventTitle}</strong>.
-                    </p>
+                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
+                      <strong style="color: #0f172a;">${params.senderName}</strong> wants to send you a ticket for an upcoming event!
+                    </div>
                     
                     ${params.message ? `
-                      <div style="background-color: #f9fafb; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0;">
-                        <p style="margin: 0; color: #6b7280; font-size: 14px; font-style: italic;">
-                          "${params.message}"
-                        </p>
+                      <!-- Personal Message -->
+                      <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #3b82f6; padding: 16px 20px; margin-bottom: 24px; border-radius: 0 12px 12px 0;">
+                        <div style="font-size: 12px; font-weight: 600; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Message from ${params.senderName}</div>
+                        <div style="font-size: 15px; color: #0f172a; font-style: italic; line-height: 1.6;">"${params.message}"</div>
                       </div>
                     ` : ''}
-
-                    <table role="presentation" style="width: 100%; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; margin: 24px 0;">
-                      <tr>
-                        <td style="padding: 16px; background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-                          <p style="margin: 0; color: #6b7280; font-size: 12px;">Event</p>
-                          <p style="margin: 4px 0 0; color: #111827; font-size: 16px; font-weight: 600;">${params.eventTitle}</p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 16px; background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-                          <p style="margin: 0; color: #6b7280; font-size: 12px;">Date</p>
-                          <p style="margin: 4px 0 0; color: #111827; font-size: 16px;">${new Date(params.eventDate).toLocaleString()}</p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 16px; background-color: #f9fafb;">
-                          <p style="margin: 0; color: #6b7280; font-size: 12px;">Expires</p>
-                          <p style="margin: 4px 0 0; color: #ef4444; font-size: 14px; font-weight: 600;">${new Date(params.expiresAt).toLocaleString()}</p>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <div style="text-align: center; margin: 32px 0;">
-                      <a href="${process.env.NEXT_PUBLIC_APP_URL}/tickets/transfer/${params.transferToken}" style="display: inline-block; padding: 14px 32px; background-color: #10b981; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; margin-right: 12px;">
-                        Accept Transfer
-                      </a>
-                      <a href="${process.env.NEXT_PUBLIC_APP_URL}/tickets/transfer/${params.transferToken}?action=reject" style="display: inline-block; padding: 14px 32px; background-color: #6b7280; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                        Decline
-                      </a>
+                    
+                    <!-- Event Card -->
+                    <div style="background: #f8fafc; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
+                      <div style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
+                        <div style="font-size: 11px; font-weight: 700; color: #3b82f6; letter-spacing: 1px; text-transform: uppercase;">Event</div>
+                        <div style="font-size: 18px; color: #0f172a; font-weight: 800; margin-top: 6px;">${params.eventTitle}</div>
+                      </div>
+                      <div style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
+                        <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">When</div>
+                        <div style="font-size: 15px; color: #0f172a; font-weight: 600; margin-top: 6px;">${new Date(params.eventDate).toLocaleString()}</div>
+                      </div>
+                      <div style="padding: 20px; background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);">
+                        <div style="font-size: 11px; font-weight: 700; color: #dc2626; letter-spacing: 1px; text-transform: uppercase;">⏰ Expires</div>
+                        <div style="font-size: 14px; color: #b91c1c; font-weight: 600; margin-top: 6px;">${new Date(params.expiresAt).toLocaleString()}</div>
+                      </div>
                     </div>
-
-                    <p style="margin: 24px 0 0; color: #9ca3af; font-size: 12px; text-align: center;">
+                    
+                    <!-- Action Buttons -->
+                    <div style="text-align: center; margin-top: 32px;">
+                      <table role="presentation" style="display: inline-block;">
+                        <tr>
+                          <td style="padding-right: 12px;">
+                            ${getButton('Accept Ticket', acceptUrl, '#10b981')}
+                          </td>
+                          <td>
+                            <a href="${declineUrl}" style="display: inline-block; padding: 14px 28px; background-color: #f1f5f9; color: #475569; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 15px;">
+                              Decline
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                    </div>
+                    
+                    <div style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px;">
                       This transfer will expire automatically if not accepted within 7 days.
-                    </p>
+                    </div>
                   </td>
                 </tr>
+                
+                ${getEmailFooter()}
               </table>
             </td>
           </tr>
@@ -532,45 +741,65 @@ export function getTicketTransferResponseEmail(params: {
   ticketId: string
 }) {
   const isAccepted = params.action === 'accepted'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eventhaiti.com'
   
   return `
     <!DOCTYPE html>
     <html>
-      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6;">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Transfer ${isAccepted ? 'Accepted' : 'Declined'}</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
         <table role="presentation" style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td align="center" style="padding: 40px 0;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <td align="center" style="padding: 48px 16px;">
+              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+                
+                <!-- Header -->
                 <tr>
-                  <td style="background: ${isAccepted ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)'}; padding: 40px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">
-                      Transfer ${isAccepted ? 'Accepted' : 'Declined'}
-                    </h1>
+                  <td style="padding: 0;">
+                    <div style="background: ${isAccepted ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #64748b 0%, #475569 100%)'}; padding: 50px 40px; text-align: center;">
+                      <div style="font-size: 56px; line-height: 1;">${isAccepted ? '🎉' : '↩️'}</div>
+                      <div style="margin-top: 20px; font-size: 22px; font-weight: 800; color: #ffffff;">
+                        Transfer ${isAccepted ? 'Successful!' : 'Declined'}
+                      </div>
+                    </div>
                   </td>
                 </tr>
+                
+                <!-- Content -->
                 <tr>
                   <td style="padding: 40px;">
-                    <h2 style="margin: 0 0 16px; color: #111827; font-size: 24px;">Transfer Update</h2>
-                    <p style="margin: 0 0 24px; color: #6b7280; font-size: 16px; line-height: 1.6;">
-                      <strong style="color: #111827;">${params.recipientName}</strong> has ${isAccepted ? 'accepted' : 'declined'} your ticket transfer for <strong style="color: #111827;">${params.eventTitle}</strong>.
-                    </p>
+                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 12px;">Transfer Update</div>
+                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
+                      <strong style="color: #0f172a;">${params.recipientName}</strong> has ${isAccepted ? 'accepted' : 'declined'} your ticket transfer for <strong style="color: #0f172a;">${params.eventTitle}</strong>.
+                    </div>
                     
                     ${isAccepted ? `
-                      <p style="margin: 24px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-                        The ticket has been successfully transferred. The new owner will receive their own ticket confirmation.
-                      </p>
+                      <!-- Success Message -->
+                      <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 16px; padding: 24px; text-align: center; border: 1px solid #a7f3d0;">
+                        <div style="font-size: 14px; color: #065f46; line-height: 1.7;">
+                          ✅ The ticket has been successfully transferred.<br>
+                          The new owner will receive their own ticket confirmation.
+                        </div>
+                      </div>
                     ` : `
-                      <p style="margin: 24px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-                        Your ticket is still yours. You can try transferring it to someone else if needed.
-                      </p>
-                      <div style="text-align: center; margin-top: 32px;">
-                        <a href="${process.env.NEXT_PUBLIC_APP_URL}/tickets/${params.ticketId}" style="display: inline-block; padding: 14px 32px; background-color: #f97316; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                          View Ticket
-                        </a>
+                      <!-- Ticket Still Yours -->
+                      <div style="background: #f8fafc; border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0;">
+                        <div style="font-size: 14px; color: #475569; line-height: 1.7; margin-bottom: 20px;">
+                          Your ticket is still yours. You can try transferring it to someone else or keep it for yourself!
+                        </div>
+                        <div style="text-align: center;">
+                          ${getButton('View My Ticket', `${appUrl}/tickets/${params.ticketId}`, '#f97316')}
+                        </div>
                       </div>
                     `}
                   </td>
                 </tr>
+                
+                ${getEmailFooter()}
               </table>
             </td>
           </tr>
@@ -587,27 +816,44 @@ export function getTicketTransferCancelledEmail(params: {
   return `
     <!DOCTYPE html>
     <html>
-      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6;">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Transfer Cancelled</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
         <table role="presentation" style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td align="center" style="padding: 40px 0;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <td align="center" style="padding: 48px 16px;">
+              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+                
+                <!-- Header -->
                 <tr>
-                  <td style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); padding: 40px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">Transfer Cancelled</h1>
+                  <td style="padding: 0;">
+                    <div style="background: linear-gradient(135deg, #64748b 0%, #475569 100%); padding: 50px 40px; text-align: center;">
+                      <div style="font-size: 48px; line-height: 1;">🚫</div>
+                      <div style="margin-top: 20px; font-size: 22px; font-weight: 800; color: #ffffff;">Transfer Cancelled</div>
+                    </div>
                   </td>
                 </tr>
+                
+                <!-- Content -->
                 <tr>
                   <td style="padding: 40px;">
-                    <h2 style="margin: 0 0 16px; color: #111827; font-size: 24px;">Transfer Withdrawn</h2>
-                    <p style="margin: 0 0 24px; color: #6b7280; font-size: 16px; line-height: 1.6;">
-                      ${params.senderName} has cancelled the ticket transfer for <strong style="color: #111827;">${params.eventTitle}</strong>.
-                    </p>
-                    <p style="margin: 0; color: #9ca3af; font-size: 14px;">
-                      No action is needed on your part.
-                    </p>
+                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 12px;">Transfer Withdrawn</div>
+                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
+                      <strong style="color: #0f172a;">${params.senderName}</strong> has cancelled the ticket transfer for <strong style="color: #0f172a;">${params.eventTitle}</strong>.
+                    </div>
+                    
+                    <div style="background: #f8fafc; border-radius: 14px; padding: 20px; text-align: center;">
+                      <div style="font-size: 14px; color: #64748b;">
+                        No action is needed on your part. If you're still interested in attending this event, you can purchase tickets directly.
+                      </div>
+                    </div>
                   </td>
                 </tr>
+                
+                ${getEmailFooter()}
               </table>
             </td>
           </tr>
@@ -624,46 +870,60 @@ export function getEventUpdateEmail(params: {
   updateMessage: string
   eventId: string
 }) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eventhaiti.com'
+  const eventUrl = `${appUrl}/events/${params.eventId}`
+  
   return `
     <!DOCTYPE html>
     <html>
-      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6;">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Event Update - ${params.eventTitle}</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: ${emailStyles.fontFamily}; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
         <table role="presentation" style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td align="center" style="padding: 40px 0;">
-              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <td align="center" style="padding: 48px 16px;">
+              <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+                
+                <!-- Header -->
                 <tr>
-                  <td style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); padding: 40px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">📢 Event Update</h1>
+                  <td style="padding: 0;">
+                    <div style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); padding: 40px; text-align: center;">
+                      <div style="display: inline-block; padding: 10px 18px; background: rgba(0, 0, 0, 0.15); border-radius: 30px; margin-bottom: 16px;">
+                        <span style="font-size: 13px; font-weight: 600; color: #ffffff; letter-spacing: 0.5px;">📢 EVENT UPDATE</span>
+                      </div>
+                      <div style="font-size: 20px; font-weight: 800; color: #ffffff;">${params.eventTitle}</div>
+                    </div>
                   </td>
                 </tr>
+                
+                <!-- Content -->
                 <tr>
                   <td style="padding: 40px;">
-                    <h2 style="margin: 0 0 8px; color: #111827; font-size: 24px;">Hi ${params.attendeeName}!</h2>
-                    <p style="margin: 0 0 24px; color: #6b7280; font-size: 14px;">
-                      An update has been posted for <strong style="color: #111827;">${params.eventTitle}</strong>
-                    </p>
+                    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Hi ${params.attendeeName}! 👋</div>
+                    <div style="font-size: 15px; color: #64748b; line-height: 1.7; margin-bottom: 24px;">
+                      The organizer has posted an important update about your event.
+                    </div>
                     
-                    <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 24px; margin: 24px 0; border-radius: 8px;">
-                      <h3 style="margin: 0 0 12px; color: #78350f; font-size: 18px; font-weight: 600;">
-                        ${params.updateTitle}
-                      </h3>
-                      <p style="margin: 0; color: #92400e; font-size: 15px; line-height: 1.6; white-space: pre-line;">
-                        ${params.updateMessage}
-                      </p>
+                    <!-- Update Card -->
+                    <div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-radius: 16px; padding: 24px; border-left: 4px solid #f59e0b;">
+                      <div style="font-size: 18px; font-weight: 800; color: #78350f; margin-bottom: 12px;">${params.updateTitle}</div>
+                      <div style="font-size: 15px; color: #92400e; line-height: 1.8; white-space: pre-line;">${params.updateMessage}</div>
                     </div>
-
+                    
                     <div style="text-align: center; margin-top: 32px;">
-                      <a href="${process.env.NEXT_PUBLIC_APP_URL}/events/${params.eventId}" style="display: inline-block; padding: 14px 32px; background-color: #f97316; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                        View Event Details
-                      </a>
+                      ${getButton('View Event Details', eventUrl, '#0f172a')}
                     </div>
-
-                    <p style="margin: 24px 0 0; color: #9ca3af; font-size: 12px; text-align: center;">
+                    
+                    <div style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px;">
                       This update was sent by the event organizer to all ticket holders.
-                    </p>
+                    </div>
                   </td>
                 </tr>
+                
+                ${getEmailFooter()}
               </table>
             </td>
           </tr>
