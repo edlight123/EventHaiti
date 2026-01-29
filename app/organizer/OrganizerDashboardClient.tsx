@@ -6,6 +6,7 @@ import { ActionCenter } from '@/components/organizer/ActionCenter'
 import { SalesSnapshot } from '@/components/organizer/SalesSnapshot'
 import { OrganizerEventCard } from '@/components/organizer/OrganizerEventCard'
 import { PayoutsWidget } from '@/components/organizer/PayoutsWidget'
+import WelcomeDashboard from '@/components/organizer/WelcomeDashboard'
 import Link from 'next/link'
 import { CalendarPlus, DollarSign, CalendarDays, Wallet, BarChart3, QrCode, TicketPercent } from 'lucide-react'
 
@@ -28,6 +29,9 @@ interface OrganizerDashboardClientProps {
   salesData: any
   events: any[]
   eventStatsById: Record<string, { ticketsSold: number; revenueByCurrencyCents: Record<string, number> }>
+  isVerified: boolean
+  organizerName: string
+  hasCreatedEvent: boolean
 }
 
 export default function OrganizerDashboardClient({
@@ -39,9 +43,28 @@ export default function OrganizerDashboardClient({
   payoutCurrency,
   salesData,
   events,
-  eventStatsById
+  eventStatsById,
+  isVerified,
+  organizerName,
+  hasCreatedEvent
 }: OrganizerDashboardClientProps) {
   const { t } = useTranslation('common')
+
+  // Show welcome dashboard for new organizers (no events yet)
+  const isNewOrganizer = !hasCreatedEvent
+
+  if (isNewOrganizer) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+        <WelcomeDashboard
+          organizerName={organizerName}
+          hasCreatedEvent={hasCreatedEvent}
+          isVerified={isVerified}
+          hasPayoutSetup={hasPayoutSetup}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">

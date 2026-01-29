@@ -206,6 +206,9 @@ export default async function OrganizerDashboard({
       (eventStatsById[eventId].revenueByCurrencyCents[currency] || 0) + cents
   }
 
+  // Determine if this is a new organizer (no events created yet)
+  const hasCreatedEvent = (currentStats.events?.length ?? 0) > 0 || (statsLifetime.events?.length ?? 0) > 0
+
   return (
     <OrganizerDashboardClient
       nextEvent={serializedNextEvent}
@@ -217,6 +220,9 @@ export default async function OrganizerDashboard({
       salesData={salesData}
       events={serializedEvents}
       eventStatsById={eventStatsById}
+      isVerified={isVerified}
+      organizerName={user.name || user.email || ''}
+      hasCreatedEvent={hasCreatedEvent}
     />
   )
 }
