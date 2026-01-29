@@ -63,22 +63,45 @@ export default async function HomePage({
 
   // Apply filters and sorting using new filter system
   events = applyFiltersAndSort(events, filters)
+  
+  console.log('[HomePage] Events after applyFiltersAndSort:', events.length)
 
-  // Safety: never show ended events on Home.
+  // Filter out events that have definitively ended
+  // Be lenient: show events that are ongoing or haven't started yet
   const now = new Date()
-  const notEnded = (event: any) => {
+  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+  
+  const notDefinitelyEnded = (event: any) => {
     const start = event?.start_datetime ? new Date(event.start_datetime) : null
     const end = event?.end_datetime ? new Date(event.end_datetime) : null
 
-    if (end && !Number.isNaN(end.getTime())) return end.getTime() >= now.getTime()
-    if (start && !Number.isNaN(start.getTime())) return start.getTime() >= now.getTime()
-    return false
+    // If event has an end time, check if it's passed
+    if (end && !Number.isNaN(end.getTime())) {
+      return end.getTime() >= now.getTime()
+    }
+    
+    // If no end time but has start, show if started within last week (could be ongoing)
+    // or hasn't started yet
+    if (start && !Number.isNaN(start.getTime())) {
+      return start.getTime() >= oneWeekAgo.getTime()
+    }
+    
+    // If no valid dates, show it anyway
+    return true
   }
 
-  events = events.filter(notEnded)
+  console.log('[HomePage] Sample events before date filter:', events.slice(0, 3).map(e => ({
+    id: e.id,
+    title: e.title?.substring(0, 20),
+    start: e.start_datetime,
+    end: e.end_datetime,
+    country: e.country
+  })))
+
+  events = events.filter(notDefinitelyEnded)
   
   // DEBUG: Log event countries to understand what data we have
-  console.log('[HomePage] Total events after notEnded filter:', events.length)
+  console.log('[HomePage] Total events after date filter:', events.length)
   console.log('[HomePage] User country:', userCountry)
   console.log('[HomePage] Event countries:', events.slice(0, 10).map(e => ({ id: e.id, title: e.title?.substring(0, 30), country: e.country })))
   
@@ -116,13 +139,13 @@ export default async function HomePage({
     }))
   
   const trendingEvents = prioritizedEvents
-    .filter(notEnded)
+    .filter(notDefinitelyEnded)
     .filter(e => (e.tickets_sold || 0) > 10)
     .slice(0, 6)
   const thisWeekEnd = new Date(now)
   thisWeekEnd.setDate(now.getDate() + 7)
   const upcomingThisWeek = prioritizedEvents
-    .filter(notEnded)
+    .filter(notDefinitelyEnded)
     .filter(e => {
       const start = new Date(e.start_datetime)
       if (Number.isNaN(start.getTime())) return false

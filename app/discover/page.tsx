@@ -76,18 +76,31 @@ export default async function DiscoverPage({
   // Apply filters and sort
   let filteredEvents = applyFiltersAndSort(allEvents, filters)
 
-  // Safety: never show ended events on Discover.
+  // Filter out events that have definitively ended
+  // Be lenient: show events that are ongoing or haven't started yet
   const now = new Date()
-  const notEnded = (event: any) => {
+  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+  
+  const notDefinitelyEnded = (event: any) => {
     const start = event?.start_datetime ? new Date(event.start_datetime) : null
     const end = event?.end_datetime ? new Date(event.end_datetime) : null
 
-    if (end && !Number.isNaN(end.getTime())) return end.getTime() >= now.getTime()
-    if (start && !Number.isNaN(start.getTime())) return start.getTime() >= now.getTime()
-    return false
+    // If event has an end time, check if it's passed
+    if (end && !Number.isNaN(end.getTime())) {
+      return end.getTime() >= now.getTime()
+    }
+    
+    // If no end time but has start, show if started within last week (could be ongoing)
+    // or hasn't started yet
+    if (start && !Number.isNaN(start.getTime())) {
+      return start.getTime() >= oneWeekAgo.getTime()
+    }
+    
+    // If no valid dates, show it anyway
+    return true
   }
 
-  filteredEvents = filteredEvents.filter(notEnded)
+  filteredEvents = filteredEvents.filter(notDefinitelyEnded)
   
   // STRICT country filtering - ONLY show events from user's country
   // Events without a country field are assumed to be in Haiti (HT)
@@ -128,7 +141,7 @@ export default async function DiscoverPage({
   
   // Near you events (specific city + commune)
   const nearYouEvents = filters.city 
-    ? filterEventsByLocation(allEvents, filters.city, filters.commune).filter(notEnded)
+    ? filterEventsByLocation(allEvents, filters.city, filters.commune).filter(notDefinitelyEnded)
     : []
 
   const hasActiveFilters: boolean = filters.date !== 'any' || 
