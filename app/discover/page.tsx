@@ -90,8 +90,11 @@ export default async function DiscoverPage({
   filteredEvents = filteredEvents.filter(notEnded)
   
   // STRICT country filtering - ONLY show events from user's country
-  // Never mix events from different countries
-  filteredEvents = filteredEvents.filter(e => e.country === userCountry)
+  // Events without a country field are assumed to be in Haiti (HT)
+  filteredEvents = filteredEvents.filter(e => {
+    const eventCountry = e.country || 'HT' // Default to Haiti if no country set
+    return eventCountry === userCountry
+  })
   
   // Apply search filter
   const searchQuery = params.search as string | undefined

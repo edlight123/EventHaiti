@@ -78,8 +78,11 @@ export default async function HomePage({
   events = events.filter(notEnded)
   
   // STRICT country filtering - ONLY show events from user's country
-  // Never mix events from different countries
-  events = events.filter(e => e.country === userCountry)
+  // Events without a country field are assumed to be in Haiti (HT)
+  events = events.filter(e => {
+    const eventCountry = e.country || 'HT' // Default to Haiti if no country set
+    return eventCountry === userCountry
+  })
   
   // Prioritize events by user's city first, then rest of country
   const eventsInUserCity = userCity ? events.filter(e => e.city === userCity) : []
