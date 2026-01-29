@@ -319,7 +319,18 @@ export const CATEGORIES = [
 ]
 
 /**
- * Price filter configurations
+ * Currency configuration by country
+ */
+export const CURRENCY_BY_COUNTRY: Record<string, { code: string; symbol: string; budgetThreshold: number }> = {
+  'HT': { code: 'HTG', symbol: 'HTG', budgetThreshold: 500 },
+  'US': { code: 'USD', symbol: '$', budgetThreshold: 5 },
+  'CA': { code: 'CAD', symbol: 'CA$', budgetThreshold: 5 },
+  'FR': { code: 'EUR', symbol: '€', budgetThreshold: 5 },
+  'DO': { code: 'DOP', symbol: 'RD$', budgetThreshold: 300 }
+}
+
+/**
+ * Price filter configurations (default - Haiti)
  * Can be extended by adding new entries
  */
 export const PRICE_FILTERS = [
@@ -328,3 +339,27 @@ export const PRICE_FILTERS = [
   { value: '<=500', label: '≤ 500 HTG', min: 0, max: 500 },
   { value: '>500', label: '> 500 HTG', min: 500, max: Infinity }
 ] as const
+
+/**
+ * Get price filter options for a specific country
+ */
+export function getPriceFiltersForCountry(countryCode: string = 'HT'): typeof PRICE_FILTERS {
+  const currency = CURRENCY_BY_COUNTRY[countryCode] || CURRENCY_BY_COUNTRY['HT']
+  const threshold = currency.budgetThreshold
+  const symbol = currency.symbol
+  
+  // Format the label based on currency
+  const formatLabel = (prefix: string, amount: number) => {
+    if (symbol === 'HTG' || symbol === 'RD$') {
+      return `${prefix} ${amount} ${symbol}`
+    }
+    return `${prefix} ${symbol}${amount}`
+  }
+  
+  return [
+    { value: 'any', label: 'Any price' },
+    { value: 'free', label: 'Free' },
+    { value: '<=500', label: formatLabel('≤', threshold), min: 0, max: threshold },
+    { value: '>500', label: formatLabel('>', threshold), min: threshold, max: Infinity }
+  ] as unknown as typeof PRICE_FILTERS
+}

@@ -8,7 +8,11 @@ import { FilterChipsRow } from './FilterChipsRow'
 import type { EventFilters, DEFAULT_FILTERS } from '@/lib/filters/types'
 import { parseFiltersFromURL, serializeFilters, resetFilters, countActiveFilters } from '@/lib/filters/utils'
 
-export function DiscoverFilterManager() {
+interface DiscoverFilterManagerProps {
+  userCountry?: string
+}
+
+export function DiscoverFilterManager({ userCountry = 'HT' }: DiscoverFilterManagerProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -93,6 +97,7 @@ export function DiscoverFilterManager() {
       <DiscoverTopBar 
         filters={appliedFilters}
         onOpenFilters={handleOpenFilters}
+        userCountry={userCountry}
       />
       
       {hasActiveFilters && (
@@ -113,6 +118,7 @@ export function DiscoverFilterManager() {
         onApply={handleApplyFilters}
         onReset={handleResetFilters}
         onDraftChange={setDraftFilters}
+        userCountry={userCountry}
       />
     </>
   )

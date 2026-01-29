@@ -4,27 +4,31 @@ import React, { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { Search, MapPin, ChevronDown, SlidersHorizontal } from 'lucide-react'
-import { CITIES, getSubdivisions, getLocationTypeLabel, hasSubdivisions } from '@/lib/filters/config'
+import { getCitiesForCountry, getSubdivisions, getLocationTypeLabel, hasSubdivisions } from '@/lib/filters/config'
 import { countActiveFilters } from '@/lib/filters/utils'
 import type { EventFilters } from '@/lib/filters/types'
 
 interface DiscoverTopBarProps {
   filters: EventFilters
   onOpenFilters: () => void
+  userCountry?: string
 }
 
-export function DiscoverTopBar({ filters, onOpenFilters }: DiscoverTopBarProps) {
+export function DiscoverTopBar({ filters, onOpenFilters, userCountry = 'HT' }: DiscoverTopBarProps) {
   const { t } = useTranslation('common')
   const router = useRouter()
   const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
   const [showCityDropdown, setShowCityDropdown] = useState(false)
   const [showSubareaDropdown, setShowSubareaDropdown] = useState(false)
+  
+  // Get country-specific cities
+  const cities = getCitiesForCountry(userCountry)
 
   const activeFiltersCount = countActiveFilters(filters)
-  const subdivisions = filters.city ? getSubdivisions(filters.city) : []
-  const locationLabel = filters.city ? getLocationTypeLabel(filters.city) : ''
-  const hasLocation = hasSubdivisions(filters.city)
+  const subdivisions = filters.city ? getSubdivisions(filters.city, userCountry) : []
+  const locationLabel = filters.city ? getLocationTypeLabel(filters.city, userCountry) : ''
+  const hasLocation = hasSubdivisions(filters.city, userCountry)
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -117,7 +121,7 @@ export function DiscoverTopBar({ filters, onOpenFilters }: DiscoverTopBarProps) 
                     >
                       {t('filters.all_cities')}
                     </button>
-                    {CITIES.map(city => (
+                    {cities.map(city => (
                       <button
                         key={city}
                         onClick={() => handleCitySelect(city)}

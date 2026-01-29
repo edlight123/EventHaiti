@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react'
 import { X, SlidersHorizontal } from 'lucide-react'
 import { EventFilters, DateFilter } from '@/lib/filters/types'
 import { 
-  CITIES, 
   CATEGORIES, 
-  PRICE_FILTERS, 
+  getCitiesForCountry,
+  getPriceFiltersForCountry,
   getSubdivisions, 
   getLocationTypeLabel, 
   hasSubdivisions 
@@ -22,6 +22,7 @@ interface FilterPanelProps {
   onDraftChange: (filters: EventFilters) => void
   onApply: () => void
   onReset: () => void
+  userCountry?: string
 }
 
 export default function FilterPanel({
@@ -31,10 +32,15 @@ export default function FilterPanel({
   appliedFilters,
   onDraftChange,
   onApply,
-  onReset
+  onReset,
+  userCountry = 'HT'
 }: FilterPanelProps) {
   const { t } = useTranslation('common')
   const [showDatePicker, setShowDatePicker] = useState(draftFilters.date === 'pick-date')
+  
+  // Get country-specific options
+  const cities = getCitiesForCountry(userCountry)
+  const priceFilters = getPriceFiltersForCountry(userCountry)
   
   useEffect(() => {
     setShowDatePicker(draftFilters.date === 'pick-date')
@@ -95,9 +101,9 @@ export default function FilterPanel({
   const activeCount = countActiveFilters(draftFilters)
   const hasChanges = !filtersEqual(draftFilters, appliedFilters)
   
-  const subdivisions = draftFilters.city ? getSubdivisions(draftFilters.city) : []
-  const locationLabel = draftFilters.city ? getLocationTypeLabel(draftFilters.city) : 'Area'
-  const showSubdivisions = draftFilters.city && hasSubdivisions(draftFilters.city)
+  const subdivisions = draftFilters.city ? getSubdivisions(draftFilters.city, userCountry) : []
+  const locationLabel = draftFilters.city ? getLocationTypeLabel(draftFilters.city, userCountry) : 'Area'
+  const showSubdivisions = draftFilters.city && hasSubdivisions(draftFilters.city, userCountry)
   
   if (!isOpen) return null
   
@@ -196,7 +202,7 @@ export default function FilterPanel({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
             >
               <option value="">{t('filters.all_cities')}</option>
-              {CITIES.map(city => (
+              {cities.map(city => (
                 <option key={city} value={city}>{city}</option>
               ))}
             </select>
@@ -248,7 +254,7 @@ export default function FilterPanel({
               {t('filters.price')}
             </label>
             <div className="space-y-2">
-              {PRICE_FILTERS.map(option => (
+              {priceFilters.map(option => (
                 <label key={option.value} className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="radio"

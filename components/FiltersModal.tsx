@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { EventFilters, DateFilter, EventTypeFilter, PriceFilter } from '@/lib/filters/types'
-import { CITIES, CATEGORIES, PRICE_FILTERS, getSubdivisions, getLocationTypeLabel, hasSubdivisions } from '@/lib/filters/config'
+import { CATEGORIES, getCitiesForCountry, getPriceFiltersForCountry, getSubdivisions, getLocationTypeLabel, hasSubdivisions } from '@/lib/filters/config'
 import { countActiveFilters, filtersEqual } from '@/lib/filters/utils'
 import { FilterChip } from './FilterChip'
 
@@ -17,6 +17,7 @@ interface FiltersModalProps {
   onApply: () => void
   onReset: () => void
   onDraftChange: (filters: EventFilters) => void
+  userCountry?: string
 }
 
 export function FiltersModal({
@@ -26,11 +27,16 @@ export function FiltersModal({
   onClose,
   onApply,
   onReset,
-  onDraftChange
+  onDraftChange,
+  userCountry = 'HT'
 }: FiltersModalProps) {
   const { t } = useTranslation('common')
   const [mounted, setMounted] = useState(false)
   const [showDatePicker, setShowDatePicker] = useState(false)
+  
+  // Get country-specific options
+  const cities = getCitiesForCountry(userCountry)
+  const priceFilters = getPriceFiltersForCountry(userCountry)
 
   const DATE_OPTIONS: { value: DateFilter; label: string }[] = [
     { value: 'any', label: t('filters.any_date') },
@@ -78,9 +84,9 @@ export function FiltersModal({
 
   const hasChanges = !filtersEqual(draftFilters, appliedFilters)
   const activeCount = countActiveFilters(draftFilters)
-  const subdivisions = draftFilters.city ? getSubdivisions(draftFilters.city) : []
-  const locationLabel = draftFilters.city ? getLocationTypeLabel(draftFilters.city) : 'Area'
-  const hasLocation = hasSubdivisions(draftFilters.city)
+  const subdivisions = draftFilters.city ? getSubdivisions(draftFilters.city, userCountry) : []
+  const locationLabel = draftFilters.city ? getLocationTypeLabel(draftFilters.city, userCountry) : 'Area'
+  const hasLocation = hasSubdivisions(draftFilters.city, userCountry)
 
   const handleDateChange = (date: DateFilter) => {
     onDraftChange({ ...draftFilters, date, pickedDate: date === 'pick-date' ? draftFilters.pickedDate : undefined })
@@ -180,7 +186,7 @@ export function FiltersModal({
             <div className="space-y-3">
               <label className="text-sm font-medium text-gray-700">{t('filters.price')}</label>
               <div className="flex flex-wrap gap-2">
-                {PRICE_FILTERS.map(option => (
+                {priceFilters.map(option => (
                   <FilterChip
                     key={option.value}
                     label={option.label}
@@ -217,7 +223,7 @@ export function FiltersModal({
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white"
                 >
                   <option value="">{t('filters.all_cities')}</option>
-                  {CITIES.map(city => (
+                  {cities.map(city => (
                     <option key={city} value={city}>{city}</option>
                   ))}
                 </select>

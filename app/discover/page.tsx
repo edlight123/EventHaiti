@@ -157,7 +157,7 @@ export default async function DiscoverPage({
 
       {/* Top Bar with Filter Manager (includes ActiveFiltersRow) */}
       <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200" />}>
-        <DiscoverFilterManager />
+        <DiscoverFilterManager userCountry={userCountry} />
       </Suspense>
 
       {/* Main Content */}

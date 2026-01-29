@@ -132,6 +132,20 @@ export const CITIES_BY_COUNTRY: Record<string, string[]> = {
 // Backward compatibility: Haiti cities as default
 export const CITIES = CITIES_BY_COUNTRY['HT']
 
+// Get cities for a specific country
+export function getCitiesForCountry(countryCode: string): string[] {
+  return CITIES_BY_COUNTRY[countryCode] || CITIES_BY_COUNTRY['HT']
+}
+
+// Currency configuration by country
+export const CURRENCY_BY_COUNTRY: Record<string, { code: string; symbol: string; budgetThreshold: number }> = {
+  'HT': { code: 'HTG', symbol: 'HTG', budgetThreshold: 500 },
+  'US': { code: 'USD', symbol: '$', budgetThreshold: 5 },
+  'CA': { code: 'CAD', symbol: 'CA$', budgetThreshold: 5 },
+  'FR': { code: 'EUR', symbol: '€', budgetThreshold: 5 },
+  'DO': { code: 'DOP', symbol: 'RD$', budgetThreshold: 300 }
+}
+
 // Price filter configurations
 export const PRICE_FILTERS = [
   { value: 'any' as const, labelKey: 'filters.priceOptions.any' },
@@ -140,6 +154,28 @@ export const PRICE_FILTERS = [
   { value: '>500' as const, labelKey: 'filters.priceOptions.over500', min: 500, max: Infinity },
   { value: 'custom' as const, labelKey: 'filters.priceOptions.custom' }
 ]
+
+// Get price filters for a specific country (with dynamic labels)
+export function getPriceFiltersForCountry(countryCode: string = 'HT') {
+  const currency = CURRENCY_BY_COUNTRY[countryCode] || CURRENCY_BY_COUNTRY['HT']
+  const threshold = currency.budgetThreshold
+  const symbol = currency.symbol
+  
+  const formatLabel = (prefix: string, amount: number) => {
+    if (symbol === 'HTG' || symbol === 'RD$') {
+      return `${prefix} ${amount} ${symbol}`
+    }
+    return `${prefix} ${symbol}${amount}`
+  }
+  
+  return [
+    { value: 'any' as const, label: 'Any price', labelKey: 'filters.priceOptions.any' },
+    { value: 'free' as const, label: 'Free', labelKey: 'filters.priceOptions.free' },
+    { value: '<=500' as const, label: formatLabel('≤', threshold), labelKey: 'filters.priceOptions.upto500', min: 0, max: threshold },
+    { value: '>500' as const, label: formatLabel('>', threshold), labelKey: 'filters.priceOptions.over500', min: threshold, max: Infinity },
+    { value: 'custom' as const, label: 'Custom', labelKey: 'filters.priceOptions.custom' }
+  ]
+}
 
 // Date filter options
 export const DATE_OPTIONS: { value: DateFilter; labelKey: string }[] = [
