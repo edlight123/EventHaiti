@@ -1,0 +1,48 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { detectLocationFromIP, mapToSupportedLocation, getLocationDisplayName } from '@/lib/geolocation'
+
+export async function GET(request: NextRequest) {
+  try {
+    // Get IP from headers (works with Vercel, Cloudflare, etc.)
+    const forwardedFor = request.headers.get('x-forwarded-for')
+    const realIP = request.headers.get('x-real-ip')
+    const ip = forwardedFor?.split(',')[0]?.trim() || realIP || undefined
+    
+    // Detect location
+    const geo = await detectLocationFromIP(ip)
+    
+    if (!geo) {
+      return NextResponse.json({ 
+        detected: false,
+        error: 'Could not detect location'
+      })
+    }
+    
+    // Map to our supported locations
+    const mapped = mapToSupportedLocation(geo)
+    const displayName = getLocationDisplayName(geo, mapped)
+    
+    return NextResponse.json({
+      detected: true,
+      raw: {
+        country: geo.country,
+        countryCode: geo.countryCode,
+        city: geo.city,
+        region: geo.region
+      },
+      mapped: {
+        countryCode: mapped.countryCode,
+        countryName: mapped.countryName,
+        city: mapped.city,
+        isSupported: mapped.isSupported
+      },
+      displayName
+    })
+  } catch (error) {
+    console.error('Geolocation API error:', error)
+    return NextResponse.json({ 
+      detected: false,
+      error: 'Internal server error'
+    }, { status: 500 })
+  }
+}

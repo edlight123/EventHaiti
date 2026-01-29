@@ -12,6 +12,7 @@ import { parseFiltersFromURL } from '@/lib/filters/utils'
 import { applyFiltersAndSort } from '@/lib/filters/apply'
 import { getDiscoverEvents } from '@/lib/data/events'
 import { getUserProfileAdmin } from '@/lib/firestore/user-profile-admin'
+import { LocationBannerWrapper } from '@/components/LocationBannerWrapper'
 
 type Event = Database['public']['Tables']['events']['Row']
 
@@ -31,10 +32,12 @@ export default async function HomePage({
   
   // Get user's default country for prioritization
   let userCountry = 'HT' // Default to Haiti
+  let userCity = ''
   if (user?.uid) {
     try {
       const profile = await getUserProfileAdmin(user.uid)
       userCountry = profile?.defaultCountry || 'HT'
+      userCity = profile?.defaultCity || ''
     } catch (error) {
       console.error('Failed to fetch user profile:', error)
     }
@@ -145,6 +148,13 @@ export default async function HomePage({
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+      
+      {/* Location Detection Banner */}
+      <LocationBannerWrapper 
+        userId={user?.uid}
+        currentCountry={userCountry}
+        currentCity={userCity}
+      />
 
       {/* Demo Mode Banner */}
       {isDemoMode() && (

@@ -12,6 +12,7 @@ import { parseFiltersFromURL } from '@/lib/filters/utils'
 import { applyFiltersAndSort } from '@/lib/filters/apply'
 import { DiscoverFilterManager } from '@/components/DiscoverFilterManager'
 import { DiscoverPageContent } from '@/components/discover/DiscoverPageContent'
+import { LocationBannerWrapper } from '@/components/LocationBannerWrapper'
 import { 
   getFeaturedEvents, 
   getUpcomingEvents, 
@@ -39,10 +40,12 @@ export default async function DiscoverPage({
   
   // Get user's default country for prioritization
   let userCountry = 'HT' // Default to Haiti
+  let userCity = ''
   if (user?.id) {
     try {
       const profile = await getUserProfileAdmin(user.id)
       userCountry = profile?.defaultCountry || 'HT'
+      userCity = profile?.defaultCity || ''
     } catch (error) {
       console.error('Failed to fetch user profile:', error)
     }
@@ -154,6 +157,13 @@ export default async function DiscoverPage({
   return (
     <div className="min-h-screen bg-gray-50 pb-mobile-nav">
       <Navbar user={user} isAdmin={isAdmin(user?.email)} />
+      
+      {/* Location Detection Banner */}
+      <LocationBannerWrapper 
+        userId={user?.id}
+        currentCountry={userCountry}
+        currentCity={userCity}
+      />
 
       {/* Top Bar with Filter Manager (includes ActiveFiltersRow) */}
       <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200" />}>
