@@ -77,12 +77,19 @@ export default async function HomePage({
 
   events = events.filter(notEnded)
   
+  // DEBUG: Log event countries to understand what data we have
+  console.log('[HomePage] Total events after notEnded filter:', events.length)
+  console.log('[HomePage] User country:', userCountry)
+  console.log('[HomePage] Event countries:', events.slice(0, 10).map(e => ({ id: e.id, title: e.title?.substring(0, 30), country: e.country })))
+  
   // STRICT country filtering - ONLY show events from user's country
   // Events without a country field are assumed to be in Haiti (HT)
   events = events.filter(e => {
     const eventCountry = e.country || 'HT' // Default to Haiti if no country set
     return eventCountry === userCountry
   })
+  
+  console.log('[HomePage] Events after country filter:', events.length)
   
   // Prioritize events by user's city first, then rest of country
   const eventsInUserCity = userCity ? events.filter(e => e.city === userCity) : []
