@@ -283,6 +283,7 @@ export async function getDiscoverEvents(
           city: data.city,
           commune: data.commune,
           address: data.address,
+          country: data.country || 'HT', // Default to Haiti for events without country
           status: data.status || 'draft',
           start_datetime: data.start_datetime?.toDate?.()?.toISOString() || data.start_datetime,
           end_datetime: data.end_datetime?.toDate?.()?.toISOString() || data.end_datetime,
@@ -323,22 +324,41 @@ export async function getDiscoverEvents(
         }
       }
 
-      // Final guard: never return ended events.
-      // Include ongoing events when end_datetime is present and in the future.
+      // Lenient filter: show events that are upcoming, ongoing, or recently started
+      // Events that started within the past week could still be ongoing (multi-day events)
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      
+      console.log('[getDiscoverEvents] Before date filter:', events.length, 'events')
+      console.log('[getDiscoverEvents] Current time:', now.toISOString())
+      console.log('[getDiscoverEvents] One week ago:', oneWeekAgo.toISOString())
+      if (events.length > 0) {
+        console.log('[getDiscoverEvents] Sample event dates:', events.slice(0, 3).map((e: Event) => ({
+          title: e.title?.substring(0, 20),
+          start: e.start_datetime,
+          end: e.end_datetime
+        })))
+      }
+      
       events = events.filter((event: Event) => {
         const start = new Date(event.start_datetime)
         const end = event.end_datetime ? new Date(event.end_datetime) : null
 
+        // If event has an end time, show if it hasn't ended yet
         if (end && !Number.isNaN(end.getTime())) {
           return end.getTime() >= now.getTime()
         }
 
+        // If no end time, show if started within the last week (could be ongoing)
+        // or if it's in the future
         if (!Number.isNaN(start.getTime())) {
-          return start.getTime() >= now.getTime()
+          return start.getTime() >= oneWeekAgo.getTime()
         }
 
-        return false
+        // If no valid dates, show it anyway
+        return true
       })
+      
+      console.log('[getDiscoverEvents] After date filter:', events.length, 'events')
 
       // Return soonest upcoming first (query is already ASC, but keep this deterministic)
       events = events
