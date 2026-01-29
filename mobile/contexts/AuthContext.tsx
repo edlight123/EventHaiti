@@ -16,11 +16,13 @@ interface UserProfile {
   role: 'attendee' | 'organizer' | 'admin';
   phone_number?: string;
   default_city?: string;
+  default_country?: string; // Country code: HT, US, CA, FR, DO
+  default_subarea?: string; // State/region within country
   is_verified?: boolean;
   photo_url?: string;
 }
 
-type UserProfilePatch = Partial<Pick<UserProfile, 'full_name' | 'phone_number' | 'default_city' | 'photo_url'>>;
+type UserProfilePatch = Partial<Pick<UserProfile, 'full_name' | 'phone_number' | 'default_city' | 'default_country' | 'default_subarea' | 'photo_url'>>;
 
 interface AuthContextType {
   user: User | null;

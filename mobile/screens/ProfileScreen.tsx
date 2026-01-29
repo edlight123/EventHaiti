@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Briefcase, ExternalLink, LogOut, MapPin, Settings, User } from 'lucide-react-native';
+import { Briefcase, ChevronDown, ExternalLink, LogOut, MapPin, Settings, User } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
@@ -21,12 +21,13 @@ import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage
 import { useAuth } from '../contexts/AuthContext';
 import { useAppMode } from '../contexts/AppModeContext';
 import { useI18n } from '../contexts/I18nContext';
+import { useFilters } from '../contexts/FiltersContext';
 import { COLORS } from '../config/brand';
 import { db, isDemoMode, storage } from '../config/firebase';
 import { getStaffEventIds } from '../lib/staffAssignments';
 import { getVerificationRequest, type VerificationRequest } from '../lib/verification';
 import { useNavigation } from '@react-navigation/native';
-import { CITIES_BY_COUNTRY } from '../types/filters';
+import { CITIES_BY_COUNTRY, COUNTRIES } from '../types/filters';
 
 const WEBSITE_BASE_URL = 'https://eventhaiti.vercel.app';
 
@@ -35,6 +36,7 @@ export default function ProfileScreen() {
   const { user, userProfile, signOut, updateUserProfile, refreshUserProfile } = useAuth();
   const { mode, setMode } = useAppMode();
   const { language, setLanguage, t } = useI18n();
+  const { setUserCountry, applyFiltersDirectly, appliedFilters } = useFilters();
   const insets = useSafeAreaInsets();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -44,6 +46,8 @@ export default function ProfileScreen() {
 
   const [editedName, setEditedName] = useState(userProfile?.full_name || '');
   const [editedCity, setEditedCity] = useState(userProfile?.default_city || '');
+  const [editedCountry, setEditedCountry] = useState(userProfile?.default_country || 'HT');
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
 
   const [phonePrefix, setPhonePrefix] = useState<'+509' | '+1'>('+509');
   const [phoneDigits, setPhoneDigits] = useState('');
@@ -203,14 +207,19 @@ export default function ProfileScreen() {
     if (!isEditing) {
       setEditedName(userProfile?.full_name || '');
       setEditedCity(userProfile?.default_city || '');
+      setEditedCountry(userProfile?.default_country || 'HT');
       parsePhone(userProfile?.phone_number || '');
     }
-  }, [isEditing, parsePhone, userProfile?.default_city, userProfile?.full_name, userProfile?.phone_number]);
+  }, [isEditing, parsePhone, userProfile?.default_city, userProfile?.default_country, userProfile?.full_name, userProfile?.phone_number]);
+
+  // Get cities for selected country
+  const citiesForCountry = useMemo(() => {
+    return CITIES_BY_COUNTRY[editedCountry] || CITIES_BY_COUNTRY['HT'] || [];
+  }, [editedCountry]);
 
   const allCities = useMemo(() => {
-    const values = Object.values(CITIES_BY_COUNTRY).flat();
-    return Array.from(new Set(values));
-  }, []);
+    return citiesForCountry;
+  }, [citiesForCountry]);
 
   const filteredCities = useMemo(() => {
     const q = editedCity.trim().toLowerCase();
@@ -284,7 +293,17 @@ export default function ProfileScreen() {
         full_name: name,
         phone_number: combinedPhone,
         default_city: editedCity,
+        default_country: editedCountry,
       });
+      
+      // Update filters to use new country
+      setUserCountry(editedCountry);
+      applyFiltersDirectly({
+        ...appliedFilters,
+        country: editedCountry,
+        city: '', // Reset city filter when country changes
+      });
+      
       setIsEditing(false);
       Alert.alert(t('profile.saveSuccessTitle'), t('profile.saveSuccessBody'));
     } catch {
@@ -292,7 +311,7 @@ export default function ProfileScreen() {
     } finally {
       setSaving(false);
     }
-  }, [editedCity, editedName, phoneDigits, phonePrefix, t, updateUserProfile, user?.uid]);
+  }, [appliedFilters, applyFiltersDirectly, editedCity, editedCountry, editedName, phoneDigits, phonePrefix, setUserCountry, t, updateUserProfile, user?.uid]);
 
   const confirmSignOut = useCallback(() => {
     Alert.alert(t('profile.signOutTitle'), t('profile.signOutBody'), [
@@ -453,6 +472,43 @@ export default function ProfileScreen() {
                   keyboardType="phone-pad"
                 />
               </View>
+
+              <Text style={styles.fieldLabel}>{t('profile.defaultCountry') || 'Country'}</Text>
+              <TouchableOpacity
+                style={styles.countrySelector}
+                onPress={() => setShowCountryPicker(!showCountryPicker)}
+              >
+                <Text style={styles.countrySelectorText}>
+                  {COUNTRIES.find(c => c.code === editedCountry)?.name || 'Select Country'}
+                </Text>
+                <ChevronDown size={20} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+              
+              {showCountryPicker && (
+                <View style={styles.countryList}>
+                  {COUNTRIES.map((country) => (
+                    <TouchableOpacity
+                      key={country.code}
+                      style={[
+                        styles.countryOption,
+                        editedCountry === country.code && styles.countryOptionActive
+                      ]}
+                      onPress={() => {
+                        setEditedCountry(country.code);
+                        setEditedCity(''); // Reset city when country changes
+                        setShowCountryPicker(false);
+                      }}
+                    >
+                      <Text style={[
+                        styles.countryOptionText,
+                        editedCountry === country.code && styles.countryOptionTextActive
+                      ]}>
+                        {country.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
 
               <Text style={styles.fieldLabel}>{t('profile.defaultCity')}</Text>
               <TextInput
@@ -709,6 +765,47 @@ const styles = StyleSheet.create({
   suggestionText: {
     fontSize: 14,
     color: COLORS.text,
+  },
+  countrySelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 8,
+  },
+  countrySelectorText: {
+    fontSize: 15,
+    color: COLORS.text,
+  },
+  countryList: {
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    backgroundColor: COLORS.surface,
+  },
+  countryOption: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
+  },
+  countryOptionActive: {
+    backgroundColor: `${COLORS.primary}15`,
+  },
+  countryOptionText: {
+    fontSize: 15,
+    color: COLORS.text,
+  },
+  countryOptionTextActive: {
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   card: {
     backgroundColor: COLORS.surface,

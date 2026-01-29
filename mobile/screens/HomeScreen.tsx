@@ -18,9 +18,11 @@ import { collection, query, where, getDocs, limit, Timestamp } from 'firebase/fi
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
+import { useFilters } from '../contexts/FiltersContext';
 import { COLORS, BRAND } from '../config/brand';
 import { Bell } from 'lucide-react-native';
 import FeaturedCarousel from '../components/FeaturedCarousel';
+import LocationDetectionBanner from '../components/LocationDetectionBanner';
 
 import CategoryGrid from '../components/CategoryGrid';
 import TrendingSection from '../components/TrendingSection';
@@ -30,6 +32,7 @@ import AllEventsPreview from '../components/AllEventsPreview';
 export default function HomeScreen({ navigation }: any) {
   const { user, userProfile } = useAuth();
   const { t } = useI18n();
+  const { userCountry } = useFilters();
   const insets = useSafeAreaInsets();
   const [events, setEvents] = useState<any[]>([]);
   const [featuredEvents, setFeaturedEvents] = useState<any[]>([]);
@@ -97,27 +100,41 @@ export default function HomeScreen({ navigation }: any) {
         return aTime - bTime;
       });
 
-      // Filter out past events
+      // Filter out past events (be lenient - show events from past week that could be ongoing)
       const now = new Date();
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const futureEvents: any[] = eventsData.filter((e) => {
         const start = e.start_datetime ? new Date(e.start_datetime) : null;
         const end = e.end_datetime ? new Date(e.end_datetime) : null;
-        const cutoff = end || start;
-        if (!cutoff) return false;
-        return cutoff >= now;
+        
+        // If has end date, check if it's in the future
+        if (end) return end >= now;
+        // If only start date, show if started within past week
+        if (start) return start >= oneWeekAgo;
+        // No dates - show anyway
+        return true;
       });
 
       const effectiveEvents = futureEvents.length > 0 ? futureEvents : eventsData;
-      setEvents(effectiveEvents);
+      
+      // Apply country filter - only show events from user's country
+      const countryFiltered = effectiveEvents.filter((e) => 
+        (e.country || 'HT') === userCountry
+      );
+      
+      console.log('[HomeScreen] Events filtered by country:', userCountry, '→', countryFiltered.length, 'of', effectiveEvents.length);
+      
+      const finalEvents = countryFiltered.length > 0 ? countryFiltered : effectiveEvents;
+      setEvents(finalEvents);
 
       // Featured events (top 5 by tickets sold)
-      const featured = [...effectiveEvents]
+      const featured = [...finalEvents]
         .sort((a: any, b: any) => (b.tickets_sold || 0) - (a.tickets_sold || 0))
         .slice(0, 5);
       setFeaturedEvents(featured);
 
       // Trending events (tickets_sold > 10)
-      const trending = effectiveEvents
+      const trending = finalEvents
         .filter((e) => (e.tickets_sold || 0) > 10)
         .slice(0, 6);
       setTrendingEvents(trending);
@@ -125,7 +142,7 @@ export default function HomeScreen({ navigation }: any) {
       // This week events
       const oneWeekFromNow = new Date(now);
       oneWeekFromNow.setDate(now.getDate() + 7);
-      const thisWeek = effectiveEvents
+      const thisWeek = finalEvents
         .filter((e) => e.start_datetime <= oneWeekFromNow)
         .slice(0, 6);
       setThisWeekEvents(thisWeek);
@@ -150,7 +167,7 @@ export default function HomeScreen({ navigation }: any) {
 
   useEffect(() => {
     fetchEvents();
-  }, []);
+  }, [userCountry]); // Refetch when country changes
 
   // Listen for tab press to scroll to top
   useEffect(() => {
@@ -233,6 +250,9 @@ export default function HomeScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+      
+      {/* Location Detection Banner */}
+      <LocationDetectionBanner />
 
       {/* Compact Header */}
       <Animated.View
