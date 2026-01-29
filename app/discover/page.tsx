@@ -39,9 +39,9 @@ export default async function DiscoverPage({
   
   // Get user's default country for prioritization
   let userCountry = 'HT' // Default to Haiti
-  if (user?.uid) {
+  if (user?.id) {
     try {
-      const profile = await getUserProfileAdmin(user.uid)
+      const profile = await getUserProfileAdmin(user.id)
       userCountry = profile?.defaultCountry || 'HT'
     } catch (error) {
       console.error('Failed to fetch user profile:', error)
