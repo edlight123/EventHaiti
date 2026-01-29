@@ -1,5 +1,8 @@
 /**
  * IP-based geolocation utilities
+ * 
+ * PRIMARY: Uses Vercel's built-in geolocation headers (FREE, no setup)
+ * FALLBACK: Uses ip-api.com for local development only
  */
 
 export interface GeoLocation {
@@ -7,7 +10,6 @@ export interface GeoLocation {
   countryCode: string
   city: string
   region: string
-  timezone: string
 }
 
 // Map detected country codes to our supported countries
@@ -17,6 +19,14 @@ const SUPPORTED_COUNTRIES: Record<string, string> = {
   'CA': 'CA', // Canada
   'FR': 'FR', // France
   'DO': 'DO', // Dominican Republic
+}
+
+const COUNTRY_NAMES: Record<string, string> = {
+  'HT': 'Haiti',
+  'US': 'United States',
+  'CA': 'Canada',
+  'FR': 'France',
+  'DO': 'Dominican Republic'
 }
 
 // Map common cities to our city names in the config
@@ -72,14 +82,41 @@ const CITY_MAPPING: Record<string, Record<string, string>> = {
 }
 
 /**
- * Detect location from IP address (server-side)
+ * Extract geolocation from Vercel's automatic headers
+ * 
+ * Vercel automatically adds these headers at the edge - FREE, no setup required:
+ * - x-vercel-ip-country: Country code (US, HT, CA, etc.)
+ * - x-vercel-ip-city: City name (URL encoded)
+ * - x-vercel-ip-country-region: State/province code
+ * 
+ * @see https://vercel.com/docs/edge-network/headers#x-vercel-ip-country
+ */
+export function getLocationFromVercelHeaders(headers: Headers): GeoLocation | null {
+  const countryCode = headers.get('x-vercel-ip-country')
+  const city = headers.get('x-vercel-ip-city')
+  const region = headers.get('x-vercel-ip-country-region')
+  
+  if (!countryCode) {
+    return null
+  }
+  
+  return {
+    countryCode,
+    country: COUNTRY_NAMES[countryCode] || countryCode,
+    city: city ? decodeURIComponent(city) : '',
+    region: region || ''
+  }
+}
+
+/**
+ * Fallback for local development - uses ip-api.com
+ * Only called when Vercel headers aren't available (localhost)
  */
 export async function detectLocationFromIP(ip?: string): Promise<GeoLocation | null> {
   try {
-    // Use ip-api.com (free, no key needed, 45 req/min)
     const url = ip 
-      ? `http://ip-api.com/json/${ip}?fields=status,country,countryCode,city,regionName,timezone`
-      : `http://ip-api.com/json/?fields=status,country,countryCode,city,regionName,timezone`
+      ? `http://ip-api.com/json/${ip}?fields=status,country,countryCode,city,regionName`
+      : `http://ip-api.com/json/?fields=status,country,countryCode,city,regionName`
     
     const response = await fetch(url, {
       next: { revalidate: 3600 } // Cache for 1 hour
@@ -99,8 +136,7 @@ export async function detectLocationFromIP(ip?: string): Promise<GeoLocation | n
       country: data.country,
       countryCode: data.countryCode,
       city: data.city,
-      region: data.regionName,
-      timezone: data.timezone
+      region: data.regionName
     }
   } catch (error) {
     console.error('Failed to detect location from IP:', error)
@@ -133,17 +169,9 @@ export function mapToSupportedLocation(geo: GeoLocation): {
   const cityMapping = CITY_MAPPING[countryCode] || {}
   const mappedCity = cityMapping[geo.city] || null
   
-  const countryNames: Record<string, string> = {
-    'HT': 'Haiti',
-    'US': 'United States',
-    'CA': 'Canada',
-    'FR': 'France',
-    'DO': 'Dominican Republic'
-  }
-  
   return {
     countryCode,
-    countryName: countryNames[countryCode] || geo.country,
+    countryName: COUNTRY_NAMES[countryCode] || geo.country,
     city: mappedCity,
     isSupported: true
   }

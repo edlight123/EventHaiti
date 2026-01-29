@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { detectLocationFromIP, mapToSupportedLocation, getLocationDisplayName } from '@/lib/geolocation'
+import { 
+  getLocationFromVercelHeaders, 
+  detectLocationFromIP, 
+  mapToSupportedLocation, 
+  getLocationDisplayName 
+} from '@/lib/geolocation'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get IP from headers (works with Vercel, Cloudflare, etc.)
-    const forwardedFor = request.headers.get('x-forwarded-for')
-    const realIP = request.headers.get('x-real-ip')
-    const ip = forwardedFor?.split(',')[0]?.trim() || realIP || undefined
+    // 1. Try Vercel's built-in geolocation headers first (FREE, no setup)
+    let geo = getLocationFromVercelHeaders(request.headers)
     
-    // Detect location
-    const geo = await detectLocationFromIP(ip)
+    // 2. Fallback to ip-api.com for local development
+    if (!geo) {
+      const forwardedFor = request.headers.get('x-forwarded-for')
+      const realIP = request.headers.get('x-real-ip')
+      const ip = forwardedFor?.split(',')[0]?.trim() || realIP || undefined
+      geo = await detectLocationFromIP(ip)
+    }
     
     if (!geo) {
       return NextResponse.json({ 
